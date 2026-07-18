@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>DMS 库存查询</title><link rel="stylesheet" href="/mobile/mobile.css">
+</head><body>
+<header class="m-topbar">
+  <div class="m-topbar-title">📦 库存查询</div>
+  <div class="m-topbar-right" onclick="history.back()">←</div>
+</header>
+<div class="m-content">
+  <div style="margin-bottom:10px;display:flex;gap:8px;">
+    <input class="m-input" placeholder="🔍 序列号追溯..." id="serialInput" style="flex:1;">
+    <button class="m-btn m-btn-primary" onclick="doTrace()">追溯</button>
+  </div>
+  <div id="traceBox"></div>
+  <div id="invList"><div class="m-loading">加载中...</div></div>
+</div>
+<nav class="m-tabbar">
+  <a class="m-tabbar-item" href="/mobile/home.html"><span>🏠</span>首页</a>
+  <a class="m-tabbar-item" href="/mobile/orders.html"><span>📋</span>订单</a>
+  <a class="m-tabbar-item active" href="/mobile/inventory.html"><span>📦</span>库存</a>
+  <a class="m-tabbar-item" href="/mobile/messages.html"><span>🔔</span>消息</a>
+  <a class="m-tabbar-item" href="javascript:localStorage.clear();location.href='/mobile/login.html'"><span>👤</span>我的</a>
+</nav>
+<script src="/mobile/mobile-lib.js"></script>
+<script>
+if (!MDMS.requireAuth()) throw 0;
+
+function loadInv() {
+  MDMS.api('/api/inventory?page=1&size=30').then(function(d){
+    if (d.code!==0) { document.getElementById('invList').innerHTML='<div class="m-error">'+d.message+'</div>'; return; }
+    var list = (d.data && d.data.list) || [];
+    if (!list.length) { document.getElementById('invList').innerHTML='<div class="m-empty">📭 无库存</div>'; return; }
+    var h = '<div class="m-section-title">库存清单（前 30 条）</div>';
+    list.forEach(function(i){
+      h += '<div class="m-section" style="padding:10px;margin-bottom:6px;">' +
+        '<div style="font-weight:600;">产品 #' + i.productId + '</div>' +
+        '<div style="font-size:12px;color:#666;">批次 ' + (i.batchNo||'-') + ' · 序列号 ' + (i.serialNo||'-') + '</div>' +
+        '<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:13px;">' +
+        '<span>数量 <b>' + i.qty + '</b></span>' +
+        '<span style="color:#999;">到期 ' + (i.expDate||'-') + '</span>' +
+        '</div></div>';
+    });
+    document.getElementById('invList').innerHTML = h;
+  });
+}
+
+function doTrace() {
+  var sn = document.getElementById('serialInput').value.trim();
+  if (!sn) { MDMS.toast('请输入序列号', 'warn'); return; }
+  document.getElementById('traceBox').innerHTML = '<div class="m-loading">追溯中...</div>';
+  MDMS.api('/api/traceability/by-serial?serialNo=' + encodeURIComponent(sn)).then(function(d){
+    if (d.code!==0) { document.getElementById('traceBox').innerHTML='<div class="m-error">'+d.message+'</div>'; return; }
+    var events = d.data.events || [];
+    var cur = d.data.currentStock;
+    var h = '<div class="m-section"><div class="m-section-title">🔍 序列号 '+sn+' 追溯</div>';
+    if (cur) {
+      h += '<div style="background:#e6f4ff;padding:8px;border-radius:6px;font-size:12px;margin-bottom:10px;">' +
+        '当前位置：仓库 #' + cur.warehouseId + ' · 数量 ' + cur.qty + ' · 到期 ' + cur.expDate + '</div>';
+    }
+    if (!events.length) { h += '<div class="m-empty">无追溯事件</div>'; }
+    else {
+      h += '<div class="m-timeline">';
+      events.forEach(function(e){
+        h += '<div class="m-timeline-item">' +
+          '<div class="m-timeline-time">' + String(e.at).substring(0,19) + '</div>' +
+          '<div class="m-timeline-title">' + eventLabel(e.event) + '</div>' +
+          '<div class="m-timeline-desc">产品 #' + e.productId + ' · 批次 ' + (e.batchNo||'-') + ' · 数量 ' + e.qty + '</div>' +
+          '</div>';
+      });
+      h += '</div>';
+    }
+    h += '</div>';
+    document.getElementById('traceBox').innerHTML = h;
+  });
+}
+
+function eventLabel(e) {
+  var m = {'RECEIPT':'📥 收货入库','SALES_OUT':'🛒 销售出库','ADJUST':'⚖️ 库存调整','MOVE':'🔀 调拨','RMA':'↩️ 退货'};
+  return m[e] || e;
+}
+
+loadInv();
+</script>
+</body></html>

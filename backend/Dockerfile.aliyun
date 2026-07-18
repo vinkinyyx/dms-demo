@@ -1,0 +1,28 @@
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /build
+
+RUN mkdir -p /root/.m2 && \
+    echo '<settings><mirrors><mirror><id>aliyun</id><mirrorOf>*</mirrorOf><name>Aliyun</name><url>https://maven.aliyun.com/repository/public</url></mirror></mirrors></settings>' > /root/.m2/settings.xml
+
+COPY pom.xml .
+RUN mvn -B dependency:go-offline -Dmaven.test.skip=true || true
+
+COPY src ./src
+# 不要 -q，输出完整报错
+RUN mvn -B -Dmaven.test.skip=true clean package && ls -la /build/target/
+
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+
+RUN apk add --no-cache curl tzdata && \
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone && \
+    apk del tzdata
+
+COPY --from=builder /build/target/dms-backend*.jar app.jar
+
+ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -Duser.timezone=Asia/Shanghai"
+
+EXPOSE 8080
+
+ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar app.jar"]

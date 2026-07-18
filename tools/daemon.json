@@ -1,0 +1,8 @@
+{
+  "registry-mirrors": [
+    "https://dockerpull.org",
+    "https://hub.rat.dev",
+    "https://docker.1panel.live",
+    "https://registry.dockermirror.com"
+  ]
+}

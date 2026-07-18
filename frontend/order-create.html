@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMS · 新建订单</title>
+<link rel="stylesheet" href="/dms.css">
+<style>
+/* ========== 下单页专属样式 ========== */
+body { background:#f0f2f5; }
+
+.oc-topbar {
+  height:56px; background:#fff; padding:0 20px; display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid #e8ecf0; box-shadow:0 1px 3px rgba(0,0,0,.04); position:sticky; top:0; z-index:10;
+}
+.oc-topbar-left { display:flex; align-items:center; gap:16px; }
+.oc-back { padding:6px 12px; border-radius:4px; color:#666; font-size:13px; cursor:pointer; }
+.oc-back:hover { background:#f5f5f5; color:#2C4B8E; }
+.oc-title { font-size:16px; font-weight:600; color:#333; display:flex; align-items:center; gap:8px; }
+.oc-status { font-size:12px; color:#999; padding:2px 10px; background:#f0f0f0; border-radius:10px; }
+.oc-status.saved { background:#f6ffed; color:#52c41a; }
+.oc-topbar-right { display:flex; gap:8px; }
+
+.oc-wrap { max-width:1400px; margin:0 auto; padding:16px 20px; display:grid; grid-template-columns:1fr 320px; gap:16px; }
+
+.oc-main { display:flex; flex-direction:column; gap:14px; }
+.oc-side { display:flex; flex-direction:column; gap:14px; position:sticky; top:72px; align-self:start; }
+
+.oc-card {
+  background:#fff; border-radius:8px; padding:20px 24px; box-shadow:0 1px 3px rgba(0,0,0,.06);
+}
+.oc-card-header {
+  display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #f0f0f0;
+}
+.oc-step-num {
+  width:28px; height:28px; border-radius:50%; background:#2C4B8E; color:#fff;
+  display:flex; align-items:center; justify-content:center; font-weight:600; font-size:14px;
+}
+.oc-card-title { font-size:16px; font-weight:600; color:#333; }
+.oc-card-sub { font-size:12px; color:#999; margin-left:auto; }
+
+/* 表单栅格 */
+.oc-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px 20px; }
+.oc-form-item.oc-full { grid-column:1 / -1; }
+.oc-form-item label { display:block; font-size:12px; color:#666; margin-bottom:6px; font-weight:500; }
+.oc-form-item label .req { color:#f5222d; }
+.oc-form-item input, .oc-form-item select, .oc-form-item textarea {
+  width:100%; padding:9px 12px; border:1px solid #d9d9d9; border-radius:4px; font-size:13px; background:#fff;
+  transition:border-color .15s;
+}
+.oc-form-item input:focus, .oc-form-item select:focus, .oc-form-item textarea:focus {
+  outline:none; border-color:#2C4B8E; box-shadow:0 0 0 2px rgba(44,75,142,.1);
+}
+.oc-picker { cursor:pointer; background:#fafbfc !important; position:relative; padding-right:32px; }
+.oc-picker:hover { background:#e6f4ff !important; border-color:#2C4B8E; }
+.oc-picker-clear {
+  position:absolute; right:8px; top:50%; transform:translateY(-50%); width:20px; height:20px;
+  color:#bbb; cursor:pointer; text-align:center; line-height:18px; font-size:16px; border-radius:50%;
+}
+.oc-picker-clear:hover { background:#f5f5f5; color:#f5222d; }
+.oc-picker-wrap { position:relative; }
+
+/* 明细表 */
+.oc-lines { width:100%; border-collapse:collapse; margin-top:8px; font-size:13px; }
+.oc-lines thead th {
+  background:#fafbfc; color:#666; font-size:12px; font-weight:500; padding:10px 12px;
+  border-bottom:2px solid #e8ecf0; text-align:left;
+}
+.oc-lines tbody td {
+  padding:10px 12px; border-bottom:1px solid #f0f0f0; vertical-align:middle;
+}
+.oc-lines tbody tr:hover { background:#fafcff; }
+.oc-lines input {
+  width:100%; padding:6px 10px; border:1px solid #e0e0e0; border-radius:3px; font-size:13px;
+}
+.oc-lines input:focus { outline:none; border-color:#2C4B8E; }
+.oc-lines input[readonly] { background:#fafbfc; cursor:pointer; }
+.oc-lines input[readonly]:hover { background:#e6f4ff; border-color:#2C4B8E; }
+
+.oc-lines-empty {
+  padding:60px 20px; text-align:center; color:#bbb; background:#fafbfc; border-radius:4px;
+}
+.oc-lines-empty .icon { font-size:48px; margin-bottom:12px; }
+.oc-lines-empty .tip { font-size:13px; margin-bottom:16px; }
+
+/* 库存 3 卡（在明细行内展示） */
+.oc-stock-cell {
+  display:flex; flex-direction:column; gap:4px; font-size:11px;
+}
+.oc-stock-item { display:flex; align-items:center; gap:4px; }
+.oc-stock-item.total { color:#52c41a; font-weight:600; }
+.oc-stock-item.expiring { color:#fa8c16; }
+.oc-stock-item.stale { color:#999; }
+.oc-stock-item.insufficient { color:#f5222d; font-weight:700; }
+
+/* 产品单元格 */
+.oc-prod-info { line-height:1.5; }
+.oc-prod-info .code { font-weight:600; color:#2C4B8E; font-size:13px; }
+.oc-prod-info .name { color:#333; font-size:12px; }
+.oc-prod-info .spec { color:#999; font-size:11px; }
+
+/* 金额汇总 */
+.oc-total-row {
+  display:grid; grid-template-columns:1fr 200px; gap:20px; align-items:center;
+  padding:14px 20px; background:linear-gradient(90deg,#fafbfc,#fff);
+  border-radius:6px; margin-bottom:8px;
+}
+.oc-total-label { color:#666; text-align:right; font-size:13px; }
+.oc-total-value { text-align:right; font-size:15px; }
+.oc-total-value.final { font-size:22px; font-weight:700; color:#F5222D; }
+.oc-total-value.discount { color:#52c41a; }
+
+/* 侧栏卡 */
+.oc-side-card { background:#fff; border-radius:8px; padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.oc-side-title { font-size:13px; font-weight:600; margin-bottom:10px; color:#333; display:flex; align-items:center; gap:6px; }
+.oc-side-empty { text-align:center; color:#bbb; font-size:12px; padding:30px 0; }
+.oc-side-kv { display:flex; justify-content:space-between; padding:6px 0; font-size:13px; border-bottom:1px solid #f5f5f5; }
+.oc-side-kv:last-child { border:none; }
+.oc-side-kv .k { color:#666; font-size:12px; }
+.oc-side-kv .v { color:#333; font-weight:500; }
+.oc-side-kv .v.red { color:#f5222d; font-weight:600; }
+.oc-side-kv .v.green { color:#52c41a; font-weight:600; }
+.oc-progress {
+  height:6px; background:#f0f0f0; border-radius:3px; margin:6px 0 10px; overflow:hidden;
+}
+.oc-progress-bar { height:100%; background:linear-gradient(90deg,#52c41a,#4568AE); transition:width .3s; }
+.oc-progress-bar.warn { background:linear-gradient(90deg,#fa8c16,#F5222D); }
+
+/* 大按钮 */
+.oc-btn {
+  padding:8px 18px; border:1px solid #d9d9d9; background:#fff; border-radius:4px;
+  font-size:13px; height:34px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;
+  transition:all .15s;
+}
+.oc-btn:hover { border-color:#2C4B8E; color:#2C4B8E; }
+.oc-btn-primary { background:#2C4B8E; color:#fff; border-color:#2C4B8E; }
+.oc-btn-primary:hover { background:#3d5fa8; color:#fff; }
+.oc-btn-success { background:#52C41A; color:#fff; border-color:#52C41A; }
+.oc-btn-success:hover { background:#73D13D; color:#fff; }
+.oc-btn-lg { height:38px; padding:9px 22px; font-size:14px; }
+
+.oc-add-line { padding:12px; text-align:center; background:#fafbfc; border:1px dashed #ddd; border-radius:4px; margin-top:8px; cursor:pointer; color:#2C4B8E; font-size:13px; }
+.oc-add-line:hover { background:#e6f4ff; border-color:#2C4B8E; }
+
+/* 警告条 */
+.oc-warning-bar {
+  padding:10px 16px; background:#fff7e6; border:1px solid #ffe082; border-radius:4px;
+  color:#fa8c16; font-size:12px; margin-bottom:10px; display:flex; align-items:center; gap:8px;
+}
+.oc-warning-bar.danger { background:#fff1f0; border-color:#ef9a9a; color:#f5222d; }
+
+@media (max-width:1100px) {
+  .oc-wrap { grid-template-columns:1fr; }
+  .oc-side { position:static; }
+}
+</style>
+</head>
+<body>
+
+<div class="oc-topbar">
+  <div class="oc-topbar-left">
+    <button class="oc-back" onclick="goBack()">← 返回订单列表</button>
+    <div class="oc-title">📋 新建订单 <span class="oc-status" id="saveStatus">草稿：未保存</span></div>
+  </div>
+  <div class="oc-topbar-right">
+    <button class="oc-btn" onclick="goBack()">取消</button>
+    <button class="oc-btn" onclick="saveDraft()">💾 保存草稿</button>
+    <button class="oc-btn oc-btn-primary oc-btn-lg" onclick="submitOrder()">✓ 提交订单</button>
+  </div>
+</div>
+
+<div class="oc-wrap">
+  <div class="oc-main">
+    <!-- 第 1 步：订单信息 -->
+    <div class="oc-card">
+      <div class="oc-card-header">
+        <div class="oc-step-num">1</div>
+        <div class="oc-card-title">订单信息</div>
+        <div class="oc-card-sub">必填字段带红星</div>
+      </div>
+      <div class="oc-form-grid">
+        <div class="oc-form-item">
+          <label>订单类型 <span class="req">*</span></label>
+          <select id="orderType">
+            <option value="NORMAL">常规订单</option>
+            <option value="SHORTAGE">紧急补货</option>
+            <option value="CUSTOM">定制订单</option>
+            <option value="EMERGENCY">应急订单</option>
+          </select>
+        </div>
+        <div class="oc-form-item">
+          <label>经销商 <span class="req">*</span></label>
+          <div class="oc-picker-wrap">
+            <input type="text" class="oc-picker" id="dealerPicker" readonly placeholder="点击选择经销商..." onclick="pickDealer()">
+            <span class="oc-picker-clear" onclick="clearDealer()">×</span>
+          </div>
+        </div>
+        <div class="oc-form-item">
+          <label>期望到货日期</label>
+          <input type="date" id="expectedDate">
+        </div>
+        <div class="oc-form-item">
+          <label>关联父订单</label>
+          <input type="text" class="oc-picker" id="parentOrderPicker" readonly placeholder="可选 · 点击选择父订单" onclick="pickParent()">
+        </div>
+        <div class="oc-form-item oc-full">
+          <label>订单备注</label>
+          <textarea id="remark" rows="2" placeholder="订单说明..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- 第 2 步：产品明细 -->
+    <div class="oc-card">
+      <div class="oc-card-header">
+        <div class="oc-step-num">2</div>
+        <div class="oc-card-title">产品明细</div>
+        <div class="oc-card-sub">选择产品后实时显示库存</div>
+      </div>
+
+      <div id="stockWarning"></div>
+
+      <div id="linesArea">
+        <div class="oc-lines-empty">
+          <div class="icon">📦</div>
+          <div class="tip">还没添加产品，点击下方"添加产品"开始</div>
+        </div>
+      </div>
+      <div class="oc-add-line" onclick="addLine()">➕ 添加产品明细</div>
+    </div>
+
+    <!-- 金额汇总 -->
+    <div class="oc-card">
+      <div class="oc-card-header">
+        <div class="oc-step-num">3</div>
+        <div class="oc-card-title">金额汇总</div>
+      </div>
+      <div class="oc-total-row">
+        <div class="oc-total-label">含税金额</div>
+        <div class="oc-total-value" id="totalAmount">¥ 0.00</div>
+      </div>
+      <div class="oc-total-row" id="discountRow" style="display:none;">
+        <div class="oc-total-label">促销优惠</div>
+        <div class="oc-total-value discount" id="discountAmount">-¥ 0.00</div>
+      </div>
+      <div class="oc-total-row" style="background:linear-gradient(90deg,#fff1f0,#fff);">
+        <div class="oc-total-label" style="font-weight:600;color:#333;">实付金额</div>
+        <div class="oc-total-value final" id="finalAmount">¥ 0.00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 侧边智能提示 -->
+  <div class="oc-side">
+    <!-- 经销商概览 -->
+    <div class="oc-side-card">
+      <div class="oc-side-title">👤 经销商概览</div>
+      <div id="dealerOverview">
+        <div class="oc-side-empty">请先选择经销商</div>
+      </div>
+    </div>
+
+    <!-- 授信额度 -->
+    <div class="oc-side-card" id="creditCard" style="display:none;">
+      <div class="oc-side-title">💳 授信额度</div>
+      <div id="creditBox"></div>
+    </div>
+
+    <!-- 最近订单 -->
+    <div class="oc-side-card" id="recentCard" style="display:none;">
+      <div class="oc-side-title">📋 该经销商最近订单</div>
+      <div id="recentBox"></div>
+    </div>
+
+    <!-- 帮助 -->
+    <div class="oc-side-card">
+      <div class="oc-side-title">💡 使用提示</div>
+      <ul style="font-size:12px;color:#666;padding-left:16px;line-height:1.9;">
+        <li>选择经销商后查看授信额度</li>
+        <li>选择产品后实时显示库存</li>
+        <li>📦 可用 · ⏰ 临期(30天) · 🐌 呆滞(90天)</li>
+        <li>库存不足时会红字警告</li>
+        <li>草稿会自动保存到本地</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script src="/dms-lib.js"></script>
+<script>
+if (!DMS.requireAuth()) throw 0;
+
+// ============ 模式检测（销售 or 采购）============
+var urlParams = new URLSearchParams(window.location.search);
+var MODE = urlParams.get('mode') === 'purchase' ? 'purchase' : 'sales';
+var MODE_CFG = MODE === 'purchase' ? {
+  title: '📥 新建采购订单',
+  icon: '📥',
+  partyLabel: '供应商',
+  partyKey: 'supplierId',
+  partyResource: 'dealers',    // 复用 dealers 表暂存供应商
+  apiUrl: '/api/purchase-orders',
+  backUrl: '/workspace.html',
+  showWarehouse: true,
+  overviewLabel: '供应商概览'
+} : {
+  title: '📤 新建销售订单',
+  icon: '📤',
+  partyLabel: '经销商',
+  partyKey: 'dealerId',
+  partyResource: 'dealers',
+  apiUrl: '/api/orders',
+  backUrl: '/workspace.html',
+  showWarehouse: false,
+  overviewLabel: '经销商概览'
+};
+
+// 更新顶栏标题
+document.querySelector('.oc-title').innerHTML = MODE_CFG.title + ' <span class="oc-status" id="saveStatus">草稿：未保存</span>';
+document.title = 'DMS · ' + MODE_CFG.title;
+
+// 动态修改"经销商" -> "供应商"
+document.querySelectorAll('.oc-form-item').forEach(function(item){
+  var lbl = item.querySelector('label');
+  if (lbl && lbl.textContent.indexOf('经销商') === 0) {
+    lbl.innerHTML = MODE_CFG.partyLabel + ' <span class="req">*</span>';
+    var input = item.querySelector('#dealerPicker');
+    if (input) input.placeholder = '点击选择' + MODE_CFG.partyLabel + '...';
+  }
+});
+// 如果是采购模式，添加"入库仓库"字段
+if (MODE_CFG.showWarehouse) {
+  var warehouseHtml =
+    '<div class="oc-form-item">' +
+      '<label>入库仓库 <span class="req">*</span></label>' +
+      '<div class="oc-picker-wrap">' +
+        '<input type="text" class="oc-picker" id="warehousePicker" readonly placeholder="点击选择入库仓库..." onclick="pickWarehouse()">' +
+        '<span class="oc-picker-clear" onclick="clearWarehouse()">×</span>' +
+      '</div>' +
+    '</div>';
+  var expectedItem = document.querySelector('#expectedDate').closest('.oc-form-item');
+  expectedItem.insertAdjacentHTML('beforebegin', warehouseHtml);
+}
+// 侧栏经销商概览 title
+document.querySelector('.oc-side-title').textContent = '👤 ' + MODE_CFG.overviewLabel;
+
+// 订单类型选项差异
+if (MODE === 'purchase') {
+  document.getElementById('orderType').innerHTML =
+    '<option value="NORMAL">常规采购</option>' +
+    '<option value="URGENT">紧急采购</option>' +
+    '<option value="RETURN">退货</option>';
+}
+
+// ============ 数据 ============
+var state = {
+  orderType: MODE === 'purchase' ? 'NORMAL' : 'NORMAL',
+  partyId: null,
+  partyLabel: '',
+  warehouseId: null,
+  warehouseLabel: '',
+  expectedDate: '',
+  parentOrderId: null,
+  remark: '',
+  lines: []
+};
+
+// ============ Picker：经销商/供应商 ============
+function pickDealer(){
+  DMS.picker(MODE_CFG.partyResource, function(picked){
+    state.partyId = picked.value;
+    state.partyLabel = picked.label;
+    document.getElementById('dealerPicker').value = picked.label;
+    loadPartyOverview(picked.value);
+    markDirty();
+  });
+}
+function clearDealer(){
+  state.partyId = null;
+  state.partyLabel = '';
+  document.getElementById('dealerPicker').value = '';
+  document.getElementById('dealerOverview').innerHTML = '<div class="oc-side-empty">请先选择' + MODE_CFG.partyLabel + '</div>';
+  document.getElementById('creditCard').style.display = 'none';
+  document.getElementById('recentCard').style.display = 'none';
+  markDirty();
+}
+function pickWarehouse(){
+  DMS.picker('warehouses', function(picked){
+    state.warehouseId = picked.value;
+    state.warehouseLabel = picked.label;
+    document.getElementById('warehousePicker').value = picked.label;
+    markDirty();
+  });
+}
+function clearWarehouse(){
+  state.warehouseId = null;
+  state.warehouseLabel = '';
+  document.getElementById('warehousePicker').value = '';
+  markDirty();
+}
+function pickParent(){
+  DMS.picker('orders', function(picked){
+    state.parentOrderId = picked.value;
+    document.getElementById('parentOrderPicker').value = picked.label;
+    markDirty();
+  });
+}
+
+// ============ 加载对方概览 ============
+function loadPartyOverview(partyId){
+  document.getElementById('dealerOverview').innerHTML = '<div class="oc-side-empty">加载中...</div>';
+  DMS.api('/api/inventory-summary/dealer-overview/' + partyId).then(function(d){
+    if (d.code !== 0) { document.getElementById('dealerOverview').innerHTML='<div class="oc-side-empty">加载失败</div>'; return; }
+    var data = d.data;
+    var info = data.dealerInfo || {};
+
+    var h = '';
+    h += '<div class="oc-side-kv"><span class="k">编码</span><span class="v"><strong>' + (info.code||'-') + '</strong></span></div>';
+    h += '<div class="oc-side-kv"><span class="k">名称</span><span class="v">' + (info.name||'-') + '</span></div>';
+    h += '<div class="oc-side-kv"><span class="k">级别</span><span class="v">' + (info.level==='T1'?'一级':(info.level==='T2'?'二级':'-')) + '</span></div>';
+    h += '<div class="oc-side-kv"><span class="k">联系人</span><span class="v">' + (info.contactName||'-') + '</span></div>';
+    h += '<div class="oc-side-kv"><span class="k">GSP</span><span class="v ' + (info.gspStatus==='active'?'green':'red') + '">' + (info.gspStatus||'-') + '</span></div>';
+    h += '<div class="oc-side-kv"><span class="k">本月订单</span><span class="v">' + data.monthOrders + ' 单 · ¥ ' + Number(data.monthAmount||0).toFixed(2) + '</span></div>';
+    h += '<div class="oc-side-kv"><span class="k">累计</span><span class="v">' + data.totalOrders + ' 单 · ¥ ' + Number(data.totalAmount||0).toFixed(2) + '</span></div>';
+    document.getElementById('dealerOverview').innerHTML = h;
+
+    // 授信额度（仅销售模式显示）
+    if (MODE === 'sales') {
+      var limit = Number(data.creditLimit||0);
+      var remain = Number(data.remainingCredit||0);
+      var used = limit - remain;
+      var pct = limit > 0 ? Math.min(100, used/limit*100) : 0;
+      var pctCls = pct > 80 ? 'warn' : '';
+      document.getElementById('creditCard').style.display = 'block';
+      document.getElementById('creditBox').innerHTML =
+        '<div class="oc-side-kv"><span class="k">授信额度</span><span class="v">¥ ' + limit.toFixed(2) + '</span></div>' +
+        '<div class="oc-side-kv"><span class="k">已用（待付）</span><span class="v red">¥ ' + used.toFixed(2) + '</span></div>' +
+        '<div class="oc-progress"><div class="oc-progress-bar ' + pctCls + '" style="width:' + pct + '%;"></div></div>' +
+        '<div class="oc-side-kv"><span class="k">剩余额度</span><span class="v green"><strong>¥ ' + remain.toFixed(2) + '</strong></span></div>';
+    }
+
+    // 最近订单
+    if ((data.recentOrders||[]).length) {
+      var rh = '';
+      data.recentOrders.forEach(function(o){
+        rh += '<div class="oc-side-kv"><span class="k" style="font-size:11px;">' + o.code + '</span>' +
+              '<span class="v" style="font-size:12px;">¥ ' + Number(o.amount||0).toFixed(2) + ' ' + DMS.statusBadge(o.status) + '</span></div>';
+      });
+      document.getElementById('recentBox').innerHTML = rh;
+      document.getElementById('recentCard').style.display = 'block';
+    }
+  });
+}
+
+// ============ 明细行 ============
+function addLine(){
+  state.lines.push({
+    productId: null, productLabel: '', code: '-', name: '-', spec: '',
+    unit: '', qty: '', unitPrice: '', taxRate: '0.13',
+    stock: null
+  });
+  renderLines();
+  markDirty();
+}
+function removeLine(idx){
+  state.lines.splice(idx, 1);
+  renderLines();
+  markDirty();
+}
+function pickProduct(idx){
+  DMS.picker('products', function(picked){
+    var line = state.lines[idx];
+    line.productId = picked.value;
+    line.productLabel = picked.label;
+    line.code = picked.row.code;
+    line.name = picked.row.name;
+    line.spec = picked.row.spec || '';
+    line.unit = picked.row.unit || '';
+    if (picked.row.price != null) line.unitPrice = picked.row.price;
+    // 拉取实时库存
+    loadStock(idx, picked.value);
+    renderLines();
+  });
+}
+function loadStock(idx, productId){
+  DMS.api('/api/inventory-summary/by-product/' + productId).then(function(d){
+    if (d.code === 0) {
+      state.lines[idx].stock = d.data;
+      if (d.data.productInfo && d.data.productInfo.taxRate != null) {
+        state.lines[idx].taxRate = d.data.productInfo.taxRate;
+      }
+      renderLines();
+    }
+  });
+}
+function updateLineField(idx, field, val){
+  state.lines[idx][field] = val;
+  renderLines();
+  markDirty();
+}
+
+function renderLines(){
+  if (!state.lines.length) {
+    document.getElementById('linesArea').innerHTML =
+      '<div class="oc-lines-empty">' +
+      '<div class="icon">📦</div>' +
+      '<div class="tip">还没添加产品，点击下方"添加产品"开始</div>' +
+      '</div>';
+    updateTotals();
+    return;
+  }
+  var h = '<table class="oc-lines"><thead><tr>' +
+    '<th style="width:50px;">#</th>' +
+    '<th style="width:220px;">产品</th>' +
+    '<th style="width:130px;">实时库存</th>' +
+    '<th style="width:110px;">单价</th>' +
+    '<th style="width:100px;">数量</th>' +
+    '<th style="width:80px;">税率</th>' +
+    '<th style="width:130px;">小计</th>' +
+    '<th style="width:60px;">操作</th>' +
+    '</tr></thead><tbody>';
+
+  var insufficientCount = 0;
+  state.lines.forEach(function(line, idx){
+    var qty = Number(line.qty || 0);
+    var unitPrice = Number(line.unitPrice || 0);
+    var subtotal = qty * unitPrice;
+
+    h += '<tr>';
+    h += '<td>' + (idx + 1) + '</td>';
+
+    // 产品单元格
+    if (line.productId) {
+      h += '<td><div class="oc-prod-info">' +
+        '<div class="code">' + line.code + '</div>' +
+        '<div class="name">' + line.name + '</div>' +
+        '<div class="spec">' + (line.spec ? '规格：' + line.spec + ' · ' : '') + '单位：' + (line.unit||'-') + '</div>' +
+        '<a href="javascript:pickProduct(' + idx + ')" style="font-size:11px;">🔄 更换产品</a>' +
+        '</div></td>';
+    } else {
+      h += '<td><button class="oc-btn oc-btn-primary" onclick="pickProduct(' + idx + ')" style="font-size:12px;">📎 选择产品</button></td>';
+    }
+
+    // 实时库存单元格
+    if (line.stock) {
+      var s = line.stock;
+      var totalQ = Number(s.totalQty||0);
+      var expQ = Number(s.expiringQty||0);
+      var staleQ = Number(s.staleQty||0);
+      var insufficient = qty > 0 && totalQ < qty;
+      if (insufficient) insufficientCount++;
+
+      h += '<td><div class="oc-stock-cell">';
+      h += '<div class="oc-stock-item ' + (insufficient?'insufficient':'total') + '">📦 可用 ' + totalQ + (insufficient?' ⚠️不足':'') + '</div>';
+      if (expQ > 0) h += '<div class="oc-stock-item expiring">⏰ 临期 ' + expQ + '</div>';
+      if (staleQ > 0) h += '<div class="oc-stock-item stale">🐌 呆滞 ' + staleQ + '</div>';
+      h += '</div></td>';
+    } else if (line.productId) {
+      h += '<td style="color:#999;font-size:11px;">加载中...</td>';
+    } else {
+      h += '<td style="color:#ccc;font-size:11px;">选择产品后显示</td>';
+    }
+
+    // 单价
+    h += '<td><input type="number" value="' + (line.unitPrice||'') + '" placeholder="¥" onchange="updateLineField(' + idx + ',\'unitPrice\',this.value)"></td>';
+    // 数量
+    h += '<td><input type="number" value="' + (line.qty||'') + '" placeholder="数量" onchange="updateLineField(' + idx + ',\'qty\',this.value)"></td>';
+    // 税率
+    h += '<td><input type="number" step="0.01" value="' + (line.taxRate||'0.13') + '" onchange="updateLineField(' + idx + ',\'taxRate\',this.value)"></td>';
+    // 小计
+    h += '<td style="font-weight:600;color:#2C4B8E;">¥ ' + subtotal.toFixed(2) + '</td>';
+    // 操作
+    h += '<td><button class="oc-btn" style="padding:4px 10px;color:#f5222d;" onclick="removeLine(' + idx + ')">删除</button></td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  document.getElementById('linesArea').innerHTML = h;
+
+  // 库存不足警告
+  if (insufficientCount > 0) {
+    document.getElementById('stockWarning').innerHTML =
+      '<div class="oc-warning-bar danger">⚠️ 有 <strong>' + insufficientCount + '</strong> 个产品库存不足！建议改为紧急补货订单，或调整数量。</div>';
+  } else {
+    document.getElementById('stockWarning').innerHTML = '';
+  }
+
+  updateTotals();
+}
+
+function updateTotals(){
+  var total = 0;
+  state.lines.forEach(function(line){
+    total += Number(line.qty||0) * Number(line.unitPrice||0);
+  });
+  document.getElementById('totalAmount').textContent = '¥ ' + total.toFixed(2);
+  // TODO: 促销预览接入
+  document.getElementById('finalAmount').textContent = '¥ ' + total.toFixed(2);
+}
+
+// ============ 保存/提交 ============
+function markDirty(){
+  document.getElementById('saveStatus').textContent = '草稿：未保存';
+  document.getElementById('saveStatus').className = 'oc-status';
+  // 自动保存
+  clearTimeout(window._dt);
+  window._dt = setTimeout(saveDraft, 2000);
+}
+
+function saveDraft(){
+  state.orderType = document.getElementById('orderType').value;
+  state.expectedDate = document.getElementById('expectedDate').value;
+  state.remark = document.getElementById('remark').value;
+  localStorage.setItem('dms_order_draft_' + MODE, JSON.stringify(state));
+  var el = document.getElementById('saveStatus');
+  el.textContent = '✅ 已保存 ' + new Date().toLocaleTimeString();
+  el.className = 'oc-status saved';
+}
+
+function submitOrder(){
+  state.orderType = document.getElementById('orderType').value;
+  state.expectedDate = document.getElementById('expectedDate').value;
+  state.remark = document.getElementById('remark').value;
+
+  if (!state.partyId) { DMS.toast('请先选择' + MODE_CFG.partyLabel, 'warn'); return; }
+  if (MODE_CFG.showWarehouse && !state.warehouseId) { DMS.toast('请选择入库仓库', 'warn'); return; }
+  if (!state.lines.length) { DMS.toast('请至少添加一条产品明细', 'warn'); return; }
+  var lines = state.lines.filter(function(l){ return l.productId; });
+  if (!lines.length) { DMS.toast('请为明细行选择产品', 'warn'); return; }
+
+  DMS.confirm('确认提交' + (MODE === 'purchase' ? '采购单' : '销售订单') + '？', function(){
+    var body = {
+      orderType: state.orderType,
+      expectedDate: state.expectedDate || null,
+      remark: state.remark,
+      parentOrderId: state.parentOrderId,
+      lines: lines.map(function(l, i){
+        return {
+          productId: l.productId,
+          qty: Number(l.qty||0),
+          unitPrice: Number(l.unitPrice||0),
+          taxRate: Number(l.taxRate||0.13),
+          seq: i + 1
+        };
+      })
+    };
+    body[MODE_CFG.partyKey] = state.partyId;
+    if (MODE_CFG.showWarehouse) body.warehouseId = state.warehouseId;
+
+    DMS.api(MODE_CFG.apiUrl, {method:'POST', body: body}).then(function(d){
+      if (d.code === 0) {
+        DMS.toast((MODE === 'purchase' ? '采购单' : '销售订单') + '已创建：' + (d.data.code || '#' + d.data.id), 'success');
+        localStorage.removeItem('dms_order_draft_' + MODE);
+        setTimeout(function(){ window.location.href = '/workspace.html'; }, 1500);
+      } else {
+        DMS.toast('创建失败：' + d.message, 'error');
+      }
+    });
+  });
+}
+
+function goBack(){
+  if (state.lines.length || state.partyId) {
+    if (!confirm('放弃当前订单？未保存的内容将丢失。')) return;
+  }
+  window.location.href = '/workspace.html';
+}
+
+// ============ 加载草稿 ============
+window.addEventListener('load', function(){
+  var raw = localStorage.getItem('dms_order_draft_' + MODE);
+  if (raw && confirm('检测到本地草稿，是否恢复？')) {
+    try {
+      var saved = JSON.parse(raw);
+      state = Object.assign(state, saved);
+      document.getElementById('orderType').value = state.orderType || 'NORMAL';
+      document.getElementById('expectedDate').value = state.expectedDate || '';
+      document.getElementById('remark').value = state.remark || '';
+      if (state.partyId) {
+        document.getElementById('dealerPicker').value = state.partyLabel;
+        loadPartyOverview(state.partyId);
+      }
+      if (state.warehouseId && MODE_CFG.showWarehouse) {
+        var wp = document.getElementById('warehousePicker');
+        if (wp) wp.value = state.warehouseLabel;
+      }
+      state.lines.forEach(function(l, i){
+        if (l.productId) loadStock(i, l.productId);
+      });
+      renderLines();
+    } catch(e){
+      localStorage.removeItem('dms_order_draft_' + MODE);
+    }
+  } else {
+    addLine();
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/mocks/erp/products/sync"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json;charset=UTF-8" },
+    "jsonBody": {
+      "code": 0,
+      "message": "ok",
+      "data": {
+        "total": 3,
+        "items": [
+          {
+            "code": "PROD-000001",
+            "name_cn": "演示产品-1",
+            "spec": "SPEC-11",
+            "unit": "盒",
+            "current_price": 199.90,
+            "tax_rate": 0.13,
+            "udi_required": true,
+            "status": "active"
+          },
+          {
+            "code": "PROD-000002",
+            "name_cn": "演示产品-2",
+            "spec": "SPEC-12",
+            "unit": "支",
+            "current_price": 599.00,
+            "tax_rate": 0.13,
+            "udi_required": true,
+            "status": "active"
+          },
+          {
+            "code": "PROD-000003",
+            "name_cn": "演示产品-3",
+            "spec": "SPEC-13",
+            "unit": "件",
+            "current_price": 1299.00,
+            "tax_rate": 0.13,
+            "udi_required": false,
+            "status": "active"
+          }
+        ]
+      }
+    }
+  }
+}

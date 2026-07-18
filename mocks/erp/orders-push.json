@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/mocks/erp/orders/push"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json;charset=UTF-8" },
+    "jsonBody": {
+      "code": 0,
+      "message": "ok",
+      "data": {
+        "erp_order_no": "ERP-PO-{{randomValue length=10 type='NUMERIC'}}",
+        "status": "ACCEPTED",
+        "accepted_at": "{{now format='yyyy-MM-dd HH:mm:ss'}}",
+        "estimated_ship_date": "{{now offset='+3 days' format='yyyy-MM-dd'}}"
+      }
+    },
+    "transformers": ["response-template"]
+  }
+}

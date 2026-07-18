@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>DMS 消息中心</title><link rel="stylesheet" href="/mobile/mobile.css">
+</head><body>
+<header class="m-topbar">
+  <div class="m-topbar-title">🔔 消息中心</div>
+  <div class="m-topbar-right" onclick="history.back()">←</div>
+</header>
+<div class="m-content">
+  <div id="list"><div class="m-loading">加载中...</div></div>
+</div>
+<nav class="m-tabbar">
+  <a class="m-tabbar-item" href="/mobile/home.html"><span>🏠</span>首页</a>
+  <a class="m-tabbar-item" href="/mobile/orders.html"><span>📋</span>订单</a>
+  <a class="m-tabbar-item" href="/mobile/inventory.html"><span>📦</span>库存</a>
+  <a class="m-tabbar-item active" href="/mobile/messages.html"><span>🔔</span>消息</a>
+  <a class="m-tabbar-item" href="javascript:localStorage.clear();location.href='/mobile/login.html'"><span>👤</span>我的</a>
+</nav>
+<script src="/mobile/mobile-lib.js"></script>
+<script>
+if (!MDMS.requireAuth()) throw 0;
+MDMS.api('/api/system/notifications?page=1&size=30').then(function(d){
+  if (d.code!==0) { document.getElementById('list').innerHTML='<div class="m-error">'+d.message+'</div>'; return; }
+  var list = (d.data && d.data.list) || [];
+  if (!list.length) { document.getElementById('list').innerHTML='<div class="m-empty">📭 无消息</div>'; return; }
+  var h = '';
+  list.forEach(function(n){
+    var isRead = n.isRead;
+    h += '<div class="m-section" style="margin-bottom:8px;padding:12px;' + (isRead?'':'border-left:3px solid #F5222D;') + '">' +
+      '<div style="display:flex;justify-content:space-between;">' +
+      '<span style="font-weight:600;font-size:14px;">'+(n.title||'-')+'</span>' +
+      (isRead?'<span class="m-badge-gray">已读</span>':'<span class="m-badge-red">未读</span>') +
+      '</div>' +
+      '<div style="font-size:12px;color:#666;margin:8px 0;">'+(n.content||'-')+'</div>' +
+      '<div style="font-size:11px;color:#999;">'+String(n.createdAt||'').substring(0,19)+' · '+(n.channel||'-')+'</div>' +
+      '</div>';
+  });
+  document.getElementById('list').innerHTML = h;
+});
+</script>
+</body></html>

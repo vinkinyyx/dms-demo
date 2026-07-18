@@ -1,0 +1,26 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/mocks/ca/sign"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json;charset=UTF-8" },
+    "jsonBody": {
+      "code": "0000",
+      "message": "签署成功",
+      "data": {
+        "ca_serial_no": "CA-MOCK-{{randomValue length=10 type='NUMERIC'}}",
+        "sign_flow_id": "FLOW-{{randomValue length=12 type='ALPHANUMERIC'}}",
+        "signed_pdf_url": "http://localhost:9090/mocks/ca/signed-demo.pdf",
+        "signed_at": "{{now format='yyyy-MM-dd HH:mm:ss'}}",
+        "signer": {
+          "type": "dealer",
+          "name": "演示经销商",
+          "sms_code_ref": "SMS-{{randomValue length=6 type='NUMERIC'}}"
+        }
+      }
+    },
+    "transformers": ["response-template"]
+  }
+}

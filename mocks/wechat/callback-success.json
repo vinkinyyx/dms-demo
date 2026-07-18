@@ -1,0 +1,22 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/mocks/wechat/callback/success"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json;charset=UTF-8" },
+    "jsonBody": {
+      "code": 0,
+      "message": "ok",
+      "data": {
+        "openid": "MOCK_OPENID_001",
+        "unionid": "MOCK_UNIONID_001",
+        "state": "MOCK_SCENE_001",
+        "bound": true,
+        "user_id": 1,
+        "username": "vendor02"
+      }
+    }
+  }
+}

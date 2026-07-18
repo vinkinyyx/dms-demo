@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/mocks/wechat/callback/need-bind"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json;charset=UTF-8" },
+    "jsonBody": {
+      "code": 0,
+      "message": "need_bind",
+      "data": {
+        "openid": "MOCK_OPENID_999",
+        "unionid": "MOCK_UNIONID_999",
+        "state": "MOCK_SCENE_001",
+        "bound": false,
+        "bind_token": "MOCK_BIND_TOKEN_XYZ"
+      }
+    }
+  }
+}

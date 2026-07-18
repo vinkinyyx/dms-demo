@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>DMS 移动端登录</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; }
+body {
+  font-family:"PingFang SC","Microsoft YaHei",-apple-system,sans-serif;
+  background:linear-gradient(180deg,#1E3A5F 0%,#2C4B8E 60%,#4568AE 100%);
+  color:#333; min-height:100vh; padding:20px;
+}
+.header { text-align:center; padding:60px 0 40px; color:#fff; }
+.logo { font-size:48px; font-weight:800; letter-spacing:8px; text-shadow:0 2px 8px rgba(0,0,0,.2); }
+.subtitle { font-size:13px; opacity:.8; margin-top:8px; letter-spacing:2px; }
+.card {
+  background:#fff; border-radius:16px; padding:24px 20px;
+  box-shadow:0 10px 40px rgba(0,0,0,.25);
+}
+.tabs { display:flex; border-bottom:1px solid #eee; margin-bottom:20px; }
+.tab {
+  flex:1; text-align:center; padding:12px 0; font-size:15px;
+  color:#999; border-bottom:2px solid transparent;
+}
+.tab.active { color:#2C4B8E; border-bottom-color:#2C4B8E; font-weight:600; }
+.form-item { margin-bottom:16px; }
+.form-item label { display:block; font-size:12px; color:#666; margin-bottom:6px; }
+.form-item input {
+  width:100%; padding:12px 14px; border:1px solid #e0e0e0; border-radius:8px;
+  font-size:16px; background:#fafafa;
+  -webkit-appearance:none;
+}
+.form-item input:focus { outline:none; border-color:#2C4B8E; background:#fff; }
+.btn-primary {
+  width:100%; padding:14px; background:linear-gradient(135deg,#2C4B8E,#1E3A5F);
+  color:#fff; border:none; border-radius:8px; font-size:16px; font-weight:500;
+  margin-top:8px; letter-spacing:2px;
+}
+.btn-primary:disabled { opacity:.5; }
+.error { background:#ffebee; color:#c62828; padding:10px 14px; border-radius:6px; font-size:12px; margin-bottom:12px; display:none; }
+.error.show { display:block; }
+.hint { background:#fff8e1; border:1px solid #ffe082; border-radius:6px; padding:10px; font-size:11px; color:#f57c00; margin-bottom:16px; }
+.wx-panel { text-align:center; padding:20px 0; }
+.wx-qr {
+  width:180px; height:180px; margin:0 auto 16px;
+  border:1px dashed #ddd; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:80px; background:#f9f9f9;
+}
+.wx-tip { font-size:12px; color:#666; margin-bottom:8px; }
+.wx-actions { display:flex; gap:8px; margin-top:16px; }
+.wx-actions button { flex:1; padding:10px; border-radius:6px; border:1px solid #07C160; background:#fff; color:#07C160; font-size:13px; }
+.wx-actions button.primary { background:#07C160; color:#fff; }
+.footer { text-align:center; color:rgba(255,255,255,.6); font-size:11px; margin-top:32px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">DMS</div>
+  <div class="subtitle">移动端 · 经销商管理</div>
+</div>
+
+<div class="card">
+  <div class="tabs">
+    <div class="tab active" id="tabPwd" onclick="switchTab('pwd')">账号登录</div>
+    <div class="tab" id="tabWx" onclick="switchTab('wx')">微信扫码</div>
+  </div>
+
+  <div class="error" id="errBox"></div>
+
+  <!-- 账号密码 -->
+  <div id="pwdPane">
+    <div class="hint">💡 演示：admin / Sh123456 · 租户：default</div>
+    <div class="form-item">
+      <label>租户代码</label>
+      <input type="text" id="tenantCode" value="default">
+    </div>
+    <div class="form-item">
+      <label>账号</label>
+      <input type="text" id="username" value="admin" placeholder="请输入账号" autocomplete="username">
+    </div>
+    <div class="form-item">
+      <label>密码</label>
+      <input type="password" id="password" value="Sh123456" placeholder="请输入密码" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="btnLogin" onclick="doPwdLogin()">登 录</button>
+  </div>
+
+  <!-- 微信扫码 -->
+  <div id="wxPane" style="display:none;">
+    <div class="wx-panel">
+      <div class="wx-qr" id="qrBox">📱</div>
+      <div class="wx-tip">请打开微信「扫一扫」，扫描上方二维码</div>
+      <div class="wx-tip" id="qrHint" style="color:#f57c00;font-size:11px;">V1 Mock: 点击下方"模拟扫码"完成登录</div>
+      <div class="wx-actions">
+        <button onclick="refreshQr()">🔄 刷新二维码</button>
+        <button class="primary" onclick="mockScan()">✅ 模拟扫码</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">© 2026 DMS · V1.0.0-alpha</div>
+
+<script>
+var mode = 'pwd';
+var currentQrTicket = null;
+
+function switchTab(m) {
+  mode = m;
+  document.getElementById('tabPwd').classList.toggle('active', m==='pwd');
+  document.getElementById('tabWx').classList.toggle('active', m==='wx');
+  document.getElementById('pwdPane').style.display = m==='pwd' ? 'block' : 'none';
+  document.getElementById('wxPane').style.display = m==='wx' ? 'block' : 'none';
+  if (m === 'wx') refreshQr();
+}
+
+function showError(msg) {
+  var el = document.getElementById('errBox');
+  el.textContent = '❌ ' + msg;
+  el.classList.add('show');
+  setTimeout(function(){ el.classList.remove('show'); }, 3000);
+}
+
+async function doPwdLogin() {
+  var btn = document.getElementById('btnLogin');
+  btn.disabled = true; btn.textContent = '登录中...';
+  try {
+    var r = await fetch('/api/auth/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        tenantCode: document.getElementById('tenantCode').value.trim(),
+        username: document.getElementById('username').value.trim(),
+        password: document.getElementById('password').value
+      })
+    });
+    var d = await r.json();
+    if (d.code === 0) {
+      localStorage.setItem('dms_access_token', d.data.accessToken);
+      localStorage.setItem('dms_refresh_token', d.data.refreshToken);
+      localStorage.setItem('dms_user', JSON.stringify(d.data.user));
+      window.location.href = '/mobile/home.html';
+    } else {
+      showError((d.message||'登录失败') + ' ('+d.code+')');
+    }
+  } catch(e) {
+    showError('网络错误：' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '登 录';
+}
+
+async function refreshQr() {
+  var box = document.getElementById('qrBox');
+  box.innerHTML = '⏳';
+  try {
+    var r = await fetch('/api/auth/wechat/qrcode', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    var d = await r.json();
+    if (d.code === 0) {
+      currentQrTicket = d.data.ticket || d.data.state;
+      // 简单二维码画像（V1 Mock 用图案）
+      box.innerHTML = '<div style="text-align:center;"><div style="font-size:60px;">📱</div>' +
+        '<div style="font-size:10px;color:#999;margin-top:4px;font-family:monospace;">' +
+        (currentQrTicket||'').substring(0,12) + '...</div></div>';
+    }
+  } catch(e) {
+    box.innerHTML = '❌';
+    showError('二维码加载失败：' + e.message);
+  }
+}
+
+async function mockScan() {
+  if (!currentQrTicket) { showError('请先刷新二维码'); return; }
+  try {
+    var r = await fetch('/api/auth/wechat/callback', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ code:'MOCK_WX_CODE_'+Date.now(), state:currentQrTicket })
+    });
+    var d = await r.json();
+    if (d.code === 0) {
+      if (d.data.needBind) {
+        // 未绑定，跳转绑定页（简化：直接提示）
+        showError('该微信未绑定账号，请先在 PC 端绑定');
+        return;
+      }
+      // 已绑定：直接登录
+      localStorage.setItem('dms_access_token', d.data.accessToken);
+      localStorage.setItem('dms_refresh_token', d.data.refreshToken);
+      localStorage.setItem('dms_user', JSON.stringify(d.data.user));
+      window.location.href = '/mobile/home.html';
+    } else {
+      showError(d.message || '扫码失败');
+    }
+  } catch(e) {
+    showError('网络错误：' + e.message);
+  }
+}
+
+// 已登录则直接进
+if (localStorage.getItem('dms_access_token')) {
+  fetch('/api/auth/me', {headers:{'Authorization':'Bearer '+localStorage.getItem('dms_access_token')}})
+    .then(r=>r.json()).then(d=>{ if(d.code===0) window.location.href='/mobile/home.html'; }).catch(()=>{});
+}
+</script>
+</body>
+</html>

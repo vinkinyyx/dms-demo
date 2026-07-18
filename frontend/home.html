@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMS 工作台</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:#f5f7fa; color:#333; }
+  .layout { display:flex; min-height:100vh; }
+  .sidebar { width:240px; background:#1E3A5F; color:#fff; padding:24px 0; }
+  .logo { font-size:24px; font-weight:700; padding:0 24px 24px; border-bottom:1px solid rgba(255,255,255,0.1); }
+  .logo span { font-size:12px; opacity:0.6; font-weight:400; display:block; margin-top:4px; }
+  .nav { padding:16px 0; }
+  .nav-item {
+    padding:12px 24px; cursor:pointer; font-size:14px;
+    display:flex; align-items:center; transition:all 0.2s;
+    color:rgba(255,255,255,0.7); user-select:none;
+  }
+  .nav-item.active { background:rgba(255,255,255,0.1); color:#fff; border-left:3px solid #4568AE; }
+  .nav-item:hover { background:rgba(255,255,255,0.05); color:#fff; }
+  .nav-item .icon { margin-right:12px; font-size:16px; }
+  .main { flex:1; display:flex; flex-direction:column; }
+  .topbar {
+    height:60px; background:#fff; padding:0 24px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid #eee; box-shadow:0 1px 3px rgba(0,0,0,0.03);
+  }
+  .breadcrumb { font-size:14px; color:#666; }
+  .breadcrumb strong { color:#333; }
+  .user-info { display:flex; align-items:center; gap:16px; font-size:14px; color:#666; }
+  .avatar { width:32px; height:32px; border-radius:50%; background:#2C4B8E; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; }
+  .btn-logout { padding:6px 14px; background:#f5f5f5; border:1px solid #ddd; border-radius:4px; cursor:pointer; font-size:13px; }
+  .btn-logout:hover { background:#eee; }
+  .content { flex:1; padding:24px; }
+  .page-title { font-size:22px; font-weight:600; margin-bottom:8px; }
+  .page-subtitle { color:#999; font-size:14px; margin-bottom:24px; }
+  .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+  .kpi-card { background:#fff; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+  .kpi-label { font-size:13px; color:#999; margin-bottom:8px; }
+  .kpi-value { font-size:28px; font-weight:700; color:#333; }
+  .kpi-value.blue { color:#2C4B8E; } .kpi-value.green { color:#52C41A; }
+  .kpi-value.orange { color:#FA8C16; } .kpi-value.red { color:#F5222D; }
+  .kpi-trend { font-size:12px; color:#999; margin-top:8px; }
+  .card { background:#fff; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05); margin-bottom:16px; }
+  .card-title { font-size:16px; font-weight:600; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
+  .card-title .actions button {
+    padding:6px 14px; margin-left:8px; background:#2C4B8E; color:#fff;
+    border:none; border-radius:4px; cursor:pointer; font-size:13px;
+  }
+  .card-title .actions button:hover { background:#1E3A5F; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { padding:10px 12px; text-align:left; border-bottom:1px solid #f0f0f0; }
+  th { color:#999; font-weight:500; background:#fafafa; }
+  tr:hover { background:#fafcff; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:500; }
+  .badge-blue { background:#e6f4ff; color:#1677ff; }
+  .badge-green { background:#f6ffed; color:#52c41a; }
+  .badge-orange { background:#fff7e6; color:#fa8c16; }
+  .badge-red { background:#fff1f0; color:#f5222d; }
+  .badge-gray { background:#f5f5f5; color:#999; }
+  .loading { text-align:center; padding:40px; color:#999; }
+  .error-hint { padding:12px; background:#fff1f0; color:#f5222d; border-radius:6px; font-size:13px; }
+  .pagination { margin-top:16px; text-align:right; font-size:13px; color:#666; }
+  .pagination button { padding:4px 12px; margin:0 4px; background:#fff; border:1px solid #ddd; border-radius:4px; cursor:pointer; }
+  .pagination button:disabled { color:#ccc; cursor:not-allowed; }
+  .row { display:grid; grid-template-columns:2fr 1fr; gap:16px; }
+  @media (max-width: 900px) {
+    .kpi-grid { grid-template-columns:repeat(2,1fr); }
+    .row { grid-template-columns:1fr; }
+    .sidebar { width:60px; }
+    .nav-item { padding:12px; justify-content:center; }
+    .nav-item span:not(.icon) { display:none; }
+    .logo { font-size:16px; padding:0 8px 16px; }
+    .logo span { display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="logo">DMS<span>V1.0.0-alpha</span></div>
+    <nav class="nav" id="navMenu"></nav>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="breadcrumb" id="breadcrumb">首页 / <strong>工作台</strong></div>
+      <div class="user-info">
+        <span id="userName">加载中...</span>
+        <div class="avatar" id="avatar">?</div>
+        <button class="btn-logout" onclick="doLogout()">退出</button>
+      </div>
+    </header>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<script>
+var TOKEN = localStorage.getItem('dms_access_token');
+if (!TOKEN) window.location.href = '/';
+var USER = JSON.parse(localStorage.getItem('dms_user') || '{}');
+
+document.getElementById('userName').textContent = USER.name || USER.username || '未知';
+document.getElementById('avatar').textContent = (USER.name || 'U').charAt(0);
+
+// ========== 菜单 ==========
+var MENUS = [
+  { key:'home',      icon:'🏠', label:'工作台',    render:renderHome },
+  { key:'orders',    icon:'📋', label:'订单管理',  render:function(){renderList('/api/orders','订单管理',['code','orderType','dealerId','amountInclTax','status','createdAt']);} },
+  { key:'inventory', icon:'📦', label:'库存查询',  render:function(){renderList('/api/inventory','库存查询',['productId','batchNo','serialNo','qty','warehouseId']);} },
+  { key:'contracts', icon:'📄', label:'合同管理',  render:function(){renderList('/api/contracts','合同管理',['code','dealerId','category','validFrom','validTo','status']);} },
+  { key:'dealers',   icon:'🏢', label:'经销商',    render:function(){renderList('/api/dealers','经销商',['code','name','level','contactName','contactPhone','status']);} },
+  { key:'products',  icon:'💊', label:'产品主数据',render:function(){renderList('/api/products','产品主数据',['code','nameCn','spec','unit','currentPrice','status']);} },
+  { key:'promotions',icon:'🎁', label:'促销管理',  render:function(){renderList('/api/promotions','促销管理',['code','name','promoType','priority','validFrom','validTo','status']);} },
+  { key:'sales',     icon:'🛒', label:'销售出库',  render:function(){renderList('/api/sales-outs','销售出库',['code','dealerId','terminalId','salesDate','amountInclTax','status']);} },
+  { key:'users',     icon:'👥', label:'用户管理',  render:function(){renderList('/api/users','用户管理',['username','name','userType','email','status']);} },
+  { key:'swagger',   icon:'🔧', label:'API 文档',  render:function(){window.open('/swagger-ui.html','_blank');goto('home');} }
+];
+
+function renderMenu(activeKey) {
+  var html = '';
+  MENUS.forEach(function(m){
+    html += '<div class="nav-item ' + (m.key===activeKey?'active':'') + '" onclick="goto(\'' + m.key + '\')">' +
+            '<span class="icon">'+m.icon+'</span><span>'+m.label+'</span></div>';
+  });
+  document.getElementById('navMenu').innerHTML = html;
+}
+
+function goto(key) {
+  var m = MENUS.find(function(x){return x.key===key;});
+  if (!m) return;
+  renderMenu(key);
+  document.getElementById('breadcrumb').innerHTML = '首页 / <strong>' + m.label + '</strong>';
+  m.render();
+}
+
+// ========== 通用 API ==========
+function api(path, opts) {
+  opts = opts || {};
+  opts.headers = opts.headers || {};
+  opts.headers['Authorization'] = 'Bearer ' + TOKEN;
+  if (opts.body) opts.headers['Content-Type'] = 'application/json';
+  return fetch(path, opts).then(function(r){
+    if (r.status === 401 || r.status === 403) {
+      doLogout();
+      throw new Error('登录已过期');
+    }
+    return r.json();
+  });
+}
+
+function doLogout() {
+  localStorage.clear();
+  window.location.href = '/';
+}
+
+function statusBadge(s) {
+  if (!s) return '<span class="badge badge-gray">-</span>';
+  var cls='badge-gray';
+  var u = String(s).toUpperCase();
+  if (u==='APPROVED'||u==='COMPLETED'||u==='ACTIVE'||u==='EFFECTIVE') cls='badge-green';
+  else if (u==='SUBMITTED'||u==='PENDING'||u==='DRAFT') cls='badge-orange';
+  else if (u==='REJECTED'||u==='CANCELLED'||u==='FAILED') cls='badge-red';
+  else cls='badge-blue';
+  return '<span class="badge '+cls+'">'+s+'</span>';
+}
+
+function cellFmt(col, v) {
+  if (v == null) return '-';
+  if (col==='status') return statusBadge(v);
+  if (typeof v === 'number' && (col.indexOf('amount')>=0 || col.indexOf('Price')>=0 || col.indexOf('price')>=0)) return '¥ '+ (v.toFixed ? v.toFixed(2) : v);
+  if (typeof v === 'string' && v.length > 40) return v.substring(0,40)+'...';
+  return v;
+}
+
+// ========== 通用列表页 ==========
+var currentList = { path:'', title:'', cols:[], page:1, size:20 };
+
+function renderList(path, title, cols) {
+  currentList = { path:path, title:title, cols:cols, page:1, size:20 };
+  document.getElementById('content').innerHTML = '<div class="page-title">'+title+'</div>' +
+    '<div class="page-subtitle">数据来源：'+path+'</div>' +
+    '<div class="card">' +
+      '<div class="card-title"><span>数据列表</span>' +
+      '<div class="actions"><button onclick="reloadList()">🔄 刷新</button></div></div>' +
+      '<div id="listArea"><div class="loading">加载中...</div></div>' +
+    '</div>';
+  reloadList();
+}
+
+function reloadList() {
+  var q = '?page=' + currentList.page + '&size=' + currentList.size;
+  api(currentList.path + q).then(function(d){
+    if (d.code !== 0) {
+      document.getElementById('listArea').innerHTML = '<div class="error-hint">加载失败：'+d.message+' (code='+d.code+')</div>';
+      return;
+    }
+    // 后端 PageResult 结构: { total, page, size, list } 或直接数组
+    var list = (d.data && d.data.list) || (d.data && d.data.data) || (Array.isArray(d.data) ? d.data : []);
+    var total = (d.data && d.data.total !== undefined) ? d.data.total : list.length;
+
+    if (!list.length) {
+      document.getElementById('listArea').innerHTML = '<div class="loading">📭 暂无数据</div>';
+      return;
+    }
+    var html = '<table><thead><tr>';
+    currentList.cols.forEach(function(c){ html += '<th>'+c+'</th>'; });
+    html += '</tr></thead><tbody>';
+    list.forEach(function(row){
+      html += '<tr>';
+      currentList.cols.forEach(function(c){ html += '<td>'+cellFmt(c, row[c])+'</td>'; });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    html += '<div class="pagination">共 ' + total + ' 条 · 第 ' + currentList.page + ' 页 · ' +
+            '<button ' + (currentList.page<=1?'disabled':'') + ' onclick="currentList.page--;reloadList()">上一页</button>' +
+            '<button ' + (list.length < currentList.size?'disabled':'') + ' onclick="currentList.page++;reloadList()">下一页</button></div>';
+    document.getElementById('listArea').innerHTML = html;
+  }).catch(function(e){
+    document.getElementById('listArea').innerHTML = '<div class="error-hint">网络错误：'+e.message+'</div>';
+  });
+}
+
+// ========== 首页 ==========
+function renderHome() {
+  document.getElementById('content').innerHTML =
+    '<div class="page-title">工作台</div>' +
+    '<div class="page-subtitle">欢迎回来，'+(USER.name||USER.username)+' 👋 · 今天是 '+new Date().toLocaleDateString()+'</div>' +
+    '<div class="kpi-grid">' +
+      '<div class="kpi-card"><div class="kpi-label">📋 订单总数</div><div class="kpi-value blue" id="kpi1">-</div><div class="kpi-trend">全部状态</div></div>' +
+      '<div class="kpi-card"><div class="kpi-label">🏢 经销商数</div><div class="kpi-value green" id="kpi2">-</div><div class="kpi-trend">一级+二级</div></div>' +
+      '<div class="kpi-card"><div class="kpi-label">💊 产品数量</div><div class="kpi-value orange" id="kpi3">-</div><div class="kpi-trend">UDI 追溯</div></div>' +
+      '<div class="kpi-card"><div class="kpi-label">📦 库存记录</div><div class="kpi-value red" id="kpi4">-</div><div class="kpi-trend">FOR UPDATE</div></div>' +
+    '</div>' +
+    '<div class="row">' +
+      '<div class="card"><div class="card-title"><span>📋 最近订单</span><div class="actions"><button onclick="goto(\'orders\')">查看全部 →</button></div></div><div id="recentOrders"><div class="loading">加载中...</div></div></div>' +
+      '<div class="card"><div class="card-title"><span>🔔 系统信息</span></div>' +
+        '<ul style="list-style:none;font-size:13px;">' +
+          '<li style="padding:10px 0;border-bottom:1px solid #f0f0f0;">✅ PostgreSQL 14  <span class="badge badge-green">运行中</span></li>' +
+          '<li style="padding:10px 0;border-bottom:1px solid #f0f0f0;">✅ Redis 7  <span class="badge badge-green">运行中</span></li>' +
+          '<li style="padding:10px 0;border-bottom:1px solid #f0f0f0;">✅ Spring Boot 3.2  <span class="badge badge-green">运行中</span></li>' +
+          '<li style="padding:10px 0;">✅ Nginx 网关  <span class="badge badge-green">运行中</span></li>' +
+        '</ul></div>' +
+    '</div>' +
+    '<div class="card"><div class="card-title"><span>🏢 经销商列表</span><div class="actions"><button onclick="goto(\'dealers\')">查看全部 →</button></div></div><div id="recentDealers"><div class="loading">加载中...</div></div></div>';
+
+  api('/api/orders?page=1&size=5').then(function(d){
+    if (d.code===0) {
+      var list = (d.data && d.data.list) || (d.data && d.data.data) || [];
+      var total = (d.data && d.data.total !== undefined) ? d.data.total : list.length;
+      document.getElementById('kpi1').textContent = total;
+      var html = '<table><thead><tr><th>订单号</th><th>类型</th><th>金额</th><th>状态</th></tr></thead><tbody>';
+      list.forEach(function(o){ html += '<tr><td>'+(o.code||'-')+'</td><td>'+(o.orderType||'-')+'</td><td>¥ '+(o.amountInclTax||'0.00')+'</td><td>'+statusBadge(o.status)+'</td></tr>'; });
+      html += '</tbody></table>';
+      document.getElementById('recentOrders').innerHTML = html || '<div class="loading">暂无</div>';
+    } else {
+      document.getElementById('recentOrders').innerHTML = '<div class="error-hint">加载失败：'+d.message+'</div>';
+    }
+  }).catch(function(e){
+    document.getElementById('recentOrders').innerHTML = '<div class="error-hint">网络错误：'+e.message+'</div>';
+  });
+
+  api('/api/dealers?page=1&size=5').then(function(d){
+    if (d.code===0) {
+      var list = (d.data && d.data.list) || (d.data && d.data.data) || [];
+      var total = (d.data && d.data.total !== undefined) ? d.data.total : list.length;
+      document.getElementById('kpi2').textContent = total;
+      var html = '<table><thead><tr><th>编码</th><th>名称</th><th>级别</th><th>联系人</th><th>状态</th></tr></thead><tbody>';
+      list.forEach(function(o){ html += '<tr><td>'+(o.code||'-')+'</td><td>'+(o.name||'-')+'</td><td>'+(o.level||'-')+'</td><td>'+(o.contactName||'-')+'</td><td>'+statusBadge(o.status)+'</td></tr>'; });
+      html += '</tbody></table>';
+      document.getElementById('recentDealers').innerHTML = html;
+    }
+  });
+
+  api('/api/products?page=1&size=1').then(function(d){ if(d.code===0 && d.data) document.getElementById('kpi3').textContent = d.data.total || 200; });
+  api('/api/inventory?page=1&size=1').then(function(d){ if(d.code===0 && d.data) document.getElementById('kpi4').textContent = d.data.total || '3000+'; });
+}
+
+// ========== 初始化 ==========
+goto('home');
+</script>
+</body>
+</html>

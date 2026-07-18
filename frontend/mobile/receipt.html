@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>DMS 扫码收货</title><link rel="stylesheet" href="/mobile/mobile.css">
+</head><body>
+<header class="m-topbar">
+  <div class="m-topbar-title">📥 扫码收货</div>
+  <div class="m-topbar-right" onclick="history.back()">←</div>
+</header>
+<div class="m-content">
+  <div class="m-section">
+    <div class="m-section-title">收货操作</div>
+    <div class="m-input" style="text-align:center;font-size:60px;padding:30px;background:#fafafa;color:#2C4B8E;">📷</div>
+    <div style="text-align:center;font-size:12px;color:#666;margin:10px 0;">V1 Mock：手动输入序列号或使用相机（如浏览器支持）</div>
+    <input class="m-input" placeholder="扫码或输入序列号" id="serialInput" style="margin-bottom:10px;">
+    <button class="m-btn m-btn-primary m-btn-block" onclick="doVerify()">✅ 校验序列号</button>
+  </div>
+  <div id="result"></div>
+  <div class="m-section">
+    <div class="m-section-title">📥 待收货列表</div>
+    <div id="pendingList"><div class="m-loading">加载中...</div></div>
+  </div>
+</div>
+<nav class="m-tabbar">
+  <a class="m-tabbar-item" href="/mobile/home.html"><span>🏠</span>首页</a>
+  <a class="m-tabbar-item" href="/mobile/orders.html"><span>📋</span>订单</a>
+  <a class="m-tabbar-item" href="/mobile/inventory.html"><span>📦</span>库存</a>
+  <a class="m-tabbar-item" href="/mobile/messages.html"><span>🔔</span>消息</a>
+  <a class="m-tabbar-item" href="javascript:localStorage.clear();location.href='/mobile/login.html'"><span>👤</span>我的</a>
+</nav>
+<script src="/mobile/mobile-lib.js"></script>
+<script>
+if (!MDMS.requireAuth()) throw 0;
+
+function doVerify() {
+  var sn = document.getElementById('serialInput').value.trim();
+  if (!sn) { MDMS.toast('请输入序列号', 'warn'); return; }
+  document.getElementById('result').innerHTML = '<div class="m-loading">校验中...</div>';
+  MDMS.api('/api/traceability/by-serial?serialNo='+encodeURIComponent(sn)).then(function(d){
+    if (d.code!==0 || !d.data.currentStock) {
+      document.getElementById('result').innerHTML = '<div class="m-error">❌ 序列号 '+sn+' 未在库存中找到</div>';
+      return;
+    }
+    var s = d.data.currentStock;
+    document.getElementById('result').innerHTML =
+      '<div class="m-section" style="border:1px solid #52C41A;">' +
+      '<div style="color:#52C41A;font-weight:600;">✅ 校验通过</div>' +
+      '<div style="font-size:12px;margin-top:8px;">' +
+      '仓库 #' + s.warehouseId + ' · 批次 ' + (s.batchNo||'-') + ' · 到期 ' + s.expDate +
+      '</div></div>';
+  });
+}
+
+MDMS.api('/api/receipts?page=1&size=10').then(function(d){
+  if (d.code!==0) { document.getElementById('pendingList').innerHTML='<div class="m-error">'+d.message+'</div>'; return; }
+  var list = (d.data && d.data.list) || [];
+  if (!list.length) { document.getElementById('pendingList').innerHTML='<div class="m-empty">📭 无待收货</div>'; return; }
+  var h = '';
+  list.forEach(function(r){
+    h += '<div style="padding:8px;border-bottom:1px solid #f0f0f0;">' +
+      '<div style="font-weight:600;">'+r.code+'</div>' +
+      '<div style="font-size:11px;color:#999;">到货 '+(r.arrivedAt||'-')+'</div>' +
+      '</div>';
+  });
+  document.getElementById('pendingList').innerHTML = h;
+});
+</script>
+</body></html>

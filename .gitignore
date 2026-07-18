@@ -1,0 +1,66 @@
+# ============ Java / Maven ============
+target/
+*.class
+*.jar
+!/tools/maven/**/*.jar
+!/tools/downloads/*.jar
+.mvn/
+mvnw
+mvnw.cmd
+
+# ============ IDE ============
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============ Node / 前端构建产物 ============
+node_modules/
+dist/
+build/
+.cache/
+
+# ============ 日志 ============
+*.log
+logs/
+tmp/
+
+# ============ 数据库导出 (太大,单独放) ============
+docs/05_数据库设计/schema_export/dms_full.sql
+docs/05_数据库设计/schema_export/dms_data.sql
+
+# ============ 敏感信息 ============
+.env
+.env.local
+.env.production
+*.pem
+*.key
+!application*.yml
+docker-compose.aliyun.yml
+docker-compose.production.yml
+
+# ============ Docker 数据卷 ============
+docker/
+data/
+pgdata/
+redisdata/
+
+# ============ 临时文件 ============
+_sync_from_server/
+tmp/
+temp/
+*.tmp
+*.bak
+
+# ============ 系统 ============
+*.zip
+*.7z
+!docs/**/*.zip

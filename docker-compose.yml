@@ -1,0 +1,168 @@
+# =====================================================================
+# DMS Docker Compose 编排 - 本地开发环境一键启动
+# 服务：PostgreSQL / Redis / MinIO / WireMock / Backend(Spring Boot)
+#
+# ⚠️ 警告：本文件仅用于本地开发环境，包含弱密码。
+#    生产部署请参考 docker-compose.aliyun.example.yml 并替换所有 <REPLACE_ME_...> 占位符。
+# =====================================================================
+version: "3.9"
+
+services:
+
+  # -------------------------------------------------------------------
+  # PostgreSQL 14 数据库
+  # -------------------------------------------------------------------
+  postgres:
+    image: postgres:14-alpine
+    container_name: dms-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dms
+      POSTGRES_USER: dms
+      POSTGRES_PASSWORD: dms123456
+      TZ: Asia/Shanghai
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dms -d dms"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dms-net
+
+  # -------------------------------------------------------------------
+  # Redis 7 缓存
+  # -------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: dms-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dms-net
+
+  # -------------------------------------------------------------------
+  # MinIO 对象存储（合同 PDF / 附件 / 冷存审计）
+  # -------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: dms-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dms-net
+
+  # -------------------------------------------------------------------
+  # WireMock Mock Server（模拟 微信 / e签宝 / ERP / 企微 / 飞书）
+  # -------------------------------------------------------------------
+  mock-server:
+    image: wiremock/wiremock:3.3.1
+    container_name: dms-mock-server
+    restart: unless-stopped
+    command:
+      - --port
+      - "9090"
+      - --global-response-templating
+      - --verbose
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./mocks:/home/wiremock/mappings:ro
+    networks:
+      - dms-net
+
+  # -------------------------------------------------------------------
+  # DMS Backend (Spring Boot)
+  # -------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: dms/backend:1.0
+    container_name: dms-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      mock-server:
+        condition: service_started
+    environment:
+      # 数据库
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dms
+      DB_USER: dms
+      DB_PASSWORD: dms123456
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # MinIO
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: dms
+      # Mock Server 基址
+      MOCK_BASE_URL: http://mock-server:9090
+      # 微信小程序（Mock）
+      WECHAT_APP_ID: MOCK_WECHAT_APP_ID
+      WECHAT_APP_SECRET: MOCK_WECHAT_APP_SECRET
+      # 种子数据开关
+      SEED_ENABLED: "true"
+      # JWT 密钥
+      JWT_SECRET: dms-jwt-secret-please-change-in-prod-2026
+      # Spring 配置
+      SPRING_PROFILES_ACTIVE: docker
+      TZ: Asia/Shanghai
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - dms-net
+
+# ---------------------------------------------------------------------
+# 网络与卷
+# ---------------------------------------------------------------------
+networks:
+  dms-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+  miniodata:
+    driver: local

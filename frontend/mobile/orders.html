@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>DMS 订单查询</title><link rel="stylesheet" href="/mobile/mobile.css">
+</head><body>
+<header class="m-topbar">
+  <div class="m-topbar-title">📋 订单查询</div>
+  <div class="m-topbar-right" onclick="history.back()">←</div>
+</header>
+<div class="m-content">
+  <div style="margin-bottom:10px;">
+    <input class="m-input" placeholder="🔍 搜索订单号/经销商..." id="kw" oninput="doSearch()">
+  </div>
+  <div id="orderList"><div class="m-loading">加载中...</div></div>
+</div>
+<nav class="m-tabbar">
+  <a class="m-tabbar-item" href="/mobile/home.html"><span>🏠</span>首页</a>
+  <a class="m-tabbar-item active" href="/mobile/orders.html"><span>📋</span>订单</a>
+  <a class="m-tabbar-item" href="/mobile/inventory.html"><span>📦</span>库存</a>
+  <a class="m-tabbar-item" href="/mobile/messages.html"><span>🔔</span>消息</a>
+  <a class="m-tabbar-item" href="javascript:localStorage.clear();location.href='/mobile/login.html'"><span>👤</span>我的</a>
+</nav>
+<script src="/mobile/mobile-lib.js"></script>
+<script>
+if (!MDMS.requireAuth()) throw 0;
+var page = 1;
+function load() {
+  MDMS.api('/api/orders?page='+page+'&size=20').then(function(d){
+    if (d.code!==0) { document.getElementById('orderList').innerHTML='<div class="m-error">'+d.message+'</div>'; return; }
+    var list = (d.data && d.data.list) || [];
+    if (!list.length) { document.getElementById('orderList').innerHTML='<div class="m-empty">📭 无订单</div>'; return; }
+    var h = '';
+    list.forEach(function(o){
+      h += '<div class="m-section" style="padding:12px;margin-bottom:8px;">' +
+        '<div style="display:flex;justify-content:space-between;">' +
+        '<span style="font-weight:600;">' + o.code + '</span>' + MDMS.statusBadge(o.status) + '</div>' +
+        '<div style="font-size:12px;color:#666;margin-top:6px;">' + (o.orderType||'-') + ' · 期望 ' + (o.expectedDate||'-') + '</div>' +
+        '<div style="margin-top:8px;color:#F5222D;font-weight:600;">¥ ' + Number(o.amountInclTax||0).toFixed(2) + '</div>' +
+        '</div>';
+    });
+    document.getElementById('orderList').innerHTML = h;
+  });
+}
+function doSearch() { /* 后端 orders 未支持 keyword，此处保留占位 */ load(); }
+load();
+</script>
+</body></html>

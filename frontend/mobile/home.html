@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>DMS 移动工作台</title>
+<link rel="stylesheet" href="/mobile/mobile.css">
+</head>
+<body>
+<header class="m-topbar">
+  <div class="m-topbar-title">工作台</div>
+  <div class="m-topbar-right" onclick="location.href='/mobile/messages.html'">🔔<span class="m-badge" id="unreadBadge" style="display:none;">0</span></div>
+</header>
+
+<div class="m-content">
+  <div class="m-welcome">
+    <div class="m-welcome-avatar" id="userAvatar">?</div>
+    <div>
+      <div class="m-welcome-hello">你好，<span id="userName">-</span></div>
+      <div class="m-welcome-sub" id="today">-</div>
+    </div>
+  </div>
+
+  <div class="m-kpi-grid">
+    <div class="m-kpi"><div class="m-kpi-label">📋 我的订单</div><div class="m-kpi-val" id="kOrders">-</div></div>
+    <div class="m-kpi"><div class="m-kpi-label">📦 库存记录</div><div class="m-kpi-val" id="kInv">-</div></div>
+    <div class="m-kpi"><div class="m-kpi-label">💊 产品</div><div class="m-kpi-val" id="kProd">-</div></div>
+    <div class="m-kpi"><div class="m-kpi-label">🎁 促销</div><div class="m-kpi-val" id="kPromo">-</div></div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-title">快捷操作</div>
+    <div class="m-quick-grid">
+      <a class="m-quick" href="/mobile/orders.html"><div class="m-quick-icon" style="background:#e6f4ff;">📋</div><div>订单</div></a>
+      <a class="m-quick" href="/mobile/inventory.html"><div class="m-quick-icon" style="background:#f6ffed;">📦</div><div>库存</div></a>
+      <a class="m-quick" href="/mobile/receipt.html"><div class="m-quick-icon" style="background:#fff7e6;">📥</div><div>扫码收货</div></a>
+      <a class="m-quick" href="/mobile/report.html"><div class="m-quick-icon" style="background:#fff1f0;">🛒</div><div>扫码报台</div></a>
+    </div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-title">最近订单</div>
+    <div id="recentOrders"><div class="m-loading">加载中...</div></div>
+  </div>
+
+  <div class="m-section">
+    <div class="m-section-title">系统信息</div>
+    <ul class="m-list">
+      <li>✅ 后端服务  <span class="m-badge-green">运行中</span></li>
+      <li>💊 医疗器械行业 · 强合规</li>
+      <li>👤 当前账号：<span id="me">-</span></li>
+    </ul>
+  </div>
+</div>
+
+<nav class="m-tabbar">
+  <a class="m-tabbar-item active" href="/mobile/home.html"><span>🏠</span>首页</a>
+  <a class="m-tabbar-item" href="/mobile/orders.html"><span>📋</span>订单</a>
+  <a class="m-tabbar-item" href="/mobile/inventory.html"><span>📦</span>库存</a>
+  <a class="m-tabbar-item" href="/mobile/messages.html"><span>🔔</span>消息</a>
+  <a class="m-tabbar-item" href="javascript:doLogout();"><span>👤</span>我的</a>
+</nav>
+
+<script src="/mobile/mobile-lib.js"></script>
+<script>
+if (!MDMS.requireAuth()) throw 0;
+document.getElementById('userName').textContent = MDMS.USER.name || MDMS.USER.username || '-';
+document.getElementById('me').textContent = MDMS.USER.name || MDMS.USER.username;
+document.getElementById('userAvatar').textContent = (MDMS.USER.name||'U').charAt(0);
+document.getElementById('today').textContent = new Date().toLocaleDateString('zh-CN', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+MDMS.api('/api/system/stats').then(function(d){
+  if (d.code===0) {
+    document.getElementById('kOrders').textContent = d.data.orders||0;
+    document.getElementById('kInv').textContent = d.data.inventoryRecords||0;
+    document.getElementById('kProd').textContent = d.data.products||0;
+    document.getElementById('kPromo').textContent = d.data.promotions||0;
+  }
+});
+
+MDMS.api('/api/orders?page=1&size=5').then(function(d){
+  if (d.code===0) {
+    var list = (d.data && d.data.list) || [];
+    if (!list.length) { document.getElementById('recentOrders').innerHTML='<div class="m-empty">📭 暂无订单</div>'; return; }
+    var h = '';
+    list.forEach(function(o){
+      h += '<div class="m-order-item">' +
+        '<div class="m-order-code">' + o.code + '</div>' +
+        '<div class="m-order-meta">'+ (o.orderType||'-') + ' · 期望到货 ' + (o.expectedDate||'-') + '</div>' +
+        '<div class="m-order-foot"><span class="m-amount">¥ ' + Number(o.amountInclTax||0).toFixed(2) + '</span>' +
+        MDMS.statusBadge(o.status) + '</div>' +
+        '</div>';
+    });
+    document.getElementById('recentOrders').innerHTML = h;
+  }
+});
+
+function doLogout() {
+  if (confirm('确认退出登录？')) {
+    localStorage.clear();
+    location.href = '/mobile/login.html';
+  }
+}
+</script>
+</body>
+</html>

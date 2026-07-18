@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMS 后台管理</title>
+<link rel="stylesheet" href="/dms.css">
+<style>
+  .dms-sidebar { background:#111827; }
+  .admin-badge {
+    display:inline-block;padding:2px 8px;background:#F5222D;color:#fff;
+    border-radius:3px;font-size:11px;margin-left:6px;
+  }
+</style>
+</head>
+<body>
+<div class="dms-layout">
+  <aside class="dms-sidebar dark2">
+    <div class="dms-logo">
+      DMS Admin<small>后台管理 · V1.0.0</small>
+    </div>
+    <div class="dms-nav" id="navMenu"></div>
+    <div style="padding:20px;font-size:12px;color:rgba(255,255,255,0.5);">
+      <a href="/workspace.html" style="color:#7EB6FF;">← 返回业务工作台</a>
+    </div>
+  </aside>
+  <main class="dms-main">
+    <header class="dms-topbar">
+      <div class="dms-crumb" id="crumb">后台 / <strong>系统概览</strong> <span class="admin-badge">管理员</span></div>
+      <div class="dms-user">
+        <span id="userName">-</span>
+        <div class="dms-avatar" id="avatar">?</div>
+        <button class="dms-btn-logout" onclick="DMS.logout()">退出</button>
+      </div>
+    </header>
+    <div class="dms-content" id="content"></div>
+  </main>
+</div>
+
+<script src="/dms-lib.js"></script>
+<script>
+if (!DMS.requireAuth()) { throw new Error('need login'); }
+document.getElementById('userName').textContent = DMS.USER.name || DMS.USER.username || '-';
+document.getElementById('avatar').textContent = (DMS.USER.name || 'A').charAt(0);
+
+// ============ 后台菜单分级 ============
+var MENU_GROUPS = [
+  { group: '概览', items: [
+    { key:'overview', icon:'📊', label:'系统概览', render:renderOverview },
+    { key:'dashboard', icon:'📈', label:'综合看板', render:renderDashboard }
+  ]},
+  { group: '日志与审计', items: [
+    { key:'audit-logs',  icon:'📜', label:'审计操作日志',
+      render:function(){ renderLogs('/api/system/audit-logs', '审计操作日志',
+        ['id','username','action','entityType','entityId','ipAddress','atTime'],
+        [{key:'action',label:'操作类型',placeholder:'如: CREATE/UPDATE/DELETE'},
+         {key:'entityType',label:'实体类型',placeholder:'如: order/user'}]); }
+    },
+    { key:'login-logs',  icon:'🔐', label:'用户登录日志',
+      render:function(){ renderLogs('/api/system/login-logs', '用户登录日志',
+        ['id','username','loginType','ipAddress','userAgent','success','failReason','atTime'],
+        [{key:'username',label:'账号',placeholder:'如: admin'}]); }
+    },
+    { key:'notifications', icon:'🔔', label:'通知消息',
+      render:function(){ renderLogs('/api/system/notifications', '通知消息',
+        ['id','receiverId','channel','category','title','content','isRead','createdAt'], []); }
+    }
+  ]},
+  { group: '账号与权限', items: [
+    { key:'users',   icon:'👥', label:'账号管理',   render:renderUsers },
+    { key:'roles',   icon:'🎭', label:'角色管理',   render:renderRoles }
+  ]},
+  { group: '多租户', items: [
+    { key:'tenants', icon:'🏛️', label:'租户列表',   render:renderTenants }
+  ]},
+  { group: '系统配置', items: [
+    { key:'settings', icon:'⚙️', label:'系统参数',   render:renderSettings },
+    { key:'dicts',    icon:'📖', label:'数据字典',   render:renderDicts },
+    { key:'dictsCrud',icon:'🗂️', label:'字典维护',   render:renderDictsCrud },
+    { key:'formCfg',  icon:'🧩', label:'字段配置(低代码)', render:renderFormConfig },
+    { key:'workflows',icon:'🔄', label:'流程配置',   render:renderWorkflows },
+    { key:'rbac',     icon:'🛡️', label:'RBAC 权限矩阵', render:renderRbac }
+  ]},
+  { group: '系统运维', items: [
+    { key:'cache',    icon:'💾', label:'缓存监视',   render:renderCache },
+    { key:'timeouts', icon:'⏰', label:'超时检查',   render:renderTimeouts },
+    { key:'batch',    icon:'📥', label:'批量导入',   render:renderBatchImport }
+  ]},
+  { group: '开发者', items: [
+    { key:'api',      icon:'🔧', label:'API 文档',   render:function(){ window.open('/swagger-ui.html','_blank'); goto('overview'); } },
+    { key:'health',   icon:'💚', label:'健康检查',   render:renderHealth }
+  ]}
+];
+
+var MENU_INDEX = {};
+MENU_GROUPS.forEach(function(g){ g.items.forEach(function(m){ MENU_INDEX[m.key] = m; }); });
+
+function renderMenu(activeKey){
+  var h = '';
+  MENU_GROUPS.forEach(function(g){
+    h += '<div class="dms-nav-group">' + g.group + '</div>';
+    g.items.forEach(function(m){
+      h += '<div class="dms-nav-item ' + (m.key===activeKey?'active':'') + '" onclick="goto(\'' + m.key + '\')">' +
+           '<span class="icon">' + m.icon + '</span><span>' + m.label + '</span></div>';
+    });
+  });
+  document.getElementById('navMenu').innerHTML = h;
+}
+
+function goto(key){
+  var m = MENU_INDEX[key]; if (!m) return;
+  renderMenu(key);
+  document.getElementById('crumb').innerHTML = '后台 / <strong>' + m.label + '</strong> <span class="admin-badge">管理员</span>';
+  m.render();
+}
+
+// ============ 系统概览 ============
+function renderOverview(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">系统概览</div>' +
+    '<div class="dms-page-sub">全库统计数据 · 实时刷新</div>' +
+    '<div class="dms-kpi-grid" id="kpiGrid"></div>' +
+    '<div class="dms-card">' +
+      '<div class="dms-card-title"><span>💚 服务健康</span><div class="actions"><button class="dms-btn" onclick="renderOverview()">🔄 刷新</button></div></div>' +
+      '<div id="healthBox"><div class="dms-loading">检测中...</div></div>' +
+    '</div>' +
+    '<div class="dms-card">' +
+      '<div class="dms-card-title"><span>🔐 最近登录日志</span></div>' +
+      '<div id="recentLogins"><div class="dms-loading">加载中...</div></div>' +
+    '</div>' +
+    '<div class="dms-card">' +
+      '<div class="dms-card-title"><span>📜 最近审计日志</span></div>' +
+      '<div id="recentAudits"><div class="dms-loading">加载中...</div></div>' +
+    '</div>';
+
+  DMS.api('/api/system/stats').then(function(d){
+    if (d.code === 0) {
+      var s = d.data;
+      var items = [
+        {label:'👥 用户',color:'',v:s.users},
+        {label:'🎭 角色',color:'p',v:s.roles},
+        {label:'🏛️ 租户',color:'g',v:1},
+        {label:'🏢 经销商',color:'g',v:s.dealers},
+        {label:'💊 产品',color:'o',v:s.products},
+        {label:'📋 订单',color:'',v:s.orders},
+        {label:'📄 合同',color:'p',v:s.contracts},
+        {label:'📦 库存记录',color:'r',v:s.inventoryRecords},
+        {label:'🎁 促销规则',color:'o',v:s.promotions},
+        {label:'🛒 销售出库',color:'g',v:s.salesOuts},
+        {label:'📜 审计日志',color:'r',v:s.auditLogs},
+        {label:'🔐 登录日志',color:'p',v:s.loginLogs},
+        {label:'🔔 消息通知',color:'',v:s.notifications}
+      ];
+      var h = '';
+      items.forEach(function(it){
+        h += '<div class="dms-kpi"><div class="dms-kpi-label">' + it.label + '</div><div class="dms-kpi-val ' + it.color + '">' + (it.v||0) + '</div></div>';
+      });
+      document.getElementById('kpiGrid').innerHTML = h;
+    }
+  });
+
+  fetch('/api/actuator/health').then(function(r){return r.json();}).then(function(h){
+    var status = h.status;
+    var color = status === 'UP' ? 'green' : 'red';
+    var html = '<table><thead><tr><th>组件</th><th>状态</th><th>详情</th></tr></thead><tbody>';
+    html += '<tr><td><strong>整体</strong></td><td>' + DMS.statusBadge(status) + '</td><td>-</td></tr>';
+    if (h.components) {
+      Object.keys(h.components).forEach(function(k){
+        var c = h.components[k];
+        html += '<tr><td>' + k + '</td><td>' + DMS.statusBadge(c.status) + '</td><td><code>' + JSON.stringify(c.details || {}).substring(0,120) + '</code></td></tr>';
+      });
+    }
+    html += '</tbody></table>';
+    document.getElementById('healthBox').innerHTML = html;
+  }).catch(function(){
+    document.getElementById('healthBox').innerHTML = '<div class="dms-error-hint">健康检查未开放详情，请通过 /actuator/health 查看</div>';
+  });
+
+  DMS.api('/api/system/login-logs?page=1&size=8').then(function(d){
+    if (d.code === 0) {
+      var list = d.data.list;
+      var h = '<table><thead><tr><th>账号</th><th>类型</th><th>IP</th><th>成功</th><th>时间</th></tr></thead><tbody>';
+      list.forEach(function(l){
+        h += '<tr><td>' + l.username + '</td><td>' + l.loginType + '</td><td>' + (l.ipAddress||'-') + '</td><td>' + DMS.statusBadge(l.success?'true':'false') + '</td><td>' + (l.atTime||'').substring(0,19) + '</td></tr>';
+      });
+      h += '</tbody></table>';
+      document.getElementById('recentLogins').innerHTML = h || '<div class="dms-empty">暂无</div>';
+    }
+  });
+
+  DMS.api('/api/system/audit-logs?page=1&size=8').then(function(d){
+    if (d.code === 0) {
+      var list = d.data.list;
+      var h = '<table><thead><tr><th>账号</th><th>操作</th><th>实体</th><th>实体ID</th><th>IP</th><th>时间</th></tr></thead><tbody>';
+      list.forEach(function(l){
+        h += '<tr><td>' + (l.username||'-') + '</td><td>' + DMS.statusBadge(l.action) + '</td><td>' + (l.entityType||'-') + '</td><td>' + (l.entityId||'-') + '</td><td>' + (l.ipAddress||'-') + '</td><td>' + (l.atTime||'').substring(0,19) + '</td></tr>';
+      });
+      h += '</tbody></table>';
+      document.getElementById('recentAudits').innerHTML = h || '<div class="dms-empty">暂无</div>';
+    }
+  });
+}
+
+// ============ 通用日志分页 ============
+var logsState = {};
+function renderLogs(api, title, cols, filters){
+  logsState = { api:api, title:title, cols:cols, filters:filters, page:1, size:20, params:{} };
+  var toolbar = '';
+  filters.forEach(function(f){
+    toolbar += '<input type="text" data-filter="' + f.key + '" placeholder="' + f.label + (f.placeholder?': '+f.placeholder:'') + '" style="min-width:200px;">';
+  });
+  toolbar += '<button class="dms-btn dms-btn-primary" onclick="applyLogsFilter()">🔍 查询</button>';
+  toolbar += '<button class="dms-btn" onclick="resetLogsFilter()">重置</button>';
+  toolbar += '<button class="dms-btn" onclick="reloadLogs()">🔄 刷新</button>';
+
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">' + title + '</div>' +
+    '<div class="dms-page-sub">接口：<code>' + api + '</code></div>' +
+    '<div class="dms-card">' +
+      '<div class="dms-toolbar">' + toolbar + '</div>' +
+      '<div id="logsArea"><div class="dms-loading">加载中...</div></div>' +
+    '</div>';
+  reloadLogs();
+}
+
+function applyLogsFilter(){
+  logsState.params = {};
+  document.querySelectorAll('[data-filter]').forEach(function(el){
+    var v = el.value.trim();
+    if (v) logsState.params[el.getAttribute('data-filter')] = v;
+  });
+  logsState.page = 1;
+  reloadLogs();
+}
+function resetLogsFilter(){
+  document.querySelectorAll('[data-filter]').forEach(function(el){ el.value=''; });
+  logsState.params = {}; logsState.page=1;
+  reloadLogs();
+}
+function reloadLogs(){
+  var qs = '?page=' + logsState.page + '&size=' + logsState.size;
+  Object.keys(logsState.params).forEach(function(k){ qs += '&' + k + '=' + encodeURIComponent(logsState.params[k]); });
+  DMS.api(logsState.api + qs).then(function(d){
+    if (d.code !== 0) { document.getElementById('logsArea').innerHTML = '<div class="dms-error-hint">' + d.message + '</div>'; return; }
+    var list = d.data.list || [];
+    var total = d.data.total || 0;
+    if (!list.length) { document.getElementById('logsArea').innerHTML = '<div class="dms-empty">📭 暂无</div>'; return; }
+    var h = '<table><thead><tr>';
+    logsState.cols.forEach(function(c){ h += '<th>' + c + '</th>'; });
+    h += '<th>操作</th></tr></thead><tbody>';
+    list.forEach(function(row){
+      h += '<tr>';
+      logsState.cols.forEach(function(c){
+        var v = row[c];
+        if (c==='success') h += '<td>' + DMS.statusBadge(v?'true':'false') + '</td>';
+        else if (c==='action') h += '<td>' + DMS.statusBadge(v) + '</td>';
+        else if (c==='isRead') h += '<td>' + (v?'已读':'<span class="dms-badge dms-badge-orange">未读</span>') + '</td>';
+        else if (c==='atTime' || c==='createdAt') h += '<td>' + (v||'').toString().substring(0,19) + '</td>';
+        else h += '<td>' + DMS.fmt(v) + '</td>';
+      });
+      h += '<td><button class="dms-btn" onclick=\'DMS.detail("日志详情",' + JSON.stringify(row).replace(/'/g,"\\'").replace(/"/g,'\\"') + ')\'>查看</button></td>';
+      h += '</tr>';
+    });
+    h += '</tbody></table>';
+    h += '<div class="dms-pagination">共 ' + total + ' 条 · 第 ' + logsState.page + ' 页 · ' +
+         '<button ' + (logsState.page<=1?'disabled':'') + ' onclick="logsState.page--;reloadLogs()">上一页</button>' +
+         '<button ' + (list.length<logsState.size?'disabled':'') + ' onclick="logsState.page++;reloadLogs()">下一页</button></div>';
+    document.getElementById('logsArea').innerHTML = h;
+  });
+}
+
+// ============ 账号管理 ============
+function renderUsers(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">账号管理</div>' +
+    '<div class="dms-page-sub">全部租户下的用户账号</div>' +
+    '<div class="dms-card">' +
+      '<div class="dms-card-title"><span>用户列表</span>' +
+      '<div class="actions"><button class="dms-btn dms-btn-primary" onclick="userCreate()">➕ 新建账号</button>' +
+      '<button class="dms-btn" onclick="renderUsers()">🔄 刷新</button></div></div>' +
+      '<div id="usersArea"><div class="dms-loading">加载中...</div></div>' +
+    '</div>';
+  usersState = { page:1, size:20 };
+  reloadUsers();
+}
+var usersState = { page:1, size:20 };
+function reloadUsers(){
+  DMS.api('/api/users?page=' + usersState.page + '&size=' + usersState.size).then(function(d){
+    if (d.code !== 0) { document.getElementById('usersArea').innerHTML = '<div class="dms-error-hint">' + d.message + '</div>'; return; }
+    var list = (d.data.list) || [];
+    var h = '<table><thead><tr><th>ID</th><th>账号</th><th>姓名</th><th>类型</th><th>邮箱</th><th>状态</th><th>微信</th><th>最近登录</th><th style="width:280px;">操作</th></tr></thead><tbody>';
+    list.forEach(function(u){
+      h += '<tr>' +
+        '<td>' + u.id + '</td>' +
+        '<td><strong>' + u.username + '</strong></td>' +
+        '<td>' + (u.name||'-') + '</td>' +
+        '<td>' + (u.userType||'-') + '</td>' +
+        '<td>' + (u.email||'-') + '</td>' +
+        '<td>' + DMS.statusBadge(u.status) + '</td>' +
+        '<td>' + (u.wechatBound?'✅ 已绑':'—') + '</td>' +
+        '<td style="font-size:12px;color:#999;">' + ((u.lastLoginAt||'').toString().substring(0,19) || '-') + '</td>' +
+        '<td>' +
+          '<button class="dms-btn" onclick="userView(' + u.id + ')">查看</button> ' +
+          '<button class="dms-btn dms-btn-primary" onclick="userEdit(' + u.id + ')">编辑</button> ' +
+          '<button class="dms-btn dms-btn-warn" onclick="userUnlock(' + u.id + ')">解锁</button> ' +
+          '<button class="dms-btn dms-btn-danger" onclick="userResetPwd(' + u.id + ')">重置密码</button>' +
+        '</td>' +
+      '</tr>';
+    });
+    h += '</tbody></table>';
+    var total = d.data.total || 0;
+    h += '<div class="dms-pagination">共 ' + total + ' 条 · 第 ' + usersState.page + ' 页 · ' +
+         '<button ' + (usersState.page<=1?'disabled':'') + ' onclick="usersState.page--;reloadUsers()">上一页</button>' +
+         '<button ' + (list.length<usersState.size?'disabled':'') + ' onclick="usersState.page++;reloadUsers()">下一页</button></div>';
+    document.getElementById('usersArea').innerHTML = h;
+  });
+}
+
+var USER_FORM = [
+  {key:'username',label:'账号',required:true},
+  {key:'name',label:'姓名',required:true},
+  {key:'userType',label:'用户类型',type:'select',options:['vendor','dealer'],value:'vendor'},
+  {key:'email',label:'邮箱'},
+  {key:'phone',label:'手机号'},
+  {key:'password',label:'密码',type:'password'},
+  {key:'orgId',label:'组织ID',type:'number'},
+  {key:'dealerId',label:'经销商ID(dealer)',type:'number'},
+  {key:'status',label:'状态',type:'select',options:['active','inactive','locked'],value:'active'}
+];
+
+function userCreate(){
+  DMS.modal({ title:'新建账号', fields: USER_FORM, onSubmit:function(data){
+    ['orgId','dealerId'].forEach(function(k){ if(data[k]!=='') data[k]=Number(data[k]); });
+    return DMS.api('/api/users', {method:'POST', body:data}).then(function(d){
+      if(d.code===0){ DMS.toast('新建成功','success'); reloadUsers(); return true; }
+      DMS.toast('失败：'+d.message,'error'); return false;
+    });
+  }});
+}
+function userView(id){
+  DMS.api('/api/users/' + id).then(function(d){
+    if(d.code===0) DMS.detail('账号详情 #' + id, d.data);
+  });
+}
+function userEdit(id){
+  DMS.api('/api/users/' + id).then(function(d){
+    if(d.code!==0){ DMS.toast('加载失败','error'); return; }
+    var fields = USER_FORM.filter(function(f){return f.key!=='password'&&f.key!=='username'}).map(function(f){return Object.assign({},f,{value:d.data[f.key]});});
+    DMS.modal({ title:'编辑账号 #'+id, fields:fields, onSubmit:function(data){
+      ['orgId','dealerId'].forEach(function(k){ if(data[k]!=='') data[k]=Number(data[k]); });
+      return DMS.api('/api/users/'+id, {method:'PUT', body:data}).then(function(d2){
+        if(d2.code===0){ DMS.toast('更新成功','success'); reloadUsers(); return true; }
+        DMS.toast('失败：'+d2.message,'error'); return false;
+      });
+    }});
+  });
+}
+function userUnlock(id){
+  DMS.confirm('确认解锁该账号？将清空错误次数与锁定时间。', function(){
+    DMS.api('/api/users/'+id+'/unlock', {method:'POST'}).then(function(d){
+      if(d.code===0){ DMS.toast('已解锁','success'); reloadUsers(); }
+      else DMS.toast('失败：'+d.message,'error');
+    });
+  });
+}
+function userResetPwd(id){
+  DMS.modal({ title:'重置密码 #'+id, fields:[
+    {key:'newPassword',label:'新密码',type:'password',required:true,value:'Sh123456'}
+  ], onSubmit:function(data){
+    return DMS.api('/api/users/'+id+'/reset-password', {method:'POST', body:data}).then(function(d){
+      if(d.code===0){ DMS.toast('密码已重置','success'); return true; }
+      DMS.toast('失败：'+d.message,'error'); return false;
+    });
+  }});
+}
+
+// ============ 角色管理 ============
+function renderRoles(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">角色管理</div>' +
+    '<div class="dms-page-sub">RBAC 角色 · 系统角色 vs 自定义角色</div>' +
+    '<div class="dms-card">' +
+      '<div class="dms-card-title"><span>角色列表</span>' +
+      '<div class="actions"><button class="dms-btn dms-btn-primary" onclick="roleCreate()">➕ 新建角色</button>' +
+      '<button class="dms-btn" onclick="renderRoles()">🔄</button></div></div>' +
+      '<div id="rolesArea"><div class="dms-loading">加载中...</div></div>' +
+    '</div>';
+  DMS.api('/api/roles').then(function(d){
+    if(d.code!==0){ document.getElementById('rolesArea').innerHTML='<div class="dms-error-hint">'+d.message+'</div>'; return; }
+    var list = Array.isArray(d.data) ? d.data : (d.data.list || []);
+    var h = '<table><thead><tr><th>ID</th><th>编码</th><th>名称</th><th>类型</th><th>描述</th></tr></thead><tbody>';
+    list.forEach(function(r){
+      h += '<tr><td>'+r.id+'</td><td><strong>'+r.code+'</strong></td><td>'+r.name+'</td><td>'+(r.type||'-')+'</td><td>'+(r.description||'-')+'</td></tr>';
+    });
+    h += '</tbody></table>';
+    document.getElementById('rolesArea').innerHTML = h || '<div class="dms-empty">暂无</div>';
+  });
+}
+function roleCreate(){
+  DMS.modal({ title:'新建角色', fields:[
+    {key:'code',label:'角色编码',required:true},
+    {key:'name',label:'角色名称',required:true},
+    {key:'type',label:'类型',type:'select',options:['system','custom'],value:'custom'},
+    {key:'description',label:'描述',type:'textarea'}
+  ], onSubmit:function(data){
+    return DMS.api('/api/roles', {method:'POST', body:data}).then(function(d){
+      if(d.code===0){ DMS.toast('新建成功','success'); renderRoles(); return true; }
+      DMS.toast('失败：'+d.message,'error'); return false;
+    });
+  }});
+}
+
+// ============ 租户列表 ============
+function renderTenants(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">租户列表</div>' +
+    '<div class="dms-page-sub">多租户 · SaaS 架构</div>' +
+    '<div class="dms-card"><div id="tenantsArea"><div class="dms-loading">加载中...</div></div></div>';
+  DMS.api('/api/system/tenants-brief').then(function(d){
+    if(d.code!==0){ document.getElementById('tenantsArea').innerHTML='<div class="dms-error-hint">'+d.message+'</div>'; return; }
+    var list = d.data || [];
+    var h = '<table><thead><tr><th>ID</th><th>编码</th><th>名称</th><th>行业</th><th>状态</th><th>创建时间</th></tr></thead><tbody>';
+    list.forEach(function(t){
+      h += '<tr><td><code>'+t.id.substring(0,8)+'…</code></td><td><strong>'+t.code+'</strong></td><td>'+t.name+'</td><td>'+(t.industry||'-')+'</td><td>'+DMS.statusBadge(t.status)+'</td><td style="font-size:12px;color:#999;">'+(t.createdAt||'').substring(0,19)+'</td></tr>';
+    });
+    h += '</tbody></table>';
+    document.getElementById('tenantsArea').innerHTML = h;
+  });
+}
+
+// ============ 系统参数 ============
+function renderSettings(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">系统参数</div>' +
+    '<div class="dms-page-sub">全局系统配置项</div>' +
+    '<div class="dms-card"><div id="settingsArea"><div class="dms-loading">加载中...</div></div></div>';
+  DMS.api('/api/system/settings').then(function(d){
+    if(d.code!==0){ document.getElementById('settingsArea').innerHTML='<div class="dms-error-hint">'+d.message+'</div>'; return; }
+    var list = d.data || [];
+    var h = '<table><thead><tr><th>参数键</th><th>值</th><th>说明</th></tr></thead><tbody>';
+    list.forEach(function(s){
+      h += '<tr><td><code>'+s.key+'</code></td><td>'+DMS.fmt(s.value)+'</td><td style="color:#999;">'+(s.description||'-')+'</td></tr>';
+    });
+    h += '</tbody></table>';
+    document.getElementById('settingsArea').innerHTML = h;
+  });
+}
+
+// ============ 数据字典 ============
+function renderDicts(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">数据字典</div>' +
+    '<div class="dms-page-sub">系统枚举字典</div>' +
+    '<div class="dms-card"><div id="dictsArea"><div class="dms-loading">加载中...</div></div></div>';
+  DMS.api('/api/system/dicts').then(function(d){
+    if(d.code!==0){ document.getElementById('dictsArea').innerHTML='<div class="dms-error-hint">'+d.message+'</div>'; return; }
+    var list = d.data || [];
+    var byType = {};
+    list.forEach(function(item){
+      if(!byType[item.typeCode]) byType[item.typeCode] = { name:item.typeName, items:[] };
+      byType[item.typeCode].items.push(item);
+    });
+    var h = '';
+    Object.keys(byType).forEach(function(tc){
+      h += '<h4 style="margin:16px 0 8px;font-size:14px;">📘 ' + tc + ' · ' + byType[tc].name + '</h4>';
+      h += '<table><thead><tr><th>值</th><th>标签</th><th>排序</th></tr></thead><tbody>';
+      byType[tc].items.forEach(function(it){
+        h += '<tr><td><code>'+it.itemCode+'</code></td><td>'+it.label+'</td><td>'+it.sortOrder+'</td></tr>';
+      });
+      h += '</tbody></table>';
+    });
+    document.getElementById('dictsArea').innerHTML = h;
+  });
+}
+
+// ============ 健康检查 ============
+function renderHealth(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">健康检查</div>' +
+    '<div class="dms-page-sub">/actuator/health · 后端服务状态</div>' +
+    '<div class="dms-card"><div id="healthDetail"><div class="dms-loading">检测中...</div></div></div>';
+  fetch('/api/actuator/health').then(function(r){return r.json();}).then(function(h){
+    document.getElementById('healthDetail').innerHTML = '<pre style="background:#f5f7fa;padding:12px;border-radius:4px;font-size:12px;overflow:auto;">' + JSON.stringify(h, null, 2) + '</pre>';
+  });
+}
+
+// ============ 字典维护（增删改查 dict_items） ============
+function renderDictsCrud(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">🗂️ 字典维护</div>' +
+    '<div class="dms-page-sub">管理员可自行维护库存状态、仓库类型、产品线等配置数据</div>' +
+    '<div style="display:grid;grid-template-columns:280px 1fr;gap:12px;">' +
+    '<div class="dms-card"><div class="dms-card-title">字典分类' +
+    '<div class="actions"><button class="dms-btn dms-btn-sm dms-btn-primary" onclick="createDictType()">➕ 新增</button></div></div>' +
+    '<div id="dictTypesBox"><div class="dms-loading">加载中...</div></div></div>' +
+    '<div class="dms-card"><div class="dms-card-title" id="dictItemsTitle">选择左侧字典查看条目</div>' +
+    '<div id="dictItemsBox"></div></div></div>';
+  DMS.api('/api/dicts/types').then(function(d){
+    if (d.code !== 0) return;
+    var list = d.data || [];
+    var h = '<table><thead><tr><th>编码</th><th>名称</th><th>操作</th></tr></thead><tbody>';
+    list.forEach(function(t){
+      h += '<tr style="cursor:pointer;" onclick="loadDictItems(\''+t.code+'\',\''+t.name.replace(/\'/g,"")+'\')">' +
+        '<td><code>'+t.code+'</code></td><td>'+t.name+'</td>' +
+        '<td><button class="dms-btn dms-btn-sm" onclick="event.stopPropagation();loadDictItems(\''+t.code+'\',\''+t.name.replace(/\'/g,"")+'\')">查看</button></td></tr>';
+    });
+    h += '</tbody></table>';
+    document.getElementById('dictTypesBox').innerHTML = h;
+  });
+}
+function createDictType(){
+  DMS.form({
+    title:'新增字典分类',
+    fields:[
+      {key:'code',label:'编码',required:true,placeholder:'如：CUSTOM_TYPE'},
+      {key:'name',label:'名称',required:true,placeholder:'如：自定义类型'}
+    ],
+    onSubmit:function(data){
+      return DMS.api('/api/dicts/types',{method:'POST',body:data}).then(function(d){
+        if (d.code===0){ DMS.toast('新增成功','success'); renderDictsCrud(); return true; }
+        DMS.toast('失败：'+d.message,'error'); return false;
+      });
+    }
+  });
+}
+function loadDictItems(typeCode, typeName){
+  document.getElementById('dictItemsTitle').innerHTML =
+    '📖 <strong>' + typeCode + '</strong> · ' + typeName +
+    '<div class="actions"><button class="dms-btn dms-btn-sm dms-btn-primary" onclick="addDictItem(\''+typeCode+'\')">➕ 新增条目</button></div>';
+  DMS.api('/api/dicts/'+typeCode+'/items').then(function(d){
+    var list = d.data || [];
+    if (!list.length){ document.getElementById('dictItemsBox').innerHTML='<div class="dms-empty">暂无条目</div>'; return; }
+    var h = '<table><thead><tr><th>编码</th><th>名称</th><th style="width:80px;">排序</th><th style="width:200px;">操作</th></tr></thead><tbody>';
+    list.forEach(function(it){
+      h += '<tr><td><code>'+it.code+'</code></td><td>'+it.name+'</td><td>'+it.seq+'</td>' +
+        '<td><button class="dms-btn dms-btn-sm dms-btn-primary" onclick="editDictItem('+it.id+',\''+typeCode+'\',\''+it.code+'\',\''+it.name.replace(/\'/g,"")+'\','+it.seq+')">编辑</button> ' +
+        '<button class="dms-btn dms-btn-sm dms-btn-danger" onclick="delDictItem('+it.id+',\''+typeCode+'\')">删除</button></td></tr>';
+    });
+    h += '</tbody></table>';
+    document.getElementById('dictItemsBox').innerHTML = h;
+  });
+}
+function addDictItem(typeCode){
+  DMS.form({
+    title:'新增字典条目',
+    fields:[
+      {key:'code',label:'编码',required:true},
+      {key:'name',label:'中文名称',required:true},
+      {key:'seq',label:'排序',type:'number',value:'100'}
+    ],
+    onSubmit:function(data){
+      return DMS.api('/api/dicts/'+typeCode+'/items',{method:'POST',body:data}).then(function(d){
+        if(d.code===0){ DMS.toast('新增成功','success'); loadDictItems(typeCode, typeCode); return true; }
+        DMS.toast('失败：'+d.message,'error'); return false;
+      });
+    }
+  });
+}
+function editDictItem(id, typeCode, code, name, seq){
+  DMS.form({
+    title:'编辑字典条目',
+    fields:[
+      {key:'code',label:'编码',required:true,value:code},
+      {key:'name',label:'名称',required:true,value:name},
+      {key:'seq',label:'排序',type:'number',value:String(seq)}
+    ],
+    onSubmit:function(data){
+      return DMS.api('/api/dicts/items/'+id,{method:'PUT',body:data}).then(function(d){
+        if(d.code===0){ DMS.toast('更新成功','success'); loadDictItems(typeCode,typeCode); return true; }
+        DMS.toast('失败：'+d.message,'error'); return false;
+      });
+    }
+  });
+}
+function delDictItem(id, typeCode){
+  DMS.confirm('确认删除？', function(){
+    DMS.api('/api/dicts/items/'+id,{method:'DELETE'}).then(function(d){
+      if(d.code===0){ DMS.toast('已删除','success'); loadDictItems(typeCode,typeCode); }
+      else DMS.toast('失败：'+d.message,'error');
+    });
+  });
+}
+
+// ============ 字段配置（低代码） ============
+var currentForm = null;
+function renderFormConfig(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">🧩 字段配置（低代码）</div>' +
+    '<div class="dms-page-sub">管理员可配置字段是否必填、是否在列表/表单/详情展示、字段中文标签、以及新增自定义业务字段</div>' +
+    '<div class="dms-card">' +
+    '<div class="dms-card-title">选择表单</div>' +
+    '<div id="formSelector" style="display:flex;gap:8px;flex-wrap:wrap;"><div class="dms-loading">加载中...</div></div>' +
+    '</div>' +
+    '<div id="formFieldsBox"></div>';
+  DMS.api('/api/form-configs/forms').then(function(d){
+    var forms = d.data || [];
+    var h = '';
+    forms.forEach(function(f){
+      h += '<button class="dms-btn" onclick="selectForm(\''+f.key+'\',\''+f.label+'\')">'+f.label+' <code style="margin-left:4px;">'+f.key+'</code></button>';
+    });
+    document.getElementById('formSelector').innerHTML = h;
+  });
+}
+function selectForm(formKey, formLabel){
+  currentForm = { key: formKey, label: formLabel };
+  document.getElementById('formFieldsBox').innerHTML =
+    '<div class="dms-card">' +
+    '<div class="dms-card-title">📋 '+formLabel+' 字段配置' +
+    '<div class="actions">' +
+    '<button class="dms-btn dms-btn-primary" onclick="addCustomField()">➕ 新增自定义字段</button>' +
+    '<button class="dms-btn dms-btn-success" onclick="saveFormConfig()">💾 保存配置</button>' +
+    '</div></div>' +
+    '<div id="formFieldsList"><div class="dms-loading">加载中...</div></div>' +
+    '</div>';
+  loadFormFields();
+}
+function loadFormFields(){
+  DMS.api('/api/form-configs/'+currentForm.key).then(function(d){
+    var list = d.data || [];
+    if (!list.length){ document.getElementById('formFieldsList').innerHTML='<div class="dms-empty">暂无字段配置</div>'; return; }
+    var h = '<table><thead><tr>' +
+      '<th style="width:60px;">排序</th>' +
+      '<th>字段编码</th><th>中文标签</th><th>类型</th><th>分组</th>' +
+      '<th style="width:60px;text-align:center;">必填</th>' +
+      '<th style="width:80px;text-align:center;">列表显示</th>' +
+      '<th style="width:80px;text-align:center;">表单显示</th>' +
+      '<th style="width:80px;text-align:center;">详情显示</th>' +
+      '<th style="width:80px;text-align:center;">来源</th>' +
+      '<th style="width:80px;">操作</th></tr></thead><tbody>';
+    list.forEach(function(f,i){
+      h += '<tr>' +
+        '<td><input type="number" data-fi="'+i+'" data-fk="sortOrder" value="'+f.sortOrder+'" style="width:60px;"></td>' +
+        '<td><code>'+f.fieldKey+'</code></td>' +
+        '<td><input type="text" data-fi="'+i+'" data-fk="fieldLabel" value="'+(f.fieldLabel||'').replace(/"/g,'&quot;')+'" style="width:120px;"></td>' +
+        '<td><select data-fi="'+i+'" data-fk="fieldType" style="width:100px;">' +
+          ['text','number','date','textarea','select','picker','boolean'].map(function(t){
+            return '<option value="'+t+'"'+(f.fieldType===t?' selected':'')+'>'+t+'</option>';
+          }).join('') + '</select></td>' +
+        '<td><input type="text" data-fi="'+i+'" data-fk="group" value="'+(f.group||'').replace(/"/g,'&quot;')+'" style="width:100px;"></td>' +
+        '<td style="text-align:center;"><input type="checkbox" data-fi="'+i+'" data-fk="required" '+(f.required?'checked':'')+'></td>' +
+        '<td style="text-align:center;"><input type="checkbox" data-fi="'+i+'" data-fk="showInList" '+(f.showInList?'checked':'')+'></td>' +
+        '<td style="text-align:center;"><input type="checkbox" data-fi="'+i+'" data-fk="showInForm" '+(f.showInForm?'checked':'')+'></td>' +
+        '<td style="text-align:center;"><input type="checkbox" data-fi="'+i+'" data-fk="showInDetail" '+(f.showInDetail?'checked':'')+'></td>' +
+        '<td style="text-align:center;">' + (f.isNative?'<span class="dms-badge dms-badge-blue">原生</span>':'<span class="dms-badge dms-badge-orange">自定义</span>') + '</td>' +
+        '<td>' + (!f.isNative?'<button class="dms-btn dms-btn-sm dms-btn-danger" onclick="delFormField('+f.id+')">删除</button>':'-') + '</td>' +
+        '</tr>';
+    });
+    h += '</tbody></table>';
+    document.getElementById('formFieldsList').innerHTML = h;
+    // 保存到窗口以便读取
+    window._currentFields = list;
+  });
+}
+function saveFormConfig(){
+  var list = (window._currentFields || []).map(function(f, i){
+    var newF = Object.assign({}, f);
+    document.querySelectorAll('[data-fi="'+i+'"]').forEach(function(el){
+      var key = el.getAttribute('data-fk');
+      if (el.type === 'checkbox') newF[key] = el.checked;
+      else if (el.type === 'number') newF[key] = Number(el.value);
+      else newF[key] = el.value;
+    });
+    return newF;
+  });
+  DMS.api('/api/form-configs/'+currentForm.key+'/upsert', {method:'POST', body: list}).then(function(d){
+    if (d.code === 0) {
+      DMS.toast('已保存 · 更新 '+d.data.updated+' · 新增 '+d.data.inserted, 'success');
+      loadFormFields();
+    } else DMS.toast('保存失败：'+d.message, 'error');
+  });
+}
+function addCustomField(){
+  DMS.form({
+    title:'新增自定义业务字段',
+    fields:[
+      {key:'fieldKey',label:'字段编码（英文）',required:true,placeholder:'如：customer_code'},
+      {key:'fieldLabel',label:'中文标签',required:true},
+      {key:'fieldType',label:'类型',type:'select',options:['text','number','date','textarea','select','boolean']},
+      {key:'group',label:'分组',placeholder:'如：扩展字段'},
+      {key:'placeholder',label:'输入提示'},
+      {key:'defaultValue',label:'默认值'}
+    ],
+    onSubmit:function(data){
+      data.isNative = false;
+      data.showInForm = true;
+      data.showInList = true;
+      data.showInDetail = true;
+      return DMS.api('/api/form-configs/'+currentForm.key+'/upsert',{method:'POST',body:[data]}).then(function(d){
+        if(d.code===0){ DMS.toast('已新增','success'); loadFormFields(); return true; }
+        DMS.toast('失败：'+d.message,'error'); return false;
+      });
+    }
+  });
+}
+function delFormField(id){
+  DMS.confirm('确认删除该字段配置？', function(){
+    DMS.api('/api/form-configs/'+id, {method:'DELETE'}).then(function(d){
+      if(d.code===0){ DMS.toast('已删除','success'); loadFormFields(); }
+    });
+  });
+}
+
+// ============ US-D-08 流程配置 ============
+function renderWorkflows(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">🔄 流程配置</div>' +
+    '<div class="dms-page-sub">审批流工作流定义</div>' +
+    '<div class="dms-card"><div id="wfList"><div class="dms-loading">加载中...</div></div></div>';
+  DMS.api('/api/system-ops/workflows').then(function(d){
+    var list = d.data || [];
+    if (!list.length) { document.getElementById('wfList').innerHTML='<div class="dms-empty">暂无</div>'; return; }
+    var h = '<table><thead><tr><th>编号</th><th>编码</th><th>名称</th><th>描述</th><th>节点数</th><th>操作</th></tr></thead><tbody>';
+    list.forEach(function(w){
+      h += '<tr><td>'+w.id+'</td><td><strong>'+w.code+'</strong></td><td>'+w.name+'</td><td style="color:#999;">'+(w.description||'-')+'</td><td>'+w.nodeCount+'</td>' +
+        '<td><button class="dms-btn dms-btn-sm" onclick="viewNodes('+w.id+')">查看节点</button></td></tr>';
+    });
+    h += '</tbody></table>';
+    document.getElementById('wfList').innerHTML = h;
+  });
+}
+function viewNodes(id){
+  DMS.api('/api/system-ops/workflows/'+id+'/nodes').then(function(d){
+    var nodes = d.data || [];
+    var content = nodes.map(function(n){
+      return '#'+n.seq+' ['+n.type+'] '+n.name+' → '+(n.assigneeType||'-')+':'+(n.assigneeRef||'-')+' (SLA '+ (n.slaHours||'-') +'h)';
+    }).join('\n');
+    DMS.detail('流程节点 #'+id, {'节点数':nodes.length,'节点列表': content || '暂无节点'});
+  });
+}
+
+// ============ US-D-06 RBAC 权限矩阵 ============
+function renderRbac(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">🛡️ RBAC 权限矩阵</div>' +
+    '<div class="dms-page-sub">角色 × 资源 × 权限</div>' +
+    '<div class="dms-card"><div class="dms-card-title"><span>角色</span></div><div id="rolesBox"></div></div>' +
+    '<div class="dms-card"><div class="dms-card-title"><span>角色-权限映射</span></div><div id="rpBox"></div></div>';
+  DMS.api('/api/system-ops/rbac/matrix').then(function(d){
+    var roles = d.data.roles || [];
+    var h1 = '<table><thead><tr><th>ID</th><th>编码</th><th>名称</th><th>类型</th><th>描述</th></tr></thead><tbody>';
+    roles.forEach(function(r){
+      h1 += '<tr><td>'+r.id+'</td><td><strong>'+r.code+'</strong></td><td>'+r.name+'</td><td>'+DMS.statusBadge(r.type)+'</td><td style="color:#999;">'+(r.description||'-')+'</td></tr>';
+    });
+    h1 += '</tbody></table>';
+    document.getElementById('rolesBox').innerHTML = h1;
+
+    var rps = d.data.rolePermissions || [];
+    var byRole = {};
+    rps.forEach(function(p){ if(!byRole[p.roleId])byRole[p.roleId]=[]; byRole[p.roleId].push(p.permission); });
+    var h2 = '<table><thead><tr><th>角色</th><th>权限列表</th></tr></thead><tbody>';
+    roles.forEach(function(r){
+      var perms = byRole[r.id] || [];
+      h2 += '<tr><td><strong>'+r.name+'</strong></td><td>'+(perms.length?perms.map(function(p){return '<span class="dms-badge dms-badge-blue">'+p+'</span>';}).join(' '):'<span style="color:#bbb;">无</span>')+'</td></tr>';
+    });
+    h2 += '</tbody></table>';
+    document.getElementById('rpBox').innerHTML = h2;
+  });
+}
+
+// ============ US-D-11 缓存监视 ============
+function renderCache(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">💾 缓存监视</div>' +
+    '<div class="dms-page-sub">Redis 状态与手动清理</div>' +
+    '<div class="dms-card"><div class="dms-card-title"><span>Redis 状态</span>' +
+    '<div class="actions"><button class="dms-btn" onclick="renderCache()">🔄 刷新</button>' +
+    '<button class="dms-btn dms-btn-warn" onclick="flushCache()">🧹 清理缓存</button></div></div>' +
+    '<div id="cacheBox"><div class="dms-loading">检测中...</div></div></div>';
+  DMS.api('/api/system-ops/cache/status').then(function(d){
+    var s = d.data || {};
+    var info = s.info || {};
+    var h = '<div class="dms-kpi-grid">' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">连接状态</div><div class="dms-kpi-val g">' + (s.connected?'✅ 正常':'❌ 断开') + '</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">键数量</div><div class="dms-kpi-val">' + (s.keyCount||0) + '</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">内存</div><div class="dms-kpi-val o">' + (info.used_memory_human||'-') + '</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">已连接客户端</div><div class="dms-kpi-val p">' + (info.connected_clients||'-') + '</div></div>' +
+      '</div>';
+    h += '<h4 style="margin:16px 0 8px;">Redis Info 详情</h4>';
+    h += '<table><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>';
+    Object.keys(info).forEach(function(k){
+      h += '<tr><td><code>'+k+'</code></td><td>'+info[k]+'</td></tr>';
+    });
+    h += '</tbody></table>';
+    h += '<h4 style="margin:16px 0 8px;">采样 Key (前 20)</h4>';
+    h += '<div style="font-family:monospace;font-size:12px;background:#fafafa;padding:10px;border-radius:4px;">' +
+      (s.sampleKeys||[]).map(function(k){return '<div>'+k+'</div>';}).join('') + '</div>';
+    document.getElementById('cacheBox').innerHTML = h;
+  });
+}
+function flushCache(){
+  DMS.confirm('清除所有 dms:cache:* 缓存？', function(){
+    DMS.api('/api/system-ops/cache/flush', {method:'POST', body:{pattern:'dms:cache:*'}}).then(function(d){
+      if (d.code===0) { DMS.toast('已清理 '+d.data.cleared+' 条', 'success'); renderCache(); }
+      else DMS.toast('清理失败：'+d.message, 'error');
+    });
+  });
+}
+
+// ============ US-A-12 超时检查 ============
+function renderTimeouts(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">⏰ 超时提醒</div>' +
+    '<div class="dms-page-sub">合同/订单审批超时提醒（24/48/72h 三档）</div>' +
+    '<div class="dms-card">' +
+    '<div class="dms-card-title"><span>手动触发超时检查</span></div>' +
+    '<p style="font-size:13px;color:#666;">生产环境已配置定时任务每小时自动检查。手动触发用于测试。</p>' +
+    '<button class="dms-btn dms-btn-primary" onclick="runTimeout()">▶️ 立即检查</button>' +
+    '<div id="timeoutResult" style="margin-top:12px;"></div>' +
+    '</div>';
+}
+function runTimeout(){
+  document.getElementById('timeoutResult').innerHTML = '<div class="dms-loading">检查中...</div>';
+  DMS.api('/api/system-ops/check-timeouts', {method:'POST', body:{}}).then(function(d){
+    if (d.code===0) {
+      document.getElementById('timeoutResult').innerHTML =
+        '<div style="padding:12px;background:#f6ffed;border-radius:4px;color:#52c41a;">' +
+        '✅ 检查完成 · 提醒 <strong>'+d.data.reminded+'</strong> 条 · 时间：'+d.data.checkedAt.substring(0,19) + '</div>';
+    } else {
+      document.getElementById('timeoutResult').innerHTML = '<div class="dms-error-hint">'+d.message+'</div>';
+    }
+  });
+}
+
+// ============ US-D-05/B-27 批量导入 ============
+function renderBatchImport(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">📥 批量导入</div>' +
+    '<div class="dms-page-sub">批量导入用户 / 发票 / 订单</div>' +
+    '<div class="dms-card">' +
+    '<div class="dms-card-title"><span>选择导入类型</span></div>' +
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
+    '<button class="dms-btn dms-btn-primary" onclick="doImport(\'users\')">👥 批量导入用户</button>' +
+    '<button class="dms-btn dms-btn-primary" onclick="doImport(\'invoices\')">💵 批量导入采购发票</button>' +
+    '<button class="dms-btn dms-btn-primary" onclick="doImport(\'orders\')">📋 批量导入订单</button>' +
+    '</div>' +
+    '<div id="importResult" style="margin-top:16px;"></div>' +
+    '</div>';
+}
+function doImport(type){
+  var samples = {
+    users: '[\n{"username":"batch_user_1","name":"批量用户1","email":"u1@test.com","userType":"vendor"},\n{"username":"batch_user_2","name":"批量用户2","email":"u2@test.com","userType":"vendor"}\n]',
+    invoices: '[\n{"invoiceNo":"INV-BATCH-001","refOrderId":1,"amount":1000,"taxAmount":130,"taxRate":0.13,"issueDate":"2026-07-01"}\n]',
+    orders: '[\n{"orderType":"NORMAL","dealerId":1,"lines":[{"productId":1,"qty":5,"unitPrice":100,"taxRate":0.13}]}\n]'
+  };
+  var promptContent = prompt('输入 JSON 数组：', samples[type]);
+  if (!promptContent) return;
+  var arr;
+  try { arr = JSON.parse(promptContent); } catch(e){ DMS.toast('JSON 格式错误：'+e.message, 'error'); return; }
+  var url, body;
+  if (type === 'users')     { url='/api/system-ops/users/batch-import';    body = {users:arr}; }
+  else if (type === 'invoices') { url='/api/system-ops/invoices/batch-import'; body = {invoices:arr}; }
+  else { url='/api/orders/batch-import'; body = {orders:arr}; }
+  document.getElementById('importResult').innerHTML = '<div class="dms-loading">导入中...</div>';
+  DMS.api(url, {method:'POST', body:body}).then(function(d){
+    if (d.code !== 0) { document.getElementById('importResult').innerHTML='<div class="dms-error-hint">'+d.message+'</div>'; return; }
+    var s = d.data;
+    document.getElementById('importResult').innerHTML =
+      '<div class="dms-card" style="background:'+(s.failed?'#fff7e6':'#f6ffed')+';border:1px solid '+(s.failed?'#ffe082':'#b7eb8f')+'">' +
+      '<h4>导入完成</h4>' +
+      '<p>共 <strong>'+s.total+'</strong> 条 · 成功 <strong style="color:#52C41A;">'+s.success+'</strong> 条 · 失败 <strong style="color:#F5222D;">'+s.failed+'</strong> 条</p>' +
+      (s.errors && s.errors.length ? '<pre style="font-size:11px;color:#c62828;">'+JSON.stringify(s.errors,null,2)+'</pre>' : '') +
+      '</div>';
+  });
+}
+
+// ============ 综合看板（US-C-09） ============
+function renderDashboard(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">📈 综合看板</div>' +
+    '<div class="dms-page-sub">全维度业务概览 · KPI + 分布 + Top 榜 + 库存告警</div>' +
+    '<div class="dms-kpi-grid" id="dashKpi"></div>' +
+    '<div class="dms-card"><div class="dms-card-title"><span>📦 库存告警（US-B-17）</span></div><div id="invStats"></div></div>' +
+    '<div class="dms-card"><div class="dms-card-title"><span>📊 订单状态分布</span></div><div id="orderDist"></div></div>' +
+    '<div class="dms-card"><div class="dms-card-title"><span>📄 合同状态分布</span></div><div id="contractDist"></div></div>' +
+    '<div class="dms-card"><div class="dms-card-title"><span>🏆 Top 5 经销商（订单金额）</span></div><div id="topDealers"></div></div>' +
+    '<div class="dms-card"><div class="dms-card-title"><span>🏆 Top 5 产品（销量）</span></div><div id="topProducts"></div></div>';
+
+  DMS.api('/api/dashboard/overview').then(function(d){
+    if (d.code !== 0) { document.getElementById('dashKpi').innerHTML='<div class="dms-error-hint">'+d.message+'</div>'; return; }
+    var t = d.data.totals || {};
+    document.getElementById('dashKpi').innerHTML =
+      kpi('📋 订单', t.orders, '') +
+      kpi('🏢 经销商', t.dealers, 'g') +
+      kpi('💊 产品', t.products, 'o') +
+      kpi('📄 合同', t.contracts, 'p') +
+      kpi('🛒 销售出库', t.salesOuts, 'r');
+
+    var inv = d.data.inventoryStats || {};
+    document.getElementById('invStats').innerHTML =
+      '<div class="dms-kpi-grid">' +
+      kpi('📦 库存总量', inv.totalQty || 0, '') +
+      kpi('⏰ 临期库存 (30 天内)', inv.expiringQty || 0, 'o') +
+      kpi('🐌 呆滞库存 (90 天无动)', inv.staleQty || 0, 'r') +
+      kpi('🗂️ 库存记录', inv.records || 0, 'p') +
+      '</div>';
+
+    document.getElementById('orderDist').innerHTML = renderDist(d.data.orderStatusDist);
+    document.getElementById('contractDist').innerHTML = renderDist(d.data.contractStatusDist);
+    document.getElementById('topDealers').innerHTML = renderTop(d.data.topDealers, '¥');
+    document.getElementById('topProducts').innerHTML = renderTop(d.data.topProducts, '件');
+  });
+
+  function kpi(label, val, color) {
+    return '<div class="dms-kpi"><div class="dms-kpi-label">'+label+'</div><div class="dms-kpi-val '+(color||'')+'">'+(val||0)+'</div></div>';
+  }
+  function renderDist(list) {
+    if (!list || !list.length) return '<div class="dms-empty">暂无</div>';
+    var total = list.reduce(function(s,x){return s+Number(x.value||0);}, 0);
+    var h = '';
+    list.forEach(function(x){
+      var pct = total ? Math.round(Number(x.value)/total*100) : 0;
+      h += '<div style="padding:8px 0;">' +
+        '<div style="display:flex;justify-content:space-between;font-size:13px;">' +
+        '<span>'+DMS.statusBadge(x.key)+'</span>' +
+        '<span><strong>'+x.value+'</strong> <span style="color:#999;">('+pct+'%)</span></span></div>' +
+        '<div style="height:6px;background:#f0f0f0;border-radius:3px;margin-top:6px;">' +
+        '<div style="height:100%;background:linear-gradient(90deg,#2C4B8E,#4568AE);width:'+pct+'%;border-radius:3px;"></div>' +
+        '</div></div>';
+    });
+    return h;
+  }
+  function renderTop(list, unit) {
+    if (!list || !list.length) return '<div class="dms-empty">暂无</div>';
+    var maxVal = list.reduce(function(m,x){return Math.max(m,Number(x.value||0));},0);
+    var h = '<table><thead><tr><th>排名</th><th>名称</th><th style="width:50%;">数值</th></tr></thead><tbody>';
+    list.forEach(function(x, i){
+      var pct = maxVal ? (Number(x.value)/maxVal*100) : 0;
+      h += '<tr><td>'+(i+1)+'</td><td>'+x.name+'</td><td>' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<div style="flex:1;height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden;">' +
+        '<div style="height:100%;background:#52C41A;width:'+pct+'%;"></div></div>' +
+        '<span style="min-width:80px;text-align:right;font-weight:600;">'+unit+' '+Number(x.value).toFixed(2)+'</span>' +
+        '</div></td></tr>';
+    });
+    h += '</tbody></table>';
+    return h;
+  }
+}
+
+// 初始化
+goto('overview');
+</script>
+</body>
+</html>

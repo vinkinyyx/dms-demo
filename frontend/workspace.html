@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMS 业务工作台</title>
+<link rel="stylesheet" href="/dms.css">
+</head>
+<body>
+<div class="dms-layout">
+  <aside class="dms-sidebar">
+    <div class="dms-logo">DMS 工作台<small>V1.1 · 业务系统</small></div>
+    <div class="dms-nav" id="navMenu"></div>
+    <div style="padding:20px;font-size:12px;color:rgba(255,255,255,0.5);">
+      <a href="/admin.html" style="color:#7EB6FF;">→ 进入后台管理</a>
+    </div>
+  </aside>
+  <main class="dms-main">
+    <header class="dms-topbar">
+      <div class="dms-crumb" id="crumb">首页 / <strong>工作台</strong></div>
+      <div class="dms-user">
+        <span id="userName">-</span>
+        <div class="dms-avatar" id="avatar">?</div>
+        <button class="dms-btn-logout" onclick="DMS.logout()">退出</button>
+      </div>
+    </header>
+    <div class="dms-content" id="content"></div>
+  </main>
+</div>
+
+<script src="/dms-lib.js"></script>
+<script>
+if (!DMS.requireAuth()) { throw new Error('need login'); }
+document.getElementById('userName').textContent = DMS.USER.name || DMS.USER.username || '未知';
+document.getElementById('avatar').textContent = (DMS.USER.name || 'U').charAt(0);
+
+// ============ 菜单定义（分级 + 中文表单字段 + Picker）============
+var MENU_GROUPS = [
+  { group: '概览', items: [
+    { key:'home', icon:'🏠', label:'工作台首页', render:renderHome }
+  ]},
+
+  { group: '主数据管理', items: [
+    { key:'products',   icon:'💊', label:'产品管理',   api:'/api/products',
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'code',l:'编码'},{k:'nameCn',l:'中文名称'},
+        {k:'spec',l:'规格型号'},{k:'unit',l:'单位',w:60},{k:'currentPrice',l:'参考单价'},
+        {k:'taxRate',l:'税率',w:70},{k:'udiRequired',l:'UDI追溯',w:80},{k:'status',l:'状态',w:80}
+      ],
+      form:[
+        {key:'code',label:'产品编码',required:true,group:'基本信息',placeholder:'如 PROD-XXXXX'},
+        {key:'nameCn',label:'中文名称',required:true,group:'基本信息'},
+        {key:'nameEn',label:'英文名称',group:'基本信息'},
+        {key:'categoryId',label:'产品分类',group:'基本信息',picker:{resource:'categories'}},
+        {key:'spec',label:'规格型号',group:'规格与价格'},
+        {key:'unit',label:'单位',group:'规格与价格',value:'个'},
+        {key:'currentPrice',label:'参考单价',type:'number',group:'规格与价格'},
+        {key:'taxRate',label:'税率(如 0.13 表示 13%)',type:'number',group:'规格与价格',value:'0.13'},
+        {key:'udiRequired',label:'需要UDI追溯',type:'boolean',group:'医疗器械',value:'true'},
+        {key:'warnMonths',label:'临期预警(月)',type:'number',group:'医疗器械',value:'3'},
+        {key:'safetyQty',label:'安全库存',type:'number',group:'库存参数',value:'10'},
+        {key:'minOrderQty',label:'最小订购量',type:'number',group:'库存参数',value:'1'},
+        {key:'status',label:'状态',type:'select',options:[{value:'active',label:'启用'},{value:'inactive',label:'停用'}],value:'active',group:'状态'}
+      ]
+    },
+
+    { key:'categories', icon:'🗂️', label:'产品分类', api:'/api/product-categories',
+      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'编码'},{k:'name',l:'名称'},{k:'sortOrder',l:'排序',w:60},{k:'status',l:'状态',w:80}],
+      form:[
+        {key:'code',label:'分类编码',required:true,group:'基本信息'},
+        {key:'name',label:'分类名称',required:true,group:'基本信息'},
+        {key:'parentId',label:'父分类',group:'基本信息',picker:{resource:'categories'}},
+        {key:'sortOrder',label:'排序',type:'number',value:'1',group:'基本信息'},
+        {key:'status',label:'状态',type:'select',options:[{value:'active',label:'启用'},{value:'inactive',label:'停用'}],value:'active',group:'状态'}
+      ]
+    },
+
+    { key:'dealers', icon:'🏢', label:'经销商管理', api:'/api/dealers',
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'code',l:'编码'},{k:'name',l:'名称'},
+        {k:'level',l:'级别',w:70},{k:'contactName',l:'联系人',w:100},{k:'contactPhone',l:'电话',w:120},{k:'status',l:'状态',w:80}
+      ],
+      form:[
+        {key:'code',label:'经销商编码',required:true,group:'基本信息'},
+        {key:'name',label:'经销商名称',required:true,group:'基本信息'},
+        {key:'level',label:'级别',type:'select',options:[{value:'T1',label:'一级'},{value:'T2',label:'二级'}],value:'T1',required:true,group:'基本信息'},
+        {key:'regionId',label:'所属区域',group:'基本信息',picker:{resource:'regions'}},
+        {key:'legalPerson',label:'法定代表人',group:'工商信息'},
+        {key:'uscNo',label:'统一社会信用代码',group:'工商信息',placeholder:'18位统一社会信用代码'},
+        {key:'regAddress',label:'注册地址',group:'工商信息'},
+        {key:'foundedAt',label:'成立日期',type:'date',group:'工商信息'},
+        {key:'businessScope',label:'经营范围',type:'textarea',group:'工商信息'},
+        {key:'contactName',label:'联系人',group:'联系信息'},
+        {key:'contactPhone',label:'联系电话',group:'联系信息'},
+        {key:'contactEmail',label:'邮箱',type:'email',group:'联系信息'},
+        {key:'gspStatus',label:'GSP资质状态',type:'select',options:[{value:'active',label:'有效'},{value:'expired',label:'已过期'},{value:'none',label:'无'}],value:'active',group:'资质'},
+        {key:'gspExpire',label:'GSP到期日',type:'date',group:'资质'},
+        {key:'status',label:'状态',type:'select',options:[{value:'active',label:'启用'},{value:'inactive',label:'停用'},{value:'blocked',label:'冻结'}],value:'active',group:'状态'}
+      ]
+    },
+
+    { key:'hospitals', icon:'🏥', label:'医院/终端', api:'/api/hospitals',
+      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'编码'},{k:'name',l:'名称'},{k:'level',l:'等级',w:80},{k:'contactName',l:'联系人',w:100},{k:'status',l:'状态',w:80}],
+      form:[
+        {key:'code',label:'医院编码',required:true,group:'基本信息'},
+        {key:'name',label:'医院名称',required:true,group:'基本信息'},
+        {key:'level',label:'医院等级',type:'select',options:[{value:'三甲',label:'三级甲等'},{value:'三乙',label:'三级乙等'},{value:'二甲',label:'二级甲等'},{value:'二乙',label:'二级乙等'},{value:'一级',label:'一级'},{value:'未定',label:'未定级'}],group:'基本信息'},
+        {key:'regionId',label:'所属区域',group:'基本信息',picker:{resource:'regions'}},
+        {key:'contactName',label:'联系人',group:'联系信息'},
+        {key:'contactPhone',label:'联系电话',group:'联系信息'},
+        {key:'address',label:'地址',type:'textarea',group:'联系信息'},
+        {key:'status',label:'状态',type:'select',options:[{value:'active',label:'启用'},{value:'inactive',label:'停用'}],value:'active',group:'状态'}
+      ]
+    },
+
+    { key:'warehouses', icon:'🏭', label:'仓库管理', api:'/api/warehouses',
+      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'编码'},{k:'name',l:'名称'},{k:'type',l:'类型',w:100},{k:'status',l:'状态',w:80}],
+      form:[
+        {key:'code',label:'仓库编码',required:true,group:'基本信息'},
+        {key:'name',label:'仓库名称',required:true,group:'基本信息'},
+        {key:'type',label:'仓库类型',type:'select',options:[{value:'main',label:'主仓库'},{value:'sub',label:'分仓库'},{value:'hospital',label:'医院寄售仓'}],value:'main',required:true,group:'基本信息'},
+        {key:'dealerId',label:'所属经销商',picker:{resource:'dealers'},group:'归属'},
+        {key:'hospitalId',label:'所属医院(仅寄售仓)',picker:{resource:'hospitals'},group:'归属'},
+        {key:'address',label:'仓库地址',type:'textarea',group:'详情'},
+        {key:'status',label:'状态',type:'select',options:[{value:'active',label:'启用'},{value:'inactive',label:'停用'}],value:'active',group:'状态'}
+      ]
+    },
+
+    { key:'regions', icon:'📍', label:'区域管理', api:'/api/regions',
+      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'编码'},{k:'name',l:'名称'},{k:'level',l:'级别',w:60}],
+      form:[
+        {key:'code',label:'区域编码',required:true,group:'基本信息'},
+        {key:'name',label:'区域名称',required:true,group:'基本信息'},
+        {key:'level',label:'级别',type:'number',value:'1',group:'基本信息'},
+        {key:'parentId',label:'父区域',picker:{resource:'regions'},group:'基本信息'},
+        {key:'sortOrder',label:'排序',type:'number',value:'1',group:'基本信息'}
+      ]
+    }
+  ]},
+
+  { group: '合同与授权', items: [
+    { key:'contract-apps', icon:'📝', label:'合同申请', api:'/api/contract-applications',
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'code',l:'申请编号'},
+        {k:'applicationType',l:'申请类型',w:80},{k:'contractCategory',l:'合同分类',w:100},
+        {k:'validFrom',l:'生效开始',w:100},{k:'validTo',l:'生效结束',w:100},{k:'status',l:'状态',w:80}
+      ],
+      form:[
+        {key:'applicationType',label:'申请类型',type:'select',options:[{value:'NEW',label:'新签'},{value:'MODIFY',label:'变更'},{value:'RENEW',label:'续签'},{value:'TERMINATE',label:'终止'}],value:'NEW',required:true,group:'基本信息'},
+        {key:'contractCategory',label:'合同分类',type:'select',options:[{value:'SALES',label:'销售合同'},{value:'AUTHORIZATION',label:'授权合同'},{value:'DISTRIBUTION',label:'经销合同'}],value:'SALES',required:true,group:'基本信息'},
+        {key:'dealerId',label:'经销商',required:true,picker:{resource:'dealers'},group:'基本信息'},
+        {key:'validFrom',label:'生效开始',type:'date',group:'有效期'},
+        {key:'validTo',label:'生效结束',type:'date',group:'有效期'},
+        {key:'remark',label:'备注说明',type:'textarea',group:'其它'}
+      ],
+      actions: [
+        { label:'提交审批',   method:'POST', path:'/submit',  confirm:'确认提交此申请？', type:'warn' },
+        { label:'审批通过',  method:'POST', path:'/approve', confirm:'审批通过后将自动生成合同，是否继续？', type:'success' }
+      ]
+    },
+
+    { key:'contracts', icon:'📄', label:'合同', api:'/api/contracts',
+      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'合同编号'},{k:'category',l:'分类',w:100},{k:'validFrom',l:'生效开始',w:100},{k:'validTo',l:'生效结束',w:100},{k:'status',l:'状态',w:80}],
+      readonly: true
+    },
+
+    { key:'authorizations', icon:'🔑', label:'授权', api:'/api/authorizations',
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'authType',l:'授权类型',w:130},
+        {k:'validFrom',l:'生效开始',w:100},{k:'validTo',l:'生效结束',w:100},{k:'status',l:'状态',w:80}
+      ],
+      form:[
+        {key:'dealerId',label:'经销商',required:true,picker:{resource:'dealers'},group:'授权主体'},
+        {key:'contractId',label:'关联合同',picker:{resource:'contracts'},group:'授权主体'},
+        {key:'authType',label:'授权类型',type:'select',options:[{value:'ORDER',label:'订货授权'},{value:'SALES_TO_HOSPITAL',label:'向医院销售'},{value:'RMA',label:'退换货'},{value:'LOAN',label:'借用'}],value:'ORDER',required:true,group:'授权主体'},
+        {key:'productId',label:'限定产品(空=全部)',picker:{resource:'products'},group:'授权范围'},
+        {key:'terminalId',label:'限定终端(空=全部)',picker:{resource:'hospitals'},group:'授权范围'},
+        {key:'validFrom',label:'生效开始',type:'date',group:'有效期'},
+        {key:'validTo',label:'生效结束',type:'date',group:'有效期'},
+        {key:'status',label:'状态',type:'select',options:[{value:'active',label:'启用'},{value:'suspended',label:'挂起'},{value:'expired',label:'已过期'}],value:'active',group:'状态'}
+      ]
+    }
+  ]},
+
+  { group: '销售业务', items: [
+    { key:'orders', icon:'📤', label:'销售订单', api:'/api/orders',
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'code',l:'订单号'},
+        {k:'orderType',l:'类型',w:100},{k:'amountInclTax',l:'含税金额',w:110},
+        {k:'finalAmount',l:'最终金额',w:110},{k:'expectedDate',l:'期望到货',w:100},{k:'status',l:'状态',w:80}
+      ],
+      form:[
+        {key:'orderType',label:'订单类型',type:'select',options:[{value:'NORMAL',label:'常规订单'},{value:'SHORTAGE',label:'紧急补货'},{value:'CUSTOM',label:'定制订单'},{value:'EMERGENCY',label:'应急订单'}],value:'NORMAL',required:true,group:'订单信息'},
+        {key:'dealerId',label:'经销商',required:true,picker:{resource:'dealers'},group:'订单信息'},
+        {key:'expectedDate',label:'期望到货日期',type:'date',group:'订单信息'},
+        {key:'remark',label:'订单备注',type:'textarea',group:'其它'},
+        {key:'lines',type:'lines',label:'订单明细',required:true,group:'订单明细',
+          cols:[
+            {k:'productId',l:'产品',type:'picker',picker:'products',required:true},
+            {k:'qty',l:'数量',type:'number',required:true},
+            {k:'unitPrice',l:'单价',type:'number'},
+            {k:'taxRate',l:'税率',type:'number'}
+          ]
+        }
+      ],
+      statusDriven: true,   // 状态驱动按钮
+      salesOrder: true
+    },
+
+    { key:'sales-outs', icon:'🛒', label:'销售出库', api:'/api/sales-outs',
+      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'出库单号'},{k:'salesDate',l:'销售日期',w:100},{k:'amountInclTax',l:'含税金额',w:110},{k:'status',l:'状态',w:80}],
+      form:[
+        {key:'dealerId',label:'经销商',required:true,picker:{resource:'dealers'},group:'出库信息'},
+        {key:'terminalId',label:'终端医院',required:true,picker:{resource:'hospitals'},group:'出库信息'},
+        {key:'salesDate',label:'销售日期',type:'date',group:'出库信息'},
+        {key:'remark',label:'备注',type:'textarea',group:'其它'}
+      ]
+    },
+
+    { key:'sales-invoices', icon:'💰', label:'销售发票', api:'/api/sales-invoices',
+      cols:[{k:'id',l:'编号',w:60},{k:'invoiceNo',l:'发票号'},{k:'amount',l:'含税金额',w:120},{k:'issueDate',l:'开票日期',w:100}],
+      readonly: true
+    }
+  ]},
+
+  { group: '采购业务', items: [
+    { key:'purchase-orders', icon:'📥', label:'采购订单', api:'/api/purchase-orders',
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'code',l:'采购单号'},
+        {k:'orderType',l:'类型',w:80},{k:'supplierId',l:'供应商',w:80},
+        {k:'warehouseId',l:'入库仓库',w:80},
+        {k:'amountInclTax',l:'含税金额',w:110},{k:'expectedDate',l:'期望到货',w:100},{k:'status',l:'状态',w:80}
+      ],
+      form:[
+        {key:'orderType',label:'采购类型',type:'select',options:[{value:'NORMAL',label:'常规采购'},{value:'URGENT',label:'紧急采购'},{value:'RETURN',label:'退货'}],value:'NORMAL',required:true,group:'采购信息'},
+        {key:'supplierId',label:'供应商',required:true,picker:{resource:'dealers'},group:'采购信息'},
+        {key:'warehouseId',label:'入库仓库',required:true,picker:{resource:'warehouses'},group:'采购信息'},
+        {key:'expectedDate',label:'期望到货日期',type:'date',group:'采购信息'},
+        {key:'remark',label:'采购备注',type:'textarea',group:'其它'},
+        {key:'lines',type:'lines',label:'采购明细',required:true,group:'采购明细',
+          cols:[
+            {k:'productId',l:'产品',type:'picker',picker:'products',required:true},
+            {k:'qty',l:'采购数量',type:'number',required:true},
+            {k:'unitPrice',l:'采购单价',type:'number'},
+            {k:'taxRate',l:'税率',type:'number'}
+          ]
+        }
+      ],
+      statusDriven: true,
+      purchaseOrder: true
+    },
+
+    { key:'receipts', icon:'📦', label:'收货入库', api:'/api/receipts',
+      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'入库单号'},{k:'arrivedAt',l:'到货时间',w:140},{k:'status',l:'状态',w:80}],
+      readonly: true
+    },
+
+    { key:'purchase-invoices', icon:'💵', label:'采购发票', api:'/api/purchase-invoices',
+      cols:[{k:'id',l:'编号',w:60},{k:'invoiceNo',l:'发票号'},{k:'amount',l:'含税金额',w:120},{k:'taxRate',l:'税率',w:70},{k:'issueDate',l:'开票日期',w:100}],
+      form:[
+        {key:'refOrderId',label:'关联订单',required:true,picker:{resource:'orders'},group:'发票信息'},
+        {key:'invoiceNo',label:'发票号',required:true,group:'发票信息'},
+        {key:'amount',label:'含税金额',type:'number',required:true,group:'金额'},
+        {key:'taxAmount',label:'税额',type:'number',group:'金额'},
+        {key:'taxRate',label:'税率',type:'number',value:'0.13',group:'金额'},
+        {key:'issueDate',label:'开票日期',type:'date',group:'其它'}
+      ]
+    }
+  ]},
+
+  { group: '库存管理', items: [
+    { key:'inventory', icon:'📦', label:'库存查询', api:'/api/inventory',
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'productId',l:'产品ID',w:80},
+        {k:'batchNo',l:'批次号'},{k:'serialNo',l:'序列号'},{k:'qty',l:'数量',w:80},
+        {k:'expDate',l:'到期日期',w:100},{k:'inSource',l:'入库来源',w:80}
+      ],
+      readonly: true
+    },
+    { key:'receipts', icon:'📥', label:'收货入库', api:'/api/receipts',
+      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'入库单号'},{k:'arrivedAt',l:'到货时间',w:140},{k:'status',l:'状态',w:80}],
+      readonly: true
+    },
+    { key:'stock-moves', icon:'🔀', label:'调拨移库', api:'/api/stock-moves',
+      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'调拨单号'},{k:'status',l:'状态',w:80}],
+      form:[
+        {key:'fromWarehouseId',label:'源仓库',required:true,picker:{resource:'warehouses'},group:'调拨信息'},
+        {key:'toWarehouseId',label:'目标仓库',required:true,picker:{resource:'warehouses'},group:'调拨信息'},
+        {key:'remark',label:'备注',type:'textarea',group:'其它'}
+      ]
+    },
+    { key:'inventory-adjustments', icon:'⚖️', label:'库存调整', api:'/api/inventory-adjustments',
+      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'调整单号'},{k:'category',l:'调整方向',w:80},{k:'type',l:'调整类型',w:100},{k:'status',l:'状态',w:80}],
+      readonly: true
+    }
+  ]},
+
+  { group: '促销与营销', items: [
+    { key:'promotions', icon:'🎁', label:'促销规则', api:'/api/promotions',
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'code',l:'编码'},{k:'name',l:'名称'},
+        {k:'promoType',l:'类型',w:120},{k:'priority',l:'优先级',w:70},
+        {k:'validFrom',l:'开始',w:100},{k:'validTo',l:'结束',w:100},{k:'status',l:'状态',w:80}
+      ],
+      form:[
+        {key:'code',label:'促销编码',required:true,group:'基本信息'},
+        {key:'name',label:'促销名称',required:true,group:'基本信息'},
+        {key:'promoType',label:'促销类型',type:'select',options:[{value:'MOQ',label:'起订量(MOQ)'},{value:'FULL_REDUCTION',label:'满减'}],value:'MOQ',required:true,group:'基本信息'},
+        {key:'priority',label:'优先级(值越大越优先)',type:'number',value:'10',group:'规则'},
+        {key:'exclusive',label:'排他',type:'boolean',value:'true',group:'规则'},
+        {key:'validFrom',label:'生效开始',type:'date',group:'有效期'},
+        {key:'validTo',label:'生效结束',type:'date',group:'有效期'},
+        {key:'status',label:'状态',type:'select',options:[{value:'draft',label:'草稿'},{value:'active',label:'启用'},{value:'paused',label:'暂停'}],value:'draft',group:'状态'},
+        {key:'description',label:'说明',type:'textarea',group:'其它'}
+      ]
+    }
+  ]},
+
+  { group: '用户与权限', items: [
+    { key:'users', icon:'👥', label:'账号管理', api:'/api/users',
+      cols:[{k:'id',l:'编号',w:60},{k:'username',l:'账号'},{k:'name',l:'姓名'},{k:'userType',l:'类型',w:80},{k:'email',l:'邮箱'},{k:'status',l:'状态',w:80}],
+      form:[
+        {key:'username',label:'账号',required:true,group:'基本信息'},
+        {key:'name',label:'姓名',required:true,group:'基本信息'},
+        {key:'userType',label:'用户类型',type:'select',options:[{value:'vendor',label:'厂商'},{value:'dealer',label:'经销商'}],value:'vendor',required:true,group:'基本信息'},
+        {key:'password',label:'初始密码',type:'password',group:'基本信息',placeholder:'留空则用默认密码'},
+        {key:'email',label:'邮箱',type:'email',group:'联系信息'},
+        {key:'phone',label:'手机号',group:'联系信息'},
+        {key:'orgId',label:'所属组织',picker:{resource:'org-units'},group:'归属'},
+        {key:'dealerId',label:'所属经销商(dealer类型)',picker:{resource:'dealers'},group:'归属'},
+        {key:'status',label:'状态',type:'select',options:[{value:'active',label:'启用'},{value:'inactive',label:'停用'},{value:'locked',label:'锁定'}],value:'active',group:'状态'}
+      ]
+    },
+    { key:'roles', icon:'🎭', label:'角色管理', api:'/api/roles',
+      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'编码'},{k:'name',l:'名称'},{k:'type',l:'类型',w:80},{k:'description',l:'描述'}],
+      form:[
+        {key:'code',label:'角色编码',required:true,group:'基本信息'},
+        {key:'name',label:'角色名称',required:true,group:'基本信息'},
+        {key:'type',label:'角色类型',type:'select',options:[{value:'system',label:'系统角色'},{value:'custom',label:'自定义角色'}],value:'custom',group:'基本信息'},
+        {key:'description',label:'描述',type:'textarea',group:'其它'}
+      ]
+    }
+  ]},
+
+  { group: '外部资源', items: [
+    { key:'swagger', icon:'🔧', label:'API 文档', render:function(){ window.open('/swagger-ui.html','_blank'); goto('home'); } }
+  ]}
+];
+
+var MENU_INDEX = {};
+MENU_GROUPS.forEach(function(g){ g.items.forEach(function(m){ MENU_INDEX[m.key] = m; }); });
+
+function renderMenu(activeKey){
+  var h = '';
+  MENU_GROUPS.forEach(function(g){
+    h += '<div class="dms-nav-group">' + g.group + '</div>';
+    g.items.forEach(function(m){
+      h += '<div class="dms-nav-item ' + (m.key===activeKey?'active':'') + '" onclick="goto(\'' + m.key + '\')">' +
+           '<span class="icon">' + m.icon + '</span><span>' + m.label + '</span></div>';
+    });
+  });
+  document.getElementById('navMenu').innerHTML = h;
+}
+
+function goto(key){
+  var m = MENU_INDEX[key]; if (!m) return;
+  renderMenu(key);
+  document.getElementById('crumb').innerHTML = '首页 / <strong>' + m.label + '</strong>';
+  if (m.render) m.render();
+  else if (m.api) renderList(m);
+}
+
+// ============ 通用列表 ============
+var currentList = {};
+
+function renderList(menu){
+  currentList = { menu: menu, page: 1, size: 20 };
+  var newBtn = menu.readonly ? '' : '<button class="dms-btn dms-btn-primary" onclick="doCreate()">➕ 新建</button>';
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">' + menu.label + '</div>' +
+    '<div class="dms-page-sub">共 <span id="totalCnt">-</span> 条数据 · <code>' + menu.api + '</code></div>' +
+    '<div class="dms-card">' +
+      '<div class="dms-card-title">' +
+        '<span>数据列表</span>' +
+        '<div class="actions">' +
+          '<button class="dms-btn" onclick="reloadList()">🔄 刷新</button>' + newBtn +
+        '</div>' +
+      '</div>' +
+      '<div id="listArea"><div class="dms-loading">加载中...</div></div>' +
+    '</div>';
+  reloadList();
+}
+
+function reloadList(){
+  var m = currentList.menu;
+  var q = '?page=' + currentList.page + '&size=' + currentList.size;
+  DMS.api(m.api + q).then(function(d){
+    if (d.code !== 0) {
+      document.getElementById('listArea').innerHTML = '<div class="dms-error-hint">加载失败：' + d.message + '</div>';
+      return;
+    }
+    var list = (d.data && d.data.list) || (d.data && d.data.data) || (Array.isArray(d.data) ? d.data : []);
+    var total = (d.data && d.data.total != null) ? d.data.total : list.length;
+    var totalEl = document.getElementById('totalCnt');
+    if (totalEl) totalEl.textContent = total;
+
+    if (!list.length) { document.getElementById('listArea').innerHTML = '<div class="dms-empty">📭 暂无数据</div>'; return; }
+
+    var h = '<table><thead><tr>';
+    m.cols.forEach(function(c){
+      var w = c.w ? (' style="width:' + c.w + 'px;"') : '';
+      h += '<th' + w + '>' + c.l + '</th>';
+    });
+    if (!m.readonly) h += '<th style="width:240px;">操作</th>';
+    h += '</tr></thead><tbody>';
+
+    list.forEach(function(row){
+      h += '<tr>';
+      m.cols.forEach(function(c){
+        var v = row[c.k];
+        if (c.k === 'status') h += '<td>' + DMS.statusBadge(v) + '</td>';
+        else if (typeof v === 'number' && (c.k.indexOf('mount')>0 || c.k.indexOf('rice')>0)) h += '<td>¥ ' + Number(v).toFixed(2) + '</td>';
+        else if (typeof v === 'boolean') h += '<td>' + (v ? '✅' : '—') + '</td>';
+        else h += '<td>' + DMS.fmt(v, c.k) + '</td>';
+      });
+      if (!m.readonly) {
+        var id = row.id;
+        h += '<td>' +
+          '<button class="dms-btn dms-btn-sm" onclick="doView(' + id + ')">👁️ 查看</button>';
+        // 状态驱动按钮
+        if (m.statusDriven) {
+          var acts = actionsForStatus(m, row.status);
+          acts.forEach(function(a){
+            var cls = 'dms-btn-' + (a.type || 'warn');
+            var lbl = a.label;
+            var confirmMsg = a.confirm || ('确认' + lbl + '？');
+            h += ' <button class="dms-btn dms-btn-sm ' + cls + '" onclick="doStatusAction(' + id + ',\'' + a.key + '\',\'' + a.method + '\',\'' + a.path + '\',\'' + confirmMsg + '\')">' + lbl + '</button>';
+          });
+        } else {
+          // 无状态驱动：显示编辑
+          h += ' <button class="dms-btn dms-btn-sm dms-btn-primary" onclick="doEdit(' + id + ')">✏️ 编辑</button>';
+          if (m.actions) {
+            m.actions.forEach(function(a, idx){
+              var cls = 'dms-btn-' + (a.type || 'warn');
+              h += ' <button class="dms-btn dms-btn-sm ' + cls + '" onclick="doAction(' + id + ',' + idx + ')">' + a.label + '</button>';
+            });
+          }
+        }
+        h += '</td>';
+      }
+      h += '</tr>';
+    });
+    h += '</tbody></table>';
+    h += '<div class="dms-pagination">共 ' + total + ' 条 · 第 ' + currentList.page + ' 页 · ' +
+         '<button ' + (currentList.page<=1?'disabled':'') + ' onclick="currentList.page--;reloadList()">上一页</button>' +
+         '<button ' + (list.length<currentList.size?'disabled':'') + ' onclick="currentList.page++;reloadList()">下一页</button></div>';
+    document.getElementById('listArea').innerHTML = h;
+  }).catch(function(e){
+    document.getElementById('listArea').innerHTML = '<div class="dms-error-hint">网络错误：' + e.message + '</div>';
+  });
+}
+
+function doCreate(){
+  var m = currentList.menu;
+  // 销售订单/采购订单使用大屏下单页
+  if (m.key === 'orders') {
+    window.location.href = '/order-create.html?mode=sales';
+    return;
+  }
+  if (m.key === 'purchase-orders') {
+    window.location.href = '/order-create.html?mode=purchase';
+    return;
+  }
+  DMS.form({
+    title: '新建 · ' + m.label,
+    okText: '保存',
+    fields: m.form,
+    onSubmit: function(data){
+      return DMS.api(m.api, { method:'POST', body: data }).then(function(d){
+        if (d.code === 0) { DMS.toast('新建成功', 'success'); reloadList(); return true; }
+        DMS.toast('新建失败：' + d.message, 'error'); return false;
+      });
+    }
+  });
+}
+
+function doView(id){
+  var m = currentList.menu;
+  DMS.api(m.api + '/' + id).then(function(d){
+    if (d.code !== 0) { DMS.toast('查看失败：' + d.message, 'error'); return; }
+    renderDetailChinese(m, d.data);
+  });
+}
+
+// ============ 中文详情视图 ============
+function renderDetailChinese(menu, data){
+  // 构建中文字段视图（不显示 JSON）
+  var groups = {
+    '基本信息': [],
+    '金额': [],
+    '时间': [],
+    '状态': [],
+    '其它': []
+  };
+
+  // 通用字段映射
+  var fieldGroups = {
+    'id':'基本信息','code':'基本信息','orderType':'基本信息','name':'基本信息','nameCn':'基本信息',
+    'dealerId':'基本信息','supplierId':'基本信息','warehouseId':'基本信息','productId':'基本信息',
+    'terminalId':'基本信息','hospitalId':'基本信息','categoryId':'基本信息','regionId':'基本信息',
+    'amountInclTax':'金额','discountAmount':'金额','finalAmount':'金额','taxAmount':'金额',
+    'currentPrice':'金额','price':'金额','taxRate':'金额','qty':'金额',
+    'createdAt':'时间','updatedAt':'时间','expectedDate':'时间','submittedAt':'时间',
+    'approvedAt':'时间','completedAt':'时间','arrivedAt':'时间','salesDate':'时间',
+    'validFrom':'时间','validTo':'时间','issueDate':'时间',
+    'status':'状态','gspStatus':'状态'
+  };
+
+  Object.keys(data || {}).forEach(function(k){
+    if (k === 'lines' || k === 'extra' || k === 'allowedActions') return;
+    var g = fieldGroups[k] || '其它';
+    groups[g].push({ key: k, value: data[k] });
+  });
+
+  var h = '';
+
+  // 顶部：单号+状态+关键操作
+  h += '<div style="padding:16px 20px;background:linear-gradient(135deg,#2C4B8E,#1E3A5F);color:#fff;border-radius:6px;margin-bottom:16px;">' +
+       '<div style="font-size:12px;opacity:.8;">' + menu.label + '</div>' +
+       '<div style="font-size:20px;font-weight:700;margin:4px 0;">' + (data.code || ('#' + data.id)) + '</div>' +
+       '<div style="display:flex;gap:12px;align-items:center;font-size:12px;opacity:.9;">' +
+       (data.status ? '<span style="background:rgba(255,255,255,.2);padding:3px 10px;border-radius:10px;">' + statusChinese(data.status) + '</span>' : '') +
+       (data.createdAt ? '<span>创建时间：' + String(data.createdAt).substring(0,19) + '</span>' : '') +
+       '</div></div>';
+
+  // 分组字段
+  ['基本信息','金额','时间','状态','其它'].forEach(function(gname){
+    var items = groups[gname];
+    if (!items.length) return;
+    h += '<div style="margin-bottom:14px;">' +
+         '<div style="font-size:13px;font-weight:600;color:#2C4B8E;padding:6px 12px;background:#e6f4ff;border-left:3px solid #2C4B8E;margin-bottom:8px;">' + gname + '</div>' +
+         '<table style="width:100%;border-collapse:collapse;">';
+    items.forEach(function(it){
+      var label = DMS.labelOf(it.key);
+      var val = it.value;
+      var display;
+      if (val == null || val === '') display = '<span style="color:#bbb;">-</span>';
+      else if (it.key === 'status') display = DMS.statusBadge(val);
+      else if (typeof val === 'boolean') display = val ? '✅ 是' : '否';
+      else if (typeof val === 'number' && (it.key.indexOf('mount')>0 || it.key.indexOf('Price')>0)) display = '<span style="color:#f5222d;font-weight:600;">¥ ' + Number(val).toFixed(2) + '</span>';
+      else if (typeof val === 'object') display = '<code style="font-size:11px;">' + JSON.stringify(val) + '</code>';
+      else display = String(val).replace(/T/,' ').substring(0,50);
+      h += '<tr style="border-bottom:1px solid #f5f5f5;">' +
+           '<td style="padding:8px 12px;width:140px;color:#999;font-size:12px;">' + label + '</td>' +
+           '<td style="padding:8px 12px;font-size:13px;">' + display + '</td></tr>';
+    });
+    h += '</table></div>';
+  });
+
+  // 明细子表（如果有）
+  if (data.lines && data.lines.length) {
+    h += '<div style="margin-bottom:14px;">' +
+         '<div style="font-size:13px;font-weight:600;color:#2C4B8E;padding:6px 12px;background:#e6f4ff;border-left:3px solid #2C4B8E;margin-bottom:8px;">📋 明细（' + data.lines.length + ' 项）</div>' +
+         '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+         '<thead><tr style="background:#fafbfc;">' +
+         '<th style="padding:8px;text-align:left;">#</th>' +
+         '<th style="padding:8px;text-align:left;">产品</th>' +
+         '<th style="padding:8px;text-align:left;">数量</th>' +
+         '<th style="padding:8px;text-align:left;">单价</th>' +
+         '<th style="padding:8px;text-align:left;">税率</th>' +
+         '<th style="padding:8px;text-align:left;">小计</th></tr></thead><tbody>';
+    data.lines.forEach(function(l, i){
+      h += '<tr style="border-bottom:1px solid #f5f5f5;">' +
+           '<td style="padding:8px;">' + (i+1) + '</td>' +
+           '<td style="padding:8px;"><div style="font-weight:600;color:#2C4B8E;">' + (l.productCode || l.code || ('#' + l.productId)) + '</div>' +
+             '<div style="color:#666;font-size:11px;">' + (l.productName || '-') + (l.productSpec ? ' · ' + l.productSpec : '') + '</div></td>' +
+           '<td style="padding:8px;">' + (l.qty || 0) + (l.receivedQty != null ? '<div style="color:#52c41a;font-size:10px;">已收 ' + l.receivedQty + '</div>' : '') + '</td>' +
+           '<td style="padding:8px;">¥ ' + Number(l.unitPrice||0).toFixed(2) + '</td>' +
+           '<td style="padding:8px;">' + (Number(l.taxRate||0)*100).toFixed(0) + '%</td>' +
+           '<td style="padding:8px;font-weight:600;color:#f5222d;">¥ ' + Number(l.subtotal || (Number(l.qty||0)*Number(l.unitPrice||0))).toFixed(2) + '</td>' +
+           '</tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+
+  // 允许操作
+  var actionButtons = '';
+  if (data.allowedActions && data.allowedActions.length) {
+    actionButtons = data.allowedActions.map(function(a){
+      return '<button class="dms-btn dms-btn-' + (a.type||'primary') + '" ' +
+             'onclick="doStatusAction(' + data.id + ',\'' + a.key + '\',\'' + a.method + '\',\'' + a.path + '\',\'确认' + a.label + '？\')">' +
+             a.label + '</button>';
+    }).join(' ');
+  }
+
+  // 弹窗
+  var mask = document.createElement('div');
+  mask.className = 'dms-modal-mask';
+  var box = document.createElement('div');
+  box.className = 'dms-modal-box';
+  box.style.maxWidth = '820px';
+  box.innerHTML =
+    '<div class="dms-modal-hdr"><span>' + menu.label + ' · 详情</span><button class="dms-modal-close">&times;</button></div>' +
+    '<div class="dms-modal-body">' + h + '</div>' +
+    '<div class="dms-modal-ftr">' + actionButtons +
+    ' <button class="dms-btn dms-btn-cancel">关闭</button></div>';
+  mask.appendChild(box);
+  document.body.appendChild(mask);
+  setTimeout(function(){ mask.classList.add('show'); }, 10);
+  var close = function(){ mask.classList.remove('show'); setTimeout(function(){ mask.remove(); }, 200); };
+  box.querySelector('.dms-modal-close').onclick = close;
+  box.querySelector('.dms-btn-cancel').onclick = close;
+  mask.onclick = function(e){ if(e.target===mask) close(); };
+}
+
+function statusChinese(s){
+  var map = {
+    'DRAFT':'草稿','SUBMITTED':'已提交','APPROVED':'已审批','REJECTED':'已驳回',
+    'CANCELLED':'已取消','COMPLETED':'已完成','RECEIVING':'收货中','SHIPPED':'已发货',
+    'active':'启用','inactive':'停用','locked':'锁定'
+  };
+  return map[s] || map[String(s).toUpperCase()] || s;
+}
+
+// ============ 状态驱动按钮 - 根据订单状态获取允许的操作 ============
+function actionsForStatus(menu, status){
+  // 采购订单状态机
+  if (menu.purchaseOrder) {
+    switch (String(status||'').toUpperCase()) {
+      case 'DRAFT':
+        return [
+          {key:'edit',    label:'编辑',     type:'primary', method:'GET',  path:''},
+          {key:'submit',  label:'提交审批', type:'warn',    method:'POST', path:'/submit', confirm:'确认提交采购单？'},
+          {key:'cancel',  label:'取消',     type:'danger',  method:'POST', path:'/cancel', confirm:'确认取消？'}
+        ];
+      case 'SUBMITTED':
+        return [
+          {key:'approve', label:'审批通过', type:'success', method:'POST', path:'/approve', confirm:'审批通过？'},
+          {key:'reject',  label:'驳回',     type:'danger',  method:'POST', path:'/reject',  confirm:'确认驳回？'},
+          {key:'cancel',  label:'取消',     type:'default', method:'POST', path:'/cancel'}
+        ];
+      case 'APPROVED':
+        return [
+          {key:'receive', label:'📦 收货入库', type:'success', method:'POST', path:'/receive', confirm:'确认整单收货入库？将自动更新库存。'}
+        ];
+      case 'RECEIVING':
+        return [
+          {key:'receive', label:'📦 继续收货', type:'success', method:'POST', path:'/receive', confirm:'继续收货？'}
+        ];
+      default:
+        return [];
+    }
+  }
+  // 销售订单状态机
+  if (menu.salesOrder) {
+    switch (String(status||'').toUpperCase()) {
+      case 'DRAFT':
+        return [
+          {key:'edit',    label:'编辑',     type:'primary', method:'GET',  path:''},
+          {key:'submit',  label:'提交审批', type:'warn',    method:'POST', path:'/submit', confirm:'确认提交订单？'},
+          {key:'cancel',  label:'取消',     type:'danger',  method:'POST', path:'/cancel', confirm:'确认取消订单？'}
+        ];
+      case 'SUBMITTED':
+        return [
+          {key:'approve', label:'审批通过', type:'success', method:'POST', path:'/approve', confirm:'审批通过？'},
+          {key:'reject',  label:'驳回',     type:'danger',  method:'POST', path:'/reject',  confirm:'确认驳回订单？'},
+          {key:'cancel',  label:'取消',     type:'default', method:'POST', path:'/cancel'}
+        ];
+      default:
+        return [];
+    }
+  }
+  return [];
+}
+
+// 状态动作执行
+function doStatusAction(id, key, method, path, confirmMsg){
+  var m = currentList.menu;
+  if (key === 'edit') { doEdit(id); return; }
+  DMS.confirm(confirmMsg || '确认执行？', function(){
+    DMS.api(m.api + '/' + id + path, {method: method || 'POST'}).then(function(d){
+      if (d.code === 0) { DMS.toast('操作成功', 'success'); reloadList(); }
+      else DMS.toast('失败：' + d.message, 'error');
+    });
+  });
+}
+
+function doEdit(id){
+  var m = currentList.menu;
+  DMS.api(m.api + '/' + id).then(function(d){
+    if (d.code !== 0) { DMS.toast('加载失败：' + d.message, 'error'); return; }
+    var fields = m.form.map(function(f){
+      var newF = Object.assign({}, f);
+      newF.value = d.data[f.key];
+      // Picker 类字段：如果关联对象也已 join，用其 label
+      if (f.picker && newF.value != null) {
+        newF.displayValue = '#' + newF.value;
+      }
+      return newF;
+    });
+    DMS.form({
+      title: '编辑 · ' + m.label + ' #' + id,
+      okText: '更新',
+      fields: fields,
+      onSubmit: function(data){
+        return DMS.api(m.api + '/' + id, { method:'PUT', body: data }).then(function(d2){
+          if (d2.code === 0) { DMS.toast('更新成功', 'success'); reloadList(); return true; }
+          DMS.toast('更新失败：' + d2.message, 'error'); return false;
+        });
+      }
+    });
+  });
+}
+
+function doAction(id, actionIdx){
+  var m = currentList.menu;
+  var a = m.actions[actionIdx];
+  DMS.confirm(a.confirm || ('确认' + a.label + '？'), function(){
+    DMS.api(m.api + '/' + id + a.path, { method: a.method, body: a.body || null }).then(function(d){
+      if (d.code === 0) { DMS.toast(a.label + ' 成功', 'success'); reloadList(); }
+      else DMS.toast(a.label + ' 失败：' + d.message, 'error');
+    });
+  });
+}
+
+// ============ 工作台首页 ============
+function renderHome(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">工作台</div>' +
+    '<div class="dms-page-sub">欢迎回来，' + (DMS.USER.name||DMS.USER.username) + ' 👋 · 今天是 ' + new Date().toLocaleDateString() + '</div>' +
+    '<div class="dms-kpi-grid">' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">📋 订单总数</div><div class="dms-kpi-val" id="k1">-</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">🏢 经销商</div><div class="dms-kpi-val g" id="k2">-</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">💊 产品SKU</div><div class="dms-kpi-val o" id="k3">-</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">📦 库存记录</div><div class="dms-kpi-val r" id="k4">-</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">📄 合同</div><div class="dms-kpi-val p" id="k5">-</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">🎁 促销</div><div class="dms-kpi-val" id="k6">-</div></div>' +
+    '</div>' +
+    '<div class="dms-card">' +
+      '<div class="dms-card-title"><span>📦 库存告警</span><div class="actions"><button class="dms-btn" onclick="goto(\'inventory\')">查看库存 →</button></div></div>' +
+      '<div class="dms-kpi-grid" id="invAlerts"></div>' +
+    '</div>' +
+    '<div class="dms-card">' +
+      '<div class="dms-card-title"><span>📌 我的待办</span></div>' +
+      '<div id="todos"><div class="dms-loading">加载中...</div></div>' +
+    '</div>' +
+    '<div class="dms-card">' +
+      '<div class="dms-card-title"><span>📋 最近订单</span>' +
+      '<div class="actions"><button class="dms-btn dms-btn-primary" onclick="goto(\'orders\')">全部 →</button></div></div>' +
+      '<div id="recentOrders"><div class="dms-loading">加载中...</div></div>' +
+    '</div>' +
+    '<div class="dms-card">' +
+      '<div class="dms-card-title"><span>🏢 经销商概览</span>' +
+      '<div class="actions"><button class="dms-btn dms-btn-primary" onclick="goto(\'dealers\')">全部 →</button></div></div>' +
+      '<div id="recentDealers"><div class="dms-loading">加载中...</div></div>' +
+    '</div>';
+
+  DMS.api('/api/system/stats').then(function(d){
+    if (d.code===0) {
+      document.getElementById('k1').textContent = d.data.orders || 0;
+      document.getElementById('k2').textContent = d.data.dealers || 0;
+      document.getElementById('k3').textContent = d.data.products || 0;
+      document.getElementById('k4').textContent = d.data.inventoryRecords || 0;
+      document.getElementById('k5').textContent = d.data.contracts || 0;
+      document.getElementById('k6').textContent = d.data.promotions || 0;
+    }
+  });
+
+  // 库存告警 3 张卡（US-B-17）
+  DMS.api('/api/dashboard/inventory-stats').then(function(d){
+    if (d.code===0) {
+      var inv = d.data || {};
+      document.getElementById('invAlerts').innerHTML =
+        '<div class="dms-kpi"><div class="dms-kpi-label">📦 库存总量</div><div class="dms-kpi-val">' + (inv.totalQty||0) + '</div></div>' +
+        '<div class="dms-kpi"><div class="dms-kpi-label">⏰ 临期库存(30天)</div><div class="dms-kpi-val o">' + (inv.expiringQty||0) + '</div></div>' +
+        '<div class="dms-kpi"><div class="dms-kpi-label">🐌 呆滞库存(90天)</div><div class="dms-kpi-val r">' + (inv.staleQty||0) + '</div></div>';
+    }
+  });
+
+  // 待办列表（US-HOME-04）
+  DMS.api('/api/dashboard/todos').then(function(d){
+    if (d.code===0) {
+      var items = (d.data && d.data.items) || [];
+      if (!items.length) { document.getElementById('todos').innerHTML='<div class="dms-empty">🎉 暂无待办</div>'; return; }
+      var h = '<table><thead><tr><th>类型</th><th>标题</th><th>关联</th><th>状态</th><th>操作</th></tr></thead><tbody>';
+      items.forEach(function(t){
+        h += '<tr>' +
+          '<td>' + t.type + '</td>' +
+          '<td>' + t.title + (t.count?' × ' + t.count :'') + '</td>' +
+          '<td>' + (t.code||'-') + '</td>' +
+          '<td>' + (t.status?DMS.statusBadge(t.status):'-') + '</td>' +
+          '<td><button class="dms-btn dms-btn-sm dms-btn-primary" onclick="location.href=\''+t.link+'\'">处理</button></td>' +
+          '</tr>';
+      });
+      h += '</tbody></table>';
+      document.getElementById('todos').innerHTML = h;
+    }
+  });
+
+  DMS.api('/api/orders?page=1&size=5').then(function(d){
+    if (d.code===0) {
+      var list = (d.data && d.data.list) || [];
+      var h = '<table><thead><tr><th>订单号</th><th>类型</th><th>含税金额</th><th>状态</th></tr></thead><tbody>';
+      list.forEach(function(o){
+        h += '<tr><td>' + o.code + '</td><td>' + (o.orderType||'-') + '</td><td>¥ ' + Number(o.amountInclTax||0).toFixed(2) + '</td><td>' + DMS.statusBadge(o.status) + '</td></tr>';
+      });
+      h += '</tbody></table>';
+      document.getElementById('recentOrders').innerHTML = h || '<div class="dms-empty">暂无</div>';
+    }
+  });
+
+  DMS.api('/api/dealers?page=1&size=5').then(function(d){
+    if (d.code===0) {
+      var list = (d.data && d.data.list) || [];
+      var h = '<table><thead><tr><th>编码</th><th>名称</th><th>级别</th><th>联系人</th><th>状态</th></tr></thead><tbody>';
+      list.forEach(function(o){
+        h += '<tr><td>' + o.code + '</td><td>' + o.name + '</td><td>' + (o.level==='T1'?'一级':(o.level==='T2'?'二级':o.level||'-')) + '</td><td>' + (o.contactName||'-') + '</td><td>' + DMS.statusBadge(o.status) + '</td></tr>';
+      });
+      h += '</tbody></table>';
+      document.getElementById('recentDealers').innerHTML = h;
+    }
+  });
+}
+
+goto('home');
+</script>
+</body>
+</html>

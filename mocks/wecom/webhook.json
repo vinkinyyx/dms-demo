@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/mocks/wecom/webhook"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json;charset=UTF-8" },
+    "jsonBody": {
+      "errcode": 0,
+      "errmsg": "ok",
+      "type": "wecom_bot",
+      "received_at": "{{now format='yyyy-MM-dd HH:mm:ss'}}",
+      "message_id": "WECOM-{{randomValue length=12 type='ALPHANUMERIC'}}"
+    },
+    "transformers": ["response-template"]
+  }
+}

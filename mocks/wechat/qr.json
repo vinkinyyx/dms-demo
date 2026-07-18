@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/mocks/wechat/qr"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json;charset=UTF-8" },
+    "jsonBody": {
+      "code": 0,
+      "message": "ok",
+      "data": {
+        "scene": "MOCK_SCENE_001",
+        "qr_url": "http://localhost:9090/mocks/wechat/scan.html",
+        "expire_seconds": 300
+      }
+    }
+  }
+}

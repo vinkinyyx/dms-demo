@@ -1,0 +1,37 @@
+# DMS 后端测试 profile：H2 内存库 + Flyway 禁用 + Redisson 自动装配排除，用于单元/集成测试
+spring:
+  autoconfigure:
+    exclude:
+      - org.redisson.spring.starter.RedissonAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+  datasource:
+    # H2 通过 INIT 语句注册 JSONB 域为 TEXT，兼容业务实体 columnDefinition="jsonb"
+    url: jdbc:h2:mem:dms_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;NON_KEYWORDS=USER;INIT=CREATE DOMAIN IF NOT EXISTS JSONB AS TEXT
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate.dialect: org.hibernate.dialect.H2Dialect
+    show-sql: false
+  flyway:
+    enabled: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+dms:
+  jwt:
+    secret: test-secret-key-1234567890-1234567890-1234567890
+    access-token-ttl: 600000
+    refresh-token-ttl: 3600000
+  seed:
+    enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.dms: INFO
