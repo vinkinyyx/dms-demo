@@ -2,7 +2,7 @@
 echo "=== 通过 nginx 测试 API ==="
 TOKEN=$(curl -s -X POST http://localhost/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"tenantCode":"default","username":"admin","password":"Sh123456"}' \
+  -d '{"tenantCode":"default","username":"admin","password":"'"${DMS_PWD:-Sh123456}"'"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['accessToken'])")
 echo "Token length: ${#TOKEN}"
 

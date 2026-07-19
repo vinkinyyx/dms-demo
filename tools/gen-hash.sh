@@ -14,5 +14,5 @@ docker exec dms-postgres psql -U dms -d dms -c "UPDATE users SET password_hash='
 echo "=== Login test ==="
 curl -s -X POST http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"tenantCode":"default","username":"admin","password":"Sh123456"}'
+  -d '{"tenantCode":"default","username":"admin","password":"'"${DMS_PWD:-Sh123456}"'"}'
 echo

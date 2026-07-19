@@ -6,7 +6,7 @@ PASS=0; FAIL=0
 chk(){ if [ "$1" = "$2" ]; then PASS=$((PASS+1)); echo "  ✅ $3 ($1)"; else FAIL=$((FAIL+1)); echo "  ❌ $3 (期望$2 实际$1)"; fi; }
 
 TOKEN=$(curl -s -X POST "$BASE/api/auth/login" -H 'Content-Type: application/json' \
-  --data-binary '{"tenantCode":"default","username":"admin","password":"Sh123456"}' \
+  --data-binary '{"tenantCode":"default","username":"admin","password":"'"${DMS_PWD:-Sh123456}"'"}' \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['accessToken'])")
 AUTH="Authorization: Bearer $TOKEN"
 echo "TOKEN_LEN=${#TOKEN}"

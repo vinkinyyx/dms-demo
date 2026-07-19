@@ -5,7 +5,7 @@ set +e
 echo "=== 1) 登录（通过 nginx /api/auth/login）==="
 LOGIN_RESP=$(curl -s -X POST http://localhost/api/auth/login \
   -H 'Content-Type: application/json' \
-  --data-binary '{"tenantCode":"default","username":"admin","password":"Sh123456"}')
+  --data-binary '{"tenantCode":"default","username":"admin","password":"'"${DMS_PWD:-Sh123456}"'"}')
 echo "$LOGIN_RESP" | head -c 400
 echo
 TOKEN=$(echo "$LOGIN_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('accessToken',''))")

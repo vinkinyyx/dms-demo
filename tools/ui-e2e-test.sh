@@ -18,7 +18,7 @@ echo "================================"
 
 echo "[1/12] 登录获取 token..."
 TOKEN=$(curl -s -X POST $API/api/auth/login -H "Content-Type: application/json" \
-  --data-binary '{"tenantCode":"default","username":"admin","password":"Sh123456"}' \
+  --data-binary '{"tenantCode":"default","username":"admin","password":"'"${DMS_PWD:-Sh123456}"'"}' \
   | python3 -c "import sys,json;print(json.load(sys.stdin).get('data',{}).get('accessToken',''))")
 [ -n "$TOKEN" ] && pass "登录成功 (token长度=${#TOKEN})" || fail "登录失败" "$TOKEN"
 

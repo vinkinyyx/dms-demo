@@ -35,7 +35,7 @@ echo "===================================================="
 echo "  DMS v3.3 完整回归测试 (60+ 场景)"
 echo "===================================================="
 ADMIN_T=$(curl -s -X POST $API/api/auth/login -H "Content-Type: application/json" \
-  --data-binary '{"tenantCode":"default","username":"admin","password":"Sh123456"}' \
+  --data-binary '{"tenantCode":"default","username":"admin","password":"'"${DMS_PWD:-Sh123456}"'"}' \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['accessToken'])")
 AH="Authorization: Bearer $ADMIN_T"
 [ -n "$ADMIN_T" ] && pass "admin 登录" || fail "admin 登录" "空"

@@ -8,7 +8,7 @@ fail(){ echo "  ❌ $1  $2"; FAIL=$((FAIL+1)); }
 
 echo "=== v3.4.8 补充测试 ==="
 TOKEN=$(curl -s -X POST $API/api/auth/login -H "Content-Type: application/json" \
-  --data-binary '{"tenantCode":"default","username":"admin","password":"Sh123456"}' \
+  --data-binary '{"tenantCode":"default","username":"admin","password":"'"${DMS_PWD:-Sh123456}"'"}' \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['accessToken'])")
 AH="Authorization: Bearer $TOKEN"
 

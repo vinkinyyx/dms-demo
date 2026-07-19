@@ -2,7 +2,7 @@
 echo "=== 1) 登录 ==="
 TOKEN=$(curl -s -X POST http://localhost/api/auth/login \
   -H "Content-Type: application/json" \
-  --data-binary '{"tenantCode":"default","username":"admin","password":"Sh123456"}' \
+  --data-binary '{"tenantCode":"default","username":"admin","password":"'"${DMS_PWD:-Sh123456}"'"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['accessToken'])")
 echo "Token len: ${#TOKEN}"
 

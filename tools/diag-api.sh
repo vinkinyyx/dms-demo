@@ -3,7 +3,7 @@ set +e
 echo "=== 登录取 token ==="
 TOKEN=$(curl -s -X POST http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"tenantCode":"default","username":"admin","password":"Sh123456"}' \
+  -d '{"tenantCode":"default","username":"admin","password":"'"${DMS_PWD:-Sh123456}"'"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['accessToken'])")
 echo "TOKEN len: ${#TOKEN}"
 
