@@ -33,7 +33,7 @@ public class Authorization {
     @Column(name = "contract_id")
     private Long contractId;
 
-    @Column(name = "auth_type", nullable = false, length = 32)
+    @Column(name = "auth_type", length = 32)
     private String authType;
 
     @Column(name = "product_line_id")
@@ -47,6 +47,18 @@ public class Authorization {
 
     @Column(name = "region_id")
     private Long regionId;
+
+    @Column(name = "product_lines", length = 500)
+    private String productLines;
+
+    @Column(name = "category_ids", length = 500)
+    private String categoryIds;
+
+    @Column(name = "terminal_ids", length = 1000)
+    private String terminalIds;
+
+    @Column(columnDefinition = "TEXT")
+    private String remark;
 
     @Column(name = "valid_from", nullable = false)
     private LocalDate validFrom;
@@ -71,4 +83,13 @@ public class Authorization {
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
+
+    @Transient
+    private String dealerName;
+
+    @Transient
+    private String categoryNames;
+
+    @Transient
+    private String terminalNames;
 }

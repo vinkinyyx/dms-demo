@@ -19,6 +19,8 @@ public class OrderCreateRequest {
     private Map<String, Object> shipSnapshot;
     private String remark;
     private LocalDate expectedDate;
+    private Boolean isRed;
+    private Long refOrderId;
     private List<Line> lines;
 
     @Data

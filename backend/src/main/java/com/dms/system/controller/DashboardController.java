@@ -167,7 +167,7 @@ public class DashboardController {
                 m.put("type", t.get("type"));
                 m.put("title", t.get("title"));
                 m.put("status", t.get("status"));
-                m.put("createdAt", String.valueOf(t.get("created_at")));
+                m.put("createdAt", com.dms.common.util.DateFmt.fmt(t.get("created_at")));
                 m.put("link", link);
                 out.add(m);
             }

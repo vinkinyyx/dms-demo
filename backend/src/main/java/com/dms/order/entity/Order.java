@@ -53,6 +53,12 @@ public class Order {
     @Column(name = "parent_order_id")
     private Long parentOrderId;
 
+    @Column(name = "is_red")
+    private Boolean isRed;
+
+    @Column(name = "ref_order_id")
+    private Long refOrderId;
+
     @Column(name = "amount_incl_tax", precision = 18, scale = 2)
     private BigDecimal amountInclTax;
 
@@ -91,6 +97,12 @@ public class Order {
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
+
+    @jakarta.persistence.Transient
+    private String dealerName;
+
+    @jakarta.persistence.Transient
+    private String refOrderCode;
 
     public void ensureSnapshot() {
         if (shipSnapshot == null) shipSnapshot = new HashMap<>();

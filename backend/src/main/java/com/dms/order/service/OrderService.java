@@ -28,6 +28,7 @@ import com.dms.promotion.dto.PromotionEvaluationResult;
 import com.dms.promotion.dto.PromotionHit;
 import com.dms.promotion.dto.PromotionLine;
 import com.dms.promotion.service.PromotionEngine;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -57,13 +58,36 @@ public class OrderService {
     private final AuthorizationService authorizationService;
     private final PromotionEngine promotionEngine;
 
+    @PersistenceContext
+    private jakarta.persistence.EntityManager em;
+
     @Transactional(readOnly = true)
     public PageResult<Order> list(PageQuery pageQuery) {
         UUID tenantId = TenantContext.getTenantId();
         Page<Order> page = tenantId == null
                 ? orderRepository.findAll(pageQuery.toPageable())
                 : orderRepository.findByTenantId(tenantId, pageQuery.toPageable());
+        page.getContent().forEach(o -> {
+            if (o.getDealerId() != null) o.setDealerName(lookupName("dealers", o.getDealerId()));
+            if (o.getRefOrderId() != null) o.setRefOrderCode(lookupCode("orders", o.getRefOrderId()));
+        });
         return PageResult.of(page);
+    }
+
+    private String lookupName(String table, Long id) {
+        try {
+            Object r = em.createNativeQuery("SELECT name FROM " + table + " WHERE id = ?1")
+                    .setParameter(1, id).getResultList().stream().findFirst().orElse(null);
+            return r == null ? null : String.valueOf(r);
+        } catch (Exception e) { return null; }
+    }
+
+    private String lookupCode(String table, Long id) {
+        try {
+            Object r = em.createNativeQuery("SELECT code FROM " + table + " WHERE id = ?1")
+                    .setParameter(1, id).getResultList().stream().findFirst().orElse(null);
+            return r == null ? null : String.valueOf(r);
+        } catch (Exception e) { return null; }
     }
 
     @Transactional(readOnly = true)
@@ -151,9 +175,11 @@ public class OrderService {
         // 4. 保存订单
         Order order = Order.builder()
                 .tenantId(tenantId)
-                .code(docNoGenerator.next("ORD"))
+                .code(docNoGenerator.next("SO"))
                 .orderType(request.getOrderType() == null ? "PURCHASE" : request.getOrderType())
                 .dealerId(request.getDealerId())
+                .isRed(Boolean.TRUE.equals(request.getIsRed()))
+                .refOrderId(request.getRefOrderId())
                 .shipAddressId(request.getShipAddressId())
                 .shipSnapshot(request.getShipSnapshot() == null ? new HashMap<>() : request.getShipSnapshot())
                 .status("DRAFT")
@@ -248,7 +274,7 @@ public class OrderService {
         Order origin = loadOrder(id);
         Order child = Order.builder()
                 .tenantId(origin.getTenantId())
-                .code(docNoGenerator.next("ORD"))
+                .code(docNoGenerator.next("SO"))
                 .orderType(origin.getOrderType())
                 .dealerId(origin.getDealerId())
                 .shipAddressId(origin.getShipAddressId())

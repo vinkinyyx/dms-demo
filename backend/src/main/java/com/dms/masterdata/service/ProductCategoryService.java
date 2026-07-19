@@ -28,10 +28,14 @@ public class ProductCategoryService {
 
     @Transactional(readOnly = true)
     public PageResult<ProductCategory> list(PageQuery pageQuery) {
+        return list(pageQuery, null);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResult<ProductCategory> list(PageQuery pageQuery, java.util.Map<String, String> filters) {
         UUID tenantId = TenantContext.getTenantId();
-        Page<ProductCategory> page = tenantId == null
-                ? repository.findAll(pageQuery.toPageable())
-                : repository.findByTenantId(tenantId, pageQuery.toPageable());
+        var spec = com.dms.common.util.SpecUtil.<ProductCategory>byTenantAndFilters(tenantId, filters);
+        Page<ProductCategory> page = repository.findAll(spec, pageQuery.toPageable());
         return PageResult.of(page);
     }
 
@@ -61,6 +65,12 @@ public class ProductCategoryService {
     @Transactional
     public ProductCategory update(Long id, ProductCategory patch) {
         ProductCategory old = get(id);
+        if (patch.getCode() != null && !patch.getCode().equals(old.getCode())) {
+            if (repository.existsByTenantIdAndCode(old.getTenantId(), patch.getCode())) {
+                throw new BusinessException(ErrorCode.RESOURCE_CONFLICT, "商品分类编码已存在: " + patch.getCode());
+            }
+            old.setCode(patch.getCode());
+        }
         if (patch.getName() != null) old.setName(patch.getName());
         if (patch.getParentId() != null) old.setParentId(patch.getParentId());
         if (patch.getLevel() != null) old.setLevel(patch.getLevel());

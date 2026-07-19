@@ -29,10 +29,7 @@ public class ReceiptController {
     private final ReceiptService service;
     private final EntityManager em;
 
-    @GetMapping
-    public ApiResponse<PageResult<Receipt>> list(@Valid PageQuery pageQuery) {
-        return ApiResponse.ok(service.list(pageQuery));
-    }
+    // GET 已移到 BizDocListController（v3.4.6 增强字段）
 
     @PostMapping
     public ApiResponse<Receipt> create(@RequestBody Receipt receipt) {

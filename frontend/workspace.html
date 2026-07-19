@@ -7,16 +7,18 @@
 <link rel="stylesheet" href="/dms.css">
 </head>
 <body>
+<div class="dms-mobile-mask" id="mobileMask" onclick="toggleSidebar(false)"></div>
 <div class="dms-layout">
-  <aside class="dms-sidebar">
+  <aside class="dms-sidebar" id="dmsSidebar">
     <div class="dms-logo">DMS 工作台<small>V1.1 · 业务系统</small></div>
     <div class="dms-nav" id="navMenu"></div>
-    <div style="padding:20px;font-size:12px;color:rgba(255,255,255,0.5);">
-      <a href="/admin.html" style="color:#7EB6FF;">→ 进入后台管理</a>
+    <div style="padding:20px;font-size:12px;color:var(--md-on-surface-variant);">
+      <a href="/admin.html" style="color:var(--md-primary);">→ 进入后台管理</a>
     </div>
   </aside>
   <main class="dms-main">
     <header class="dms-topbar">
+      <button class="dms-mobile-menu-btn" onclick="toggleSidebar()" title="菜单" aria-label="菜单">☰</button>
       <div class="dms-crumb" id="crumb">首页 / <strong>工作台</strong></div>
       <div class="dms-user">
         <span id="userName">-</span>
@@ -24,11 +26,13 @@
         <button class="dms-btn-logout" onclick="DMS.logout()">退出</button>
       </div>
     </header>
+    <div class="dms-tabsbar" id="tabsBar"></div>
     <div class="dms-content" id="content"></div>
   </main>
 </div>
 
 <script src="/dms-lib.js"></script>
+<script src="/echarts.min.js"></script>
 <script>
 if (!DMS.requireAuth()) { throw new Error('need login'); }
 document.getElementById('userName').textContent = DMS.USER.name || DMS.USER.username || '未知';
@@ -42,16 +46,20 @@ var MENU_GROUPS = [
 
   { group: '主数据管理', items: [
     { key:'products',   icon:'💊', label:'产品管理',   api:'/api/products',
+      searchFields:[
+        {k:'code',l:'产品编码'},{k:'nameCn',l:'中文名称'},
+        {k:'status',l:'状态',filter:{type:'select',options:[{value:'active',label:'启用'},{value:'inactive',label:'停用'}]}}
+      ],
       cols:[
         {k:'id',l:'编号',w:60},{k:'code',l:'编码'},{k:'nameCn',l:'中文名称'},
         {k:'spec',l:'规格型号'},{k:'unit',l:'单位',w:60},{k:'currentPrice',l:'参考单价'},
-        {k:'taxRate',l:'税率',w:70},{k:'udiRequired',l:'UDI追溯',w:80},{k:'status',l:'状态',w:80}
+        {k:'taxRate',l:'税率',w:70},{k:'udiRequired',l:'UDI追溯',w:80},{k:'status',l:'状态',w:80,filter:{type:'select',options:[{value:'active',label:'启用'},{value:'inactive',label:'停用'}]}}
       ],
       form:[
         {key:'code',label:'产品编码',required:true,group:'基本信息',placeholder:'如 PROD-XXXXX'},
         {key:'nameCn',label:'中文名称',required:true,group:'基本信息'},
         {key:'nameEn',label:'英文名称',group:'基本信息'},
-        {key:'categoryId',label:'产品分类',group:'基本信息',picker:{resource:'categories'}},
+        {key:'categoryId',label:'产品分类',required:true,group:'基本信息',picker:{resource:'categories'}},
         {key:'spec',label:'规格型号',group:'规格与价格'},
         {key:'unit',label:'单位',group:'规格与价格',value:'个'},
         {key:'currentPrice',label:'参考单价',type:'number',group:'规格与价格'},
@@ -65,6 +73,7 @@ var MENU_GROUPS = [
     },
 
     { key:'categories', icon:'🗂️', label:'产品分类', api:'/api/product-categories',
+      searchFields:[{k:'code',l:'编码'},{k:'name',l:'名称'}],
       cols:[{k:'id',l:'编号',w:60},{k:'code',l:'编码'},{k:'name',l:'名称'},{k:'sortOrder',l:'排序',w:60},{k:'status',l:'状态',w:80}],
       form:[
         {key:'code',label:'分类编码',required:true,group:'基本信息'},
@@ -76,6 +85,7 @@ var MENU_GROUPS = [
     },
 
     { key:'dealers', icon:'🏢', label:'经销商管理', api:'/api/dealers',
+      searchFields:[{k:'code',l:'编码'},{k:'name',l:'名称'}],
       cols:[
         {k:'id',l:'编号',w:60},{k:'code',l:'编码'},{k:'name',l:'名称'},
         {k:'level',l:'级别',w:70},{k:'contactName',l:'联系人',w:100},{k:'contactPhone',l:'电话',w:120},{k:'status',l:'状态',w:80}
@@ -100,6 +110,7 @@ var MENU_GROUPS = [
     },
 
     { key:'hospitals', icon:'🏥', label:'医院/终端', api:'/api/hospitals',
+      searchFields:[{k:'code',l:'编码'},{k:'name',l:'名称'}],
       cols:[{k:'id',l:'编号',w:60},{k:'code',l:'编码'},{k:'name',l:'名称'},{k:'level',l:'等级',w:80},{k:'contactName',l:'联系人',w:100},{k:'status',l:'状态',w:80}],
       form:[
         {key:'code',label:'医院编码',required:true,group:'基本信息'},
@@ -114,6 +125,7 @@ var MENU_GROUPS = [
     },
 
     { key:'warehouses', icon:'🏭', label:'仓库管理', api:'/api/warehouses',
+      searchFields:[{k:'code',l:'编码'},{k:'name',l:'名称'}],
       cols:[{k:'id',l:'编号',w:60},{k:'code',l:'编码'},{k:'name',l:'名称'},{k:'type',l:'类型',w:100},{k:'status',l:'状态',w:80}],
       form:[
         {key:'code',label:'仓库编码',required:true,group:'基本信息'},
@@ -164,28 +176,30 @@ var MENU_GROUPS = [
       readonly: true
     },
 
-    { key:'authorizations', icon:'🔑', label:'授权', api:'/api/authorizations',
+    { key:'authorizations', icon:'🔑', label:'授权（产品分类×医院）', api:'/api/authorizations', detailable:true,
       cols:[
-        {k:'id',l:'编号',w:60},{k:'authType',l:'授权类型',w:130},
+        {k:'id',l:'编号',w:60},{k:'dealerName',l:'经销商',w:120},
+        {k:'categoryNames',l:'授权产品分类'},{k:'terminalNames',l:'授权医院'},
         {k:'validFrom',l:'生效开始',w:100},{k:'validTo',l:'生效结束',w:100},{k:'status',l:'状态',w:80}
       ],
       form:[
         {key:'dealerId',label:'经销商',required:true,picker:{resource:'dealers'},group:'授权主体'},
-        {key:'contractId',label:'关联合同',picker:{resource:'contracts'},group:'授权主体'},
-        {key:'authType',label:'授权类型',type:'select',options:[{value:'ORDER',label:'订货授权'},{value:'SALES_TO_HOSPITAL',label:'向医院销售'},{value:'RMA',label:'退换货'},{value:'LOAN',label:'借用'}],value:'ORDER',required:true,group:'授权主体'},
-        {key:'productId',label:'限定产品(空=全部)',picker:{resource:'products'},group:'授权范围'},
-        {key:'terminalId',label:'限定终端(空=全部)',picker:{resource:'hospitals'},group:'授权范围'},
-        {key:'validFrom',label:'生效开始',type:'date',group:'有效期'},
-        {key:'validTo',label:'生效结束',type:'date',group:'有效期'},
+        {key:'categoryIds',label:'授权产品分类（多选）',type:'multiselect',picker:{resource:'categories'},required:true,group:'授权范围'},
+        {key:'terminalIds',label:'授权医院/终端（多选）',type:'multiselect',picker:{resource:'hospitals'},required:true,group:'授权范围'},
+        {key:'validFrom',label:'生效开始',type:'date',required:true,group:'有效期'},
+        {key:'validTo',label:'生效结束',type:'date',required:true,group:'有效期'},
+        {key:'contractId',label:'关联合同（可选）',picker:{resource:'contracts'},group:'其它'},
+        {key:'remark',label:'备注',type:'textarea',group:'其它'},
         {key:'status',label:'状态',type:'select',options:[{value:'active',label:'启用'},{value:'suspended',label:'挂起'},{value:'expired',label:'已过期'}],value:'active',group:'状态'}
       ]
     }
   ]},
 
   { group: '销售业务', items: [
-    { key:'orders', icon:'📤', label:'销售订单', api:'/api/orders',
+    { key:'orders', icon:'📤', label:'销售订单', api:'/api/orders', detailable:true,
       cols:[
         {k:'id',l:'编号',w:60},{k:'code',l:'订单号'},
+        {k:'dealerName',l:'经销商',w:120},
         {k:'orderType',l:'类型',w:100},{k:'amountInclTax',l:'含税金额',w:110},
         {k:'finalAmount',l:'最终金额',w:110},{k:'expectedDate',l:'期望到货',w:100},{k:'status',l:'状态',w:80}
       ],
@@ -203,36 +217,48 @@ var MENU_GROUPS = [
           ]
         }
       ],
-      statusDriven: true,   // 状态驱动按钮
+      statusDriven: true,
       salesOrder: true
     },
 
-    { key:'sales-outs', icon:'🛒', label:'销售出库', api:'/api/sales-outs',
-      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'出库单号'},{k:'salesDate',l:'销售日期',w:100},{k:'amountInclTax',l:'含税金额',w:110},{k:'status',l:'状态',w:80}],
+    { key:'sales-returns', icon:'↩️', label:'销退订单', api:'/api/orders?isRed=true',
+      apiCreate:'/api/orders',
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'code',l:'销退单号'},
+        {k:'dealerName',l:'经销商',w:120},{k:'refOrderCode',l:'原销售单',w:120},
+        {k:'amountInclTax',l:'含税金额',w:110},{k:'status',l:'状态',w:80}
+      ],
       form:[
-        {key:'dealerId',label:'经销商',required:true,picker:{resource:'dealers'},group:'出库信息'},
-        {key:'terminalId',label:'终端医院',required:true,picker:{resource:'hospitals'},group:'出库信息'},
-        {key:'salesDate',label:'销售日期',type:'date',group:'出库信息'},
-        {key:'remark',label:'备注',type:'textarea',group:'其它'}
-      ]
-    },
-
-    { key:'sales-invoices', icon:'💰', label:'销售发票', api:'/api/sales-invoices',
-      cols:[{k:'id',l:'编号',w:60},{k:'invoiceNo',l:'发票号'},{k:'amount',l:'含税金额',w:120},{k:'issueDate',l:'开票日期',w:100}],
-      readonly: true
+        {key:'isRed',label:'红字标记',type:'boolean',value:true,readonly:true,group:'销退信息'},
+        {key:'orderType',label:'销退类型',type:'select',options:[{value:'RETURN',label:'销退'},{value:'EXCHANGE',label:'换货'}],value:'RETURN',required:true,group:'销退信息'},
+        {key:'refOrderId',label:'原销售订单',required:true,picker:{resource:'orders'},group:'销退信息'},
+        {key:'dealerId',label:'经销商',required:true,picker:{resource:'dealers'},group:'销退信息'},
+        {key:'remark',label:'销退原因',type:'textarea',required:true,group:'其它'},
+        {key:'lines',type:'lines',label:'销退明细',required:true,group:'销退明细',
+          cols:[
+            {k:'productId',l:'产品',type:'picker',picker:'products',required:true},
+            {k:'qty',l:'退货数量',type:'number',required:true},
+            {k:'unitPrice',l:'单价',type:'number'},
+            {k:'taxRate',l:'税率',type:'number'}
+          ]
+        }
+      ],
+      statusDriven: true,
+      salesOrder: true,
+      isRedForm: true
     }
   ]},
 
   { group: '采购业务', items: [
-    { key:'purchase-orders', icon:'📥', label:'采购订单', api:'/api/purchase-orders',
+    { key:'purchase-orders', icon:'📥', label:'采购订单', api:'/api/purchase-orders', detailable:true,
       cols:[
         {k:'id',l:'编号',w:60},{k:'code',l:'采购单号'},
-        {k:'orderType',l:'类型',w:80},{k:'supplierId',l:'供应商',w:80},
-        {k:'warehouseId',l:'入库仓库',w:80},
+        {k:'orderType',l:'类型',w:80},{k:'supplierName',l:'供应商',w:120},
+        {k:'warehouseName',l:'入库仓库',w:120},
         {k:'amountInclTax',l:'含税金额',w:110},{k:'expectedDate',l:'期望到货',w:100},{k:'status',l:'状态',w:80}
       ],
       form:[
-        {key:'orderType',label:'采购类型',type:'select',options:[{value:'NORMAL',label:'常规采购'},{value:'URGENT',label:'紧急采购'},{value:'RETURN',label:'退货'}],value:'NORMAL',required:true,group:'采购信息'},
+        {key:'orderType',label:'采购类型',type:'select',options:[{value:'NORMAL',label:'常规采购'},{value:'URGENT',label:'紧急采购'}],value:'NORMAL',required:true,group:'采购信息'},
         {key:'supplierId',label:'供应商',required:true,picker:{resource:'dealers'},group:'采购信息'},
         {key:'warehouseId',label:'入库仓库',required:true,picker:{resource:'warehouses'},group:'采购信息'},
         {key:'expectedDate',label:'期望到货日期',type:'date',group:'采购信息'},
@@ -250,48 +276,299 @@ var MENU_GROUPS = [
       purchaseOrder: true
     },
 
-    { key:'receipts', icon:'📦', label:'收货入库', api:'/api/receipts',
-      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'入库单号'},{k:'arrivedAt',l:'到货时间',w:140},{k:'status',l:'状态',w:80}],
-      readonly: true
-    },
-
-    { key:'purchase-invoices', icon:'💵', label:'采购发票', api:'/api/purchase-invoices',
-      cols:[{k:'id',l:'编号',w:60},{k:'invoiceNo',l:'发票号'},{k:'amount',l:'含税金额',w:120},{k:'taxRate',l:'税率',w:70},{k:'issueDate',l:'开票日期',w:100}],
+    { key:'purchase-returns', icon:'↩️', label:'采退订单', api:'/api/purchase-orders?isRed=true',
+      apiCreate:'/api/purchase-orders',
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'code',l:'采退单号'},
+        {k:'supplierName',l:'供应商',w:120},{k:'refPoId',l:'原采购单',w:100},
+        {k:'warehouseName',l:'出库仓库',w:120},
+        {k:'amountInclTax',l:'含税金额',w:110},{k:'status',l:'状态',w:80}
+      ],
       form:[
-        {key:'refOrderId',label:'关联订单',required:true,picker:{resource:'orders'},group:'发票信息'},
-        {key:'invoiceNo',label:'发票号',required:true,group:'发票信息'},
-        {key:'amount',label:'含税金额',type:'number',required:true,group:'金额'},
-        {key:'taxAmount',label:'税额',type:'number',group:'金额'},
-        {key:'taxRate',label:'税率',type:'number',value:'0.13',group:'金额'},
-        {key:'issueDate',label:'开票日期',type:'date',group:'其它'}
-      ]
+        {key:'isRed',label:'红字标记',type:'boolean',value:true,readonly:true,group:'采退信息'},
+        {key:'orderType',label:'采退类型',type:'select',options:[{value:'RETURN',label:'采退'}],value:'RETURN',required:true,group:'采退信息'},
+        {key:'refPoId',label:'原采购单',required:true,picker:{resource:'purchase-orders'},group:'采退信息'},
+        {key:'supplierId',label:'供应商',required:true,picker:{resource:'dealers'},group:'采退信息'},
+        {key:'warehouseId',label:'出库仓库',required:true,picker:{resource:'warehouses'},group:'采退信息'},
+        {key:'remark',label:'采退原因',type:'textarea',required:true,group:'其它'},
+        {key:'lines',type:'lines',label:'采退明细',required:true,group:'采退明细',
+          cols:[
+            {k:'productId',l:'产品',type:'picker',picker:'products',required:true},
+            {k:'qty',l:'退货数量',type:'number',required:true},
+            {k:'unitPrice',l:'单价',type:'number'},
+            {k:'taxRate',l:'税率',type:'number'}
+          ]
+        }
+      ],
+      statusDriven: true,
+      purchaseOrder: true,
+      isRedForm: true
     }
   ]},
 
   { group: '库存管理', items: [
     { key:'inventory', icon:'📦', label:'库存查询', api:'/api/inventory',
       cols:[
-        {k:'id',l:'编号',w:60},{k:'productId',l:'产品ID',w:80},
-        {k:'batchNo',l:'批次号'},{k:'serialNo',l:'序列号'},{k:'qty',l:'数量',w:80},
-        {k:'expDate',l:'到期日期',w:100},{k:'inSource',l:'入库来源',w:80}
+        {k:'id',l:'编号',w:60},
+        {k:'productCode',l:'产品编码',w:110},
+        {k:'productName',l:'产品名称',w:180},
+        {k:'productSpec',l:'规格',w:110},
+        {k:'warehouseName',l:'仓库',w:100},
+        {k:'batchNo',l:'批次号',w:130},
+        {k:'serialNo',l:'序列号',w:130},
+        {k:'stockStatus',l:'库存状态',w:90},
+        {k:'qty',l:'数量',w:80},
+        {k:'expDate',l:'到期',w:100},
+        {k:'inSource',l:'入库来源',w:90}
       ],
       readonly: true
     },
-    { key:'receipts', icon:'📥', label:'收货入库', api:'/api/receipts',
-      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'入库单号'},{k:'arrivedAt',l:'到货时间',w:140},{k:'status',l:'状态',w:80}],
-      readonly: true
+    { key:'sales-outs', icon:'🛒', label:'销售出库', api:'/api/sales-outs', detailable:true,
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'code',l:'出库单号',w:170},
+        {k:'isRed',l:'红字',w:60},
+        {k:'dealerName',l:'经销商',w:140, link:{menu:'dealers',param:'id',valueKey:'dealerId'}},
+        {k:'salesDate',l:'销售日期',w:100},
+        {k:'amountInclTax',l:'含税金额',w:110},
+        {k:'autoCreated',l:'自动生成',w:80},
+        {k:'sourceOrderId',l:'来源销售订单',w:120, link:{menu:'orders',param:'id',valueKey:'sourceOrderId'}, linkLabelKey:'sourceOrderCode'},
+        {k:'status',l:'状态',w:80}
+      ],
+      readonly: true,
+      statusDriven: true,
+      statusActions: {
+        'DRAFT': [
+          { key:'execute', label:'✅ 执行发货', method:'POST', path:'/execute', type:'primary', needsLots:true },
+          { key:'cancel',  label:'❌ 取消',     method:'POST', path:'/cancel-draft', type:'danger' }
+        ],
+        'PARTIAL_SHIPPED': [
+          { key:'execute', label:'✅ 继续发货', method:'POST', path:'/execute', type:'primary', needsLots:true },
+          { key:'cancel',  label:'❌ 取消剩余', method:'POST', path:'/cancel-draft', type:'danger' }
+        ]
+      }
     },
-    { key:'stock-moves', icon:'🔀', label:'调拨移库', api:'/api/stock-moves',
-      cols:[{k:'id',l:'编号',w:60},{k:'code',l:'调拨单号'},{k:'status',l:'状态',w:80}],
+    { key:'receipts', icon:'📥', label:'收货入库', api:'/api/receipts', detailable:true,
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'code',l:'入库单号',w:170},
+        {k:'isRed',l:'红字',w:60},
+        {k:'warehouseName',l:'仓库',w:110},
+        {k:'refDocType',l:'源类型',w:100},
+        {k:'sourcePoId',l:'来源采购订单',w:120, link:{menu:'purchase-orders',param:'id',valueKey:'sourcePoId'}, linkLabelKey:'sourcePoCode'},
+        {k:'autoCreated',l:'自动生成',w:80},
+        {k:'status',l:'状态',w:80}
+      ],
+      readonly: true,
+      statusDriven: true,
+      statusActions: {
+        'DRAFT': [
+          { key:'execute', label:'✅ 执行收货', method:'POST', path:'/execute', type:'primary', needsLots:true, isReceipt:true },
+          { key:'cancel',  label:'❌ 取消',     method:'POST', path:'/cancel-draft', type:'danger' }
+        ],
+        'PARTIAL_RECEIVED': [
+          { key:'execute', label:'✅ 继续收货', method:'POST', path:'/execute', type:'primary', needsLots:true, isReceipt:true },
+          { key:'cancel',  label:'❌ 取消剩余', method:'POST', path:'/cancel-draft', type:'danger' }
+        ]
+      }
+    },
+    { key:'stock-moves', icon:'🔀', label:'库存移动', api:'/api/stock-moves', detailable:true, noEdit:true,
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'code',l:'调拨单号'},
+        {k:'fromWarehouseName',l:'源仓库',w:120},{k:'toWarehouseName',l:'目标仓库',w:120},
+        {k:'status',l:'状态',w:80}
+      ],
       form:[
-        {key:'fromWarehouseId',label:'源仓库',required:true,picker:{resource:'warehouses'},group:'调拨信息'},
-        {key:'toWarehouseId',label:'目标仓库',required:true,picker:{resource:'warehouses'},group:'调拨信息'},
-        {key:'remark',label:'备注',type:'textarea',group:'其它'}
+        {key:'fromWarehouseId',label:'源仓库',required:true,picker:{resource:'warehouses'},group:'移动信息'},
+        {key:'toWarehouseId',label:'目标仓库',required:true,picker:{resource:'warehouses'},group:'移动信息'},
+        {key:'stockStatus',label:'原库位库存状态',type:'select',options:[{value:'QUALIFIED',label:'合格'},{value:'PENDING',label:'待检'},{value:'DEFECTIVE',label:'不合格'}],value:'QUALIFIED',group:'移动信息'},
+        {key:'remark',label:'备注/原因',type:'textarea',group:'其它'},
+        {key:'lines',type:'lines',label:'移动明细',required:true,group:'移动明细',lineMode:'stock',
+          cols:[
+            {k:'productId',l:'产品',type:'picker',picker:'products',required:true},
+            {k:'batchNo',l:'批次号',type:'text'},
+            {k:'serialNo',l:'序列号',type:'text'},
+            {k:'qty',l:'数量',type:'number',required:true}
+          ]
+        }
       ]
     },
-    { key:'inventory-adjustments', icon:'⚖️', label:'库存调整', api:'/api/inventory-adjustments',
+    { key:'inventory-adjustments', icon:'⚖️', label:'库存调整', api:'/api/inventory-adjustments', detailable:true, noEdit:true,
       cols:[{k:'id',l:'编号',w:60},{k:'code',l:'调整单号'},{k:'category',l:'调整方向',w:80},{k:'type',l:'调整类型',w:100},{k:'status',l:'状态',w:80}],
-      readonly: true
+      form:[
+        {key:'warehouseId',label:'仓库',required:true,picker:{resource:'warehouses'},group:'调整信息'},
+        {key:'category',label:'调整方向',type:'select',options:[{value:'IN',label:'盘盈(增加)'},{value:'OUT',label:'盘亏(扣减)'}],value:'IN',required:true,group:'调整信息'},
+        {key:'type',label:'调整类型',type:'select',options:[{value:'STOCKTAKE',label:'盘点差异'},{value:'DAMAGE',label:'报损'},{value:'CORRECT',label:'数据修正'},{value:'OTHER',label:'其他'}],value:'STOCKTAKE',required:true,group:'调整信息'},
+        {key:'stockStatus',label:'库存状态',type:'select',options:[{value:'QUALIFIED',label:'合格'},{value:'PENDING',label:'待检'},{value:'DEFECTIVE',label:'不合格'}],value:'QUALIFIED',group:'调整信息'},
+        {key:'remark',label:'原因说明',type:'textarea',required:true,group:'其它'},
+        {key:'lines',type:'lines',label:'调整明细',required:true,group:'调整明细',lineMode:'adjust',
+          cols:[
+            {k:'productId',l:'产品',type:'picker',picker:'products',required:true},
+            {k:'batchNo',l:'批次号',type:'text'},
+            {k:'serialNo',l:'序列号',type:'text'},
+            {k:'qty',l:'调整数量',type:'number',required:true}
+          ]
+        }
+      ]
+    }
+  ]},
+
+  { group: '手术业务', items: [
+    { key:'surgery-reports', icon:'🏥', label:'手术植入报台', api:'/api/surgery-reports',
+      apiCreate:'/api/surgery-reports',
+      cols:[
+        {k:'id',l:'编号',w:60},{k:'code',l:'报台单号'},
+        {k:'dealerName',l:'经销商',w:120},{k:'terminalName',l:'医院',w:120},
+        {k:'surgeryDate',l:'手术日期',w:100},
+        {k:'patientInfo',l:'患者信息'},{k:'doctorName',l:'主刀医生',w:80},{k:'status',l:'状态',w:80}
+      ],
+      form:[
+        {key:'dealerId',label:'经销商',required:true,picker:{resource:'dealers'},group:'手术信息'},
+        {key:'terminalId',label:'医院/终端(必须已授权)',required:true,picker:{resource:'hospitals'},group:'手术信息'},
+        {key:'warehouseId',label:'出库仓库',required:true,picker:{resource:'warehouses'},group:'手术信息'},
+        {key:'surgeryDate',label:'手术日期',type:'date',required:true,group:'手术信息'},
+        {key:'patientInfo',label:'患者信息',placeholder:'如：李某某，男，65岁，右膝置换',group:'手术详情'},
+        {key:'doctorName',label:'主刀医生',group:'手术详情'},
+        {key:'remark',label:'手术备注',type:'textarea',group:'其它'},
+        {key:'lines',type:'lines',label:'植入产品明细',required:true,group:'植入明细',
+          cols:[
+            {k:'productId',l:'产品',type:'picker',picker:'products',required:true},
+            {k:'qty',l:'数量',type:'number',required:true},
+            {k:'batchNo',l:'批次号(批次品必填)'},
+            {k:'serialNo',l:'序列号(序列号品必填)'},
+            {k:'unitPrice',l:'单价',type:'number'}
+          ]
+        }
+      ]
+    }
+  ]},
+
+  { group: '业务报表', items: [
+    { key:'report-sales-ranking', icon:'📊', label:'销售业绩排行', api:'/api/reports/sales-ranking',
+      cols:[
+        {k:'dealerId',l:'经销商ID',w:70, link:{menu:'dealers',param:'id',valueKey:'dealerId'}},
+        {k:'dealerCode',l:'经销商编码',w:110},
+        {k:'dealerName',l:'经销商名称'},
+        {k:'level',l:'级别',w:80},
+        {k:'region',l:'区域',w:80},
+        {k:'positionName',l:'所属岗位',w:110},
+        {k:'orderCount',l:'订单数',w:80},
+        {k:'productKinds',l:'品类数',w:70},
+        {k:'totalQty',l:'总数量',w:80},
+        {k:'totalAmount',l:'销售总额',w:130},
+        {k:'lastOrderAt',l:'最近下单',w:130}
+      ],
+      readonly: true, hideMeta: true
+    },
+    { key:'report-product-top10', icon:'🏆', label:'产品销售 TOP10', api:'/api/reports/product-top10',
+      cols:[
+        {k:'productId',l:'产品ID',w:70, link:{menu:'products',param:'id',valueKey:'productId'}},
+        {k:'productCode',l:'产品编码',w:110},
+        {k:'productName',l:'产品名称'},
+        {k:'spec',l:'规格',w:110},
+        {k:'unitType',l:'单位',w:60},
+        {k:'categoryName',l:'品类',w:100},
+        {k:'orderCount',l:'订单数',w:80},
+        {k:'totalQty',l:'销量',w:80},
+        {k:'avgPrice',l:'均价',w:100},
+        {k:'totalAmount',l:'销售额',w:130}
+      ],
+      readonly: true, hideMeta: true
+    },
+    { key:'report-inventory-turnover', icon:'📉', label:'库存周转', api:'/api/reports/inventory-turnover',
+      cols:[
+        {k:'productId',l:'产品ID',w:70, link:{menu:'products',param:'id',valueKey:'productId'}},
+        {k:'productCode',l:'产品编码',w:110},
+        {k:'productName',l:'产品名称'},
+        {k:'unitType',l:'单位',w:60},
+        {k:'currentStock',l:'当前库存',w:100},
+        {k:'qualifiedStock',l:'合格库存',w:100},
+        {k:'pendingStock',l:'待检库存',w:100},
+        {k:'defectiveStock',l:'不合格',w:90},
+        {k:'batchCount',l:'批次数',w:70},
+        {k:'recentInQty',l:'近30天入库',w:110},
+        {k:'recentOutQty',l:'近30天出库',w:110},
+        {k:'turnoverDays',l:'周转天数',w:90}
+      ],
+      readonly: true, hideMeta: true
+    },
+    { key:'report-surgery-stats', icon:'🏥', label:'手术报台统计', api:'/api/reports/surgery-stats',
+      cols:[
+        {k:'terminalId',l:'医院ID',w:70, link:{menu:'hospitals',param:'id',valueKey:'terminalId'}},
+        {k:'hospitalCode',l:'医院编码',w:110},
+        {k:'hospitalName',l:'医院'},
+        {k:'level',l:'级别',w:80},
+        {k:'city',l:'城市',w:90},
+        {k:'surgeryCount',l:'手术数',w:80},
+        {k:'totalImplants',l:'植入件数',w:100},
+        {k:'lastSurgeryAt',l:'最近手术',w:130}
+      ],
+      readonly: true, hideMeta: true
+    },
+    { key:'report-receivables', icon:'💰', label:'应收账款', api:'/api/reports/receivables',
+      cols:[
+        {k:'dealerId',l:'经销商ID',w:70, link:{menu:'dealers',param:'id',valueKey:'dealerId'}},
+        {k:'dealerCode',l:'经销商编码',w:110},
+        {k:'dealerName',l:'经销商名称'},
+        {k:'level',l:'级别',w:80},
+        {k:'unpaidCount',l:'未结算单数',w:100},
+        {k:'totalReceivable',l:'应收金额',w:130},
+        {k:'age30',l:'0-30 天',w:110},
+        {k:'age60',l:'31-60 天',w:110},
+        {k:'age90',l:'61-90 天',w:110},
+        {k:'ageOver90',l:'>90 天',w:110}
+      ],
+      readonly: true, hideMeta: true
+    }
+  ]},
+
+  { group: '销售组织', items: [
+    { key:'sales-positions', icon:'👔', label:'销售岗位', customView: 'renderPositions' }
+  ]},
+
+  { group: '主数据管理', items: [
+    { key:'suppliers', icon:'🏭', label:'供应商', api:'/api/suppliers',
+      cols:[
+        {k:'id',l:'ID',w:60},{k:'code',l:'编码',w:110},{k:'name',l:'名称'},
+        {k:'contactPerson',l:'联系人',w:100},{k:'contactPhone',l:'电话',w:130},
+        {k:'address',l:'地址'},{k:'taxNo',l:'税号',w:150},{k:'status',l:'状态',w:80}
+      ],
+      form:[
+        {key:'code', label:'供应商编码', required:true},
+        {key:'name', label:'供应商名称', required:true},
+        {key:'contactPerson', label:'联系人'},
+        {key:'contactPhone', label:'联系电话'},
+        {key:'address', label:'地址', full:true},
+        {key:'bankAccount', label:'银行账号'},
+        {key:'taxNo', label:'税号'},
+        {key:'remark', label:'备注', full:true},
+        {key:'status', label:'状态', type:'select', options:[{value:'active',label:'启用'},{value:'inactive',label:'停用'}]}
+      ]
+    },
+    { key:'product-prices', icon:'💵', label:'产品价格', api:'/api/product-prices',
+      cols:[
+        {k:'id',l:'ID',w:60},
+        {k:'productCode',l:'产品编码',w:130, link:{menu:'products',param:'id',valueKey:'productId'}},
+        {k:'productName',l:'产品名称'},
+        {k:'productUnit',l:'单位',w:60},
+        {k:'partnerType',l:'范围',w:80},
+        {k:'partnerName',l:'伙伴',w:120},
+        {k:'purchasePrice',l:'采购价',w:110},
+        {k:'salesPrice',l:'销售价',w:110},
+        {k:'currency',l:'货币',w:60},
+        {k:'status',l:'状态',w:70}
+      ],
+      form:[
+        {key:'productId', label:'产品', required:true, type:'product-picker'},
+        {key:'partnerType', label:'范围', type:'select', required:true, options:[
+          {value:'GLOBAL',label:'全局'},{value:'DEALER',label:'按经销商'},{value:'SUPPLIER',label:'按供应商'}
+        ]},
+        {key:'partnerId', label:'伙伴ID（GLOBAL 填 0）'},
+        {key:'purchasePrice', label:'采购价', type:'number', required:true},
+        {key:'salesPrice', label:'销售价', type:'number', required:true},
+        {key:'currency', label:'货币', value:'CNY'},
+        {key:'effectiveDate', label:'生效日期', type:'date'},
+        {key:'expireDate', label:'失效日期', type:'date'},
+        {key:'status', label:'状态', type:'select', options:[{value:'active',label:'启用'},{value:'inactive',label:'停用'}]}
+      ]
     }
   ]},
 
@@ -348,42 +625,282 @@ var MENU_GROUPS = [
 ];
 
 var MENU_INDEX = {};
-MENU_GROUPS.forEach(function(g){ g.items.forEach(function(m){ MENU_INDEX[m.key] = m; }); });
+MENU_GROUPS.forEach(function(g){ g.items.forEach(function(m){ m._group = g.group; MENU_INDEX[m.key] = m; }); });
+
+// v3.4.15: 菜单分组覆盖配置（后台可调整），启动时从后端加载
+var _menuOverrides = {};
+function loadMenuOverrides(cb){
+  DMS.api('/api/menu-configs').then(function(r){
+    _menuOverrides = {};
+    if (r && r.code === 0 && Array.isArray(r.data)) {
+      r.data.forEach(function(c){ _menuOverrides[c.menuKey] = c; });
+    }
+    if (cb) cb();
+  }).catch(function(){ if (cb) cb(); });
+}
 
 function renderMenu(activeKey){
-  var h = '';
+  // v3.4.10 合并同名分组；v3.4.15 应用后台分组/排序/显隐覆盖
+  var merged = {}; var order = [];
   MENU_GROUPS.forEach(function(g){
-    h += '<div class="dms-nav-group">' + g.group + '</div>';
     g.items.forEach(function(m){
-      h += '<div class="dms-nav-item ' + (m.key===activeKey?'active':'') + '" onclick="goto(\'' + m.key + '\')">' +
+      var ov = _menuOverrides[m.key] || {};
+      if (ov.visible === false) return;
+      var gname = ov.group || m._group || g.group;
+      if (!merged[gname]) { merged[gname] = []; order.push(gname); }
+      merged[gname].push({ m: m, sort: (ov.sortOrder != null ? ov.sortOrder : 100) });
+    });
+  });
+  var h = '';
+  order.forEach(function(gname){
+    h += '<div class="dms-nav-group">' + gname + '</div>';
+    merged[gname].sort(function(a,b){ return a.sort - b.sort; });
+    merged[gname].forEach(function(it){
+      var m = it.m;
+      h += '<div class="dms-nav-item ' + (m.key===activeKey?'active':'') + '" onclick="goto(\'' + m.key + '\');_mobileAfterNav();">' +
            '<span class="icon">' + m.icon + '</span><span>' + m.label + '</span></div>';
     });
   });
   document.getElementById('navMenu').innerHTML = h;
 }
 
-function goto(key){
+// ============ 移动端汉堡菜单 v3.4.7 ============
+function toggleSidebar(forceState){
+  var sb = document.getElementById('dmsSidebar');
+  var mask = document.getElementById('mobileMask');
+  var willOpen = (forceState === true) || (forceState === undefined && !sb.classList.contains('open'));
+  if (forceState === false) willOpen = false;
+  if (willOpen) { sb.classList.add('open'); mask.classList.add('show'); }
+  else { sb.classList.remove('open'); mask.classList.remove('show'); }
+}
+function _mobileAfterNav(){
+  if (window.innerWidth <= 900) toggleSidebar(false);
+}
+
+// ============ 多标签 Tabs 系统 v3.4.6 ============
+// 每个 Tab 保存自身状态：菜单 key、附加过滤参数、当前分页信息、DOM 快照
+var _tabs = [];      // [{id, key, label, icon, filter, state, pinned}]
+var _activeTabId = null;
+var _tabIdSeq = 0;
+var _contentSnapshots = {}; // tabId -> {html, scrollTop}
+
+function _saveActiveTabSnapshot(){
+  if (!_activeTabId) return;
+  var content = document.getElementById('content');
+  // v3.4.15: 持久化用户已输入的表单值到 DOM 属性，使 innerHTML 快照能保留未保存内容
+  content.querySelectorAll('input, textarea, select').forEach(function(el){
+    if (el.type === 'checkbox' || el.type === 'radio') {
+      if (el.checked) el.setAttribute('checked', 'checked'); else el.removeAttribute('checked');
+    } else if (el.tagName === 'SELECT') {
+      Array.prototype.forEach.call(el.options, function(o){
+        if (o.selected) o.setAttribute('selected', 'selected'); else o.removeAttribute('selected');
+      });
+    } else if (el.tagName === 'TEXTAREA') {
+      el.textContent = el.value == null ? '' : el.value;
+    } else {
+      el.setAttribute('value', el.value == null ? '' : el.value);
+    }
+  });
+  _contentSnapshots[_activeTabId] = {
+    html: content.innerHTML,
+    scrollTop: content.scrollTop,
+    currentList: JSON.parse(JSON.stringify(currentList || {}))
+  };
+}
+
+function _renderTabsBar(){
+  var bar = document.getElementById('tabsBar');
+  bar.innerHTML = _tabs.map(function(t){
+    var active = t.id === _activeTabId ? 'active' : '';
+    var pinned = t.pinned ? 'pinned' : '';
+    return '<button type="button" class="dms-tab ' + active + ' ' + pinned + '" data-tab-id="' + t.id + '">' +
+      '<span class="dms-tab-icon">' + (t.icon||'📄') + '</span>' +
+      '<span>' + t.label + '</span>' +
+      (t.pinned ? '' : '<span class="close" onclick="closeTab(' + t.id + ',event)">×</span>') +
+      '</button>';
+  }).join('');
+  bar.querySelectorAll('.dms-tab').forEach(function(el){
+    el.addEventListener('click', function(e){
+      if (e.target.classList.contains('close')) return;
+      var id = Number(el.getAttribute('data-tab-id'));
+      activateTab(id);
+    });
+  });
+}
+
+function closeTab(id, evt){
+  if (evt) evt.stopPropagation();
+  var idx = _tabs.findIndex(function(t){return t.id === id;});
+  if (idx < 0) return;
+  if (_tabs[idx].pinned) return;
+  _tabs.splice(idx, 1);
+  delete _contentSnapshots[id];
+  if (_activeTabId === id) {
+    var next = _tabs[Math.min(idx, _tabs.length - 1)] || _tabs[0];
+    if (next) activateTab(next.id);
+    else { _activeTabId = null; document.getElementById('content').innerHTML = ''; }
+  }
+  _renderTabsBar();
+}
+
+function activateTab(id){
+  if (_activeTabId === id) return;
+  _saveActiveTabSnapshot();
+  var t = _tabs.find(function(x){return x.id === id;});
+  if (!t) return;
+  _activeTabId = id;
+  _renderTabsBar();
+  var m = MENU_INDEX[t.key];
+  if (!m) return;
+  renderMenu(t.key);
+  document.getElementById('crumb').innerHTML = '首页 / <strong>' + t.label + '</strong>';
+  // 恢复快照 or 重新渲染
+  var snap = _contentSnapshots[id];
+  if (t.filter && t.filter.__mode) {
+    // v3.4.15: 表单页签用快照恢复 DOM（保留用户已输入内容），不做列表重绑
+    if (snap) {
+      document.getElementById('content').innerHTML = snap.html;
+      setTimeout(function(){ document.getElementById('content').scrollTop = snap.scrollTop || 0; }, 0);
+    } else {
+      _renderTabContent(t);
+    }
+    return;
+  }
+  if (snap) {
+    document.getElementById('content').innerHTML = snap.html;
+    if (snap.currentList) currentList = snap.currentList;
+    setTimeout(function(){ document.getElementById('content').scrollTop = snap.scrollTop || 0; }, 0);
+    _rebindListActions();
+  } else {
+    _renderTabContent(t);
+  }
+}
+
+function _renderTabContent(t){
+  var m = MENU_INDEX[t.key];
+  // v3.4.15: 表单页签（新建/编辑/详情）切走再回来时，重建表单而非误当列表查询
+  if (t.filter && t.filter.__mode && !t.filter.__custom) {
+    _renderFormPage(m, t.filter.__mode, t.filter.__id);
+    return;
+  }
+  if (t.filter && t.filter.__custom === 'order') { _renderOrderCreatePage(m); return; }
+  if (t.filter && t.filter.__custom === 'stockmove') { _renderStockMoveCreatePage(m); return; }
+  if (m.customView && typeof window[m.customView] === 'function') window[m.customView](t.filter);
+  else if (m.render) m.render();
+  else if (m.api) renderList(m, t.filter);
+}
+
+// 重新绑定列表分页/按钮（从快照恢复后事件丢失，需要重新绑定）
+function _rebindListActions(){
+  // 简化：如果是列表页，直接重新渲染
+  if (currentList && currentList.menu && currentList.menu.api) {
+    var m = currentList.menu;
+    var filter = currentList.filter;
+    renderList(m, filter);
+  }
+}
+
+function openTab(key, filter, label){
   var m = MENU_INDEX[key]; if (!m) return;
+  var displayLabel = label || m.label;
+  // filter 相同则激活已有 tab
+  var filterKey = filter ? JSON.stringify(filter) : '';
+  var existing = _tabs.find(function(t){
+    return t.key === key && (JSON.stringify(t.filter||'') === JSON.stringify(filter||''));
+  });
+  if (existing) { activateTab(existing.id); return; }
+
+  _saveActiveTabSnapshot();
+  var tab = {
+    id: ++_tabIdSeq,
+    key: key,
+    label: displayLabel,
+    icon: m.icon,
+    filter: filter || null,
+    pinned: key === 'home'
+  };
+  _tabs.push(tab);
+  _activeTabId = tab.id;
+  _renderTabsBar();
   renderMenu(key);
-  document.getElementById('crumb').innerHTML = '首页 / <strong>' + m.label + '</strong>';
-  if (m.render) m.render();
-  else if (m.api) renderList(m);
+  document.getElementById('crumb').innerHTML = '首页 / <strong>' + displayLabel + '</strong>';
+  _renderTabContent(tab);
+}
+
+// 兼容：goto 现在改为 openTab 简写
+function goto(key, filter){
+  openTab(key, filter);
+}
+
+// v3.4.10 表单 product-picker
+function _openProductPickerForField(fieldKey) {
+  DMS.api('/api/lookups/products?limit=500').then(function(r){
+    if (r.code !== 0) { DMS.toast('加载产品失败', 'error'); return; }
+    var products = r.data || [];
+    var searchInput = '<input type="text" id="ppfSearch" placeholder="🔍 输入产品编码/名称搜索..." style="width:100%;padding:6px 10px;border:1px solid var(--md-outline);border-radius:6px;margin-bottom:8px;">';
+    var listHtml = '<div id="ppfList" style="max-height:400px;overflow-y:auto;border:1px solid var(--md-outline-variant);border-radius:6px;">';
+    products.forEach(function(p){
+      listHtml += '<div class="ppf-item" data-pid="' + p.id + '" data-pname="' + (p.nameCn||p.name||'').replace(/"/g,'&quot;') + '" data-pcode="' + p.code + '" style="padding:8px 10px;border-bottom:1px solid var(--md-outline-variant);cursor:pointer;">' +
+        '<strong>' + p.code + '</strong> · ' + (p.nameCn || p.name || '-') +
+        (p.unitType ? '<span style="color:#999;font-size:11px;margin-left:6px;">['+p.unitType+']</span>' : '') +
+      '</div>';
+    });
+    listHtml += '</div>';
+    DMS.confirm(searchInput + listHtml, function(){
+      var sel = document.querySelector('.ppf-item.selected');
+      if (!sel) { DMS.toast('请选择产品', 'warn'); return false; }
+      var pid = sel.getAttribute('data-pid');
+      var pname = sel.getAttribute('data-pname');
+      var pcode = sel.getAttribute('data-pcode');
+      document.querySelector('input[data-form-key="'+fieldKey+'"]').value = pid;
+      var lbl = document.getElementById('pp-label-'+fieldKey);
+      if (lbl) lbl.textContent = pcode + ' · ' + pname;
+    }, '选择产品');
+    setTimeout(function(){
+      document.querySelectorAll('.ppf-item').forEach(function(el){
+        el.addEventListener('click', function(){
+          document.querySelectorAll('.ppf-item').forEach(function(x){ x.classList.remove('selected'); x.style.background=''; });
+          el.classList.add('selected'); el.style.background = 'var(--md-primary-container)';
+        });
+      });
+      var si = document.getElementById('ppfSearch');
+      if (si) si.addEventListener('input', function(){
+        var kw = si.value.toLowerCase();
+        document.querySelectorAll('.ppf-item').forEach(function(el){
+          el.style.display = el.textContent.toLowerCase().indexOf(kw) >= 0 ? '' : 'none';
+        });
+      });
+    }, 50);
+  });
+}
+
+
+function openDetailTab(menuKey, id){
+  var m = MENU_INDEX[menuKey];
+  if (!m) { DMS.toast('未知菜单：' + menuKey, 'error'); return; }
+  openFormTab(m, 'view', id);
 }
 
 // ============ 通用列表 ============
 var currentList = {};
 
-function renderList(menu){
-  currentList = { menu: menu, page: 1, size: 20 };
+function renderList(menu, filter){
+  currentList = { menu: menu, page: 1, size: 20, filter: filter || null, sortKey: 'updatedAt', sortDir: 'desc' };
   var newBtn = menu.readonly ? '' : '<button class="dms-btn dms-btn-primary" onclick="doCreate()">➕ 新建</button>';
+  var importBtn = menu.readonly ? '' : '<button class="dms-btn" onclick="doImport()">📥 导入</button>';
+  var exportBtn = '<button class="dms-btn" onclick="doExport()">📤 导出</button>';
+  var templateBtn = menu.readonly ? '' : '<button class="dms-btn" onclick="doDownloadTemplate()">📄 模板</button>';
+  var filterBadge = filter ? '<span class="dms-badge dms-badge-blue" style="margin-left:8px;">🔍 已按 ' + Object.keys(filter).map(function(k){return k+'='+filter[k];}).join(', ') + ' 过滤 <a class="dms-link" style="margin-left:4px;" onclick="clearListFilter()">×清除</a></span>' : '';
   document.getElementById('content').innerHTML =
-    '<div class="dms-page-title">' + menu.label + '</div>' +
+    '<div class="dms-page-title">' + menu.label + filterBadge + '</div>' +
     '<div class="dms-page-sub">共 <span id="totalCnt">-</span> 条数据 · <code>' + menu.api + '</code></div>' +
     '<div class="dms-card">' +
       '<div class="dms-card-title">' +
         '<span>数据列表</span>' +
         '<div class="actions">' +
-          '<button class="dms-btn" onclick="reloadList()">🔄 刷新</button>' + newBtn +
+          '<button class="dms-btn" onclick="reloadList()">🔄 刷新</button>' +
+          '<button class="dms-btn" onclick="_toggleFilterRow()">🔽 筛选</button>' +
+          templateBtn + importBtn + exportBtn + newBtn +
         '</div>' +
       '</div>' +
       '<div id="listArea"><div class="dms-loading">加载中...</div></div>' +
@@ -391,9 +908,46 @@ function renderList(menu){
   reloadList();
 }
 
+function clearListFilter(){
+  if (currentList && currentList.menu) {
+    currentList.filter = null;
+    renderList(currentList.menu, null);
+  }
+}
+
+// v3.4.10 列表排序切换
+function _toggleSort(key){
+  if (!currentList) return;
+  if (currentList.sortKey === key) {
+    currentList.sortDir = currentList.sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    currentList.sortKey = key;
+    currentList.sortDir = 'asc';
+  }
+  currentList.page = 1;
+  reloadList();
+}
+
 function reloadList(){
   var m = currentList.menu;
-  var q = '?page=' + currentList.page + '&size=' + currentList.size;
+  // v3.4.10: 排序状态从 currentList
+  var sortKey = currentList.sortKey || 'updatedAt';
+  var sortDir = currentList.sortDir || 'desc';
+  var q = '?page=' + currentList.page + '&size=' + currentList.size + '&sort=' + sortKey + ',' + sortDir;
+  // v3.4.6 附加 filter 参数
+  if (currentList.filter) {
+    Object.keys(currentList.filter).forEach(function(k){
+      var v = currentList.filter[k];
+      if (v != null && v !== '') q += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(v);
+    });
+  }
+  // v3.4.14: 列筛选（固定搜索区 + 表头漏斗）统一传后端，跨全部数据
+  if (currentList.colFilters) {
+    Object.keys(currentList.colFilters).forEach(function(k){
+      var v = currentList.colFilters[k];
+      if (v != null && v !== '') q += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(v);
+    });
+  }
   DMS.api(m.api + q).then(function(d){
     if (d.code !== 0) {
       document.getElementById('listArea').innerHTML = '<div class="dms-error-hint">加载失败：' + d.message + '</div>';
@@ -401,74 +955,390 @@ function reloadList(){
     }
     var list = (d.data && d.data.list) || (d.data && d.data.data) || (Array.isArray(d.data) ? d.data : []);
     var total = (d.data && d.data.total != null) ? d.data.total : list.length;
-    var totalEl = document.getElementById('totalCnt');
-    if (totalEl) totalEl.textContent = total;
-
-    if (!list.length) { document.getElementById('listArea').innerHTML = '<div class="dms-empty">📭 暂无数据</div>'; return; }
-
-    var h = '<table><thead><tr>';
-    m.cols.forEach(function(c){
-      var w = c.w ? (' style="width:' + c.w + 'px;"') : '';
-      h += '<th' + w + '>' + c.l + '</th>';
-    });
-    if (!m.readonly) h += '<th style="width:240px;">操作</th>';
-    h += '</tr></thead><tbody>';
-
-    list.forEach(function(row){
-      h += '<tr>';
-      m.cols.forEach(function(c){
-        var v = row[c.k];
-        if (c.k === 'status') h += '<td>' + DMS.statusBadge(v) + '</td>';
-        else if (typeof v === 'number' && (c.k.indexOf('mount')>0 || c.k.indexOf('rice')>0)) h += '<td>¥ ' + Number(v).toFixed(2) + '</td>';
-        else if (typeof v === 'boolean') h += '<td>' + (v ? '✅' : '—') + '</td>';
-        else h += '<td>' + DMS.fmt(v, c.k) + '</td>';
+    // 前端按 updatedAt 倒序兜底排序（仅在默认排序时生效，避免覆盖用户点列排序）
+    if ((currentList.sortKey === 'updatedAt') && currentList.sortDir === 'desc') {
+      list.sort(function(a, b){
+        var au = a.updatedAt || a.createdAt || '';
+        var bu = b.updatedAt || b.createdAt || '';
+        return bu.toString().localeCompare(au.toString());
       });
-      if (!m.readonly) {
-        var id = row.id;
-        h += '<td>' +
-          '<button class="dms-btn dms-btn-sm" onclick="doView(' + id + ')">👁️ 查看</button>';
-        // 状态驱动按钮
-        if (m.statusDriven) {
-          var acts = actionsForStatus(m, row.status);
-          acts.forEach(function(a){
-            var cls = 'dms-btn-' + (a.type || 'warn');
-            var lbl = a.label;
-            var confirmMsg = a.confirm || ('确认' + lbl + '？');
-            h += ' <button class="dms-btn dms-btn-sm ' + cls + '" onclick="doStatusAction(' + id + ',\'' + a.key + '\',\'' + a.method + '\',\'' + a.path + '\',\'' + confirmMsg + '\')">' + lbl + '</button>';
-          });
-        } else {
-          // 无状态驱动：显示编辑
-          h += ' <button class="dms-btn dms-btn-sm dms-btn-primary" onclick="doEdit(' + id + ')">✏️ 编辑</button>';
-          if (m.actions) {
-            m.actions.forEach(function(a, idx){
-              var cls = 'dms-btn-' + (a.type || 'warn');
-              h += ' <button class="dms-btn dms-btn-sm ' + cls + '" onclick="doAction(' + id + ',' + idx + ')">' + a.label + '</button>';
-            });
-          }
-        }
-        h += '</td>';
-      }
-      h += '</tr>';
-    });
-    h += '</tbody></table>';
-    h += '<div class="dms-pagination">共 ' + total + ' 条 · 第 ' + currentList.page + ' 页 · ' +
-         '<button ' + (currentList.page<=1?'disabled':'') + ' onclick="currentList.page--;reloadList()">上一页</button>' +
-         '<button ' + (list.length<currentList.size?'disabled':'') + ' onclick="currentList.page++;reloadList()">下一页</button></div>';
-    document.getElementById('listArea').innerHTML = h;
+    }
+    currentList._raw = list;
+    currentList._total = total;
+    _renderListTable();
   }).catch(function(e){
     document.getElementById('listArea').innerHTML = '<div class="dms-error-hint">网络错误：' + e.message + '</div>';
   });
 }
 
+// v3.4.13/14 列筛选切换（表头漏斗）
+function _toggleFilterRow(){
+  currentList.showFilters = !currentList.showFilters;
+  _renderListTable();
+}
+// v3.4.14: 列筛选统一传后端，跨全部数据；变更后回到第1页重新查询
+function _setColFilter(key, val){
+  currentList.colFilters = currentList.colFilters || {};
+  if (val == null || val === '') delete currentList.colFilters[key];
+  else currentList.colFilters[key] = String(val).trim();
+  // 同步固定搜索区与漏斗行两处输入
+  currentList.page = 1;
+  reloadList();
+}
+function _clearColFilters(){
+  currentList.colFilters = {};
+  currentList.page = 1;
+  reloadList();
+}
+// 生成单个筛选控件（select列用下拉，date列用日期，其余文本）
+function _filterControlHtml(c, extraStyle){
+  var cur = (currentList.colFilters && currentList.colFilters[c.k]) || '';
+  var st = 'font-size:12px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-weight:normal;' + (extraStyle||'width:100%;');
+  var ff = c.filter || {};
+  if (ff.type === 'select' && ff.options) {
+    var opts = '<option value="">全部</option>' + ff.options.map(function(o){
+      return '<option value="'+o.value+'"'+(String(cur)===String(o.value)?' selected':'')+'>'+o.label+'</option>';
+    }).join('');
+    return '<select onchange="_setColFilter(\''+c.k+'\', this.value)" style="'+st+'">'+opts+'</select>';
+  }
+  if (ff.type === 'date') {
+    return '<input type="date" value="'+cur+'" onchange="_setColFilter(\''+c.k+'\', this.value)" style="'+st+'">';
+  }
+  return '<input type="text" value="'+cur+'" placeholder="🔎'+c.l+'" onchange="_setColFilter(\''+c.k+'\', this.value)" style="'+st+'">';
+}
+
+function _renderListTable(keepFocus){
+  var m = currentList.menu;
+  var list = (currentList._raw || []).slice();
+  var total = currentList._total || 0;
+  var totalEl = document.getElementById('totalCnt');
+  if (totalEl) totalEl.textContent = total;
+
+  // 列定义中如果没有创建/修改元数据，自动追加
+  var cols = m.cols.slice();
+  var extraColKeys = cols.map(function(c){ return c.k; });
+  if (!m.hideMeta) {
+    if (extraColKeys.indexOf('createdBy') < 0 && list.some(function(r){ return r.createdBy != null || r.createdByName; })) cols.push({k:'createdByName',l:'创建人',w:100});
+    if (extraColKeys.indexOf('createdAt') < 0 && list.some(function(r){ return r.createdAt; })) cols.push({k:'createdAt',l:'创建时间',w:150});
+    if (extraColKeys.indexOf('updatedBy') < 0 && list.some(function(r){ return r.updatedBy != null || r.updatedByName; })) cols.push({k:'updatedByName',l:'最后修改人',w:100});
+    if (extraColKeys.indexOf('updatedAt') < 0 && list.some(function(r){ return r.updatedAt; })) cols.push({k:'updatedAt',l:'最后修改',w:150});
+  }
+
+  if (!(currentList._raw || []).length) {
+    document.getElementById('listArea').innerHTML = _fixedSearchBarHtml(m) + '<div class="dms-empty">📭 暂无数据</div>' + renderPagination(0, 1);
+    _bindFixedSearch();
+    return;
+  }
+
+  var totalPages = Math.max(1, Math.ceil(total / currentList.size));
+  var h = _fixedSearchBarHtml(m);
+  h += '<table><thead><tr>';
+  cols.forEach(function(c){
+    var w = c.w ? (' style="width:' + c.w + 'px;cursor:pointer;user-select:none;"') : ' style="cursor:pointer;user-select:none;"';
+    var arrow = '';
+    if (currentList.sortKey === c.k) arrow = currentList.sortDir === 'asc' ? ' ▲' : ' ▼';
+    else arrow = ' <span style="color:#ccc;">⇅</span>';
+    h += '<th' + w + ' onclick="_toggleSort(\''+c.k+'\')" title="点击排序">' + c.l + arrow + '</th>';
+  });
+  if (!m.readonly || m.statusDriven || m.actions) h += '<th style="width:240px;">操作</th>';
+  h += '</tr>';
+  // 漏斗筛选行（表头即可点出筛选，select列下拉/date列日期/其余文本）
+  if (currentList.showFilters) {
+    h += '<tr class="dms-filter-row">';
+    cols.forEach(function(c){
+      h += '<th style="padding:2px 4px;">' + _filterControlHtml(c) + '</th>';
+    });
+    if (!m.readonly || m.statusDriven || m.actions) h += '<th></th>';
+    h += '</tr>';
+  }
+  h += '</thead><tbody>';
+
+  list.forEach(function(row){
+    h += '<tr>';
+    cols.forEach(function(c){
+      var v = row[c.k];
+      if (c.k === 'createdByName' && v == null) v = row.createdBy;
+      if (c.k === 'updatedByName' && v == null) v = row.updatedBy;
+
+      // v3.4.13: 单据编号 code 列做成链接，点击打开自身详情
+      if (c.k === 'code' && m.detailable && v != null && v !== '') {
+        h += '<td><a class="dms-link" onclick="doView(' + row.id + ')">' + v + '</a></td>';
+      }
+      else if (c.link && v != null && v !== '' && v !== '-') {
+        var filterVal = c.link.valueKey ? row[c.link.valueKey] : v;
+        var linkLabel = c.linkLabelKey ? (row[c.linkLabelKey] || v) : v;
+        h += '<td><a class="dms-link" onclick="openDetailTab(\'' + c.link.menu + '\',' + filterVal + ')">' + linkLabel + '</a></td>';
+      }
+      else if (c.k === 'status') h += '<td>' + DMS.statusBadge(v) + '</td>';
+      else if (c.k === 'createdAt' || c.k === 'updatedAt') h += '<td style="font-size:11px;color:#666;">' + (v ? String(v).replace('T',' ').substring(0,19) : '-') + '</td>';
+      else if (typeof v === 'number' && (c.k.indexOf('mount')>0 || c.k.indexOf('rice')>0)) h += '<td>¥ ' + Number(v).toFixed(2) + '</td>';
+      else if (typeof v === 'boolean') h += '<td>' + (v ? '✅' : '—') + '</td>';
+      else h += '<td>' + DMS.fmt(v, c.k) + '</td>';
+    });
+    if (!m.readonly || m.statusDriven || m.actions) {
+      var id = row.id;
+      h += '<td>' +
+        '<button class="dms-btn dms-btn-sm" onclick="doView(' + id + ')">👁️ 查看</button>';
+      if (m.statusDriven) {
+        var acts = actionsForStatus(m, row.status);
+        acts.forEach(function(a){
+          var cls = 'dms-btn-' + (a.type || 'warn');
+          var lbl = a.label;
+          var confirmMsg = a.confirm || ('确认' + lbl + '？');
+          h += ' <button class="dms-btn dms-btn-sm ' + cls + '" onclick="doStatusAction(' + id + ',\'' + a.key + '\',\'' + a.method + '\',\'' + a.path + '\',\'' + confirmMsg + '\')">' + lbl + '</button>';
+        });
+      } else if (!m.readonly) {
+        if (!m.noEdit) h += ' <button class="dms-btn dms-btn-sm dms-btn-primary" onclick="doEdit(' + id + ')">✏️ 编辑</button>';
+        if (m.actions) {
+          m.actions.forEach(function(a, idx){
+            var cls = 'dms-btn-' + (a.type || 'warn');
+            h += ' <button class="dms-btn dms-btn-sm ' + cls + '" onclick="doAction(' + id + ',' + idx + ')">' + a.label + '</button>';
+          });
+        }
+      }
+      h += '</td>';
+    }
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  h += renderPagination(total, totalPages);
+  document.getElementById('listArea').innerHTML = h;
+  _bindFixedSearch();
+}
+
+// v3.4.14: 固定搜索区（列表顶部常驻，按菜单 searchFields 定制）
+function _fixedSearchBarHtml(m){
+  var sf = m.searchFields;
+  if (!sf || !sf.length) return '';
+  var items = sf.map(function(c){
+    return '<div style="display:flex;flex-direction:column;gap:2px;">' +
+      '<label style="font-size:11px;color:#888;">' + c.l + '</label>' +
+      _filterControlHtml(c, 'width:160px;') +
+      '</div>';
+  }).join('');
+  return '<div class="dms-fixed-search" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:10px 12px;background:#f7f9fc;border:1px solid #eef1f6;border-radius:8px;margin-bottom:10px;">' +
+    items +
+    '<button class="dms-btn dms-btn-sm" onclick="_clearColFilters()" style="margin-bottom:1px;">✖ 清空</button>' +
+    '</div>';
+}
+function _bindFixedSearch(){ /* 控件已用 onchange 内联绑定，无需额外处理 */ }
+
+// ============ 完整分页组件 ============
+function renderPagination(total, totalPages){
+  var p = currentList.page;
+  var size = currentList.size;
+  var canPrev = p > 1;
+  var canNext = p < totalPages;
+  return '<div class="dms-pagination" style="display:flex;align-items:center;gap:8px;padding:12px 8px;font-size:13px;flex-wrap:wrap;">' +
+    '<span>共 <strong>' + total + '</strong> 条 · 共 <strong>' + totalPages + '</strong> 页</span>' +
+    '<button class="dms-btn dms-btn-sm" ' + (canPrev?'':'disabled') + ' onclick="goPage(1)">首页</button>' +
+    '<button class="dms-btn dms-btn-sm" ' + (canPrev?'':'disabled') + ' onclick="goPage(' + (p-1) + ')">上一页</button>' +
+    '<span>第 <strong>' + p + '</strong> / ' + totalPages + ' 页</span>' +
+    '<button class="dms-btn dms-btn-sm" ' + (canNext?'':'disabled') + ' onclick="goPage(' + (p+1) + ')">下一页</button>' +
+    '<button class="dms-btn dms-btn-sm" ' + (canNext?'':'disabled') + ' onclick="goPage(' + totalPages + ')">末页</button>' +
+    '<span style="margin-left:12px;">跳至 <input type="number" id="jumpInput" min="1" max="' + totalPages + '" value="' + p + '" style="width:60px;padding:4px 8px;border:1px solid #d9d9d9;border-radius:3px;"> 页</span>' +
+    '<button class="dms-btn dms-btn-sm" onclick="jumpToPage()">跳转</button>' +
+    '<span style="margin-left:12px;">每页 <select id="pageSizeSel" onchange="changePageSize(this.value)" style="padding:4px 8px;border:1px solid #d9d9d9;border-radius:3px;">' +
+      [10,20,50,100,200].map(function(s){ return '<option value="' + s + '"' + (s===size?' selected':'') + '>' + s + ' 条</option>'; }).join('') +
+    '</select></span>' +
+    '</div>';
+}
+
+function goPage(p){
+  var totalPages = 1;
+  try { totalPages = parseInt(document.querySelector('.dms-pagination strong:nth-of-type(2)').textContent) || 1; } catch(e) {}
+  if (p < 1) p = 1;
+  if (p > totalPages) p = totalPages;
+  currentList.page = p;
+  reloadList();
+}
+
+function jumpToPage(){
+  var v = parseInt(document.getElementById('jumpInput').value);
+  if (!isNaN(v)) goPage(v);
+}
+
+function changePageSize(s){
+  currentList.size = parseInt(s);
+  currentList.page = 1;
+  reloadList();
+}
+
+// ============ 导入 / 导出 / 模板下载 ============
+function doExport(){
+  var m = currentList.menu;
+  DMS.toast('正在导出...', 'info');
+  // 拉取全部数据
+  DMS.api(m.api + '?page=1&size=99999&sort=updatedAt,desc').then(function(d){
+    if (d.code !== 0) { DMS.toast('导出失败：' + d.message, 'error'); return; }
+    var list = (d.data && d.data.list) || (d.data && d.data.data) || (Array.isArray(d.data) ? d.data : []);
+    if (!list.length) { DMS.toast('无数据可导出', 'warn'); return; }
+    downloadCsv(m.label, list);
+  });
+}
+
+function downloadCsv(name, list){
+  // 提取所有字段
+  var keys = [];
+  list.forEach(function(row){
+    Object.keys(row).forEach(function(k){
+      if (keys.indexOf(k) < 0 && typeof row[k] !== 'object') keys.push(k);
+    });
+  });
+  // 生成 CSV（Excel 兼容 · UTF-8 BOM）
+  var csv = '\ufeff';
+  csv += keys.map(function(k){ return DMS.labelOf ? DMS.labelOf(k) : k; }).join(',') + '\n';
+  list.forEach(function(row){
+    csv += keys.map(function(k){
+      var v = row[k];
+      if (v == null) return '';
+      var s = String(v).replace(/"/g, '""');
+      if (s.indexOf(',') >= 0 || s.indexOf('\n') >= 0 || s.indexOf('"') >= 0) s = '"' + s + '"';
+      return s;
+    }).join(',') + '\n';
+  });
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = name + '_' + new Date().toISOString().substring(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  DMS.toast('已导出 ' + list.length + ' 条数据', 'success');
+}
+
+function doDownloadTemplate(){
+  var m = currentList.menu;
+  if (!m.form) { DMS.toast('该模块无表单定义，无法生成模板', 'warn'); return; }
+  var flat = flattenFields(m.form);
+  var headers = flat.filter(function(f){ return f.type !== 'lines'; }).map(function(f){ return f.key + '(' + f.label + (f.required?' *':'') + ')'; });
+  var csv = '\ufeff' + headers.join(',') + '\n';
+  // 示例行
+  csv += headers.map(function(){ return ''; }).join(',') + '\n';
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = m.label + '_导入模板.csv'; a.click();
+  URL.revokeObjectURL(url);
+  DMS.toast('模板已下载', 'success');
+}
+
+function flattenFields(fields){
+  var out = [];
+  (fields || []).forEach(function(f){
+    if (f.type === 'lines') return;
+    out.push(f);
+  });
+  return out;
+}
+
+function doImport(){
+  var m = currentList.menu;
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.csv,.xlsx,.xls,text/csv';
+  input.onchange = function(e){
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var text = ev.target.result;
+      // 移除 BOM
+      if (text.charCodeAt(0) === 0xFEFF) text = text.substring(1);
+      var rows = parseCsv(text);
+      if (rows.length < 2) { DMS.toast('文件为空或只有标题行', 'warn'); return; }
+      var headers = rows[0].map(function(h){
+        // 提取括号前的 key（模板生成时格式是 "key(label)"）
+        var m = /^([^\(]+)/.exec(h);
+        return m ? m[1].trim() : h.trim();
+      });
+      var records = [];
+      for (var i = 1; i < rows.length; i++) {
+        var row = rows[i];
+        if (row.every(function(c){ return c === '' || c == null; })) continue;
+        var obj = {};
+        headers.forEach(function(h, idx){
+          if (row[idx] !== undefined && row[idx] !== '') obj[h] = row[idx];
+        });
+        records.push(obj);
+      }
+      if (!records.length) { DMS.toast('无有效数据', 'warn'); return; }
+      DMS.confirm('确认导入 ' + records.length + ' 条数据？重复的编码会失败。', function(){
+        importBatch(m, records);
+      });
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+  input.click();
+}
+
+function parseCsv(text){
+  var rows = [];
+  var cur = [];
+  var field = '';
+  var inQuote = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i];
+    if (inQuote) {
+      if (c === '"') {
+        if (text[i+1] === '"') { field += '"'; i++; }
+        else inQuote = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQuote = true;
+      else if (c === ',') { cur.push(field); field = ''; }
+      else if (c === '\n') { cur.push(field); rows.push(cur); cur = []; field = ''; }
+      else if (c === '\r') {}
+      else field += c;
+    }
+  }
+  if (field !== '' || cur.length) { cur.push(field); rows.push(cur); }
+  return rows;
+}
+
+function importBatch(m, records){
+  var success = 0, failed = 0;
+  var errors = [];
+  var idx = 0;
+  function next(){
+    if (idx >= records.length) {
+      DMS.toast('导入完成：成功 ' + success + ' 条 · 失败 ' + failed + ' 条', failed?'warn':'success');
+      if (errors.length) console.warn('导入错误:', errors);
+      reloadList();
+      return;
+    }
+    var rec = records[idx++];
+    DMS.api(m.api, { method:'POST', body: rec }).then(function(d){
+      if (d.code === 0) success++;
+      else { failed++; errors.push('第 ' + idx + ' 行: ' + d.message); }
+      next();
+    }).catch(function(e){
+      failed++; errors.push('第 ' + idx + ' 行: ' + e.message);
+      next();
+    });
+  }
+  next();
+}
+
 function doCreate(){
   var m = currentList.menu;
-  // 销售订单/采购订单使用大屏下单页
+  // v3.4.8：销售订单/采购订单也走 Tab 内下单页
   if (m.key === 'orders') {
-    window.location.href = '/order-create.html?mode=sales';
+    openOrderCreateTab(m, 'sales');
     return;
   }
   if (m.key === 'purchase-orders') {
-    window.location.href = '/order-create.html?mode=purchase';
+    openOrderCreateTab(m, 'purchase');
+    return;
+  }
+  // v3.4.15: 库存移动多方式创建页
+  if (m.key === 'stock-moves') {
+    openStockMoveCreateTab(m);
+    return;
+  }
+  // v3.4.7 主表单类子页 Tab
+  if (m.form && m.form.length > 4) {
+    openFormTab(m, 'create', null);
     return;
   }
   DMS.form({
@@ -477,18 +1347,958 @@ function doCreate(){
     fields: m.form,
     onSubmit: function(data){
       return DMS.api(m.api, { method:'POST', body: data }).then(function(d){
-        if (d.code === 0) { DMS.toast('新建成功', 'success'); reloadList(); return true; }
+        if (d.code === 0) {
+          DMS.toast('新建成功', 'success');
+          // v3.4.7: 保持在当前列表 Tab，仅刷新
+          reloadList();
+          return true;
+        }
         DMS.toast('新建失败：' + d.message, 'error'); return false;
       });
     }
   });
 }
 
+// ============ v3.4.7 表单 Tab（新建/编辑/详情统一样式）============
+function openFormTab(m, mode, id){
+  var suffix = mode === 'create' ? '新建' : (mode === 'edit' ? ('编辑 #' + id) : ('详情 #' + id));
+  var tabLabel = m.label + ' - ' + suffix;
+  var filter = { __mode: mode, __id: id, __ts: mode==='create' ? Date.now() : id };
+  _saveActiveTabSnapshot();
+  var tab = {
+    id: ++_tabIdSeq,
+    key: m.key,
+    label: tabLabel,
+    icon: mode==='create'?'➕':(mode==='edit'?'✏️':'👁️'),
+    filter: filter,
+    pinned: false
+  };
+  _tabs.push(tab);
+  _activeTabId = tab.id;
+  _renderTabsBar();
+  document.getElementById('crumb').innerHTML = '首页 / <strong>' + tabLabel + '</strong>';
+  _renderFormPage(m, mode, id);
+}
+
+function _renderFormPage(m, mode, id){
+  var content = document.getElementById('content');
+  var isView = mode === 'view';
+  content.innerHTML =
+    '<div class="dms-page-title">' + (mode==='create'?'➕ 新建 ':(mode==='edit'?'✏️ 编辑 ':'👁️ 详情 ')) + m.label + (id?' #'+id:'') + '</div>' +
+    '<div class="dms-page-sub"><a class="dms-link" onclick="_backToListTab(\''+m.key+'\')">← 返回列表</a></div>' +
+    '<div class="dms-card"><div id="formTabBody"><div class="dms-loading">加载中...</div></div></div>' +
+    (isView || mode==='edit' ? '<div class="dms-card"><div class="dms-card-title"><span>📜 操作/审批/自动执行历史</span></div><div id="historyTrack"><div class="dms-loading">加载中...</div></div></div>' : '');
+
+  if (mode === 'create') {
+    _renderFormBody(m, {}, false);
+  } else {
+    var detailPath = m.detailable ? (m.api + '/' + id + '/detail') : (m.api + '/' + id);
+    DMS.api(detailPath).then(function(d){
+      if (d.code !== 0) { document.getElementById('formTabBody').innerHTML = '<div class="dms-error-hint">' + d.message + '</div>'; return; }
+      _renderFormBody(m, d.data || {}, isView);
+      _loadHistoryTrack(m, id);
+    });
+  }
+}
+
+function _renderFormBody(m, data, isView){
+  var body = document.getElementById('formTabBody');
+  var fields = m.form || [];
+  // v3.4.12: key(去掉尾部 Id) → 名称字段。dealerId→dealerName 等
+  var linkFieldMap = {
+    dealerId: {menu:'dealers', nameKey:'dealerName'},
+    productId: {menu:'products', nameKey:'productName'},
+    warehouseId: {menu:'warehouses', nameKey:'warehouseName'},
+    terminalId: {menu:'hospitals', nameKey:'terminalName'},
+    supplierId: {menu:'suppliers', nameKey:'supplierName'},
+    categoryId: {menu:'categories', nameKey:'categoryName'},
+    sourceOrderId: {menu:'orders', nameKey:'sourceOrderCode'},
+    sourcePoId: {menu:'purchase-orders', nameKey:'sourcePoCode'}
+  };
+  var html = '<div class="dms-form-grid">';
+  fields.forEach(function(f){
+    // v3.4.12: lines 字段单独用明细表渲染，跳过普通字段循环，避免 [object Object]
+    if (f.type === 'lines') return;
+    var val = data[f.key];
+    var fm = linkFieldMap[f.key];
+    // 名称优先级：后端返回的 xxxName / xxxCode → 原值
+    var nameVal = fm && data[fm.nameKey] ? data[fm.nameKey] : (data[f.key + 'Name'] || data[f.key + 'Code']);
+    var displayVal = nameVal || val;
+    var isLink = isView && fm && val;
+    var fullClass = f.full ? 'dms-form-full' : '';
+    html += '<div class="dms-form-item ' + fullClass + '">' +
+      '<label>' + (f.required?'<span style="color:var(--md-error);">*</span> ':'') + f.label + '</label>';
+    if (isView) {
+      if (isLink) {
+        var lval = displayVal || val;
+        html += '<div style="padding:8px 10px;background:var(--md-surface-variant);border-radius:var(--md-radius);"><a class="dms-link" onclick="openDetailTab(\''+fm.menu+'\','+val+')">' + lval + '</a></div>';
+      } else {
+        var showVal = val == null ? '-' : String(val);
+        if (f.type === 'select' && f.options) {
+          var opt = f.options.find(function(o){return o.value===val;});
+          if (opt) showVal = opt.label;
+        } else if (f.type === 'boolean') {
+          showVal = (val === true || val === 'true' || val === 1 || val === '1') ? '是' : '否';
+        } else if (f.type === 'multiselect') {
+          showVal = (val == null || val === '') ? '-' : String(val);
+        }
+        html += '<div style="padding:8px 10px;background:var(--md-surface-variant);border-radius:var(--md-radius);min-height:34px;">' + showVal + '</div>';
+      }
+    } else {
+      // v3.4.10: 支持 select / product-picker；v3.4.12: picker.resource 下拉
+      if (f.type === 'select' && f.options) {
+        var opts = f.options.map(function(o){
+          return '<option value="'+o.value+'"'+(String(val)===String(o.value)?' selected':'')+'>'+o.label+'</option>';
+        }).join('');
+        html += '<select data-form-key="'+f.key+'"><option value="">-- 请选择 --</option>'+opts+'</select>';
+      } else if (f.type === 'multiselect' && f.picker && f.picker.resource) {
+        html += '<div data-multi-key="'+f.key+'" data-multi-resource="'+f.picker.resource+'" data-multi-val="'+(val==null?'':String(val))+'" style="border:1px solid var(--md-outline);border-radius:6px;padding:6px;max-height:140px;overflow-y:auto;">加载中...</div>';
+      } else if (f.picker && f.picker.resource) {
+        html += '<select data-form-key="'+f.key+'" data-picker-resource="'+f.picker.resource+'" data-picker-val="'+(val==null?'':val)+'"><option value="">加载中...</option></select>';
+      } else if (f.type === 'boolean') {
+        var bchecked = (val === true || val === 'true' || val === 1 || val === '1');
+        html += '<label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;">' +
+          '<input type="checkbox" data-form-key="'+f.key+'" data-form-bool="1"'+(bchecked?' checked':'')+' style="width:auto;"> 是' +
+          '</label>';
+      } else if (f.type === 'number') {
+        html += '<input type="number" step="any" data-form-key="'+f.key+'" value="'+(val==null?'':String(val))+'" placeholder="'+(f.placeholder||f.label)+'">';
+      } else if (f.type === 'product-picker') {
+        var ppText = data.productCode ? (data.productCode + (data.productName?(' '+data.productName):'')) : (val ? ('已选：#' + val) : '');
+        var showLabel = ppText || '点击选择产品...';
+        html += '<div style="display:flex;gap:8px;align-items:center;">' +
+          '<input type="hidden" data-form-key="'+f.key+'" value="'+(val==null?'':val)+'">' +
+          '<span id="pp-label-'+f.key+'" style="flex:1;padding:6px 10px;border:1px solid var(--md-outline);border-radius:6px;cursor:pointer;background:white;" onclick="_openProductPickerForField(\''+f.key+'\')">'+showLabel+'</span>' +
+          '<button class="dms-btn dms-btn-sm" onclick="_openProductPickerForField(\''+f.key+'\')">选择</button>' +
+          '</div>';
+      } else if (f.type === 'date') {
+        var dval = val==null?'':String(val).substring(0,10);
+        html += '<input type="date" data-form-key="'+f.key+'" value="'+dval+'">';
+      } else if (f.type === 'textarea') {
+        html += '<textarea data-form-key="'+f.key+'" rows="2" placeholder="'+(f.placeholder||f.label)+'" style="width:100%;">'+(val==null?'':String(val).replace(/</g,'&lt;'))+'</textarea>';
+      } else {
+        html += '<input type="text" data-form-key="' + f.key + '" value="' + (val==null?'':String(val).replace(/"/g,'&quot;')) + '" placeholder="' + (f.placeholder||f.label) + '">';
+      }
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  // v3.4.13: 可编辑明细录入（新建/编辑态，菜单含 lines 字段）
+  var linesField = fields.find(function(f){ return f.type === 'lines'; });
+  if (!isView && linesField) {
+    html += '<div class="dms-card-title" style="margin-top:16px;"><span>📋 ' + (linesField.label||'明细') + '</span>' +
+            '<div class="actions"><button class="dms-btn dms-btn-sm dms-btn-primary" onclick="_addLineRow()">➕ 添加明细</button></div></div>';
+    html += '<table id="linesEditor"><thead><tr>';
+    linesField.cols.forEach(function(c){ html += '<th>' + (c.required?'<span style="color:#e74c3c;">*</span>':'') + c.l + '</th>'; });
+    html += '<th style="width:60px;">操作</th></tr></thead><tbody></tbody></table>';
+    window._curLinesField = linesField;
+  }
+  // 明细行区（如有）
+  if (data.lines && Array.isArray(data.lines) && data.lines.length) {
+    var isRecvSo = (m.key==='receipts' || m.key==='sales-outs');
+    var qtyHead = isRecvSo ? '<th>应收/发</th><th>已收/发</th><th>待处理</th>' : '<th>数量</th><th>单价</th><th>小计</th>';
+    html += '<div class="dms-card-title" style="margin-top:16px;"><span>📋 明细行 (' + data.lines.length + ')</span></div>';
+    html += '<table><thead><tr><th>#</th><th>产品编码</th><th>产品名称</th><th>规格</th>' + qtyHead + '</tr></thead><tbody>';
+    data.lines.forEach(function(l, i){
+      var pName = l.productName || '-';
+      var pCode = l.productCode || '-';
+      var linkedName = l.productId ? '<a class="dms-link" onclick="openDetailTab(\'products\','+l.productId+')">' + pName + '</a>' : pName;
+      var cells;
+      if (isRecvSo) {
+        var exp = l.expectedQty!=null?l.expectedQty:(l.qty||0);
+        var done = (l.receivedQty!=null?l.receivedQty:(l.shippedQty!=null?l.shippedQty:0));
+        var pending = Number(exp) - Number(done);
+        cells = '<td>' + exp + '</td><td>' + done + '</td><td style="color:'+(pending>0?'#e67e22':'#27ae60')+';font-weight:600;">' + pending + '</td>';
+      } else {
+        cells = '<td>' + (l.qty||0) + '</td><td>¥ ' + Number(l.unitPrice||0).toFixed(2) + '</td>' +
+          '<td>¥ ' + Number(l.subTotal || (l.qty*l.unitPrice) || 0).toFixed(2) + '</td>';
+      }
+      html += '<tr><td>' + (i+1) + '</td><td>' + pCode + '</td><td>' + linkedName + '</td>' +
+        '<td>' + (l.productSpec||l.spec||'-') + '</td>' + cells + '</tr>';
+    });
+    html += '</tbody></table>';
+  }
+  // v3.4.13: 关联源单表头信息（需求9）
+  if (isView && data.sourceOrder) {
+    var so = data.sourceOrder;
+    html += '<div class="dms-card-title" style="margin-top:16px;"><span>🔗 关联销售订单</span></div>' +
+      '<div class="dms-form-grid" style="background:var(--md-surface-variant);padding:10px;border-radius:6px;">' +
+      '<div class="dms-form-item"><label>订单号</label><div>' + (so.code||'-') + '</div></div>' +
+      '<div class="dms-form-item"><label>经销商</label><div>' + (so.dealerName||'-') + '</div></div>' +
+      '<div class="dms-form-item"><label>订单类型</label><div>' + (so.orderType||'-') + '</div></div>' +
+      '<div class="dms-form-item"><label>状态</label><div>' + DMS.statusBadge(so.status) + '</div></div>' +
+      '<div class="dms-form-item"><label>含税金额</label><div>¥ ' + Number(so.amountInclTax||0).toFixed(2) + '</div></div>' +
+      '<div class="dms-form-item"><label>下单时间</label><div>' + (so.createdAt||'-') + '</div></div>' +
+      '</div>';
+  }
+  if (isView && data.sourcePo) {
+    var po = data.sourcePo;
+    html += '<div class="dms-card-title" style="margin-top:16px;"><span>🔗 关联采购订单</span></div>' +
+      '<div class="dms-form-grid" style="background:var(--md-surface-variant);padding:10px;border-radius:6px;">' +
+      '<div class="dms-form-item"><label>采购单号</label><div>' + (po.code||'-') + '</div></div>' +
+      '<div class="dms-form-item"><label>供应商</label><div>' + (po.supplierName||'-') + '</div></div>' +
+      '<div class="dms-form-item"><label>状态</label><div>' + DMS.statusBadge(po.status) + '</div></div>' +
+      '<div class="dms-form-item"><label>含税金额</label><div>¥ ' + Number(po.amountInclTax||0).toFixed(2) + '</div></div>' +
+      '<div class="dms-form-item"><label>下单时间</label><div>' + (po.createdAt||'-') + '</div></div>' +
+      '</div>';
+  }
+  // v3.4.12: 收发货执行记录（每次每批次）
+  if (isView && data.executionLines && data.executionLines.length) {
+    var isRecv = m.key === 'receipts';
+    html += '<div class="dms-card-title" style="margin-top:16px;"><span>🔖 ' + (isRecv?'收货':'发货') + '执行记录 (' + data.executionLines.length + ' 笔)</span></div>';
+    html += '<table><thead><tr><th>次序</th><th>产品</th><th>批次号</th><th>序列号</th><th>数量</th><th>操作人</th><th>时间</th></tr></thead><tbody>';
+    data.executionLines.forEach(function(e){
+      html += '<tr><td>第' + e.seqNo + '次</td>' +
+        '<td>' + (e.productCode||'') + ' ' + (e.productName||'') + '</td>' +
+        '<td>' + (e.batchNo||'-') + '</td>' +
+        '<td>' + (e.serialNo||'-') + '</td>' +
+        '<td style="font-weight:600;">' + e.qty + '</td>' +
+        '<td>' + (e.operatorName||'-') + '</td>' +
+        '<td>' + String(e.createdAt||'').replace('T',' ').substring(0,19) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  // v3.4.12: 操作日志时间轴
+  var logRt = _detailResourceType(m.key);
+  if (isView && logRt && data.id) {
+    html += '<div class="dms-card-title" style="margin-top:16px;"><span>🕓 操作记录</span></div>' +
+            '<div id="formOpLogBox" style="padding:4px 12px;"><span style="color:#bbb;font-size:12px;">加载中…</span></div>';
+  }
+  // 底部按钮
+  if (!isView) {
+    html += '<div style="margin-top:16px;text-align:right;">' +
+      '<button class="dms-btn" onclick="_backToListTab(\''+m.key+'\')">取消</button> ' +
+      '<button class="dms-btn dms-btn-primary" onclick="_submitFormTab(\''+m.key+'\',\''+(data.id||'')+'\')">' + (data.id ? '更新' : '保存') + '</button>' +
+      '</div>';
+  } else {
+    html += '<div style="margin-top:16px;text-align:right;">' +
+      '<button class="dms-btn" onclick="_backToListTab(\''+m.key+'\')">返回列表</button>' +
+      '</div>';
+  }
+  body.innerHTML = html;
+  // v3.4.12: 异步填充 picker 下拉
+  body.querySelectorAll('select[data-picker-resource]').forEach(function(sel){
+    var res = sel.getAttribute('data-picker-resource');
+    var cur = sel.getAttribute('data-picker-val');
+    DMS.api('/api/lookups/' + res).then(function(r){
+      if (r.code !== 0) { sel.innerHTML = '<option value="">加载失败</option>'; return; }
+      var opts = '<option value="">-- 请选择 --</option>';
+      (r.data||[]).forEach(function(o){
+        var oid = o.id != null ? o.id : o.value;
+        var oname = o.name || o.label || o.nameCn || oid;
+        opts += '<option value="'+oid+'"'+(String(cur)===String(oid)?' selected':'')+'>'+oname+'</option>';
+      });
+      sel.innerHTML = opts;
+    });
+  });
+  // v3.4.14: 异步填充 multiselect 多选复选框
+  body.querySelectorAll('div[data-multi-resource]').forEach(function(box){
+    var res = box.getAttribute('data-multi-resource');
+    var cur = (box.getAttribute('data-multi-val')||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+    DMS.api('/api/lookups/' + res).then(function(r){
+      if (r.code !== 0) { box.innerHTML = '加载失败'; return; }
+      var h = '';
+      (r.data||[]).forEach(function(o){
+        var oid = o.id != null ? o.id : o.value;
+        var oname = o.name || o.label || o.nameCn || oid;
+        var ck = cur.indexOf(String(oid)) >= 0 ? ' checked' : '';
+        h += '<label style="display:block;padding:2px 0;cursor:pointer;font-weight:normal;"><input type="checkbox" class="dms-multi-cb" value="'+oid+'"'+ck+' style="width:auto;margin-right:6px;">'+oname+'</label>';
+      });
+      box.innerHTML = h || '<span style="color:#bbb;">无可选项</span>';
+    });
+  });
+  if (isView && logRt && data.id) {
+    DMS.api('/api/operation-logs?resourceType=' + logRt + '&resourceId=' + data.id).then(function(r){
+      var el = document.getElementById('formOpLogBox');
+      if (!el) return;
+      if (r.code !== 0 || !r.data || !r.data.length) { el.innerHTML = '<span style="color:#bbb;font-size:12px;">暂无操作记录</span>'; return; }
+      var lh = '<div style="border-left:2px solid #e6f4ff;margin-left:6px;">';
+      r.data.forEach(function(log){
+        var note = ''; try { note = log.detail && log.detail.note ? log.detail.note : ''; } catch(e){}
+        lh += '<div style="position:relative;padding:6px 0 6px 18px;">' +
+          '<span style="position:absolute;left:-5px;top:10px;width:8px;height:8px;border-radius:50%;background:#2C4B8E;"></span>' +
+          '<div style="font-size:13px;font-weight:600;color:#333;">' + (log.actionLabel||log.action) + '</div>' +
+          '<div style="font-size:11px;color:#999;">' + (log.userName||'系统') + ' · ' + String(log.atTime).replace('T',' ').substring(0,19) + '</div>' +
+          (note?'<div style="font-size:11px;color:#666;margin-top:2px;">'+note+'</div>':'') + '</div>';
+      });
+      lh += '</div>';
+      el.innerHTML = lh;
+    });
+  }
+}
+
+function _submitFormTab(menuKey, id){
+  var m = MENU_INDEX[menuKey];
+  var body = {};
+  document.querySelectorAll('#formTabBody .dms-form-grid [data-form-key]').forEach(function(el){
+    if (el.getAttribute('data-form-bool') === '1') {
+      body[el.getAttribute('data-form-key')] = el.checked;
+    } else {
+      body[el.getAttribute('data-form-key')] = el.value;
+    }
+  });
+  // v3.4.14: 收集 multiselect 多选（逗号分隔）
+  document.querySelectorAll('#formTabBody div[data-multi-key]').forEach(function(box){
+    var vals = [];
+    box.querySelectorAll('.dms-multi-cb:checked').forEach(function(cb){ vals.push(cb.value); });
+    body[box.getAttribute('data-multi-key')] = vals.join(',');
+  });
+  // v3.4.13: 收集明细行
+  var linesField = (m.form||[]).find(function(f){ return f.type === 'lines'; });
+  if (linesField) {
+    var rows = document.querySelectorAll('#linesEditor tbody tr');
+    var lines = [];
+    var bad = false;
+    rows.forEach(function(tr){
+      var line = {};
+      linesField.cols.forEach(function(c){
+        var el = tr.querySelector('[data-line-key="'+c.k+'"]');
+        if (el) line[c.k] = el.value;
+      });
+      // 跳过完全空行
+      if (!line.productId && !line.qty) return;
+      if (!line.productId || !line.qty || Number(line.qty) <= 0) bad = true;
+      lines.push(line);
+    });
+    if (!lines.length) { DMS.toast('请至少添加一条明细', 'error'); return; }
+    if (bad) { DMS.toast('明细的产品和数量必填且数量需大于0', 'error'); return; }
+    body.lines = lines;
+  }
+  var url = id ? (m.api + '/' + id) : m.api;
+  var method = id ? 'PUT' : 'POST';
+  DMS.api(url, { method: method, body: body }).then(function(d){
+    if (d.code === 0) {
+      DMS.toast(id ? '更新成功' : '新建成功', 'success');
+      _backToListTab(menuKey, true);
+    } else {
+      DMS.toast('保存失败：' + d.message, 'error');
+    }
+  });
+}
+
+// v3.4.13: 明细行录入
+function _addLineRow(preset){
+  var lf = window._curLinesField;
+  if (!lf) return;
+  var tbody = document.querySelector('#linesEditor tbody');
+  if (!tbody) return;
+  var tr = document.createElement('tr');
+  var html = '';
+  lf.cols.forEach(function(c){
+    if (c.type === 'picker') {
+      html += '<td><select data-line-key="'+c.k+'" data-line-picker="'+c.picker+'"><option value="">加载中...</option></select></td>';
+    } else if (c.type === 'number') {
+      html += '<td><input type="number" step="any" data-line-key="'+c.k+'" style="width:90px;" value="'+((preset&&preset[c.k]!=null)?preset[c.k]:'')+'"></td>';
+    } else {
+      html += '<td><input type="text" data-line-key="'+c.k+'" style="width:110px;" value="'+((preset&&preset[c.k]!=null)?preset[c.k]:'')+'"></td>';
+    }
+  });
+  html += '<td><button class="dms-btn dms-btn-sm dms-btn-danger" onclick="this.closest(\'tr\').remove()">删除</button></td>';
+  tr.innerHTML = html;
+  tbody.appendChild(tr);
+  // 异步填充 picker 下拉
+  tr.querySelectorAll('select[data-line-picker]').forEach(function(sel){
+    var res = sel.getAttribute('data-line-picker');
+    var presetVal = preset && preset[sel.getAttribute('data-line-key')];
+    DMS.api('/api/lookups/' + res).then(function(r){
+      if (r.code !== 0) { sel.innerHTML = '<option value="">加载失败</option>'; return; }
+      var opts = '<option value="">-- 请选择 --</option>';
+      (r.data||[]).forEach(function(o){
+        var oid = o.id != null ? o.id : o.value;
+        var oname = o.name || o.label || o.nameCn || oid;
+        opts += '<option value="'+oid+'"'+(String(presetVal)===String(oid)?' selected':'')+'>'+oname+'</option>';
+      });
+      sel.innerHTML = opts;
+    });
+  });
+}
+
+function _backToListTab(menuKey, refresh){
+  // 关闭当前 Tab，激活/新建列表 Tab
+  var curId = _activeTabId;
+  var listTab = _tabs.find(function(t){
+    return t.key === menuKey && !(t.filter && t.filter.__mode);
+  });
+  if (listTab) {
+    // 有列表 Tab
+    if (curId !== listTab.id) {
+      _tabs = _tabs.filter(function(t){return t.id !== curId;});
+      delete _contentSnapshots[curId];
+      activateTab(listTab.id);
+      if (refresh) setTimeout(reloadList, 100);
+    } else {
+      if (refresh) reloadList();
+    }
+  } else {
+    // 打开列表 Tab（会覆盖当前）
+    _tabs = _tabs.filter(function(t){return t.id !== curId;});
+    delete _contentSnapshots[curId];
+    _activeTabId = null;
+    openTab(menuKey, null);
+  }
+  _renderTabsBar();
+}
+
+function _loadHistoryTrack(m, id){
+  var el = document.getElementById('historyTrack');
+  if (!el) return;
+  // 简化：直接查审计日志 by resource_id
+  DMS.api('/api/audit-logs?resourceId=' + id + '&resourceType=' + m.key + '&page=1&size=50').then(function(d){
+    if (d.code !== 0 || !d.data || !d.data.list || !d.data.list.length) {
+      // fallback: 显示 created/updated 时间
+      el.innerHTML = '<div class="dms-empty">暂无操作历史</div>';
+      return;
+    }
+    var html = '<table><thead><tr><th>时间</th><th>操作人</th><th>动作</th><th>备注</th></tr></thead><tbody>';
+    d.data.list.forEach(function(log){
+      html += '<tr><td style="font-size:12px;">' + (log.atTime||'').replace('T',' ').substring(0,19) + '</td>' +
+        '<td>' + (log.userName || log.userId || '-') + '</td>' +
+        '<td><span class="dms-badge dms-badge-blue">' + log.action + '</span></td>' +
+        '<td>' + (log.remark || '-') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }).catch(function(){
+    el.innerHTML = '<div class="dms-empty">暂无操作历史</div>';
+  });
+}
+
+// ============ v3.4.8 订单下单页（销售/采购）— 在 Tab 内呈现 ============
+var _orderDraft = null;  // {mode, dealerId, warehouseId, remark, lines: [{productId, productName, qty, unitPrice}]}
+
+function openOrderCreateTab(menu, mode){
+  _orderDraft = { mode: mode, dealerId: null, warehouseId: null, remark: '', lines: [] };
+  _saveActiveTabSnapshot();
+  var tab = {
+    id: ++_tabIdSeq,
+    key: menu.key,
+    label: menu.label + ' - 新建',
+    icon: '➕',
+    filter: { __mode: 'create', __ts: Date.now(), __custom: 'order' },
+    pinned: false
+  };
+  _tabs.push(tab);
+  _activeTabId = tab.id;
+  _renderTabsBar();
+  document.getElementById('crumb').innerHTML = '首页 / <strong>' + menu.label + ' - 新建</strong>';
+  _renderOrderCreatePage(menu);
+}
+
+function _renderOrderCreatePage(menu){
+  var isSales = _orderDraft.mode === 'sales';
+  var content = document.getElementById('content');
+  content.innerHTML =
+    '<div class="dms-page-title">➕ 新建' + menu.label + '</div>' +
+    '<div class="dms-page-sub"><a class="dms-link" onclick="_backToListTab(\''+menu.key+'\')">← 返回列表</a></div>' +
+
+    '<div class="dms-card"><div class="dms-card-title"><span>📋 基本信息</span></div>' +
+      '<div class="dms-form-grid">' +
+        (isSales
+          ? '<div class="dms-form-item"><label><span style="color:var(--md-error);">*</span> 经销商</label>' +
+              '<select id="fld-dealer" onchange="_orderDraft.dealerId=this.value;_updateLineProducts();"><option value="">请选择经销商</option></select></div>' +
+              '<div class="dms-form-item"><label><span style="color:var(--md-error);">*</span> 订单类型</label>' +
+              '<select id="fld-orderType"><option value="">请选择类型</option>' +
+                '<option value="NORMAL">普通销售</option>' +
+                '<option value="PROMOTION">促销</option>' +
+                '<option value="SAMPLE">样品</option>' +
+                '<option value="TRIAL">试用</option>' +
+                '<option value="REPLACEMENT">换货</option>' +
+                '<option value="CONSIGNMENT">寄售</option>' +
+              '</select></div>'
+          : '<div class="dms-form-item"><label><span style="color:var(--md-error);">*</span> 供应商</label>' +
+              '<select id="fld-supplier" onchange="_onSupplierChange(this)"><option value="">请选择供应商</option></select></div>'
+        ) +
+        '<div class="dms-form-item"><label>' + (isSales ? '目标仓库' : '<span style="color:var(--md-error);">*</span> 入库仓库') + '</label>' +
+          '<select id="fld-warehouse" onchange="_orderDraft.warehouseId=this.value;"><option value="">请选择仓库</option></select>' +
+        '</div>' +
+        '<div class="dms-form-item dms-form-full"><label>备注</label>' +
+          '<input type="text" id="fld-remark" placeholder="备注（可选）">' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="dms-card">' +
+      '<div class="dms-card-title"><span>📦 明细行</span>' +
+        '<div class="actions">' +
+          '<button class="dms-btn dms-btn-sm dms-btn-primary" onclick="_orderAddLine()">➕ 添加明细</button>' +
+        '</div>' +
+      '</div>' +
+      '<div id="orderLines"><div class="dms-empty" style="padding:20px;">尚无明细，点击"添加明细"开始</div></div>' +
+      '<div style="text-align:right;padding:10px 0;font-size:14px;">合计金额：<strong id="orderTotal" style="color:var(--md-primary);font-size:18px;">¥ 0.00</strong></div>' +
+    '</div>' +
+
+    '<div style="text-align:right;">' +
+      '<button class="dms-btn" onclick="_backToListTab(\''+menu.key+'\')">取消</button> ' +
+      '<button class="dms-btn dms-btn-primary" onclick="_submitOrder(\''+menu.key+'\')">✅ 提交订单</button>' +
+    '</div>';
+
+  // 加载经销商/供应商 & 仓库下拉
+  if (isSales) {
+    DMS.api('/api/lookups/dealers?limit=500').then(function(r){
+      if (r.code === 0) {
+        var sel = document.getElementById('fld-dealer');
+        (r.data||[]).forEach(function(d){
+          var o = document.createElement('option');
+          o.value = d.id; o.textContent = d.code + ' · ' + d.name;
+          sel.appendChild(o);
+        });
+      }
+    });
+  } else {
+    DMS.api('/api/lookups/suppliers?limit=500').then(function(r){
+      if (r.code === 0) {
+        var sel = document.getElementById('fld-supplier');
+        (r.data||[]).forEach(function(s){
+          var o = document.createElement('option');
+          o.value = s.id; o.textContent = s.code + ' · ' + s.name; o.setAttribute('data-name', s.name);
+          sel.appendChild(o);
+        });
+      }
+    });
+  }
+  DMS.api('/api/lookups/warehouses?limit=500').then(function(r){
+    if (r.code === 0) {
+      var sel = document.getElementById('fld-warehouse');
+      (r.data||[]).forEach(function(w){
+        var o = document.createElement('option');
+        o.value = w.id; o.textContent = w.code + ' · ' + w.name;
+        sel.appendChild(o);
+      });
+    }
+  });
+}
+
+function _orderAddLine(){
+  _orderDraft.lines.push({ productId: null, productCode: '', productName: '', qty: 1, unitPrice: 0 });
+  _renderOrderLines();
+}
+
+function _orderRemoveLine(idx){
+  _orderDraft.lines.splice(idx, 1);
+  _renderOrderLines();
+}
+
+function _renderOrderLines(){
+  var el = document.getElementById('orderLines');
+  if (!_orderDraft.lines.length) {
+    el.innerHTML = '<div class="dms-empty" style="padding:20px;">尚无明细，点击"添加明细"开始</div>';
+    document.getElementById('orderTotal').textContent = '¥ 0.00';
+    return;
+  }
+  var isSales = _orderDraft.mode === 'sales';
+  var html = '<table><thead><tr>' +
+    '<th style="width:40px;">#</th>' +
+    '<th>产品</th>' +
+    '<th style="width:60px;">单位</th>' +
+    (isSales ? '<th style="width:110px;">可用库存</th>' : '') +
+    '<th style="width:80px;">数量</th>' +
+    '<th style="width:110px;">单价</th>' +
+    '<th style="width:120px;">小计</th>' +
+    '<th style="width:60px;"></th>' +
+    '</tr></thead><tbody>';
+  var total = 0;
+  _orderDraft.lines.forEach(function(l, i){
+    var sub = Number(l.qty||0) * Number(l.unitPrice||0);
+    total += sub;
+    var pickerLabel = l.productName ? (l.productCode + ' · ' + l.productName) : '点击选择产品...';
+    var stockCell = '';
+    if (isSales) {
+      var stockText = l.stockQty == null ? '<span style="color:#999;">-</span>'
+        : (Number(l.stockQty) > 0
+            ? '<span style="color:var(--md-success);font-weight:500;">' + Number(l.stockQty).toFixed(0) + '</span>'
+            : '<span style="color:var(--md-error);font-weight:500;">0</span>');
+      stockCell = '<td>' + stockText + '</td>';
+    }
+    html += '<tr>' +
+      '<td>' + (i+1) + '</td>' +
+      '<td><a class="dms-link" onclick="_pickProductForLine(' + i + ')" style="cursor:pointer;">' + pickerLabel + '</a></td>' +
+      '<td>' + (l.unitType || 'EA') + '</td>' +
+      stockCell +
+      '<td><input type="number" min="1" value="' + (l.qty||1) + '" style="width:70px;padding:4px 6px;" onchange="_orderDraft.lines['+i+'].qty=Number(this.value);_renderOrderLines();"></td>' +
+      '<td><input type="number" min="0" step="0.01" value="' + (l.unitPrice||0) + '" style="width:100px;padding:4px 6px;" onchange="_orderDraft.lines['+i+'].unitPrice=Number(this.value);_renderOrderLines();"></td>' +
+      '<td>¥ ' + sub.toFixed(2) + '</td>' +
+      '<td><button class="dms-btn dms-btn-sm dms-btn-danger" onclick="_orderRemoveLine('+i+')">×</button></td>' +
+      '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+  document.getElementById('orderTotal').textContent = '¥ ' + total.toFixed(2);
+}
+
+function _updateLineProducts(){
+  // 经销商变化后，明细里已选产品可能失效，本轮先不做强校验
+}
+
+function _pickProductForLine(idx){
+  var isSales = _orderDraft.mode === 'sales';
+  var extra = {};
+  if (isSales) {
+    if (!_orderDraft.dealerId) { DMS.toast('请先选择经销商', 'warn'); return; }
+    extra.dealerId = _orderDraft.dealerId;
+  }
+  // 使用现有 picker
+  var params = 'limit=200' + (extra.dealerId ? '&dealerId=' + extra.dealerId : '');
+  DMS.api('/api/lookups/products?' + params).then(function(r){
+    if (r.code !== 0) { DMS.toast('加载产品失败', 'error'); return; }
+    var products = r.data || [];
+    if (!products.length) {
+      DMS.toast(isSales ? '该经销商无授权产品' : '无可选产品', 'warn');
+      return;
+    }
+    // 用 confirm 弹窗展示选择列表
+    var searchInput = '<input type="text" id="prodSearch" placeholder="🔍 输入产品编码/名称搜索..." style="width:100%;padding:6px 10px;border:1px solid var(--md-outline);border-radius:6px;margin-bottom:8px;">';
+    var listHtml = '<div id="prodPickList" style="max-height:400px;overflow-y:auto;border:1px solid var(--md-outline-variant);border-radius:6px;">';
+    products.forEach(function(p){
+      listHtml += '<div class="prod-pick-item" data-pid="' + p.id + '" data-pcode="' + p.code + '" data-pname="' + (p.nameCn || p.name || '').replace(/"/g,'&quot;') + '" data-price="' + (p.priceRetail || p.price || 0) + '" data-unit="' + (p.unitType || 'EA') + '" style="padding:8px 10px;border-bottom:1px solid var(--md-outline-variant);cursor:pointer;">' +
+        '<strong>' + p.code + '</strong> · ' + (p.nameCn || p.name || '-') +
+        (p.spec ? '<span style="color:#999;font-size:11px;margin-left:6px;">' + p.spec + '</span>' : '') +
+        '<span style="color:#999;font-size:11px;margin-left:6px;">[' + (p.unitType||'EA') + ']</span>' +
+        '</div>';
+    });
+    listHtml += '</div>';
+    DMS.confirm(searchInput + listHtml, function(){
+      // 通过 data-selected 标记选中
+      var sel = document.querySelector('.prod-pick-item.selected');
+      if (!sel) { DMS.toast('请选择产品', 'warn'); return false; }
+      _orderDraft.lines[idx].productId = Number(sel.getAttribute('data-pid'));
+      _orderDraft.lines[idx].productCode = sel.getAttribute('data-pcode');
+      _orderDraft.lines[idx].productName = sel.getAttribute('data-pname');
+      _orderDraft.lines[idx].unitPrice = Number(sel.getAttribute('data-price'));
+      _orderDraft.lines[idx].unitType = sel.getAttribute('data-unit') || 'EA';
+      _orderDraft.lines[idx].stockQty = null; // 待查询
+      _renderOrderLines();
+      // v3.4.9：异步查该产品在系统里的可用库存（qualified 合格库存合计）
+      if (isSales) {
+        DMS.api('/api/inventory/available-lots?productId=' + _orderDraft.lines[idx].productId + '&status=QUALIFIED').then(function(rr){
+          if (rr.code === 0) {
+            var total = (rr.data || []).reduce(function(s, x){ return s + Number(x.qty || 0); }, 0);
+            _orderDraft.lines[idx].stockQty = total;
+            _renderOrderLines();
+          }
+        });
+      }
+    }, '选择产品');
+    // 绑定选中 + 搜索
+    setTimeout(function(){
+      document.querySelectorAll('.prod-pick-item').forEach(function(el){
+        el.addEventListener('click', function(){
+          document.querySelectorAll('.prod-pick-item').forEach(function(x){ x.classList.remove('selected'); x.style.background=''; });
+          el.classList.add('selected');
+          el.style.background = 'var(--md-primary-container)';
+        });
+      });
+      var si = document.getElementById('prodSearch');
+      if (si) si.addEventListener('input', function(){
+        var kw = si.value.toLowerCase();
+        document.querySelectorAll('.prod-pick-item').forEach(function(el){
+          var t = el.textContent.toLowerCase();
+          el.style.display = t.indexOf(kw) >= 0 ? '' : 'none';
+        });
+      });
+    }, 50);
+  });
+}
+
+function _onSupplierChange(sel){
+  _orderDraft.supplierId = sel.value ? Number(sel.value) : null;
+  var opt = sel.options[sel.selectedIndex];
+  _orderDraft.supplierName = opt ? opt.getAttribute('data-name') : '';
+}
+
+function _submitOrder(menuKey){
+  var isSales = _orderDraft.mode === 'sales';
+  var m = MENU_INDEX[menuKey];
+  var orderType = null;
+  if (isSales) {
+    var dealerId = document.getElementById('fld-dealer').value;
+    if (!dealerId) { DMS.toast('请选择经销商', 'warn'); return; }
+    _orderDraft.dealerId = Number(dealerId);
+    orderType = document.getElementById('fld-orderType').value;
+    if (!orderType) { DMS.toast('请选择订单类型', 'warn'); return; }
+  } else {
+    if (!_orderDraft.supplierId) { DMS.toast('请选择供应商', 'warn'); return; }
+  }
+  _orderDraft.warehouseId = document.getElementById('fld-warehouse').value || null;
+  if (!isSales && !_orderDraft.warehouseId) { DMS.toast('采购订单必须选择入库仓库', 'warn'); return; }
+  _orderDraft.remark = document.getElementById('fld-remark').value || '';
+  if (!_orderDraft.lines.length) { DMS.toast('请添加至少一行明细', 'warn'); return; }
+  for (var i = 0; i < _orderDraft.lines.length; i++) {
+    var l = _orderDraft.lines[i];
+    if (!l.productId || !l.qty) { DMS.toast('第 ' + (i+1) + ' 行未选产品或数量为 0', 'warn'); return; }
+  }
+
+  var body;
+  if (isSales) {
+    // v3.4.9 修复：后端 OrderCreateRequest 是平铺结构
+    body = {
+      orderType: orderType,
+      dealerId: _orderDraft.dealerId,
+      shipAddressId: null,
+      remark: _orderDraft.remark,
+      lines: _orderDraft.lines.map(function(l){
+        return { productId: l.productId, qty: l.qty, unitPrice: l.unitPrice };
+      })
+    };
+  } else {
+    // 采购订单同样平铺
+    body = {
+      supplierId: _orderDraft.supplierId,
+      supplierName: _orderDraft.supplierName || '',
+      warehouseId: _orderDraft.warehouseId ? Number(_orderDraft.warehouseId) : null,
+      remark: _orderDraft.remark,
+      lines: _orderDraft.lines.map(function(l){
+        return { productId: l.productId, qty: l.qty, unitPrice: l.unitPrice };
+      })
+    };
+  }
+
+  DMS.api(m.api, { method: 'POST', body: body }).then(function(d){
+    if (d.code === 0) {
+      DMS.toast('订单创建成功', 'success');
+      _orderDraft = null;
+      _backToListTab(menuKey, true);
+    } else {
+      DMS.toast('创建失败：' + d.message, 'error');
+    }
+  });
+}
+
 function doView(id){
   var m = currentList.menu;
-  DMS.api(m.api + '/' + id).then(function(d){
-    if (d.code !== 0) { DMS.toast('查看失败：' + d.message, 'error'); return; }
-    renderDetailChinese(m, d.data);
+  // v3.4.7 详情走新 Tab
+  openFormTab(m, 'view', id);
+}
+
+// ============ v3.4.15 库存移动多方式创建 ============
+var _moveDraft = null;
+function openStockMoveCreateTab(menu){
+  _moveDraft = { method: 'forward', toWarehouseId: null, stockStatus: 'QUALIFIED', remark: '', lines: [] };
+  _saveActiveTabSnapshot();
+  var tab = { id: ++_tabIdSeq, key: menu.key, label: menu.label + ' - 新建', icon: '➕',
+    filter: { __mode: 'create', __ts: Date.now(), __custom: 'stockmove' }, pinned: false };
+  _tabs.push(tab);
+  _activeTabId = tab.id;
+  _renderTabsBar();
+  document.getElementById('crumb').innerHTML = '首页 / <strong>' + menu.label + ' - 新建</strong>';
+  _renderStockMoveCreatePage(menu);
+}
+
+function _renderStockMoveCreatePage(menu){
+  var content = document.getElementById('content');
+  var tabBtn = function(k, label){
+    var on = _moveDraft.method === k;
+    return '<button class="dms-btn ' + (on?'dms-btn-primary':'') + '" onclick="_switchMoveMethod(\''+k+'\')" style="margin-right:6px;">' + label + '</button>';
+  };
+  content.innerHTML =
+    '<div class="dms-page-title">➕ 新建' + menu.label + '</div>' +
+    '<div class="dms-page-sub"><a class="dms-link" onclick="_moveDraft=null;_backToListTab(\''+menu.key+'\')">← 返回列表</a></div>' +
+    '<div class="dms-card"><div class="dms-card-title"><span>选择方式</span></div>' +
+      '<div style="padding:8px 0;">' +
+        tabBtn('forward','① 正向选择（仓库→物料→批次）') +
+        tabBtn('search','② 搜索批次/序列号/物料（跨仓多选）') +
+        tabBtn('receipt','③ 按收货入库单带出') +
+      '</div></div>' +
+    '<div class="dms-card"><div class="dms-form-grid">' +
+      '<div class="dms-form-item"><label><span style="color:var(--md-error);">*</span> 目标仓库</label>' +
+        '<select id="mvTo"><option value="">请选择目标仓库</option></select></div>' +
+      '<div class="dms-form-item"><label>库存状态</label>' +
+        '<select id="mvStatus"><option value="QUALIFIED">合格</option><option value="PENDING">待检</option><option value="DEFECTIVE">不合格</option></select></div>' +
+      '<div class="dms-form-item" style="grid-column:1/-1;"><label>备注/原因</label><input id="mvRemark" type="text" placeholder="移动原因"></div>' +
+    '</div></div>' +
+    '<div class="dms-card"><div class="dms-card-title"><span>选择来源库存</span></div><div id="mvPickArea"></div></div>' +
+    '<div class="dms-card"><div class="dms-card-title"><span>📦 待移动明细</span><button class="dms-btn dms-btn-sm" onclick="_clearMoveLines()">清空</button></div>' +
+      '<div id="mvLines"></div></div>' +
+    '<div style="margin-top:12px;"><button class="dms-btn dms-btn-primary" onclick="_submitMove(\''+menu.key+'\')">✔ 提交移动</button></div>';
+  // 载入目标仓库下拉
+  DMS.api('/api/lookups/warehouses?limit=500').then(function(r){
+    if (r.code !== 0) return;
+    var sel = document.getElementById('mvTo');
+    (r.data||[]).forEach(function(w){ sel.innerHTML += '<option value="'+w.id+'">'+(w.code?w.code+' · ':'')+w.name+'</option>'; });
+    if (_moveDraft.toWarehouseId) sel.value = _moveDraft.toWarehouseId;
+    sel.addEventListener('change', function(){ _moveDraft.toWarehouseId = this.value; });
+  });
+  document.getElementById('mvStatus').addEventListener('change', function(){ _moveDraft.stockStatus = this.value; });
+  document.getElementById('mvStatus').value = _moveDraft.stockStatus;
+  document.getElementById('mvRemark').addEventListener('input', function(){ _moveDraft.remark = this.value; });
+  document.getElementById('mvRemark').value = _moveDraft.remark || '';
+  _renderMovePickArea();
+  _renderMoveLines();
+}
+
+function _switchMoveMethod(k){ _moveDraft.method = k; _renderStockMoveCreatePage(MENU_INDEX['stock-moves']); }
+
+function _renderMovePickArea(){
+  var area = document.getElementById('mvPickArea');
+  if (!area) return;
+  if (_moveDraft.method === 'forward') {
+    area.innerHTML =
+      '<div class="dms-form-grid">' +
+        '<div class="dms-form-item"><label>源仓库</label><select id="fwWh"><option value="">选择源仓库</option></select></div>' +
+        '<div class="dms-form-item"><label>产品</label><select id="fwProd"><option value="">先选源仓库</option></select></div>' +
+      '</div><div id="fwLots" style="margin-top:8px;color:#888;">选择仓库与产品后列出可用批次/序列号</div>';
+    DMS.api('/api/lookups/warehouses?limit=500').then(function(r){
+      if (r.code!==0) return; var s=document.getElementById('fwWh');
+      (r.data||[]).forEach(function(w){ s.innerHTML+='<option value="'+w.id+'">'+(w.code?w.code+' · ':'')+w.name+'</option>'; });
+    });
+    DMS.api('/api/lookups/products?limit=500').then(function(r){
+      if (r.code!==0) return; var s=document.getElementById('fwProd');
+      (r.data||[]).forEach(function(p){ s.innerHTML+='<option value="'+p.id+'">'+p.label+'</option>'; });
+    });
+    var reload = function(){
+      var wh=document.getElementById('fwWh').value, pid=document.getElementById('fwProd').value;
+      if (!wh || !pid) return;
+      DMS.api('/api/inventory/available-lots?productId='+pid+'&warehouseId='+wh+'&status='+_moveDraft.stockStatus).then(function(r){
+        var box=document.getElementById('fwLots');
+        if (r.code!==0 || !(r.data||[]).length){ box.innerHTML='<span style="color:#c00;">该仓库该产品无可用库存</span>'; return; }
+        box.innerHTML = _lotTable(r.data, wh);
+      });
+    };
+    document.getElementById('fwWh').addEventListener('change', reload);
+    document.getElementById('fwProd').addEventListener('change', reload);
+  } else if (_moveDraft.method === 'search') {
+    area.innerHTML =
+      '<div class="dms-form-grid">' +
+        '<div class="dms-form-item"><label>批次号</label><input id="sBatch" placeholder="批次号模糊"></div>' +
+        '<div class="dms-form-item"><label>序列号</label><input id="sSerial" placeholder="序列号模糊"></div>' +
+        '<div class="dms-form-item"><label>物料关键字</label><input id="sKw" placeholder="产品编码/名称"></div>' +
+      '</div>' +
+      '<div style="margin:8px 0;"><button class="dms-btn dms-btn-primary dms-btn-sm" onclick="_moveSearch()">🔎 搜索所有仓库库存</button></div>' +
+      '<div id="sResult" style="color:#888;">输入条件后搜索，将列出各仓库该批次/序列号/物料的库存供多选</div>';
+  } else {
+    area.innerHTML =
+      '<div class="dms-form-grid">' +
+        '<div class="dms-form-item" style="grid-column:1/-1;"><label>关联收货入库单</label><select id="rcSel"><option value="">选择已入库的收货单</option></select></div>' +
+      '</div><div id="rcResult" style="margin-top:8px;color:#888;">选择收货单后带出其已入库明细</div>';
+    DMS.api('/api/receipts?page=1&size=200').then(function(r){
+      var d = r.data && r.data.list ? r.data.list : [];
+      var sel = document.getElementById('rcSel');
+      d.forEach(function(x){
+        var st = String(x.status||'');
+        if (st.indexOf('RECEIVED')>=0 || st==='COMPLETED' || st.indexOf('PARTIAL')>=0) {
+          sel.innerHTML += '<option value="'+x.id+'">'+x.code+' · '+(x.warehouseName||'')+' · '+st+'</option>';
+        }
+      });
+      sel.addEventListener('change', function(){ if (this.value) _moveLoadReceipt(this.value); });
+    });
+  }
+}
+
+function _lotTable(lots, whId){
+  var h = '<table class="dms-table" style="width:100%;font-size:13px;"><thead><tr>' +
+    '<th style="width:36px;"></th><th>产品</th><th>批次/序列号</th><th>仓库</th><th>库存状态</th><th>可用</th><th>移动数量</th></tr></thead><tbody>';
+  lots.forEach(function(l, i){
+    var lotId = (l.warehouseId||whId||'')+'|'+(l.batchNo||'')+'|'+(l.serialNo||'')+'|'+(l.productId||'');
+    var maxQty = Number(l.qty||0);
+    var isSerial = !!l.serialNo;
+    h += '<tr>' +
+      '<td><input type="checkbox" class="mvLot" data-lot="'+encodeURIComponent(JSON.stringify({fromWarehouseId:Number(l.warehouseId||whId),productId:Number(l.productId||0),batchNo:l.batchNo||"",serialNo:l.serialNo||"",max:maxQty,productName:l.productName||"",warehouseName:l.warehouseName||""}))+'"></td>' +
+      '<td>'+(l.productName||('#'+(l.productId||'')))+'</td>' +
+      '<td>'+(l.serialNo?('SN: '+l.serialNo):('批次: '+(l.batchNo||'-')))+'</td>' +
+      '<td>'+(l.warehouseName||('#'+(l.warehouseId||whId||'')))+'</td>' +
+      '<td>'+(l.stockStatus||'')+'</td>' +
+      '<td>'+maxQty+'</td>' +
+      '<td><input type="number" class="mvQty" min="0" max="'+maxQty+'" value="'+(isSerial?1:maxQty)+'" style="width:80px;"'+(isSerial?' readonly':'')+'></td>' +
+      '</tr>';
+  });
+  h += '</tbody></table><div style="margin-top:8px;"><button class="dms-btn dms-btn-sm dms-btn-primary" onclick="_addCheckedLots()">➕ 加入待移动明细</button></div>';
+  return h;
+}
+
+function _addCheckedLots(){
+  var cbs = document.querySelectorAll('.mvLot:checked');
+  if (!cbs.length){ DMS.toast('请勾选至少一条库存', 'warn'); return; }
+  cbs.forEach(function(cb){
+    var info = JSON.parse(decodeURIComponent(cb.getAttribute('data-lot')));
+    var tr = cb.closest('tr');
+    var qty = Number(tr.querySelector('.mvQty').value || 0);
+    if (qty <= 0) return;
+    if (qty > info.max) { DMS.toast(info.productName+' 移动数量超过可用', 'warn'); return; }
+    _moveDraft.lines.push({ fromWarehouseId: info.fromWarehouseId, productId: info.productId,
+      batchNo: info.batchNo, serialNo: info.serialNo, qty: qty,
+      productName: info.productName, fromWarehouseName: info.warehouseName });
+  });
+  _renderMoveLines();
+  DMS.toast('已加入明细', 'success');
+}
+
+function _moveSearch(){
+  var b=document.getElementById('sBatch').value, s=document.getElementById('sSerial').value, k=document.getElementById('sKw').value;
+  var qs = 'size=200&stockStatus='+_moveDraft.stockStatus;
+  if (b) qs+='&batchNo='+encodeURIComponent(b);
+  if (s) qs+='&serialNo='+encodeURIComponent(s);
+  if (k) qs+='&keyword='+encodeURIComponent(k);
+  DMS.api('/api/inventory?'+qs).then(function(r){
+    var box=document.getElementById('sResult');
+    var d = r.data && r.data.list ? r.data.list : [];
+    if (!d.length){ box.innerHTML='<span style="color:#c00;">无匹配库存</span>'; return; }
+    box.innerHTML = _lotTable(d, null);
+  });
+}
+
+function _moveLoadReceipt(id){
+  DMS.api('/api/receipts/'+id+'/detail').then(function(r){
+    if (r.code!==0){ DMS.toast('加载失败', 'error'); return; }
+    var head = r.data || {};
+    var lines = head.lines || [];
+    var box=document.getElementById('rcResult');
+    if (!lines.length){ box.innerHTML='<span style="color:#c00;">该收货单无已入库明细</span>'; return; }
+    var wh = head.warehouseId; var whName = head.warehouseName||'';
+    var h = '<table class="dms-table" style="width:100%;font-size:13px;"><thead><tr><th style="width:36px;"></th><th>产品</th><th>批次/序列号</th><th>入库数量</th><th>移动数量</th></tr></thead><tbody>';
+    lines.forEach(function(l){
+      var q = Number(l.receivedQty||l.qty||0);
+      var info = {fromWarehouseId:Number(wh),productId:Number(l.productId||0),batchNo:l.batchNo||"",serialNo:l.serialNo||"",max:q,productName:l.productName||"",warehouseName:whName};
+      h += '<tr><td><input type="checkbox" class="mvLot" data-lot="'+encodeURIComponent(JSON.stringify(info))+'"></td>' +
+        '<td>'+(l.productName||('#'+l.productId))+'</td>' +
+        '<td>'+(l.serialNo?('SN: '+l.serialNo):('批次: '+(l.batchNo||'-')))+'</td>' +
+        '<td>'+q+'</td>' +
+        '<td><input type="number" class="mvQty" min="0" max="'+q+'" value="'+q+'" style="width:80px;"'+(l.serialNo?' readonly':'')+'></td></tr>';
+    });
+    h += '</tbody></table><div style="margin-top:8px;"><button class="dms-btn dms-btn-sm dms-btn-primary" onclick="_addCheckedLots()">➕ 加入待移动明细</button></div>';
+    box.innerHTML = h;
+  });
+}
+
+function _renderMoveLines(){
+  var box = document.getElementById('mvLines');
+  if (!box) return;
+  if (!_moveDraft.lines.length){ box.innerHTML = '<div style="color:#999;padding:8px;">尚未添加明细</div>'; return; }
+  var h = '<table class="dms-table" style="width:100%;font-size:13px;"><thead><tr><th>产品</th><th>批次/序列号</th><th>源仓库</th><th>数量</th><th>操作</th></tr></thead><tbody>';
+  _moveDraft.lines.forEach(function(l, i){
+    h += '<tr><td>'+(l.productName||('#'+l.productId))+'</td>' +
+      '<td>'+(l.serialNo?('SN: '+l.serialNo):('批次: '+(l.batchNo||'-')))+'</td>' +
+      '<td>'+(l.fromWarehouseName||('#'+l.fromWarehouseId))+'</td>' +
+      '<td>'+l.qty+'</td>' +
+      '<td><button class="dms-btn dms-btn-sm" onclick="_delMoveLine('+i+')">删除</button></td></tr>';
+  });
+  h += '</tbody></table>';
+  box.innerHTML = h;
+}
+function _delMoveLine(i){ _moveDraft.lines.splice(i,1); _renderMoveLines(); }
+function _clearMoveLines(){ _moveDraft.lines = []; _renderMoveLines(); }
+
+function _submitMove(menuKey){
+  var to = document.getElementById('mvTo').value;
+  if (!to){ DMS.toast('请选择目标仓库', 'warn'); return; }
+  if (!_moveDraft.lines.length){ DMS.toast('请添加至少一条移动明细', 'warn'); return; }
+  // 校验：源仓库不能等于目标仓库
+  var toId = Number(to);
+  var groups = {};
+  for (var i=0;i<_moveDraft.lines.length;i++){
+    var l=_moveDraft.lines[i];
+    if (Number(l.fromWarehouseId)===toId){ DMS.toast('第'+(i+1)+'行源仓库与目标仓库相同', 'warn'); return; }
+    (groups[l.fromWarehouseId]=groups[l.fromWarehouseId]||[]).push(l);
+  }
+  // 每个源仓库生成一张移动单
+  var srcIds = Object.keys(groups);
+  var done = 0, failed = 0;
+  srcIds.forEach(function(src){
+    var body = { fromWarehouseId: Number(src), toWarehouseId: toId, stockStatus: _moveDraft.stockStatus,
+      remark: _moveDraft.remark, lines: groups[src].map(function(l){ return { productId:l.productId, batchNo:l.batchNo, serialNo:l.serialNo, qty:l.qty }; }) };
+    DMS.api(MENU_INDEX[menuKey].api, { method:'POST', body: body }).then(function(d){
+      if (d.code===0) done++; else { failed++; DMS.toast('部分失败：'+d.message, 'error'); }
+      if (done+failed===srcIds.length){
+        if (failed===0){ DMS.toast('库存移动成功（'+done+'单）', 'success'); _moveDraft=null; _backToListTab(menuKey, true); }
+      }
+    });
   });
 }
 
@@ -583,6 +2393,14 @@ function renderDetailChinese(menu, data){
     h += '</tbody></table></div>';
   }
 
+  // v3.4.11 操作日志时间轴（异步加载）
+  var logResourceType = _detailResourceType(menu.key);
+  if (logResourceType && data.id) {
+    h += '<div style="margin-bottom:14px;">' +
+         '<div style="font-size:13px;font-weight:600;color:#2C4B8E;padding:6px 12px;background:#e6f4ff;border-left:3px solid #2C4B8E;margin-bottom:8px;">🕓 操作记录</div>' +
+         '<div id="opLogBox" style="padding:4px 12px;"><span style="color:#bbb;font-size:12px;">加载中…</span></div></div>';
+  }
+
   // 允许操作
   var actionButtons = '';
   if (data.allowedActions && data.allowedActions.length) {
@@ -611,6 +2429,44 @@ function renderDetailChinese(menu, data){
   box.querySelector('.dms-modal-close').onclick = close;
   box.querySelector('.dms-btn-cancel').onclick = close;
   mask.onclick = function(e){ if(e.target===mask) close(); };
+
+  // v3.4.11 异步拉取操作日志
+  if (logResourceType && data.id) {
+    DMS.api('/api/operation-logs?resourceType=' + logResourceType + '&resourceId=' + data.id).then(function(r){
+      var boxEl = document.getElementById('opLogBox');
+      if (!boxEl) return;
+      if (r.code !== 0 || !r.data || !r.data.length) {
+        boxEl.innerHTML = '<span style="color:#bbb;font-size:12px;">暂无操作记录</span>';
+        return;
+      }
+      var html = '<div style="border-left:2px solid #e6f4ff;margin-left:6px;">';
+      r.data.forEach(function(log){
+        var note = '';
+        try { note = log.detail && log.detail.note ? log.detail.note : ''; } catch(e){}
+        html += '<div style="position:relative;padding:6px 0 6px 18px;">' +
+          '<span style="position:absolute;left:-5px;top:10px;width:8px;height:8px;border-radius:50%;background:#2C4B8E;"></span>' +
+          '<div style="font-size:13px;font-weight:600;color:#333;">' + (log.actionLabel || log.action) + '</div>' +
+          '<div style="font-size:11px;color:#999;">' + (log.userName || '系统') + ' · ' + String(log.atTime).replace('T',' ').substring(0,19) + '</div>' +
+          (note ? '<div style="font-size:11px;color:#666;margin-top:2px;">' + note + '</div>' : '') +
+          '</div>';
+      });
+      html += '</div>';
+      boxEl.innerHTML = html;
+    });
+  }
+}
+
+// v3.4.11 菜单 key → 操作日志 resourceType
+function _detailResourceType(menuKey){
+  var map = {
+    'orders':'order', 'sales-returns':'order',
+    'purchase-orders':'purchase_order', 'purchase-returns':'purchase_order',
+    'receipts':'receipt', 'sales-outs':'sales_out',
+    'products':'product', 'dealers':'dealer', 'hospitals':'hospital',
+    'warehouses':'warehouse', 'suppliers':'supplier', 'product-prices':'product_price',
+    'inventory-adjustments':'inventory_adjustment', 'stock-moves':'stock_move'
+  };
+  return map[menuKey] || null;
 }
 
 function statusChinese(s){
@@ -624,6 +2480,11 @@ function statusChinese(s){
 
 // ============ 状态驱动按钮 - 根据订单状态获取允许的操作 ============
 function actionsForStatus(menu, status){
+  // 自定义 statusActions 字典（v3.4.4 新增）
+  if (menu.statusActions) {
+    var st = String(status||'').toUpperCase();
+    return menu.statusActions[st] || [];
+  }
   // 采购订单状态机
   if (menu.purchaseOrder) {
     switch (String(status||'').toUpperCase()) {
@@ -635,18 +2496,15 @@ function actionsForStatus(menu, status){
         ];
       case 'SUBMITTED':
         return [
-          {key:'approve', label:'审批通过', type:'success', method:'POST', path:'/approve', confirm:'审批通过？'},
+          {key:'approve', label:'审批通过', type:'success', method:'POST', path:'/approve', confirm:'审批通过？将自动创建收货入库单。'},
           {key:'reject',  label:'驳回',     type:'danger',  method:'POST', path:'/reject',  confirm:'确认驳回？'},
           {key:'cancel',  label:'取消',     type:'default', method:'POST', path:'/cancel'}
         ];
       case 'APPROVED':
-        return [
-          {key:'receive', label:'📦 收货入库', type:'success', method:'POST', path:'/receive', confirm:'确认整单收货入库？将自动更新库存。'}
-        ];
+        // v3.4.8 移除收货入库按钮：审批后自动生成 RK 草稿，去"收货入库"页操作
+        return [];
       case 'RECEIVING':
-        return [
-          {key:'receive', label:'📦 继续收货', type:'success', method:'POST', path:'/receive', confirm:'继续收货？'}
-        ];
+        return [];
       default:
         return [];
     }
@@ -677,6 +2535,19 @@ function actionsForStatus(menu, status){
 function doStatusAction(id, key, method, path, confirmMsg){
   var m = currentList.menu;
   if (key === 'edit') { doEdit(id); return; }
+  // 需要弹窗填批次/序列号（销售出库执行 & 收货入库执行）
+  if (m.statusActions) {
+    var st = null;
+    var actions = [];
+    Object.keys(m.statusActions).forEach(function(k){
+      m.statusActions[k].forEach(function(a){ if(a.key===key) { st=k; actions.push(a); }});
+    });
+    if (actions.length && actions[0].needsLots) {
+      // v3.4.8：走 Tab 内批次录入子页
+      openLotFillTab(m, id, actions[0], path, method);
+      return;
+    }
+  }
   DMS.confirm(confirmMsg || '确认执行？', function(){
     DMS.api(m.api + '/' + id + path, {method: method || 'POST'}).then(function(d){
       if (d.code === 0) { DMS.toast('操作成功', 'success'); reloadList(); }
@@ -685,8 +2556,449 @@ function doStatusAction(id, key, method, path, confirmMsg){
   });
 }
 
+// v3.4.8 批次/序列号 Tab 子页（销售出库/收货入库执行时使用）
+function openLotFillTab(menu, docId, action, path, method) {
+  _saveActiveTabSnapshot();
+  var tab = {
+    id: ++_tabIdSeq,
+    key: menu.key,
+    label: menu.label + ' - 执行 #' + docId,
+    icon: '⚡',
+    filter: { __mode: 'execute', __id: docId, __ts: Date.now() },
+    pinned: false
+  };
+  _tabs.push(tab);
+  _activeTabId = tab.id;
+  _renderTabsBar();
+  document.getElementById('crumb').innerHTML = '首页 / <strong>' + tab.label + '</strong>';
+  _renderLotFillPage(menu, docId, action, path, method);
+}
+
+function _renderLotFillPage(menu, docId, action, path, method) {
+  var content = document.getElementById('content');
+  content.innerHTML =
+    '<div class="dms-page-title">' + action.label + ' - ' + menu.label + ' #' + docId + '</div>' +
+    '<div class="dms-page-sub"><a class="dms-link" onclick="_backToListTab(\''+menu.key+'\')">← 返回列表</a></div>' +
+    '<div class="dms-card"><div id="lotFillBody"><div class="dms-loading">加载中...</div></div></div>';
+
+  DMS.api(menu.api + '/' + docId + '/detail').then(function(d){
+    if (d.code !== 0) {
+      document.getElementById('lotFillBody').innerHTML = '<div class="dms-error-hint">' + d.message + '</div>';
+      return;
+    }
+    var head = d.data || {};
+    var lines = head.lines || [];
+    var isReceipt = action.isReceipt === true;
+    var lineIdKey = isReceipt ? 'receiptLineId' : 'salesOutLineId';
+    var whId = head.warehouseId;
+
+    var rowsHtml = lines.map(function(l){
+      var isSerial = l.isSerialManaged;
+      var expected = (l.qty != null) ? l.qty : (l.expectedQty || 0);
+      var already = isReceipt ? (l.receivedQty || 0) : (l.shippedQty || 0);
+      var remaining = Number(expected) - Number(already);
+      // v3.4.12: 序列号产品用"逐个录入/选择"多行维护；批次产品单行
+      var serialCell, batchCell, thisQtyCell, opCell;
+      if (isSerial) {
+        thisQtyCell = '<td><span class="dms-serial-count" style="font-weight:600;">0</span> / ' + remaining + '</td>';
+        serialCell = '<td colspan="2"><div class="dms-serial-list" style="display:flex;flex-wrap:wrap;gap:4px;font-size:12px;color:#666;">（未录入）</div></td>';
+        if (isReceipt) {
+          opCell = '<td><button type="button" class="dms-btn dms-btn-sm dms-serial-input" data-lineid="' + l.id + '" data-remaining="' + remaining + '">✏️ 逐个录入</button></td>';
+        } else {
+          opCell = '<td><button type="button" class="dms-btn dms-btn-sm dms-serial-pick" data-lineid="' + l.id + '" data-pid="' + l.productId + '" data-wh="' + (whId||'') + '" data-remaining="' + remaining + '">📋 选序列号</button></td>';
+        }
+        return '<tr data-lineid="' + l.id + '" data-serial="1" data-remaining="' + remaining + '" data-serials="">' +
+          '<td>' + (l.productCode||'') + ' · ' + (l.productName||'') + '</td>' +
+          '<td>' + expected + '</td>' +
+          '<td style="color:#999;">' + already + '</td>' +
+          thisQtyCell +
+          '<td><span class="dms-badge dms-badge-blue">序列号</span></td>' +
+          serialCell + opCell + '</tr>';
+      } else {
+        var lotBtn = isReceipt ? '' :
+          '<button type="button" class="dms-btn dms-btn-sm dms-lot-pick" data-lineid="' + l.id + '" data-pid="' + l.productId + '" data-wh="' + (whId||'') + '" data-serial="0">📋 选择</button>';
+        return '<tr data-lineid="' + l.id + '" data-serial="0" data-remaining="' + remaining + '">' +
+          '<td>' + (l.productCode||'') + ' · ' + (l.productName||'') + '</td>' +
+          '<td>' + expected + '</td>' +
+          '<td style="color:#999;">' + already + '</td>' +
+          '<td><input type="number" class="dms-this-qty" min="0" max="' + remaining + '" value="' + remaining + '" style="width:80px;padding:4px 6px;"></td>' +
+          '<td><span class="dms-badge dms-badge-gray">批次</span></td>' +
+          '<td><input type="text" class="dms-lot-input" data-k="batchNo" value="' + (l.batchNo||'') + '" placeholder="' + (isReceipt?'批次号':'点击右侧选择') + '"' + (isReceipt?'':' readonly') + ' style="width:100%;padding:4px 6px;' + (isReceipt?'':'background:#f5f5f5;cursor:not-allowed;') + '"></td>' +
+          '<td><input type="text" class="dms-lot-input" data-k="serialNo" value="" placeholder="-" disabled style="width:100%;padding:4px 6px;"></td>' +
+          '<td>' + lotBtn + '</td>' +
+          '</tr>';
+      }
+    }).join('');
+
+    document.getElementById('lotFillBody').innerHTML =
+      '<div style="margin-bottom:8px;color:var(--md-on-surface-variant);font-size:12px;">' +
+        '单号: <strong>' + (head.code||'-') + '</strong> · ' +
+        (isReceipt ? '仓库' : '经销商') + ': ' + (head.warehouseName || head.dealerName || '-') +
+        (head.sourceOrderCode ? ' · 来源销售单: <strong style="color:var(--md-primary);">' + head.sourceOrderCode + '</strong>' : '') +
+        (head.sourcePoCode ? ' · 来源采购单: <strong style="color:var(--md-primary);">' + head.sourcePoCode + '</strong>' : '') +
+        (head.status ? ' · 状态: <span class="dms-badge dms-badge-' + (head.status==='COMPLETED'?'green':head.status.indexOf('PARTIAL')>=0?'orange':'gray') + '">' + head.status + '</span>' : '') +
+      '</div>' +
+      (isReceipt
+        ? '<div class="dms-info-hint" style="margin-bottom:12px;padding:8px 12px;background:#e6f7ff;border-left:3px solid #1890ff;font-size:12px;">💡 收货入库：<strong>可修改"本次收货量"</strong>实现部分收货；批次号/序列号必填。剩余部分可再次执行或取消。</div>'
+        : '<div class="dms-info-hint" style="margin-bottom:12px;padding:8px 12px;background:#fffbe6;border-left:3px solid #faad14;font-size:12px;">💡 销售出库：<strong>可修改"本次发货量"</strong>实现部分发货；点【选择】按仓库合格库存挑批次/序列号。</div>'
+      ) +
+      '<table><thead><tr>' +
+        '<th>产品</th><th style="width:70px;">应' + (isReceipt?'收':'发') + '</th><th style="width:70px;">已' + (isReceipt?'收':'发') + '</th><th style="width:100px;">本次量</th><th style="width:80px;">类型</th>' +
+        '<th style="width:150px;">批次号</th><th style="width:150px;">序列号</th>' +
+        '<th style="width:80px;">操作</th>' +
+      '</tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+      '<div style="margin-top:16px;text-align:right;">' +
+        '<button class="dms-btn dms-btn-danger" onclick="_cancelDoc(\''+menu.key+'\','+docId+')">✖ 取消剩余</button> ' +
+        '<button class="dms-btn" onclick="_backToListTab(\''+menu.key+'\')">返回</button> ' +
+        '<button class="dms-btn dms-btn-primary" id="lotSubmitBtn">' + action.label + '</button>' +
+      '</div>';
+
+    // v3.4.13: 序列号批量录入（收货，多行文本框一次性粘贴一批）
+    document.querySelectorAll('.dms-serial-input').forEach(function(btn){
+      btn.onclick = function(){
+        var lineId = btn.getAttribute('data-lineid');
+        var remaining = Number(btn.getAttribute('data-remaining'));
+        var tr = document.querySelector('tr[data-lineid="' + lineId + '"]');
+        var cur = (tr.getAttribute('data-serials') || '').split(',').filter(Boolean);
+        openSerialBatchInput(cur, remaining, function(arr){
+          _setSerials(tr, arr);
+        });
+      };
+    });
+
+    // v3.4.12: 序列号从库存选择（出库，多选）
+    document.querySelectorAll('.dms-serial-pick').forEach(function(btn){
+      btn.onclick = function(){
+        var pid = btn.getAttribute('data-pid');
+        var wh = btn.getAttribute('data-wh');
+        var lineId = btn.getAttribute('data-lineid');
+        var remaining = Number(btn.getAttribute('data-remaining'));
+        var url = '/api/inventory/available-lots?productId=' + pid + '&status=QUALIFIED' + (wh?('&warehouseId=' + wh):'');
+        DMS.api(url).then(function(r){
+          if (r.code !== 0) { DMS.toast('查询库存失败: ' + r.message, 'error'); return; }
+          var lots = (r.data || []).filter(function(x){return x.serialNo;});
+          if (!lots.length) { DMS.toast('该产品无合格序列号库存可选', 'warn'); return; }
+          openSerialMultiPicker(lots, remaining, function(picked){
+            var tr = document.querySelector('tr[data-lineid="' + lineId + '"]');
+            _setSerials(tr, picked);
+          });
+        });
+      };
+    });
+
+    // 绑定批次选择
+    document.querySelectorAll('.dms-lot-pick').forEach(function(btn){
+      btn.onclick = function(){
+        var pid = btn.getAttribute('data-pid');
+        var wh = btn.getAttribute('data-wh');
+        var isSerial = btn.getAttribute('data-serial') === '1';
+        var lineId = btn.getAttribute('data-lineid');
+        var url = '/api/inventory/available-lots?productId=' + pid + '&status=QUALIFIED' + (wh?('&warehouseId=' + wh):'');
+        DMS.api(url).then(function(r){
+          if (r.code !== 0) { DMS.toast('查询库存失败: ' + r.message, 'error'); return; }
+          var lots = r.data || [];
+          if (!lots.length) { DMS.toast('该产品无合格库存可选', 'warn'); return; }
+          openLotPicker(lots, isSerial, function(picked){
+            var tr = document.querySelector('tr[data-lineid="' + lineId + '"]');
+            if (isSerial) tr.querySelector('[data-k="serialNo"]').value = picked.serialNo || '';
+            else tr.querySelector('[data-k="batchNo"]').value = picked.batchNo || '';
+          });
+        });
+      };
+    });
+
+    // 提交
+    document.getElementById('lotSubmitBtn').onclick = function(){
+      var linesBody = [];
+      var invalid = false;
+      var anyThisQty = false;
+      document.querySelectorAll('#lotFillBody tbody tr').forEach(function(tr){
+        if (invalid) return;
+        var lid = Number(tr.getAttribute('data-lineid'));
+        var remaining = Number(tr.getAttribute('data-remaining') || 0);
+        var isSerial = tr.getAttribute('data-serial') === '1';
+        if (isSerial) {
+          // v3.4.12: 序列号行 → 每个序列号拆一条 qty=1
+          var serials = (tr.getAttribute('data-serials') || '').split(',').filter(Boolean);
+          if (!serials.length) return; // 本次该行不处理
+          if (serials.length > remaining) { DMS.toast('序列号数量超过剩余 ' + remaining, 'warn'); invalid = true; return; }
+          anyThisQty = true;
+          serials.forEach(function(sn){
+            var line = {}; line[lineIdKey] = lid; line.qty = 1; line.serialNo = sn;
+            linesBody.push(line);
+          });
+        } else {
+          var b = tr.querySelector('[data-k="batchNo"]').value.trim();
+          var thisQty = Number(tr.querySelector('.dms-this-qty').value || 0);
+          if (thisQty > remaining) { DMS.toast('本次量不能超过剩余 ' + remaining, 'warn'); invalid = true; return; }
+          if (thisQty <= 0) { return; }
+          anyThisQty = true;
+          if (!b) { DMS.toast('批次产品必须填批次号', 'warn'); invalid = true; return; }
+          var line = {}; line[lineIdKey] = lid; line.qty = thisQty; line.batchNo = b;
+          linesBody.push(line);
+        }
+      });
+      if (invalid) return;
+      if (!anyThisQty) { DMS.toast('本次未填任何数量', 'warn'); return; }
+      DMS.api(menu.api + '/' + docId + path, {
+        method: method || 'POST',
+        body: { lines: linesBody }
+      }).then(function(rr){
+        if (rr.code === 0) {
+          var st = rr.data && rr.data.status;
+          DMS.toast(rr.data && rr.data.message ? rr.data.message : '操作成功', 'success');
+          if (st && st.indexOf('PARTIAL') >= 0) {
+            _renderLotFillPage(menu, docId, action, path, method);
+          } else {
+            _backToListTab(menu.key, true);
+          }
+        } else {
+          DMS.toast('失败：' + rr.message, 'error');
+        }
+      });
+    };
+  });
+}
+
+// v3.4.12 设置序列号行的已录入列表（更新 UI + data-serials）
+function _setSerials(tr, serials) {
+  tr.setAttribute('data-serials', serials.join(','));
+  var cntEl = tr.querySelector('.dms-serial-count');
+  if (cntEl) cntEl.textContent = serials.length;
+  var listEl = tr.querySelector('.dms-serial-list');
+  if (listEl) {
+    listEl.innerHTML = serials.length
+      ? serials.map(function(s){ return '<span style="background:#e6f4ff;border:1px solid #91caff;border-radius:3px;padding:1px 6px;">' + s + '</span>'; }).join('')
+      : '（未录入）';
+  }
+}
+
+// v3.4.13 序列号批量录入弹窗（收货，多行文本框，一次性粘贴一批）
+function openSerialBatchInput(current, maxCount, cb) {
+  var body =
+    '<div style="margin-bottom:8px;font-size:12px;color:#666;">每行一个序列号，可从 Excel 直接复制粘贴（也支持逗号分隔）。最多 <strong>' + maxCount + '</strong> 个。</div>' +
+    '<textarea id="serialBatchTa" rows="10" style="width:100%;font-family:monospace;font-size:13px;padding:8px;border:1px solid var(--md-outline);border-radius:6px;" placeholder="SN0001&#10;SN0002&#10;SN0003">' + (current||[]).join('\n') + '</textarea>' +
+    '<div id="serialBatchCnt" style="margin-top:6px;font-size:12px;color:#999;">已录入 0 个</div>';
+  DMS.confirm(body, function(){
+    var ta = document.getElementById('serialBatchTa');
+    var arr = ta.value.split(/[\n,，;；\s]+/).map(function(s){return s.trim();}).filter(Boolean);
+    if (!arr.length) { DMS.toast('请至少录入一个序列号', 'warn'); return false; }
+    if (arr.length > maxCount) { DMS.toast('最多录入 ' + maxCount + ' 个序列号', 'warn'); return false; }
+    var dup = arr.filter(function(x,i){return arr.indexOf(x)!==i;});
+    if (dup.length) { DMS.toast('序列号重复：' + dup[0], 'warn'); return false; }
+    cb(arr);
+  }, '批量录入序列号');
+  setTimeout(function(){
+    var ta = document.getElementById('serialBatchTa');
+    var cntEl = document.getElementById('serialBatchCnt');
+    if (!ta) return;
+    function upd(){
+      var n = ta.value.split(/[\n,，;；\s]+/).map(function(s){return s.trim();}).filter(Boolean).length;
+      if (cntEl) cntEl.innerHTML = '已录入 <strong style="color:' + (n>maxCount?'#e74c3c':'#27ae60') + ';">' + n + '</strong> 个' + (n>maxCount?('（超过上限 '+maxCount+'）'):'');
+    }
+    ta.addEventListener('input', upd);
+    upd(); ta.focus();
+  }, 50);
+}
+
+// v3.4.12 序列号多选弹窗（出库从库存挑选）
+function openSerialMultiPicker(lots, maxCount, cb) {
+  var listHtml = '<div style="max-height:360px;overflow-y:auto;border:1px solid var(--md-outline-variant);border-radius:6px;">';
+  lots.forEach(function(l){
+    listHtml += '<label class="smp-item" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--md-outline-variant);cursor:pointer;">' +
+      '<input type="checkbox" class="smp-cb" value="' + l.serialNo + '">' +
+      '<span><strong>' + l.serialNo + '</strong>' + (l.batchNo?(' · 批次 '+l.batchNo):'') + (l.warehouseName?(' · '+l.warehouseName):'') + '</span>' +
+      '</label>';
+  });
+  listHtml += '</div>';
+  DMS.confirm('<div style="margin-bottom:8px;font-size:12px;color:#666;">最多可选 ' + maxCount + ' 个序列号</div>' + listHtml, function(){
+    var picked = [];
+    document.querySelectorAll('.smp-cb:checked').forEach(function(cb){ picked.push(cb.value); });
+    if (!picked.length) { DMS.toast('请至少选择一个序列号', 'warn'); return false; }
+    if (picked.length > maxCount) { DMS.toast('最多选择 ' + maxCount + ' 个', 'warn'); return false; }
+    cb(picked);
+  }, '选择序列号');
+  setTimeout(function(){
+    document.querySelectorAll('.smp-cb').forEach(function(c){
+      c.addEventListener('change', function(){
+        var n = document.querySelectorAll('.smp-cb:checked').length;
+        if (n > maxCount) { c.checked = false; DMS.toast('最多选择 ' + maxCount + ' 个', 'warn'); }
+      });
+    });
+  }, 50);
+}
+
+// v3.4.10 取消剩余
+function _cancelDoc(menuKey, docId) {
+  if (!confirm('确认取消本单剩余部分？已收/已发部分保留。')) return;
+  var m = MENU_INDEX[menuKey];
+  DMS.api(m.api + '/' + docId + '/cancel-draft', { method: 'POST' }).then(function(r){
+    if (r.code === 0) {
+      DMS.toast('已取消', 'success');
+      _backToListTab(menuKey, true);
+    } else {
+      DMS.toast('取消失败：' + r.message, 'error');
+    }
+  });
+}
+
+// v3.4.4 新增：批次/序列号填写弹窗（销售出库/收货入库执行时使用，保留兼容）
+function openLotFillModal(menu, docId, action, path, method) {
+  // 先取详情拿明细
+  DMS.api(menu.api + '/' + docId + '/detail').then(function(d){
+    if (d.code !== 0) { DMS.toast('加载明细失败：' + d.message, 'error'); return; }
+    var head = d.data || {};
+    var lines = head.lines || [];
+    var isReceipt = action.isReceipt === true;
+    var lineIdKey = isReceipt ? 'receiptLineId' : 'salesOutLineId';
+    var whId = head.warehouseId;
+
+    var rows = lines.map(function(l, i){
+      var isSerial = l.isSerialManaged;
+      var pName = (l.productCode || '') + ' ' + (l.productName || '') ;
+      var placeholder = isSerial ? '必填序列号(唯一)' : '必填批次号';
+      var lotBtn = isReceipt ? '' :
+        '<button type="button" class="dms-btn dms-btn-sm dms-lot-pick" data-lineid="' + l.id + '" data-pid="' + l.productId + '" data-wh="' + (whId||'') + '" data-serial="' + (isSerial?'1':'0') + '">📋 选择</button>';
+      return '<tr data-lineid="' + l.id + '" data-serial="' + (isSerial?'1':'0') + '">' +
+        '<td>' + pName + '</td>' +
+        '<td>' + (l.qty!=null?l.qty:'-') + '</td>' +
+        '<td>' + (isSerial ? '<span class="dms-badge dms-badge-blue">序列号</span>' : '<span class="dms-badge dms-badge-gray">批次</span>') + '</td>' +
+        '<td><input type="text" class="dms-lot-input" data-k="batchNo" value="' + (l.batchNo||'') + '" placeholder="' + (isSerial?'-':placeholder) + '"' + (isSerial?' disabled':'') + '></td>' +
+        '<td><input type="text" class="dms-lot-input" data-k="serialNo" value="' + (l.serialNo||'') + '" placeholder="' + (isSerial?placeholder:'-') + '"' + (isSerial?'':' disabled') + '></td>' +
+        '<td>' + lotBtn + '</td>' +
+        '</tr>';
+    }).join('');
+
+    var body =
+      '<div style="margin-bottom:8px;color:#666;font-size:13px;">' +
+        '单号: <strong>' + (head.code||'-') + '</strong> · ' +
+        (isReceipt ? '仓库' : '经销商') + ': ' + (head.warehouseName || head.dealerName || '-') +
+      '</div>' +
+      (isReceipt
+        ? '<div class="dms-info-hint" style="margin-bottom:12px;padding:8px 12px;background:#e6f7ff;border-left:3px solid #1890ff;font-size:12px;">💡 收货入库：请<strong>手工录入</strong>产品的批次号或序列号（这是唯一手填批次的场景）</div>'
+        : '<div class="dms-info-hint" style="margin-bottom:12px;padding:8px 12px;background:#fffbe6;border-left:3px solid #faad14;font-size:12px;">💡 销售出库：点击 <strong>选择</strong> 从合格库存中选择要出的批次/序列号</div>'
+      ) +
+      '<table class="dms-lines-table"><thead><tr>' +
+        '<th>产品</th><th style="width:80px;">数量</th><th style="width:100px;">类型</th>' +
+        '<th style="width:180px;">批次号</th><th style="width:180px;">序列号</th>' +
+        '<th style="width:100px;">操作</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>';
+
+    var footer =
+      '<button type="button" class="dms-btn dms-btn-cancel">取消</button>' +
+      '<button type="button" class="dms-btn dms-btn-primary dms-lot-submit">' + action.label + '</button>';
+
+    var mo = DMS._modalRaw ? DMS._modalRaw(action.label, body, footer, {width:'860px'}) : null;
+    // 用简单封装：因 DMS 没暴露 modalRaw，用 form 里的 baseModal 走通用方式
+    // 简化：手工创建
+    var mask = document.createElement('div');
+    mask.className = 'dms-modal-mask';
+    var box = document.createElement('div');
+    box.className = 'dms-modal-box';
+    box.style.maxWidth = '900px';
+    box.innerHTML =
+      '<div class="dms-modal-hdr"><span>' + action.label + '</span><button class="dms-modal-close" type="button">&times;</button></div>' +
+      '<div class="dms-modal-body">' + body + '</div>' +
+      '<div class="dms-modal-ftr">' + footer + '</div>';
+    mask.appendChild(box);
+    document.body.appendChild(mask);
+    setTimeout(function(){ mask.classList.add('show'); }, 10);
+    function close(){ mask.classList.remove('show'); setTimeout(function(){mask.remove();},200); }
+    box.querySelector('.dms-modal-close').onclick = close;
+    box.querySelector('.dms-btn-cancel').onclick = close;
+
+    // 批次选择按钮
+    box.querySelectorAll('.dms-lot-pick').forEach(function(btn){
+      btn.onclick = function(){
+        var pid = btn.getAttribute('data-pid');
+        var wh = btn.getAttribute('data-wh');
+        var isSerial = btn.getAttribute('data-serial') === '1';
+        var lineId = btn.getAttribute('data-lineid');
+        var url = '/api/inventory/available-lots?productId=' + pid + '&status=QUALIFIED' + (wh?('&warehouseId=' + wh):'');
+        DMS.api(url).then(function(r){
+          if (r.code !== 0) { DMS.toast('查询库存失败: ' + r.message, 'error'); return; }
+          var lots = r.data || [];
+          if (!lots.length) { DMS.toast('该产品无合格库存可选', 'warn'); return; }
+          openLotPicker(lots, isSerial, function(picked){
+            var tr = box.querySelector('tr[data-lineid="' + lineId + '"]');
+            if (isSerial) tr.querySelector('[data-k="serialNo"]').value = picked.serialNo || '';
+            else tr.querySelector('[data-k="batchNo"]').value = picked.batchNo || '';
+          });
+        });
+      };
+    });
+
+    // 提交
+    box.querySelector('.dms-lot-submit').onclick = function(){
+      var linesBody = [];
+      box.querySelectorAll('tbody tr').forEach(function(tr){
+        var lid = Number(tr.getAttribute('data-lineid'));
+        var isSerial = tr.getAttribute('data-serial') === '1';
+        var b = tr.querySelector('[data-k="batchNo"]').value.trim();
+        var s = tr.querySelector('[data-k="serialNo"]').value.trim();
+        if (isSerial && !s) { DMS.toast('序列号产品必须填序列号', 'warn'); throw 'stop'; }
+        if (!isSerial && !b) { DMS.toast('批次产品必须填批次号', 'warn'); throw 'stop'; }
+        var line = {};
+        line[lineIdKey] = lid;
+        if (b) line.batchNo = b;
+        if (s) line.serialNo = s;
+        linesBody.push(line);
+      });
+      DMS.api(menu.api + '/' + docId + path, {
+        method: method || 'POST',
+        body: { lines: linesBody }
+      }).then(function(rr){
+        if (rr.code === 0) { DMS.toast('操作成功', 'success'); close(); reloadList(); }
+        else DMS.toast('失败：' + rr.message, 'error');
+      });
+    };
+  });
+}
+
+// 批次/序列号选择弹窗（在库存中选择）
+function openLotPicker(lots, isSerial, onPicked) {
+  var mask = document.createElement('div');
+  mask.className = 'dms-modal-mask';
+  var box = document.createElement('div');
+  box.className = 'dms-modal-box';
+  box.style.maxWidth = '600px';
+  var rows = lots.map(function(l, i){
+    return '<tr data-idx="' + i + '" style="cursor:pointer;">' +
+      '<td>' + (isSerial ? (l.serialNo||'-') : (l.batchNo||'-')) + '</td>' +
+      '<td>' + (l.qty||0) + '</td>' +
+      '<td>' + (l.expDate && l.expDate !== 'null' ? String(l.expDate).substring(0,10) : '-') + '</td>' +
+      '</tr>';
+  }).join('');
+  box.innerHTML =
+    '<div class="dms-modal-hdr"><span>选择' + (isSerial?'序列号':'批次') + '</span><button class="dms-modal-close" type="button">&times;</button></div>' +
+    '<div class="dms-modal-body">' +
+      '<table class="dms-picker-table"><thead><tr>' +
+        '<th>' + (isSerial?'序列号':'批次号') + '</th><th>可用数量</th><th>到期日期</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>' +
+    '</div>' +
+    '<div class="dms-modal-ftr"><button type="button" class="dms-btn dms-btn-cancel">取消</button></div>';
+  document.body.appendChild(mask);
+  mask.appendChild(box);
+  setTimeout(function(){ mask.classList.add('show'); }, 10);
+  function close(){ mask.classList.remove('show'); setTimeout(function(){mask.remove();},200); }
+  box.querySelector('.dms-modal-close').onclick = close;
+  box.querySelector('.dms-btn-cancel').onclick = close;
+  box.querySelectorAll('tbody tr').forEach(function(tr){
+    tr.onclick = function(){
+      var idx = Number(tr.getAttribute('data-idx'));
+      onPicked(lots[idx]);
+      close();
+    };
+  });
+}
+
 function doEdit(id){
   var m = currentList.menu;
+  // v3.4.7 编辑走新 Tab
+  if (m.form && m.form.length > 4) {
+    openFormTab(m, 'edit', id);
+    return;
+  }
   DMS.api(m.api + '/' + id).then(function(d){
     if (d.code !== 0) { DMS.toast('加载失败：' + d.message, 'error'); return; }
     var fields = m.form.map(function(f){
@@ -723,23 +3035,126 @@ function doAction(id, actionIdx){
   });
 }
 
-// ============ 工作台首页 ============
+// ============ 工作台首页 - v3.4.4 完整仪表盘 ============
+var _dashboardCharts = {};
+var _dashboardFilter = { period: 'month', dealerId: '', status: '', orderType: '' };
+
+function _dashboardFilterQuery(){
+  var q = [];
+  if (_dashboardFilter.period) q.push('period=' + encodeURIComponent(_dashboardFilter.period));
+  if (_dashboardFilter.dealerId) q.push('dealerId=' + encodeURIComponent(_dashboardFilter.dealerId));
+  if (_dashboardFilter.status) q.push('status=' + encodeURIComponent(_dashboardFilter.status));
+  if (_dashboardFilter.orderType) q.push('orderType=' + encodeURIComponent(_dashboardFilter.orderType));
+  return q.length ? ('?' + q.join('&')) : '';
+}
+
+function applyDashboardFilter(){
+  _dashboardFilter.period = document.getElementById('flt-period').value;
+  _dashboardFilter.dealerId = document.getElementById('flt-dealer').value;
+  _dashboardFilter.status = document.getElementById('flt-status').value;
+  _dashboardFilter.orderType = document.getElementById('flt-type').value;
+  refreshDashboardData();
+}
+
+function resetDashboardFilter(){
+  _dashboardFilter = { period: 'month', dealerId: '', status: '', orderType: '' };
+  document.getElementById('flt-period').value = 'month';
+  document.getElementById('flt-dealer').value = '';
+  document.getElementById('flt-status').value = '';
+  document.getElementById('flt-type').value = '';
+  refreshDashboardData();
+}
+
+function refreshDashboardData(){
+  var q = _dashboardFilterQuery();
+  DMS.api('/api/dashboard/kpi' + q).then(function(d){
+    if (d.code!==0) return;
+    var k = d.data || {};
+    setKpi('kpi-totalSales', fmtMoney(k.totalSales));
+    setKpi('kpi-totalOrders', k.totalOrders);
+    setKpi('kpi-activeDealers', k.activeDealers);
+    setKpi('kpi-totalProducts', k.totalProducts);
+    setKpi('kpi-qualified', fmtNum(k.qualifiedStock));
+    setKpi('kpi-pending', fmtNum(k.pendingStock));
+    setKpi('kpi-defective', fmtNum(k.defectiveStock));
+    setKpi('kpi-totalSurgeries', k.totalSurgeries);
+  });
+  // v3.4.8：先释放已有 chart 实例（DOM 可能已重新渲染）
+  Object.keys(_dashboardCharts).forEach(function(k){
+    try { _dashboardCharts[k].dispose(); } catch(e){}
+    delete _dashboardCharts[k];
+  });
+  loadChartTrend(q);
+  loadChartInv(q);
+  loadChartDealers(q);
+  loadChartFunnel(q);
+  loadChartHosp(q);
+  loadChartActivity(q);
+}
+
 function renderHome(){
   document.getElementById('content').innerHTML =
-    '<div class="dms-page-title">工作台</div>' +
+    '<div class="dms-page-title">📊 业务概览</div>' +
     '<div class="dms-page-sub">欢迎回来，' + (DMS.USER.name||DMS.USER.username) + ' 👋 · 今天是 ' + new Date().toLocaleDateString() + '</div>' +
-    '<div class="dms-kpi-grid">' +
-      '<div class="dms-kpi"><div class="dms-kpi-label">📋 订单总数</div><div class="dms-kpi-val" id="k1">-</div></div>' +
-      '<div class="dms-kpi"><div class="dms-kpi-label">🏢 经销商</div><div class="dms-kpi-val g" id="k2">-</div></div>' +
-      '<div class="dms-kpi"><div class="dms-kpi-label">💊 产品SKU</div><div class="dms-kpi-val o" id="k3">-</div></div>' +
-      '<div class="dms-kpi"><div class="dms-kpi-label">📦 库存记录</div><div class="dms-kpi-val r" id="k4">-</div></div>' +
-      '<div class="dms-kpi"><div class="dms-kpi-label">📄 合同</div><div class="dms-kpi-val p" id="k5">-</div></div>' +
-      '<div class="dms-kpi"><div class="dms-kpi-label">🎁 促销</div><div class="dms-kpi-val" id="k6">-</div></div>' +
+
+    // v3.4.7 筛选条
+    '<div class="dms-card" style="padding:12px 16px;margin-bottom:12px;">' +
+      '<div class="dms-toolbar" style="margin-bottom:0;">' +
+        '<label style="font-size:12px;color:var(--md-on-surface-variant);align-self:center;">时间：</label>' +
+        '<select id="flt-period" style="min-width:120px;">' +
+          '<option value="today">今天</option>' +
+          '<option value="week">本周</option>' +
+          '<option value="month" selected>本月</option>' +
+          '<option value="quarter">本季度</option>' +
+          '<option value="year">本年度</option>' +
+          '<option value="all">全部</option>' +
+        '</select>' +
+        '<label style="font-size:12px;color:var(--md-on-surface-variant);align-self:center;">经销商：</label>' +
+        '<select id="flt-dealer" style="min-width:160px;"><option value="">全部</option></select>' +
+        '<label style="font-size:12px;color:var(--md-on-surface-variant);align-self:center;">订单状态：</label>' +
+        '<select id="flt-status" style="min-width:120px;">' +
+          '<option value="">全部</option>' +
+          '<option value="DRAFT">草稿</option>' +
+          '<option value="SUBMITTED">已提交</option>' +
+          '<option value="APPROVED">已审批</option>' +
+          '<option value="COMPLETED">已完成</option>' +
+          '<option value="CANCELLED">已取消</option>' +
+        '</select>' +
+        '<label style="font-size:12px;color:var(--md-on-surface-variant);align-self:center;">类型：</label>' +
+        '<select id="flt-type" style="min-width:120px;">' +
+          '<option value="">全部</option>' +
+          '<option value="NORMAL">常规</option>' +
+          '<option value="EMERGENCY">应急</option>' +
+          '<option value="SHORTAGE">缺货</option>' +
+        '</select>' +
+        '<button class="dms-btn dms-btn-primary" onclick="applyDashboardFilter()">🔍 筛选</button>' +
+        '<button class="dms-btn" onclick="resetDashboardFilter()">↺ 重置</button>' +
+      '</div>' +
     '</div>' +
-    '<div class="dms-card">' +
-      '<div class="dms-card-title"><span>📦 库存告警</span><div class="actions"><button class="dms-btn" onclick="goto(\'inventory\')">查看库存 →</button></div></div>' +
-      '<div class="dms-kpi-grid" id="invAlerts"></div>' +
+
+    // KPI 8 张
+    '<div class="dms-kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));">' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">💰 累计销售额</div><div class="dms-kpi-val" id="kpi-totalSales">-</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">📤 订单总数</div><div class="dms-kpi-val g" id="kpi-totalOrders">-</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">🏢 活跃经销商</div><div class="dms-kpi-val" id="kpi-activeDealers">-</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">💊 产品 SKU</div><div class="dms-kpi-val o" id="kpi-totalProducts">-</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">✅ 合格库存</div><div class="dms-kpi-val g" id="kpi-qualified">-</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">⏳ 待检库存</div><div class="dms-kpi-val o" id="kpi-pending">-</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">❌ 不合格库存</div><div class="dms-kpi-val r" id="kpi-defective">-</div></div>' +
+      '<div class="dms-kpi"><div class="dms-kpi-label">🏥 手术报台</div><div class="dms-kpi-val p" id="kpi-totalSurgeries">-</div></div>' +
     '</div>' +
+
+    // 6 张图表
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px;margin-top:12px;">' +
+      '<div class="dms-card"><div class="dms-card-title"><span>📈 近 12 个月销售趋势</span></div><div id="ch-trend" style="height:280px;"></div></div>' +
+      '<div class="dms-card"><div class="dms-card-title"><span>🥧 库存状态分布</span></div><div id="ch-inv" style="height:280px;"></div></div>' +
+      '<div class="dms-card"><div class="dms-card-title"><span>🏆 销售 TOP 5 经销商</span></div><div id="ch-dealers" style="height:280px;"></div></div>' +
+      '<div class="dms-card"><div class="dms-card-title"><span>🕳️ 订单状态漏斗</span></div><div id="ch-funnel" style="height:280px;"></div></div>' +
+      '<div class="dms-card"><div class="dms-card-title"><span>🏥 医院手术 TOP 10</span></div><div id="ch-hosp" style="height:280px;"></div></div>' +
+      '<div class="dms-card"><div class="dms-card-title"><span>📊 近 7 天业务活跃度</span></div><div id="ch-act" style="height:280px;"></div></div>' +
+    '</div>' +
+
+    // 待办 & 最近订单
     '<div class="dms-card">' +
       '<div class="dms-card-title"><span>📌 我的待办</span></div>' +
       '<div id="todos"><div class="dms-loading">加载中...</div></div>' +
@@ -748,81 +3163,506 @@ function renderHome(){
       '<div class="dms-card-title"><span>📋 最近订单</span>' +
       '<div class="actions"><button class="dms-btn dms-btn-primary" onclick="goto(\'orders\')">全部 →</button></div></div>' +
       '<div id="recentOrders"><div class="dms-loading">加载中...</div></div>' +
-    '</div>' +
-    '<div class="dms-card">' +
-      '<div class="dms-card-title"><span>🏢 经销商概览</span>' +
-      '<div class="actions"><button class="dms-btn dms-btn-primary" onclick="goto(\'dealers\')">全部 →</button></div></div>' +
-      '<div id="recentDealers"><div class="dms-loading">加载中...</div></div>' +
     '</div>';
 
-  DMS.api('/api/system/stats').then(function(d){
-    if (d.code===0) {
-      document.getElementById('k1').textContent = d.data.orders || 0;
-      document.getElementById('k2').textContent = d.data.dealers || 0;
-      document.getElementById('k3').textContent = d.data.products || 0;
-      document.getElementById('k4').textContent = d.data.inventoryRecords || 0;
-      document.getElementById('k5').textContent = d.data.contracts || 0;
-      document.getElementById('k6').textContent = d.data.promotions || 0;
-    }
-  });
-
-  // 库存告警 3 张卡（US-B-17）
-  DMS.api('/api/dashboard/inventory-stats').then(function(d){
-    if (d.code===0) {
-      var inv = d.data || {};
-      document.getElementById('invAlerts').innerHTML =
-        '<div class="dms-kpi"><div class="dms-kpi-label">📦 库存总量</div><div class="dms-kpi-val">' + (inv.totalQty||0) + '</div></div>' +
-        '<div class="dms-kpi"><div class="dms-kpi-label">⏰ 临期库存(30天)</div><div class="dms-kpi-val o">' + (inv.expiringQty||0) + '</div></div>' +
-        '<div class="dms-kpi"><div class="dms-kpi-label">🐌 呆滞库存(90天)</div><div class="dms-kpi-val r">' + (inv.staleQty||0) + '</div></div>';
-    }
-  });
-
-  // 待办列表（US-HOME-04）
-  DMS.api('/api/dashboard/todos').then(function(d){
-    if (d.code===0) {
-      var items = (d.data && d.data.items) || [];
-      if (!items.length) { document.getElementById('todos').innerHTML='<div class="dms-empty">🎉 暂无待办</div>'; return; }
-      var h = '<table><thead><tr><th>类型</th><th>标题</th><th>关联</th><th>状态</th><th>操作</th></tr></thead><tbody>';
-      items.forEach(function(t){
-        h += '<tr>' +
-          '<td>' + t.type + '</td>' +
-          '<td>' + t.title + (t.count?' × ' + t.count :'') + '</td>' +
-          '<td>' + (t.code||'-') + '</td>' +
-          '<td>' + (t.status?DMS.statusBadge(t.status):'-') + '</td>' +
-          '<td><button class="dms-btn dms-btn-sm dms-btn-primary" onclick="location.href=\''+t.link+'\'">处理</button></td>' +
-          '</tr>';
+  // 加载经销商下拉
+  DMS.api('/api/lookups/dealers?limit=200').then(function(r){
+    if (r.code === 0) {
+      var sel = document.getElementById('flt-dealer');
+      (r.data || []).forEach(function(d){
+        var o = document.createElement('option');
+        o.value = d.id; o.textContent = d.code + ' · ' + d.name;
+        sel.appendChild(o);
       });
-      h += '</tbody></table>';
-      document.getElementById('todos').innerHTML = h;
     }
+  });
+
+  // 首次加载
+  refreshDashboardData();
+
+  // 待办
+  DMS.api('/api/dashboard/todos').then(function(d){
+    if (d.code!==0) return;
+    var items = (d.data && d.data.items) || [];
+    if (!items.length) { document.getElementById('todos').innerHTML='<div class="dms-empty">🎉 暂无待办</div>'; return; }
+    var h = '<table><thead><tr><th>类型</th><th>标题</th><th>关联</th><th>状态</th><th>操作</th></tr></thead><tbody>';
+    items.forEach(function(t){
+      h += '<tr><td>' + t.type + '</td><td>' + t.title + (t.count?' × '+t.count:'') + '</td>' +
+        '<td>' + (t.code||'-') + '</td><td>' + (t.status?DMS.statusBadge(t.status):'-') + '</td>' +
+        '<td><button class="dms-btn dms-btn-sm dms-btn-primary" onclick="location.href=\''+t.link+'\'">处理</button></td></tr>';
+    });
+    document.getElementById('todos').innerHTML = h + '</tbody></table>';
   });
 
   DMS.api('/api/orders?page=1&size=5').then(function(d){
-    if (d.code===0) {
-      var list = (d.data && d.data.list) || [];
-      var h = '<table><thead><tr><th>订单号</th><th>类型</th><th>含税金额</th><th>状态</th></tr></thead><tbody>';
-      list.forEach(function(o){
-        h += '<tr><td>' + o.code + '</td><td>' + (o.orderType||'-') + '</td><td>¥ ' + Number(o.amountInclTax||0).toFixed(2) + '</td><td>' + DMS.statusBadge(o.status) + '</td></tr>';
-      });
-      h += '</tbody></table>';
-      document.getElementById('recentOrders').innerHTML = h || '<div class="dms-empty">暂无</div>';
-    }
+    if (d.code!==0) return;
+    var list = (d.data && d.data.list) || [];
+    var h = '<table><thead><tr><th>订单号</th><th>经销商</th><th>类型</th><th>含税金额</th><th>状态</th></tr></thead><tbody>';
+    list.forEach(function(o){
+      h += '<tr><td>' + o.code + '</td><td>' + (o.dealerName || o.dealerId || '-') + '</td>' +
+        '<td>' + (o.orderType||'-') + '</td>' +
+        '<td>¥ ' + Number(o.amountInclTax||0).toFixed(2) + '</td>' +
+        '<td>' + DMS.statusBadge(o.status) + '</td></tr>';
+    });
+    document.getElementById('recentOrders').innerHTML = h + '</tbody></table>';
   });
+}
 
-  DMS.api('/api/dealers?page=1&size=5').then(function(d){
-    if (d.code===0) {
-      var list = (d.data && d.data.list) || [];
-      var h = '<table><thead><tr><th>编码</th><th>名称</th><th>级别</th><th>联系人</th><th>状态</th></tr></thead><tbody>';
-      list.forEach(function(o){
-        h += '<tr><td>' + o.code + '</td><td>' + o.name + '</td><td>' + (o.level==='T1'?'一级':(o.level==='T2'?'二级':o.level||'-')) + '</td><td>' + (o.contactName||'-') + '</td><td>' + DMS.statusBadge(o.status) + '</td></tr>';
-      });
-      h += '</tbody></table>';
-      document.getElementById('recentDealers').innerHTML = h;
+function setKpi(id, v) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = (v == null || v === '') ? '0' : v;
+}
+function fmtMoney(v) {
+  if (v == null) return '¥0';
+  var n = Number(v);
+  if (isNaN(n)) return '¥0';
+  if (n >= 1e8) return '¥' + (n/1e8).toFixed(2) + '亿';
+  if (n >= 1e4) return '¥' + (n/1e4).toFixed(2) + '万';
+  return '¥' + n.toFixed(2);
+}
+function fmtNum(v) {
+  if (v == null) return '0';
+  var n = Number(v);
+  if (isNaN(n)) return '0';
+  if (n >= 1e4) return (n/1e4).toFixed(2) + '万';
+  return String(Math.round(n));
+}
+
+function loadChartTrend(q){
+  DMS.api('/api/dashboard/sales-trend' + (q||'')).then(function(d){
+    if (d.code!==0) return;
+    var data = d.data || [];
+    var c = _dashboardCharts.trend = _dashboardCharts.trend || echarts.init(document.getElementById('ch-trend'));
+    c.setOption({
+      tooltip:{trigger:'axis'},
+      grid:{left:60,right:20,top:20,bottom:30},
+      xAxis:{type:'category',data:data.map(function(x){return x.month;})},
+      yAxis:{type:'value'},
+      series:[{type:'line',smooth:true,data:data.map(function(x){return Number(x.amount)||0;}),
+        areaStyle:{color:'rgba(24,144,255,0.15)'},lineStyle:{color:'#1890ff',width:2},itemStyle:{color:'#1890ff'}}]
+    });
+  });
+}
+function loadChartInv(q){
+  DMS.api('/api/dashboard/inventory-pie' + (q||'')).then(function(d){
+    if (d.code!==0) return;
+    var nameMap={QUALIFIED:'合格',PENDING:'待检',DEFECTIVE:'不合格'};
+    var colorMap={QUALIFIED:'#52c41a',PENDING:'#faad14',DEFECTIVE:'#f5222d'};
+    var data=(d.data||[]).map(function(x){return {name:nameMap[x.name]||x.name,value:Number(x.value)||0,itemStyle:{color:colorMap[x.name]||'#666'}};});
+    var c = _dashboardCharts.inv = _dashboardCharts.inv || echarts.init(document.getElementById('ch-inv'));
+    c.setOption({
+      tooltip:{trigger:'item'},
+      legend:{bottom:0,left:'center'},
+      series:[{type:'pie',radius:['40%','65%'],center:['50%','45%'],
+        avoidLabelOverlap:true,label:{formatter:'{b}\n{d}%'},data:data}]
+    });
+  });
+}
+function loadChartDealers(q){
+  DMS.api('/api/dashboard/top-dealers' + (q||'')).then(function(d){
+    if (d.code!==0) return;
+    var data = d.data || [];
+    var c = _dashboardCharts.dealers = _dashboardCharts.dealers || echarts.init(document.getElementById('ch-dealers'));
+    c.setOption({
+      tooltip:{trigger:'axis'},
+      grid:{left:120,right:20,top:10,bottom:30},
+      xAxis:{type:'value'},
+      yAxis:{type:'category',data:data.map(function(x){return x.name;}).reverse()},
+      series:[{type:'bar',data:data.map(function(x){return Number(x.value)||0;}).reverse(),
+        itemStyle:{color:'#1890ff',borderRadius:[0,4,4,0]}}]
+    });
+  });
+}
+function loadChartFunnel(q){
+  DMS.api('/api/dashboard/order-funnel' + (q||'')).then(function(d){
+    if (d.code!==0) return;
+    var nameMap={DRAFT:'草稿',SUBMITTED:'已提交',APPROVED:'已审批',SHIPPED:'已发货',COMPLETED:'已完成',CANCELLED:'已取消',REJECTED:'已驳回'};
+    var data=(d.data||[]).map(function(x){return {name:nameMap[x.name]||x.name,value:Number(x.value)||0};});
+    var c = _dashboardCharts.funnel = _dashboardCharts.funnel || echarts.init(document.getElementById('ch-funnel'));
+    c.setOption({
+      tooltip:{trigger:'item'},
+      series:[{type:'funnel',left:'10%',top:10,bottom:10,width:'80%',
+        min:0,sort:'descending',gap:2,label:{show:true,position:'inside'},data:data}]
+    });
+  });
+}
+function loadChartHosp(q){
+  DMS.api('/api/dashboard/top-hospitals' + (q||'')).then(function(d){
+    if (d.code!==0) return;
+    var data = d.data || [];
+    var c = _dashboardCharts.hosp = _dashboardCharts.hosp || echarts.init(document.getElementById('ch-hosp'));
+    c.setOption({
+      tooltip:{trigger:'axis'},
+      grid:{left:140,right:20,top:10,bottom:30},
+      xAxis:{type:'value'},
+      yAxis:{type:'category',data:data.map(function(x){return x.name;}).reverse()},
+      series:[{type:'bar',data:data.map(function(x){return Number(x.value)||0;}).reverse(),
+        itemStyle:{color:'#52c41a',borderRadius:[0,4,4,0]}}]
+    });
+  });
+}
+function loadChartActivity(q){
+  DMS.api('/api/dashboard/activity-7d' + (q||'')).then(function(d){
+    if (d.code!==0) return;
+    var dd = d.data || {};
+    var dates = Array.from(new Set([].concat(dd.orders||[],dd.surgeries||[],dd.receipts||[]).map(function(r){return r.date;}))).sort();
+    var mm = function(a){ var m = new Map(); (a||[]).forEach(function(r){m.set(r.date,Number(r.count)||0);}); return m; };
+    var mo=mm(dd.orders), ms=mm(dd.surgeries), mr=mm(dd.receipts);
+    var c = _dashboardCharts.act = _dashboardCharts.act || echarts.init(document.getElementById('ch-act'));
+    c.setOption({
+      tooltip:{trigger:'axis'},
+      legend:{data:['订单','手术','入库'],bottom:0},
+      grid:{left:40,right:20,top:20,bottom:40},
+      xAxis:{type:'category',data:dates},
+      yAxis:{type:'value'},
+      series:[
+        {name:'订单',type:'bar',data:dates.map(function(d){return mo.get(d)||0;}),itemStyle:{color:'#1890ff'}},
+        {name:'手术',type:'bar',data:dates.map(function(d){return ms.get(d)||0;}),itemStyle:{color:'#52c41a'}},
+        {name:'入库',type:'bar',data:dates.map(function(d){return mr.get(d)||0;}),itemStyle:{color:'#faad14'}}
+      ]
+    });
+  });
+}
+window.addEventListener('resize', function(){
+  Object.values(_dashboardCharts).forEach(function(c){ if (c && c.resize) c.resize(); });
+});
+
+// ============ 销售岗位维护 v3.4.6（左树 + 右侧面板 + 表单）============
+var _posSelected = null;
+var _posEditing = null;   // null = 未编辑；{} = 新建；{id,...} = 编辑
+var _allDealersCache = null;
+var _allUsersCache = null;
+
+function renderPositions(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">👔 销售岗位维护</div>' +
+    '<div class="dms-page-sub">左侧岗位树 · 右侧详情/编辑面板 · 支持挂载经销商与绑定销售账号</div>' +
+    '<div style="display:grid;grid-template-columns:340px 1fr;gap:16px;">' +
+      '<div class="dms-card" style="max-height:calc(100vh - 260px);overflow-y:auto;">' +
+        '<div class="dms-card-title">' +
+          '<span>岗位树</span>' +
+          '<button class="dms-btn dms-btn-sm dms-btn-primary" onclick="posOpenCreate()">+ 新建岗位</button>' +
+        '</div>' +
+        '<div id="posTree"><div class="dms-loading">加载中...</div></div>' +
+      '</div>' +
+      '<div id="posPanel"><div class="dms-empty">👈 请从左侧选择一个岗位，或点击右上角"新建岗位"</div></div>' +
+    '</div>';
+  posLoadTree();
+  // 预加载经销商 & 销售用户 for 面板使用
+  DMS.api('/api/dealers?page=1&size=1000').then(function(r){ if(r.code===0) _allDealersCache = r.data.list||[]; });
+  DMS.api('/api/users?page=1&size=1000&role=sales').then(function(r){ if(r.code===0) _allUsersCache = r.data.list||[]; });
+}
+
+function posLoadTree(){
+  DMS.api('/api/sales-positions/tree').then(function(d){
+    if (d.code !== 0) { document.getElementById('posTree').innerHTML = '<div class="dms-error-hint">' + d.message + '</div>'; return; }
+    var tree = d.data || [];
+    document.getElementById('posTree').innerHTML = tree.length ? renderPosTreeNodes(tree, 0) : '<div class="dms-empty">暂无岗位数据</div>';
+    document.querySelectorAll('.pos-tree-node').forEach(function(el){
+      el.onclick = function(e){
+        e.stopPropagation();
+        document.querySelectorAll('.pos-tree-node').forEach(function(x){x.classList.remove('active');});
+        el.classList.add('active');
+        var id = Number(el.getAttribute('data-id'));
+        _posEditing = null;
+        posShowDetail(id);
+      };
+    });
+  });
+}
+
+function renderPosTreeNodes(nodes, depth){
+  return nodes.map(function(n){
+    var pad = 8 + depth * 20;
+    var levelColor = ['','#1a73e8','#34a853','#f9ab00','#5f6368'][n.level] || '#5f6368';
+    var boundBadge = n.boundUser ? '<span class="dms-badge dms-badge-green" style="margin-left:6px;font-size:10px;">' + n.boundUser + '</span>' : '';
+    var dealerBadge = n.dealerCount > 0 ? '<span class="dms-badge dms-badge-blue" style="margin-left:4px;font-size:10px;">' + n.dealerCount + '经销商</span>' : '';
+    var html = '<div class="pos-tree-node" data-id="' + n.id + '" ' +
+        'style="padding:8px 8px 8px ' + pad + 'px;cursor:pointer;border-radius:8px;margin:2px 0;font-size:13px;border-left:3px solid ' + levelColor + ';">' +
+      '<strong>' + n.code + '</strong> · ' + n.name + boundBadge + dealerBadge +
+      '</div>';
+    if (n.children && n.children.length) html += renderPosTreeNodes(n.children, depth + 1);
+    return html;
+  }).join('');
+}
+
+function posShowDetail(id){
+  _posSelected = id;
+  var panel = document.getElementById('posPanel');
+  panel.innerHTML = '<div class="dms-loading">加载中...</div>';
+  // 用 size=1000 避免 200 限制
+  Promise.all([
+    DMS.api('/api/sales-positions?page=1&size=1000'),
+    DMS.api('/api/dealers?page=1&size=1000')
+  ]).then(function(rs){
+    var pos = ((rs[0].data && rs[0].data.list) || []).find(function(x){return x.id===id;}) || {};
+    var allDealers = (rs[1].data && rs[1].data.list) || [];
+    _allDealersCache = allDealers;
+    var attached = allDealers.filter(function(d){return d.salesPositionId===id;});
+    var levelNames = {1:'总监',2:'大区经理',3:'小区经理',4:'销售代表'};
+
+    panel.innerHTML =
+      '<div class="dms-card">' +
+        '<div class="dms-card-title">' +
+          '<span>📋 岗位详情：' + (pos.name||'-') + '</span>' +
+          '<div class="actions">' +
+            '<button class="dms-btn dms-btn-sm" onclick="posOpenEdit(' + id + ')">✏️ 编辑</button>' +
+          '</div>' +
+        '</div>' +
+        '<table style="margin-bottom:0;">' +
+          '<tr><th style="width:140px;">岗位编码</th><td>' + (pos.code||'-') + '</td></tr>' +
+          '<tr><th>岗位名称</th><td>' + (pos.name||'-') + '</td></tr>' +
+          '<tr><th>层级</th><td><span class="dms-badge dms-badge-blue">L' + pos.level + ' ' + (levelNames[pos.level]||'') + '</span></td></tr>' +
+          '<tr><th>大区</th><td>' + (pos.region||'-') + '</td></tr>' +
+          '<tr><th>状态</th><td>' + (pos.status ? DMS.statusBadge(pos.status) : '<span class="dms-badge dms-badge-green">启用</span>') + '</td></tr>' +
+        '</table>' +
+      '</div>' +
+
+      '<div class="dms-card">' +
+        '<div class="dms-card-title">' +
+          '<span>🔗 绑定销售账号 ' + (pos.boundUser ? '<span class="dms-badge dms-badge-green" style="margin-left:8px;">' + pos.boundUser + '</span>' : '<span style="color:#999;">未绑定</span>') + '</span>' +
+          '<div class="actions">' +
+            '<button class="dms-btn dms-btn-sm dms-btn-primary" onclick="posOpenBindUser(' + id + ')">🔗 修改绑定</button>' +
+          '</div>' +
+        '</div>' +
+        '<div id="posBindUserForm"></div>' +
+      '</div>' +
+
+      '<div class="dms-card">' +
+        '<div class="dms-card-title">' +
+          '<span>🏪 挂载经销商（' + attached.length + '）</span>' +
+          '<div class="actions">' +
+            '<button class="dms-btn dms-btn-sm dms-btn-success" onclick="posOpenBindDealer(' + id + ')">➕ 修改挂载</button>' +
+          '</div>' +
+        '</div>' +
+        '<div id="posBindDealerForm">' +
+          (attached.length === 0
+            ? '<div class="dms-empty">该岗位尚未挂载经销商</div>'
+            : '<table><thead><tr><th>编码</th><th>名称</th><th>级别</th><th>状态</th></tr></thead><tbody>' +
+              attached.map(function(d){
+                return '<tr><td><a class="dms-link" onclick="openTab(\'dealers\',{id:' + d.id + '},\'dealers:' + d.id + '\')">' + d.code + '</a></td><td>' + d.name + '</td><td>' + (d.level||'-') + '</td><td>' + DMS.statusBadge(d.status) + '</td></tr>';
+              }).join('') +
+              '</tbody></table>'
+          ) +
+        '</div>' +
+      '</div>';
+  });
+}
+
+// -------- 表单：新建/编辑 --------
+function posOpenCreate(){
+  _posEditing = { code:'', name:'', level:'', parentId: _posSelected, region:'', status:'active' };
+  posRenderForm('新建岗位');
+}
+function posOpenEdit(id){
+  DMS.api('/api/sales-positions?page=1&size=1000').then(function(r){
+    var pos = ((r.data && r.data.list) || []).find(function(x){return x.id===id;}) || {};
+    _posEditing = {
+      id: id,
+      code: pos.code || '',
+      name: pos.name || '',
+      level: pos.level || '',
+      parentId: pos.parentId || null,
+      region: pos.region || '',
+      status: pos.status || 'active'
+    };
+    posRenderForm('编辑岗位');
+  });
+}
+
+function posRenderForm(title){
+  var e = _posEditing;
+  var isNew = !e.id;
+  var panel = document.getElementById('posPanel');
+  panel.innerHTML =
+    '<div class="dms-card">' +
+      '<div class="dms-card-title"><span>' + title + '</span>' +
+        '<div class="actions">' +
+          '<button class="dms-btn dms-btn-sm" onclick="posCancelForm()">✖ 取消</button>' +
+          '<button class="dms-btn dms-btn-sm dms-btn-primary" onclick="posSubmitForm()">✅ 保存</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="padding:8px 0;">' +
+        _formRow('岗位编码', 'code', e.code, '如 POS-BJ-001', true, isNew) +
+        _formRow('岗位名称', 'name', e.name, '如 华北大区经理', true) +
+        _formSelect('层级', 'level', e.level, [
+          {v:1,l:'L1 总监'},{v:2,l:'L2 大区经理'},{v:3,l:'L3 小区经理'},{v:4,l:'L4 销售代表'}
+        ], true) +
+        _formRow('大区', 'region', e.region, 'east/south/west/north 或省份', false) +
+        _formSelect('状态', 'status', e.status, [
+          {v:'active',l:'启用'},{v:'inactive',l:'停用'}
+        ], true) +
+        '<div style="margin-top:12px;padding:10px 12px;background:var(--md-surface-variant);border-radius:8px;font-size:12px;color:var(--md-on-surface-variant);">' +
+        (isNew ? '💡 父岗位: ' + (e.parentId ? '#' + e.parentId : '（顶级）') : '💡 编辑模式：编码不可修改') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+function _formRow(label, key, value, placeholder, required, editable){
+  editable = editable !== false;
+  return '<div style="display:grid;grid-template-columns:140px 1fr;gap:12px;align-items:center;padding:8px 0;">' +
+    '<label style="color:var(--md-on-surface-variant);font-size:13px;">' +
+      (required ? '<span style="color:var(--md-error);">*</span> ' : '') + label + '</label>' +
+    '<input type="text" data-form-key="' + key + '" value="' + (value==null?'':String(value).replace(/"/g,'&quot;')) + '" ' +
+      'placeholder="' + (placeholder||'') + '" ' + (editable?'':'readonly') + ' ' +
+      'style="padding:8px 12px;border:1px solid var(--md-outline);border-radius:8px;font-size:14px;' + (editable?'':'background:#f5f5f5;') + '">' +
+    '</div>';
+}
+
+function _formSelect(label, key, value, options, required){
+  var opts = options.map(function(o){
+    return '<option value="' + o.v + '"' + (String(o.v)===String(value)?' selected':'') + '>' + o.l + '</option>';
+  }).join('');
+  return '<div style="display:grid;grid-template-columns:140px 1fr;gap:12px;align-items:center;padding:8px 0;">' +
+    '<label style="color:var(--md-on-surface-variant);font-size:13px;">' +
+      (required ? '<span style="color:var(--md-error);">*</span> ' : '') + label + '</label>' +
+    '<select data-form-key="' + key + '" style="padding:8px 12px;border:1px solid var(--md-outline);border-radius:8px;font-size:14px;background:white;">' +
+      '<option value=""></option>' + opts +
+    '</select>' +
+    '</div>';
+}
+
+function posSubmitForm(){
+  var body = { parentId: _posEditing.parentId };
+  ['code','name','level','region','status'].forEach(function(k){
+    var el = document.querySelector('[data-form-key="' + k + '"]');
+    if (el) body[k] = el.value;
+  });
+  // 必填校验
+  if (!body.code || !body.name || !body.level) {
+    DMS.toast('请填写编码/名称/层级', 'warn');
+    return;
+  }
+  body.level = Number(body.level);
+  var isNew = !_posEditing.id;
+  var url = isNew ? '/api/sales-positions' : '/api/sales-positions/' + _posEditing.id;
+  var method = isNew ? 'POST' : 'PUT';
+  DMS.api(url, {method: method, body: body}).then(function(r){
+    if (r.code === 0) {
+      DMS.toast(isNew ? '创建成功' : '保存成功', 'success');
+      _posEditing = null;
+      posLoadTree();
+      if (r.data && r.data.id) setTimeout(function(){ posShowDetail(r.data.id); }, 200);
+      else if (_posSelected) posShowDetail(_posSelected);
+    } else {
+      DMS.toast('保存失败：' + r.message, 'error');
     }
   });
 }
 
-goto('home');
+function posCancelForm(){
+  _posEditing = null;
+  if (_posSelected) posShowDetail(_posSelected);
+  else renderPositions();
+}
+
+// -------- 挂经销商/绑账号 --------
+function posOpenBindUser(id){
+  // v3.4.8：candidate-users 直接返回 role=sales 的用户 + 岗位占用信息
+  DMS.api('/api/sales-positions/candidate-users').then(function(r){
+    if (r.code !== 0) { DMS.toast('加载销售账号失败：' + r.message, 'error'); return; }
+    var users = r.data || [];
+    if (!users.length) {
+      document.getElementById('posBindUserForm').innerHTML =
+        '<div class="dms-empty" style="padding:20px;">⚠️ 系统内暂无 role=sales 的用户，请先在"用户管理"里创建销售账号</div>';
+      return;
+    }
+    var options = '<option value="">-- 解绑 --</option>' + users.map(function(u){
+      var boundToOther = u.boundPositionId && u.boundPositionId !== id;
+      if (boundToOther) {
+        return '<option value="' + u.id + '" disabled style="color:#999;">' +
+          u.username + ' - ' + (u.name || '-') +
+          ' (已在岗位: ' + (u.boundPositionName || '#' + u.boundPositionId) + ')</option>';
+      }
+      return '<option value="' + u.id + '">' + u.username + ' - ' + (u.name || '-') + '</option>';
+    }).join('');
+    var panel = document.getElementById('posBindUserForm');
+    panel.innerHTML =
+      '<div style="padding:10px 0;">' +
+        '<div style="margin-bottom:6px;font-size:12px;color:var(--md-on-surface-variant);">选择销售账号绑定（灰色项已被其他岗位占用）：</div>' +
+        '<select id="posBindSelect" style="width:100%;padding:6px 10px;border:1px solid var(--md-outline);border-radius:6px;font-size:13px;">' + options + '</select>' +
+        '<div style="margin-top:8px;">' +
+          '<button class="dms-btn dms-btn-sm dms-btn-primary" onclick="posSubmitBindUser(' + id + ')">✅ 保存绑定</button>' +
+          '<button class="dms-btn dms-btn-sm" onclick="posShowDetail(' + id + ')">✖ 取消</button>' +
+        '</div>' +
+      '</div>';
+  });
+}
+function posSubmitBindUser(id){
+  var uid = document.getElementById('posBindSelect').value;
+  DMS.api('/api/sales-positions/' + id + '/bind-user', {
+    method: 'PUT',
+    body: { userId: uid ? Number(uid) : null }
+  }).then(function(r){
+    if (r.code === 0) { DMS.toast('绑定已保存', 'success'); posLoadTree(); posShowDetail(id); }
+    else DMS.toast('保存失败：' + r.message, 'error');
+  });
+}
+
+function posOpenBindDealer(id){
+  DMS.api('/api/dealers?page=1&size=1000').then(function(r){
+    _allDealersCache = (r.data && r.data.list) || [];
+    var dealers = _allDealersCache;
+    // 加载所有岗位，用于反显 dealer 归属岗位名
+    DMS.api('/api/sales-positions?page=1&size=1000').then(function(rp){
+      var posList = (rp.data && rp.data.list) || [];
+      var posMap = {};
+      posList.forEach(function(p){ posMap[p.id] = p; });
+
+      var checkboxHtml = dealers.map(function(d){
+        var boundToOther = d.salesPositionId && d.salesPositionId !== id;
+        var checked = d.salesPositionId === id ? 'checked' : '';
+        var disabled = boundToOther ? 'disabled' : '';
+        var style = boundToOther ? 'color:#999;background:#f5f5f5;cursor:not-allowed;' : '';
+        var otherTag = boundToOther
+          ? ' <span style="color:#c00;font-size:11px;margin-left:4px;">(已属岗位: ' + (posMap[d.salesPositionId] ? posMap[d.salesPositionId].name : '#' + d.salesPositionId) + ')</span>'
+          : '';
+        return '<label style="display:block;padding:6px 10px;border-bottom:1px solid var(--md-outline-variant);' + style + '">' +
+          '<input type="checkbox" value="' + d.id + '" ' + checked + ' ' + disabled + ' style="margin-right:6px;"> ' +
+          d.code + ' · ' + d.name + otherTag +
+          '</label>';
+      }).join('');
+      var panel = document.getElementById('posBindDealerForm');
+      panel.innerHTML =
+        '<div style="padding:12px 0;">' +
+          '<div style="margin-bottom:8px;font-size:13px;color:var(--md-on-surface-variant);">勾选要挂载的经销商（灰色项已被其他岗位占用，取消勾选=解挂）：</div>' +
+          '<div id="posDealerListBox" style="max-height:400px;overflow-y:auto;border:1px solid var(--md-outline-variant);border-radius:6px;padding:4px;">' + checkboxHtml + '</div>' +
+          '<div style="margin-top:10px;">' +
+            '<button class="dms-btn dms-btn-sm dms-btn-primary" onclick="posSubmitBindDealer(' + id + ')">✅ 保存挂载</button>' +
+            '<button class="dms-btn dms-btn-sm" onclick="posShowDetail(' + id + ')">✖ 取消</button>' +
+          '</div>' +
+        '</div>';
+    });
+  });
+}
+function posSubmitBindDealer(id){
+  var boxes = document.querySelectorAll('#posDealerListBox input[type=checkbox]:not([disabled])');
+  var checkedIds = [];
+  boxes.forEach(function(b){ if (b.checked) checkedIds.push(Number(b.value)); });
+  DMS.api('/api/sales-positions/' + id + '/bind-dealers', {
+    method: 'PUT',
+    body: { dealerIds: checkedIds }
+  }).then(function(r){
+    if (r.code === 0) {
+      DMS.toast('已保存 ' + (r.data.boundCount != null ? r.data.boundCount : checkedIds.length) + ' 项', 'success');
+      _allDealersCache = null;  // 清缓存
+      posLoadTree();
+      posShowDetail(id);
+    } else {
+      DMS.toast('保存失败：' + r.message, 'error');
+    }
+  });
+}
+
+// pos-tree-node hover 效果
+var _posStyle = document.createElement('style');
+_posStyle.textContent = '.pos-tree-node:hover{background:var(--md-surface-variant);}' +
+  '.pos-tree-node.active{background:var(--md-primary-container);color:var(--md-on-primary-container);}';
+document.head.appendChild(_posStyle);
+
+// v3.4.15: 先加载后台菜单分组覆盖，再渲染首页与侧栏
+loadMenuOverrides(function(){ goto('home'); });
 </script>
 </body>
 </html>

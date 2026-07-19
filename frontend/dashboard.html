@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMS 仪表盘 v3.4</title>
+<link rel="stylesheet" href="theme-m3.css">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+  .kpi-card { cursor: default; }
+  .refresh-btn { float: right; cursor: pointer; color: var(--md-primary); font-size: 20px; }
+</style>
+</head>
+<body class="m3">
+<div class="top-bar">
+  <div class="logo">DMS Console</div>
+  <div class="spacer"></div>
+  <div class="user-chip" id="userChip">
+    <span id="userName">加载中...</span>
+    <span>▾</span>
+  </div>
+</div>
+
+<div class="app-shell">
+  <aside class="side-nav">
+    <div class="nav-group">
+      <div class="nav-title">概览</div>
+      <div class="nav-item active" onclick="location.href='dashboard.html'"><span class="icon">📊</span><span class="label">仪表盘</span></div>
+      <div class="nav-item" onclick="location.href='workspace.html'"><span class="icon">🗂️</span><span class="label">业务工作台</span></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">销售业务</div>
+      <div class="nav-item" onclick="goWorkspace('orders')"><span class="icon">📤</span><span class="label">销售订单</span></div>
+      <div class="nav-item" onclick="goWorkspace('sales-returns')"><span class="icon">↩️</span><span class="label">销退订单</span></div>
+      <div class="nav-item" onclick="goWorkspace('sales-outs')"><span class="icon">🛒</span><span class="label">销售出库</span></div>
+      <div class="nav-item" onclick="goWorkspace('surgery-reports')"><span class="icon">🏥</span><span class="label">手术报台</span></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">采购业务</div>
+      <div class="nav-item" onclick="goWorkspace('purchase-orders')"><span class="icon">📥</span><span class="label">采购订单</span></div>
+      <div class="nav-item" onclick="goWorkspace('purchase-returns')"><span class="icon">↩️</span><span class="label">采退订单</span></div>
+      <div class="nav-item" onclick="goWorkspace('receipts')"><span class="icon">📦</span><span class="label">采购入库</span></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">库存</div>
+      <div class="nav-item" onclick="goWorkspace('inventory')"><span class="icon">📊</span><span class="label">库存查询</span></div>
+      <div class="nav-item" onclick="goWorkspace('stock-moves')"><span class="icon">🔀</span><span class="label">库存移动</span></div>
+      <div class="nav-item" onclick="goWorkspace('inventory-adjustments')"><span class="icon">⚖️</span><span class="label">库存调整</span></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">主数据</div>
+      <div class="nav-item" onclick="goWorkspace('dealers')"><span class="icon">🏪</span><span class="label">经销商</span></div>
+      <div class="nav-item" onclick="goWorkspace('hospitals')"><span class="icon">🏥</span><span class="label">医院</span></div>
+      <div class="nav-item" onclick="goWorkspace('products')"><span class="icon">📦</span><span class="label">产品</span></div>
+      <div class="nav-item" onclick="goWorkspace('authorizations')"><span class="icon">🔑</span><span class="label">授权</span></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">组织与权限</div>
+      <div class="nav-item" onclick="goWorkspace('sales-positions')"><span class="icon">👔</span><span class="label">销售岗位</span></div>
+      <div class="nav-item" onclick="goWorkspace('users')"><span class="icon">👥</span><span class="label">账号管理</span></div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="breadcrumb">首页 › 仪表盘</div>
+    <h1 class="page-title">
+      业务概览
+      <span class="refresh-btn" onclick="loadAll()">🔄</span>
+    </h1>
+
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">📈 近 12 个月销售趋势</div>
+        <div class="chart-container" id="chartSalesTrend"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🥧 库存状态分布</div>
+        <div class="chart-container" id="chartInventoryPie"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🏆 本月销售 TOP 5 经销商</div>
+        <div class="chart-container" id="chartTopDealers"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🕳️ 订单状态漏斗</div>
+        <div class="chart-container" id="chartOrderFunnel"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🏥 医院手术 TOP 10</div>
+        <div class="chart-container" id="chartTopHospitals"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📊 近 7 天活跃度</div>
+        <div class="chart-container" id="chartActivity"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const API = '';
+function goWorkspace(key) { location.href = 'workspace.html#' + key; }
+
+function apiGet(path) {
+  const t = localStorage.getItem('dms_access_token');
+  return fetch(API + path, { headers: { 'Authorization': 'Bearer ' + t }})
+    .then(r => {
+      if (r.status === 401 || r.status === 403) {
+        localStorage.removeItem('dms_access_token');
+        location.href = '/index.html';
+        return { code: -1, data: null };
+      }
+      return r.json();
+    })
+    .catch(() => ({ code: -1, data: null }));
+}
+
+function fmt(n) {
+  if (n == null) return '0';
+  n = Number(n);
+  if (isNaN(n)) return '0';
+  if (n >= 1e8) return (n/1e8).toFixed(2) + '亿';
+  if (n >= 1e4) return (n/1e4).toFixed(2) + '万';
+  return n.toLocaleString();
+}
+
+function ensureAuth() {
+  if (!localStorage.getItem('dms_access_token')) {
+    location.href = '/index.html';
+    return false;
+  }
+  return true;
+}
+
+function loadKPI() {
+  apiGet('/api/dashboard/kpi').then(res => {
+    if (res.code !== 0) return;
+    const d = res.data || {};
+    const cards = [
+      { label: '总销售额', value: fmt(d.totalSales), unit: '元', icon: '💰', cls: 'kpi-primary' },
+      { label: '订单总数', value: fmt(d.totalOrders), unit: '单', icon: '📤', cls: 'kpi-primary' },
+      { label: '活跃经销商', value: fmt(d.activeDealers), unit: '家', icon: '🏪', cls: 'kpi-success' },
+      { label: '产品总数', value: fmt(d.totalProducts), unit: 'SKU', icon: '📦', cls: 'kpi-success' },
+      { label: '合格库存', value: fmt(d.qualifiedStock), unit: '件', icon: '✅', cls: 'kpi-success' },
+      { label: '待检库存', value: fmt(d.pendingStock), unit: '件', icon: '⏳', cls: 'kpi-warning' },
+      { label: '不合格库存', value: fmt(d.defectiveStock), unit: '件', icon: '❌', cls: 'kpi-error' },
+      { label: '手术报台数', value: fmt(d.totalSurgeries), unit: '例', icon: '🏥', cls: 'kpi-primary' },
+    ];
+    document.getElementById('kpiGrid').innerHTML = cards.map(c => `
+      <div class="kpi-card ${c.cls}">
+        <div class="kpi-icon">${c.icon}</div>
+        <div class="kpi-label">${c.label}</div>
+        <div class="kpi-value">${c.value}<span class="kpi-unit">${c.unit}</span></div>
+      </div>
+    `).join('');
+  });
+}
+
+let charts = {};
+
+function loadSalesTrend() {
+  apiGet('/api/dashboard/sales-trend').then(res => {
+    if (res.code !== 0) return;
+    const data = res.data || [];
+    const chart = charts.trend || (charts.trend = echarts.init(document.getElementById('chartSalesTrend')));
+    chart.setOption({
+      tooltip: { trigger: 'axis' },
+      grid: { left: 40, right: 20, top: 20, bottom: 30 },
+      xAxis: { type: 'category', data: data.map(d => d.month) },
+      yAxis: { type: 'value' },
+      series: [{
+        type: 'line', smooth: true,
+        data: data.map(d => d.amount),
+        areaStyle: { color: 'rgba(26, 115, 232, 0.15)' },
+        lineStyle: { color: '#1a73e8', width: 2 },
+        itemStyle: { color: '#1a73e8' }
+      }]
+    });
+  });
+}
+
+function loadInventoryPie() {
+  apiGet('/api/dashboard/inventory-pie').then(res => {
+    if (res.code !== 0) return;
+    const nameMap = { QUALIFIED: '合格', PENDING: '待检', DEFECTIVE: '不合格' };
+    const colorMap = { QUALIFIED: '#1e8e3e', PENDING: '#f9ab00', DEFECTIVE: '#d93025' };
+    const data = (res.data || []).map(d => ({
+      name: nameMap[d.name] || d.name, value: d.value,
+      itemStyle: { color: colorMap[d.name] || '#5f6368' }
+    }));
+    const chart = charts.pie || (charts.pie = echarts.init(document.getElementById('chartInventoryPie')));
+    chart.setOption({
+      tooltip: { trigger: 'item' },
+      legend: { bottom: 0, left: 'center' },
+      series: [{
+        type: 'pie', radius: ['40%', '65%'], center: ['50%', '45%'],
+        avoidLabelOverlap: true,
+        label: { formatter: '{b}\n{d}%' },
+        data: data
+      }]
+    });
+  });
+}
+
+function loadTopDealers() {
+  apiGet('/api/dashboard/top-dealers').then(res => {
+    if (res.code !== 0) return;
+    const data = res.data || [];
+    const chart = charts.dealer || (charts.dealer = echarts.init(document.getElementById('chartTopDealers')));
+    chart.setOption({
+      tooltip: { trigger: 'axis' },
+      grid: { left: 100, right: 20, top: 10, bottom: 30 },
+      xAxis: { type: 'value' },
+      yAxis: { type: 'category', data: data.map(d => d.name).reverse() },
+      series: [{
+        type: 'bar',
+        data: data.map(d => d.value).reverse(),
+        itemStyle: { color: '#4285f4', borderRadius: [0, 4, 4, 0] }
+      }]
+    });
+  });
+}
+
+function loadOrderFunnel() {
+  apiGet('/api/dashboard/order-funnel').then(res => {
+    if (res.code !== 0) return;
+    const data = res.data || [];
+    const chart = charts.funnel || (charts.funnel = echarts.init(document.getElementById('chartOrderFunnel')));
+    chart.setOption({
+      tooltip: { trigger: 'item' },
+      series: [{
+        type: 'funnel', left: '10%', top: 10, bottom: 10, width: '80%',
+        min: 0, sort: 'descending', gap: 2,
+        label: { show: true, position: 'inside' },
+        data: data.map(d => ({ name: d.name, value: d.value }))
+      }]
+    });
+  });
+}
+
+function loadTopHospitals() {
+  apiGet('/api/dashboard/top-hospitals').then(res => {
+    if (res.code !== 0) return;
+    const data = res.data || [];
+    const chart = charts.hosp || (charts.hosp = echarts.init(document.getElementById('chartTopHospitals')));
+    chart.setOption({
+      tooltip: { trigger: 'axis' },
+      grid: { left: 120, right: 20, top: 10, bottom: 30 },
+      xAxis: { type: 'value' },
+      yAxis: { type: 'category', data: data.map(d => d.name).reverse() },
+      series: [{
+        type: 'bar',
+        data: data.map(d => d.value).reverse(),
+        itemStyle: { color: '#34a853', borderRadius: [0, 4, 4, 0] }
+      }]
+    });
+  });
+}
+
+function loadActivity() {
+  apiGet('/api/dashboard/activity-7d').then(res => {
+    if (res.code !== 0) return;
+    const d = res.data || {};
+    const dates = Array.from(new Set([...(d.orders||[]), ...(d.surgeries||[]), ...(d.receipts||[])].map(r => r.date))).sort();
+    const orderMap = new Map((d.orders||[]).map(r => [r.date, r.count]));
+    const surgMap = new Map((d.surgeries||[]).map(r => [r.date, r.count]));
+    const rcpMap = new Map((d.receipts||[]).map(r => [r.date, r.count]));
+    const chart = charts.act || (charts.act = echarts.init(document.getElementById('chartActivity')));
+    chart.setOption({
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['订单', '手术', '入库'], bottom: 0 },
+      grid: { left: 40, right: 20, top: 20, bottom: 40 },
+      xAxis: { type: 'category', data: dates },
+      yAxis: { type: 'value' },
+      series: [
+        { name: '订单', type: 'bar', data: dates.map(d => orderMap.get(d) || 0), itemStyle: { color: '#4285f4' } },
+        { name: '手术', type: 'bar', data: dates.map(d => surgMap.get(d) || 0), itemStyle: { color: '#34a853' } },
+        { name: '入库', type: 'bar', data: dates.map(d => rcpMap.get(d) || 0), itemStyle: { color: '#f9ab00' } }
+      ]
+    });
+  });
+}
+
+function loadUserInfo() {
+  const user = JSON.parse(localStorage.getItem('dms_user') || '{}');
+  document.getElementById('userName').textContent = user.name || user.username || '用户';
+}
+
+function loadAll() {
+  loadKPI();
+  loadSalesTrend();
+  loadInventoryPie();
+  loadTopDealers();
+  loadOrderFunnel();
+  loadTopHospitals();
+  loadActivity();
+}
+
+window.addEventListener('resize', () => {
+  Object.values(charts).forEach(c => c && c.resize());
+});
+
+if (ensureAuth()) {
+  loadUserInfo();
+  loadAll();
+}
+</script>
+</body>
+</html>

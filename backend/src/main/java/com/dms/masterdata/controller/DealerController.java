@@ -22,8 +22,9 @@ public class DealerController {
     private final DealerService service;
 
     @GetMapping
-    public ApiResponse<PageResult<Dealer>> list(@Valid PageQuery pageQuery) {
-        return ApiResponse.ok(service.list(pageQuery));
+    public ApiResponse<PageResult<Dealer>> list(@Valid PageQuery pageQuery,
+                                                @RequestParam(required = false) java.util.Map<String, String> allParams) {
+        return ApiResponse.ok(service.list(pageQuery, allParams));
     }
 
     @GetMapping("/{id}")

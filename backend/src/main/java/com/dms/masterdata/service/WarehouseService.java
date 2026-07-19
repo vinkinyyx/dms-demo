@@ -25,13 +25,18 @@ import java.util.UUID;
 public class WarehouseService {
 
     private final WarehouseRepository repository;
+    private final com.dms.execution.service.OperationLogService opLog;
 
     @Transactional(readOnly = true)
     public PageResult<Warehouse> list(PageQuery pageQuery) {
+        return list(pageQuery, null);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResult<Warehouse> list(PageQuery pageQuery, java.util.Map<String, String> filters) {
         UUID tenantId = TenantContext.getTenantId();
-        Page<Warehouse> page = tenantId == null
-                ? repository.findAll(pageQuery.toPageable())
-                : repository.findByTenantId(tenantId, pageQuery.toPageable());
+        var spec = com.dms.common.util.SpecUtil.<Warehouse>byTenantAndFilters(tenantId, filters);
+        Page<Warehouse> page = repository.findAll(spec, pageQuery.toPageable());
         return PageResult.of(page);
     }
 
@@ -58,7 +63,9 @@ public class WarehouseService {
         if (entity.getStatus() == null) entity.setStatus("active");
         if (entity.getType() == null) entity.setType("main");
         entity.setUpdatedAt(OffsetDateTime.now());
-        return repository.save(entity);
+        Warehouse saved = repository.save(entity);
+        opLog.log("warehouse", saved.getId(), "CREATE", "新建仓库 " + saved.getCode());
+        return saved;
     }
 
     @Transactional
@@ -70,7 +77,9 @@ public class WarehouseService {
         if (patch.getAddress() != null) old.setAddress(patch.getAddress());
         if (patch.getStatus() != null) old.setStatus(patch.getStatus());
         old.setUpdatedAt(OffsetDateTime.now());
-        return repository.save(old);
+        Warehouse saved = repository.save(old);
+        opLog.log("warehouse", id, "UPDATE", "编辑仓库 " + saved.getCode());
+        return saved;
     }
 
     @Transactional
@@ -80,5 +89,6 @@ public class WarehouseService {
         entity.setStatus("inactive");
         entity.setUpdatedAt(OffsetDateTime.now());
         repository.save(entity);
+        opLog.log("warehouse", id, "DEACTIVATE", "停用仓库 " + entity.getCode());
     }
 }

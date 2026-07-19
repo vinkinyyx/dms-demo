@@ -7,6 +7,7 @@ package com.dms.order.controller;
 
 import com.dms.common.ApiResponse;
 import com.dms.common.util.TenantContext;
+import com.dms.execution.service.AutoDocGenerator;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,8 @@ import java.util.*;
 public class PurchaseOrderController {
 
     private final EntityManager em;
+    private final AutoDocGenerator autoDocGenerator;
+    private final com.dms.common.util.DocNoGenerator docNoGenerator;
 
     /** 分页列表 */
     @GetMapping
@@ -56,11 +59,18 @@ public class PurchaseOrderController {
 
         String limitParam = "?" + idx++;
         String offsetParam = "?" + idx++;
+        String whereQualified = where.toString()
+                .replace("tenant_id", "po.tenant_id")
+                .replace("deleted_at", "po.deleted_at")
+                .replace("status", "po.status")
+                .replace("supplier_id", "po.supplier_id");
         var q = em.createNativeQuery(
-                "SELECT id, code, order_type, supplier_id, supplier_name, warehouse_id, " +
-                "amount_incl_tax, final_amount, expected_date, status, extra, created_at " +
-                "FROM purchase_orders " + where +
-                " ORDER BY created_at DESC LIMIT " + limitParam + " OFFSET " + offsetParam,
+                "SELECT po.id, po.code, po.order_type, po.supplier_id, po.supplier_name, po.warehouse_id, " +
+                "w.name AS warehouse_name, " +
+                "po.amount_incl_tax, po.final_amount, po.expected_date, po.status, po.extra, po.created_at " +
+                "FROM purchase_orders po LEFT JOIN warehouses w ON w.id = po.warehouse_id " +
+                whereQualified +
+                " ORDER BY po.created_at DESC LIMIT " + limitParam + " OFFSET " + offsetParam,
                 Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
         q.setParameter(params.size() + 1, size);
@@ -124,20 +134,22 @@ public class PurchaseOrderController {
     @Transactional
     public ApiResponse<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         UUID tid = TenantContext.getTenantId();
-        String code = "PO-" + System.currentTimeMillis();
+        boolean isRed = Boolean.TRUE.equals(body.get("isRed"));
+        String code = docNoGenerator.next(isRed ? "RPO" : "PO");
 
         BigDecimal total = calcTotal(body);
 
         var insertPo = em.createNativeQuery(
-                "INSERT INTO purchase_orders (tenant_id, code, order_type, supplier_id, supplier_name, warehouse_id, " +
+                "INSERT INTO purchase_orders (tenant_id, code, order_type, supplier_id, supplier_name, warehouse_id, is_red, " +
                 "amount_incl_tax, final_amount, expected_date, status, remark, extra, created_at, updated_at) " +
-                "VALUES (:tid, :code, :ot, :sid, :sname, :wid, :amt, :famt, :ed, 'DRAFT', :rmk, CAST(:ext AS jsonb), now(), now()) RETURNING id");
+                "VALUES (:tid, :code, :ot, :sid, :sname, :wid, :isred, :amt, :famt, :ed, 'DRAFT', :rmk, CAST(:ext AS jsonb), now(), now()) RETURNING id");
         insertPo.setParameter("tid", tid);
         insertPo.setParameter("code", code);
         insertPo.setParameter("ot", body.getOrDefault("orderType", "NORMAL"));
         insertPo.setParameter("sid", body.get("supplierId"));
         insertPo.setParameter("sname", body.getOrDefault("supplierName", ""));
         insertPo.setParameter("wid", body.get("warehouseId"));
+        insertPo.setParameter("isred", isRed);
         insertPo.setParameter("amt", total);
         insertPo.setParameter("famt", total);
         insertPo.setParameter("ed", body.get("expectedDate"));
@@ -150,6 +162,7 @@ public class PurchaseOrderController {
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("id", poId);
         res.put("code", code);
+        audit(poId, "CREATE");
         return ApiResponse.ok(res);
     }
 
@@ -193,7 +206,7 @@ public class PurchaseOrderController {
         return doTransition(id, "DRAFT", "SUBMITTED", "PO_SUBMIT");
     }
 
-    /** 审批通过 */
+    /** 审批通过 - v3.4 增强：自动生成采购入库草稿 */
     @PostMapping("/{id}/approve")
     @Transactional
     public ApiResponse<Map<String, Object>> approve(@PathVariable Long id) {
@@ -201,6 +214,13 @@ public class PurchaseOrderController {
         if (res.getCode() == 0) {
             em.createNativeQuery("UPDATE purchase_orders SET approved_at = now(), approved_by = ?1 WHERE id = ?2")
               .setParameter(1, TenantContext.getUserId()).setParameter(2, id).executeUpdate();
+            try {
+                Long rcId = autoDocGenerator.createReceiptForPurchaseOrder(id);
+                log.info("采购单 {} 审批通过，自动生成入库草稿单 {}", id, rcId);
+                if (res.getData() != null) res.getData().put("autoCreatedReceiptId", rcId);
+            } catch (Exception e) {
+                log.warn("采购单 {} 自动建单失败: {}", id, e.getMessage());
+            }
         }
         return res;
     }
@@ -315,32 +335,50 @@ public class PurchaseOrderController {
                 "UPDATE purchase_order_lines SET received_qty = received_qty + ?1 WHERE id = ?2")
             .setParameter(1, qty).setParameter(2, lineId).executeUpdate();
 
-        // 2. 更新 inventory 表（若已存在则累加；不存在则新建）
+        // 2. 判断是采购入库(正向+库存) 还是 红字采购入库(采退,反向-库存)
+        boolean isRed = false;
+        try {
+            var isRedQ = em.createNativeQuery(
+                    "SELECT is_red FROM purchase_orders WHERE id = ?1");
+            isRedQ.setParameter(1, poId);
+            Object v = isRedQ.getSingleResult();
+            isRed = v != null && Boolean.TRUE.equals(v);
+        } catch (Exception ignored) {}
+
+        BigDecimal delta = isRed ? qty.negate() : qty;
+        String txnType = isRed ? "RECEIPT_RED" : "RECEIPT";
+        // 采购入库 -> 库存状态为 PENDING (待检)
+        // 红字采购入库 -> 相当于退货给上游，从合格库存扣减
+        String targetStatus = isRed ? "QUALIFIED" : "PENDING";
+
+        // 3. 更新 inventory (按 stock_status 分组)
         var existQ = em.createNativeQuery(
                 "SELECT id, qty FROM inventory WHERE tenant_id = ?1 AND product_id = ?2 AND warehouse_id = ?3 " +
-                "AND (batch_no IS NULL OR batch_no = '') AND (serial_no IS NULL OR serial_no = '') LIMIT 1", Tuple.class);
-        existQ.setParameter(1, tid).setParameter(2, productId).setParameter(3, warehouseId);
+                "AND stock_status = ?4 AND (batch_no IS NULL OR batch_no = '') AND (serial_no IS NULL OR serial_no = '') LIMIT 1", Tuple.class);
+        existQ.setParameter(1, tid).setParameter(2, productId).setParameter(3, warehouseId).setParameter(4, targetStatus);
         @SuppressWarnings("unchecked")
         List<Tuple> exs = existQ.getResultList();
         if (exs.isEmpty()) {
             em.createNativeQuery(
-                    "INSERT INTO inventory (tenant_id, product_id, warehouse_id, qty, in_source, created_at, updated_at) " +
-                    "VALUES (?1, ?2, ?3, ?4, 'PO', now(), now())")
-                .setParameter(1, tid).setParameter(2, productId).setParameter(3, warehouseId).setParameter(4, qty)
+                    "INSERT INTO inventory (tenant_id, product_id, warehouse_id, qty, stock_status, in_source, created_at, updated_at) " +
+                    "VALUES (?1, ?2, ?3, ?4, ?5, ?6, now(), now())")
+                .setParameter(1, tid).setParameter(2, productId).setParameter(3, warehouseId)
+                .setParameter(4, delta).setParameter(5, targetStatus)
+                .setParameter(6, isRed ? "PO_RED" : "PO")
                 .executeUpdate();
         } else {
             Long invId = ((Number) exs.get(0).get("id")).longValue();
             em.createNativeQuery("UPDATE inventory SET qty = qty + ?1, updated_at = now() WHERE id = ?2")
-                .setParameter(1, qty).setParameter(2, invId).executeUpdate();
+                .setParameter(1, delta).setParameter(2, invId).executeUpdate();
         }
 
-        // 3. 写事务日志
+        // 4. 写事务日志
         em.createNativeQuery(
                 "INSERT INTO inventory_transactions (tenant_id, product_id, warehouse_id, txn_type, qty_change, " +
                 "ref_doc_type, ref_doc_id, at_time) " +
-                "VALUES (?1, ?2, ?3, 'RECEIPT', ?4, 'purchase_order', ?5, now())")
-            .setParameter(1, tid).setParameter(2, productId).setParameter(3, warehouseId).setParameter(4, qty)
-            .setParameter(5, poId).executeUpdate();
+                "VALUES (?1, ?2, ?3, ?4, ?5, 'purchase_order', ?6, now())")
+            .setParameter(1, tid).setParameter(2, productId).setParameter(3, warehouseId)
+            .setParameter(4, txnType).setParameter(5, delta).setParameter(6, poId).executeUpdate();
     }
 
     private ApiResponse<Map<String, Object>> doTransition(Long id, String fromStatus, String toStatus, String action) {
@@ -402,16 +440,17 @@ public class PurchaseOrderController {
         m.put("supplierId", t.get("supplier_id"));
         try { m.put("supplierName", t.get("supplier_name")); } catch (Exception ignored) {}
         try { m.put("warehouseId", t.get("warehouse_id")); } catch (Exception ignored) {}
+        try { m.put("warehouseName", t.get("warehouse_name")); } catch (Exception ignored) {}
         m.put("amountInclTax", t.get("amount_incl_tax"));
         m.put("finalAmount", t.get("final_amount"));
-        try { m.put("expectedDate", String.valueOf(t.get("expected_date"))); } catch (Exception ignored) {}
+        try { m.put("expectedDate", com.dms.common.util.DateFmt.fmt(t.get("expected_date"))); } catch (Exception ignored) {}
         m.put("status", t.get("status"));
         try { m.put("remark", t.get("remark")); } catch (Exception ignored) {}
         try { m.put("extra", t.get("extra")); } catch (Exception ignored) {}
-        try { m.put("createdAt", String.valueOf(t.get("created_at"))); } catch (Exception ignored) {}
-        try { m.put("submittedAt", String.valueOf(t.get("submitted_at"))); } catch (Exception ignored) {}
-        try { m.put("approvedAt", String.valueOf(t.get("approved_at"))); } catch (Exception ignored) {}
-        try { m.put("completedAt", String.valueOf(t.get("completed_at"))); } catch (Exception ignored) {}
+        try { m.put("createdAt", com.dms.common.util.DateFmt.fmt(t.get("created_at"))); } catch (Exception ignored) {}
+        try { m.put("submittedAt", com.dms.common.util.DateFmt.fmt(t.get("submitted_at"))); } catch (Exception ignored) {}
+        try { m.put("approvedAt", com.dms.common.util.DateFmt.fmt(t.get("approved_at"))); } catch (Exception ignored) {}
+        try { m.put("completedAt", com.dms.common.util.DateFmt.fmt(t.get("completed_at"))); } catch (Exception ignored) {}
         return m;
     }
 

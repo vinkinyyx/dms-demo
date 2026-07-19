@@ -25,13 +25,18 @@ import java.util.UUID;
 public class DealerService {
 
     private final DealerRepository repository;
+    private final com.dms.execution.service.OperationLogService opLog;
 
     @Transactional(readOnly = true)
     public PageResult<Dealer> list(PageQuery pageQuery) {
+        return list(pageQuery, null);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResult<Dealer> list(PageQuery pageQuery, java.util.Map<String, String> filters) {
         UUID tenantId = TenantContext.getTenantId();
-        Page<Dealer> page = tenantId == null
-                ? repository.findAll(pageQuery.toPageable())
-                : repository.findByTenantId(tenantId, pageQuery.toPageable());
+        var spec = com.dms.common.util.SpecUtil.<Dealer>byTenantAndFilters(tenantId, filters);
+        Page<Dealer> page = repository.findAll(spec, pageQuery.toPageable());
         return PageResult.of(page);
     }
 
@@ -55,7 +60,9 @@ public class DealerService {
         if (entity.getStatus() == null) entity.setStatus("active");
         entity.setUpdatedAt(OffsetDateTime.now());
         entity.ensureAttrs();
-        return repository.save(entity);
+        Dealer saved = repository.save(entity);
+        opLog.log("dealer", saved.getId(), "CREATE", "新建经销商 " + saved.getCode());
+        return saved;
     }
 
     @Transactional
@@ -82,7 +89,9 @@ public class DealerService {
         if (patch.getStatus() != null) old.setStatus(patch.getStatus());
         if (patch.getAttrs() != null) old.setAttrs(patch.getAttrs());
         old.setUpdatedAt(OffsetDateTime.now());
-        return repository.save(old);
+        Dealer saved = repository.save(old);
+        opLog.log("dealer", id, "UPDATE", "编辑经销商 " + saved.getCode());
+        return saved;
     }
 
     @Transactional
@@ -92,5 +101,6 @@ public class DealerService {
         entity.setStatus("inactive");
         entity.setUpdatedAt(OffsetDateTime.now());
         repository.save(entity);
+        opLog.log("dealer", id, "DEACTIVATE", "停用经销商 " + entity.getCode());
     }
 }

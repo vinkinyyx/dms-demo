@@ -35,20 +35,100 @@ public class LookupController {
                 "SELECT id, code, name, level, status FROM dealers",
                 "code", "name",
                 new String[]{"id", "code", "name", "level", "status"},
-                keyword, limit, true));
+                keyword, limit, true, true));
     }
 
-    /** 产品 lookup */
+    /** 产品 lookup - 支持按经销商授权过滤（v3.4.5） */
     @GetMapping("/products")
     @Transactional(readOnly = true)
     public ApiResponse<List<Map<String, Object>>> products(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long dealerId,
             @RequestParam(defaultValue = "50") int limit) {
-        return ApiResponse.ok(genericLookup(
-                "SELECT id, code, name_cn AS name, spec, unit, current_price AS price, status FROM products",
-                "code", "name_cn",
-                new String[]{"id", "code", "name", "spec", "unit", "price", "status"},
-                keyword, limit, true));
+        UUID tid = TenantContext.getTenantId();
+        // v3.4.10: 与 AuthorizationService.check 语义一致 - 授权可以是 product_id 精确匹配 OR category 范围
+        // v3.4.9: 增加 unit_type + 从 product_prices 取 sales_price（GLOBAL 兜底）
+        StringBuilder sql = new StringBuilder(
+                "SELECT DISTINCT p.id, p.code, p.name_cn AS name, p.spec, p.unit, p.unit_type, " +
+                "p.current_price AS price, " +
+                "(SELECT sales_price FROM product_prices pp WHERE pp.product_id = p.id AND pp.partner_type='GLOBAL' " +
+                " AND pp.tenant_id = p.tenant_id LIMIT 1) AS price_retail, " +
+                "p.status FROM products p ");
+        boolean withDealer = dealerId != null;
+        if (withDealer) {
+            sql.append("JOIN authorizations a ON a.tenant_id = p.tenant_id AND a.dealer_id = :did " +
+                    "  AND COALESCE(a.status,'active') = 'active' " +
+                    "  AND (a.auth_type IS NULL OR a.auth_type = 'ORDER') " +
+                    "  AND (a.valid_from IS NULL OR a.valid_from <= CURRENT_DATE) " +
+                    "  AND (a.valid_to IS NULL OR a.valid_to >= CURRENT_DATE) " +
+                    "  AND ( " +
+                    "     a.product_id IS NULL " +   /* 通配所有产品 */
+                    "     OR a.product_id = p.id " +  /* 精确匹配 */
+                    "     OR (a.category_ids IS NOT NULL AND a.category_ids <> '' " +
+                    "         AND CAST(p.category_id AS text) = ANY(string_to_array(a.category_ids, ','))) " +
+                    "  ) ");
+        }
+        sql.append("WHERE p.tenant_id = :tid AND p.deleted_at IS NULL ");
+        if (keyword != null && !keyword.isBlank()) sql.append(" AND (p.code ILIKE :kw OR p.name_cn ILIKE :kw) ");
+        sql.append(" ORDER BY p.code LIMIT :lim");
+        var q = em.createNativeQuery(sql.toString(), Tuple.class);
+        q.setParameter("tid", tid).setParameter("lim", limit);
+        if (withDealer) q.setParameter("did", dealerId);
+        if (keyword != null && !keyword.isBlank()) q.setParameter("kw", "%" + keyword + "%");
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Tuple r : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", r.get("id"));
+            m.put("code", r.get("code"));
+            m.put("name", r.get("name"));
+            m.put("nameCn", r.get("name"));
+            m.put("spec", r.get("spec"));
+            m.put("unit", r.get("unit"));
+            m.put("unitType", r.get("unit_type") == null ? "EA" : r.get("unit_type"));
+            m.put("price", r.get("price"));
+            m.put("priceRetail", r.get("price_retail"));
+            m.put("status", r.get("status"));
+            m.put("value", r.get("id"));
+            String c = String.valueOf(r.get("code"));
+            String n = String.valueOf(r.get("name"));
+            m.put("label", c + " · " + n);
+            out.add(m);
+        }
+        return ApiResponse.ok(out);
+    }
+
+    /** v3.4.9: 供应商下拉 */
+    @GetMapping("/suppliers")
+    @Transactional(readOnly = true)
+    public ApiResponse<List<Map<String, Object>>> suppliers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "200") int limit) {
+        UUID tid = TenantContext.getTenantId();
+        StringBuilder sql = new StringBuilder("SELECT id, code, name, contact_person, contact_phone, status " +
+                "FROM suppliers WHERE tenant_id = :tid AND (deleted_at IS NULL) AND (status = 'active' OR status IS NULL) ");
+        if (keyword != null && !keyword.isBlank()) sql.append(" AND (code ILIKE :kw OR name ILIKE :kw) ");
+        sql.append(" ORDER BY code LIMIT :lim");
+        var q = em.createNativeQuery(sql.toString(), Tuple.class);
+        q.setParameter("tid", tid).setParameter("lim", limit);
+        if (keyword != null && !keyword.isBlank()) q.setParameter("kw", "%" + keyword + "%");
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Tuple r : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", r.get("id"));
+            m.put("code", r.get("code"));
+            m.put("name", r.get("name"));
+            m.put("contactPerson", r.get("contact_person") == null ? "" : r.get("contact_person"));
+            m.put("contactPhone", r.get("contact_phone") == null ? "" : r.get("contact_phone"));
+            m.put("status", r.get("status"));
+            m.put("value", r.get("id"));
+            m.put("label", r.get("code") + " · " + r.get("name"));
+            out.add(m);
+        }
+        return ApiResponse.ok(out);
     }
 
     /** 医院/终端 lookup */
@@ -61,7 +141,7 @@ public class LookupController {
                 "SELECT id, code, name, level, status FROM hospitals",
                 "code", "name",
                 new String[]{"id", "code", "name", "level", "status"},
-                keyword, limit, true));
+                keyword, limit, true, true));
     }
 
     /** 仓库 lookup */
@@ -74,7 +154,7 @@ public class LookupController {
                 "SELECT id, code, name, type, status FROM warehouses",
                 "code", "name",
                 new String[]{"id", "code", "name", "type", "status"},
-                keyword, limit, true));
+                keyword, limit, true, true));
     }
 
     /** 产品分类 lookup */
@@ -87,7 +167,7 @@ public class LookupController {
                 "SELECT id, code, name FROM product_categories",
                 "code", "name",
                 new String[]{"id", "code", "name"},
-                keyword, limit, true));
+                keyword, limit, true, true));
     }
 
     /** 区域 lookup */
@@ -155,12 +235,21 @@ public class LookupController {
     private List<Map<String, Object>> genericLookup(
             String baseSql, String codeCol, String nameCol,
             String[] outCols, String keyword, int limit, boolean filterTenant) {
+        return genericLookup(baseSql, codeCol, nameCol, outCols, keyword, limit, filterTenant, false);
+    }
+
+    private List<Map<String, Object>> genericLookup(
+            String baseSql, String codeCol, String nameCol,
+            String[] outCols, String keyword, int limit, boolean filterTenant, boolean filterDeleted) {
         StringBuilder sql = new StringBuilder(baseSql);
         Map<String, Object> params = new HashMap<>();
         List<String> conds = new ArrayList<>();
         if (filterTenant) {
             conds.add("tenant_id = :tid");
             params.put("tid", TenantContext.getTenantId());
+        }
+        if (filterDeleted) {
+            conds.add("deleted_at IS NULL");
         }
         if (keyword != null && !keyword.isBlank()) {
             conds.add("(" + codeCol + " ILIKE :kw OR " + nameCol + " ILIKE :kw)");

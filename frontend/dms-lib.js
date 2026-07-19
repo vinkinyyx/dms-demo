@@ -294,6 +294,19 @@ var DMS = (function(){
       row.querySelectorAll('[data-picker]').forEach(function(input){
         input.onclick = function(){
           var res = input.getAttribute('data-picker');
+          // v3.4.5：产品选择器传当前表单的 dealerId 用于授权过滤
+          var extra = null;
+          if (res === 'products') {
+            var dealerInput = m.box.querySelector('[data-key="dealerId"]');
+            if (dealerInput) {
+              var did = dealerInput.getAttribute('data-value');
+              if (did) extra = { dealerId: did };
+              else {
+                alert('请先选择经销商');
+                return;
+              }
+            }
+          }
           openPicker(res, function(picked){
             input.value = picked.label;
             input.setAttribute('data-value', picked.value);
@@ -302,7 +315,7 @@ var DMS = (function(){
               var unitInput = row.querySelector('[data-line-key="unitPrice"]');
               if (unitInput && !unitInput.value) unitInput.value = picked.row.price;
             }
-          });
+          }, extra);
         };
       });
       row.querySelector('.dms-line-del').onclick = function(){ row.remove(); };
@@ -493,7 +506,7 @@ var DMS = (function(){
     'org-units':{ title:'选择组织',   cols:[{k:'code',l:'编码'},{k:'name',l:'名称'},{k:'type',l:'类型'}] }
   };
 
-  function openPicker(resource, onSelect) {
+  function openPicker(resource, onSelect, extraParams) {
     var meta = PICKER_META[resource] || { title:'选择', cols:[{k:'code',l:'编码'},{k:'name',l:'名称'}] };
     var bodyHtml =
       '<div class="dms-picker-search">' +
@@ -510,7 +523,16 @@ var DMS = (function(){
     function load(){
       var kw = kwInput.value.trim();
       listBox.innerHTML = '<div class="dms-loading">加载中...</div>';
-      var q = kw ? ('?keyword=' + encodeURIComponent(kw) + '&limit=50') : '?limit=50';
+      var q = '?limit=50';
+      if (kw) q += '&keyword=' + encodeURIComponent(kw);
+      // v3.4.5 新增：支持 extraParams，例如 { dealerId: 3 } 用于授权过滤
+      if (extraParams) {
+        Object.keys(extraParams).forEach(function(k){
+          if (extraParams[k] != null && extraParams[k] !== '') {
+            q += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(extraParams[k]);
+          }
+        });
+      }
       apiCall('/api/lookups/' + resource + q).then(function(d){
         if (d.code !== 0) { listBox.innerHTML = '<div class="dms-error-hint">' + d.message + '</div>'; return; }
         var list = d.data || [];

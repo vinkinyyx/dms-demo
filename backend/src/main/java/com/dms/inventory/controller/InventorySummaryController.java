@@ -186,7 +186,7 @@ public class InventorySummaryController {
                 m.put("orderType", t.get("order_type"));
                 m.put("amount", t.get("amount_incl_tax"));
                 m.put("status", t.get("status"));
-                m.put("createdAt", String.valueOf(t.get("created_at")));
+                m.put("createdAt", com.dms.common.util.DateFmt.fmt(t.get("created_at")));
                 recentOrders.add(m);
             }
         } catch (Exception ignored) {}

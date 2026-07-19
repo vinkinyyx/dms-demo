@@ -85,6 +85,9 @@ public class Product {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
+    @Transient
+    private String categoryName;
+
     public void ensureAttrs() {
         if (attrs == null) attrs = new HashMap<>();
     }

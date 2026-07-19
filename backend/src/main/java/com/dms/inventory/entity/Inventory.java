@@ -53,6 +53,9 @@ public class Inventory {
     @Column(name = "in_source", length = 32)
     private String inSource;
 
+    @Column(name = "stock_status", length = 32)
+    private String stockStatus;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 

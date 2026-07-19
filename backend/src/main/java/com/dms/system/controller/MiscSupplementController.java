@@ -200,8 +200,8 @@ public class MiscSupplementController {
                 m.put("borrowerDealerId", t.get("borrower_dealer_id"));
                 m.put("status", t.get("status"));
                 m.put("reason", t.get("reason"));
-                m.put("createdAt", String.valueOf(t.get("created_at")));
-                m.put("completedAt", String.valueOf(t.get("completed_at")));
+                m.put("createdAt", com.dms.common.util.DateFmt.fmt(t.get("created_at")));
+                m.put("completedAt", com.dms.common.util.DateFmt.fmt(t.get("completed_at")));
                 list.add(m);
             }
 

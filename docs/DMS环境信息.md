@@ -1,8 +1,9 @@
 ﻿# DMS 项目环境信息 & 部署快照
 
-> **最后同步时间：2026-07-18**
-> **服务器版本：dms-backend:2.0.2 · nginx:1.25 · postgres:14 · redis:7**
+> **最后同步时间：2026-07-19**
+> **服务器版本：dms-backend:3.4.15 · nginx:1.25 · postgres:14 · redis:7 · Flyway 到 V18**
 > **本地目录：d:\Workspace\TRAE\DMS**
+> **换机继续开发请优先看项目根目录 `交接记忆_HANDOFF.md`**
 
 ---
 
@@ -33,7 +34,7 @@
 | Port | `5432` |
 | Database | `dms` |
 | User | `dms` |
-| Password | `dms123456` |
+| Password | `<DB_PASSWORD>` |
 | Schema | `public` |
 
 > ⚠️ 演示环境专用密码。生产环境请务必更改。
@@ -258,7 +259,7 @@ d:\Workspace\TRAE\DMS
 
 ```powershell
 # 1. 启动本地 Postgres 容器
-docker run -d --name pg-dms-local -e POSTGRES_USER=dms -e POSTGRES_PASSWORD=dms123456 -e POSTGRES_DB=dms -p 15432:5432 postgres:14-alpine
+docker run -d --name pg-dms-local -e POSTGRES_USER=dms -e POSTGRES_PASSWORD=<DB_PASSWORD> -e POSTGRES_DB=dms -p 15432:5432 postgres:14-alpine
 
 # 2. 等待启动
 Start-Sleep -Seconds 5
@@ -317,7 +318,7 @@ bash /root/deep-clean.sh    # 深度清理（含无关目录）
 | # | 问题 | 状态 |
 |---|---|---|
 | 1 | 磁盘 40GB · 已用 56% | ✅ 演示环境足够 |
-| 2 | `dms123456` 弱密码公网暴露 | ⚠️ 演示可接受，生产必改 |
+| 2 | `<DB_PASSWORD>` 弱密码公网暴露 | ⚠️ 演示可接受，生产必改 |
 | 3 | 前端表单还没读 form_configs 动态渲染 | ⏸️ 待开发（下个迭代） |
 | 4 | 销售订单 `/ship` 出库发货接口未实现 | ⏸️ 待开发 |
 | 5 | 附件/PDF/图片本机存储 | ⏸️ 演示够用，生产需接 OSS |

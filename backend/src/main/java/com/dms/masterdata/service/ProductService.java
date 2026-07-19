@@ -27,20 +27,38 @@ public class ProductService {
 
     private final ProductRepository repository;
     private final ReferenceCheckService referenceCheckService;
+    private final com.dms.execution.service.OperationLogService opLog;
+
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager em;
 
     @Transactional(readOnly = true)
     public PageResult<Product> list(PageQuery pageQuery) {
+        return list(pageQuery, null);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResult<Product> list(PageQuery pageQuery, java.util.Map<String, String> filters) {
         UUID tenantId = TenantContext.getTenantId();
-        Page<Product> page = tenantId == null
-                ? repository.findAll(pageQuery.toPageable())
-                : repository.findByTenantId(tenantId, pageQuery.toPageable());
+        var spec = com.dms.common.util.SpecUtil.<Product>byTenantAndFilters(tenantId, filters);
+        Page<Product> page = repository.findAll(spec, pageQuery.toPageable());
         return PageResult.of(page);
     }
 
     @Transactional(readOnly = true)
     public Product get(Long id) {
-        return repository.findById(id)
+        Product p = repository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "商品不存在"));
+        if (p.getCategoryId() != null) {
+            try {
+                Object name = em.createNativeQuery(
+                        "SELECT name FROM product_categories WHERE id = ?1")
+                        .setParameter(1, p.getCategoryId())
+                        .getResultList().stream().findFirst().orElse(null);
+                if (name != null) p.setCategoryName(String.valueOf(name));
+            } catch (Exception ignored) {}
+        }
+        return p;
     }
 
     @Transactional
@@ -60,12 +78,20 @@ public class ProductService {
         if (entity.getWarnMonths() == null) entity.setWarnMonths(3);
         entity.setUpdatedAt(OffsetDateTime.now());
         entity.ensureAttrs();
-        return repository.save(entity);
+        Product saved = repository.save(entity);
+        opLog.log("product", saved.getId(), "CREATE", "新建产品 " + saved.getCode());
+        return saved;
     }
 
     @Transactional
     public Product update(Long id, Product patch) {
         Product old = get(id);
+        if (patch.getCode() != null && !patch.getCode().equals(old.getCode())) {
+            if (repository.existsByTenantIdAndCode(old.getTenantId(), patch.getCode())) {
+                throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "产品编码已存在: " + patch.getCode());
+            }
+            old.setCode(patch.getCode());
+        }
         if (patch.getNameCn() != null) old.setNameCn(patch.getNameCn());
         if (patch.getNameEn() != null) old.setNameEn(patch.getNameEn());
         if (patch.getCategoryId() != null) old.setCategoryId(patch.getCategoryId());
@@ -80,7 +106,9 @@ public class ProductService {
         if (patch.getStatus() != null) old.setStatus(patch.getStatus());
         if (patch.getAttrs() != null) old.setAttrs(patch.getAttrs());
         old.setUpdatedAt(OffsetDateTime.now());
-        return repository.save(old);
+        Product saved = repository.save(old);
+        opLog.log("product", id, "UPDATE", "编辑产品 " + saved.getCode());
+        return saved;
     }
 
     @Transactional
@@ -99,5 +127,6 @@ public class ProductService {
         entity.setStatus("inactive");
         entity.setUpdatedAt(OffsetDateTime.now());
         repository.save(entity);
+        opLog.log("product", id, "DEACTIVATE", "停用产品 " + entity.getCode());
     }
 }

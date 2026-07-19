@@ -88,6 +88,10 @@ public class Dealer {
     @Column(name = "sales_owner_user_id")
     private Long salesOwnerUserId;
 
+    /** v3.4.7：所属销售岗位 */
+    @Column(name = "sales_position_id")
+    private Long salesPositionId;
+
     @Column(length = 16)
     private String status;
 

@@ -25,13 +25,18 @@ import java.util.UUID;
 public class HospitalService {
 
     private final HospitalRepository repository;
+    private final com.dms.execution.service.OperationLogService opLog;
 
     @Transactional(readOnly = true)
     public PageResult<Hospital> list(PageQuery pageQuery) {
+        return list(pageQuery, null);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResult<Hospital> list(PageQuery pageQuery, java.util.Map<String, String> filters) {
         UUID tenantId = TenantContext.getTenantId();
-        Page<Hospital> page = tenantId == null
-                ? repository.findAll(pageQuery.toPageable())
-                : repository.findByTenantId(tenantId, pageQuery.toPageable());
+        var spec = com.dms.common.util.SpecUtil.<Hospital>byTenantAndFilters(tenantId, filters);
+        Page<Hospital> page = repository.findAll(spec, pageQuery.toPageable());
         return PageResult.of(page);
     }
 
@@ -55,7 +60,9 @@ public class HospitalService {
         if (entity.getStatus() == null) entity.setStatus("active");
         entity.setUpdatedAt(OffsetDateTime.now());
         entity.ensureAttrs();
-        return repository.save(entity);
+        Hospital saved = repository.save(entity);
+        opLog.log("hospital", saved.getId(), "CREATE", "新建医院 " + saved.getCode());
+        return saved;
     }
 
     @Transactional
@@ -71,7 +78,9 @@ public class HospitalService {
         if (patch.getStatus() != null) old.setStatus(patch.getStatus());
         if (patch.getAttrs() != null) old.setAttrs(patch.getAttrs());
         old.setUpdatedAt(OffsetDateTime.now());
-        return repository.save(old);
+        Hospital saved = repository.save(old);
+        opLog.log("hospital", id, "UPDATE", "编辑医院 " + saved.getCode());
+        return saved;
     }
 
     @Transactional
@@ -81,5 +90,6 @@ public class HospitalService {
         entity.setStatus("inactive");
         entity.setUpdatedAt(OffsetDateTime.now());
         repository.save(entity);
+        opLog.log("hospital", id, "DEACTIVATE", "停用医院 " + entity.getCode());
     }
 }

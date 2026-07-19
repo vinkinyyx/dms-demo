@@ -109,7 +109,7 @@ public class SalesOutService {
 
         salesOut.setId(null);
         salesOut.setTenantId(tenantId);
-        salesOut.setCode(docNoGenerator.next("SO"));
+        salesOut.setCode(docNoGenerator.next("CK"));
         salesOut.setStatus("COMPLETED");
         salesOut.setIsRed(false);
         salesOut.setCreatedBy(TenantContext.getUserId());
@@ -172,7 +172,7 @@ public class SalesOutService {
 
         SalesOut red = SalesOut.builder()
                 .tenantId(tenantId)
-                .code(docNoGenerator.next("SO"))
+                .code(docNoGenerator.next("CK"))
                 .dealerId(origin.getDealerId())
                 .terminalId(origin.getTerminalId())
                 .businessType(origin.getBusinessType())

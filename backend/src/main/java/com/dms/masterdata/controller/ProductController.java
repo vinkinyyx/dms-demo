@@ -22,8 +22,9 @@ public class ProductController {
     private final ProductService service;
 
     @GetMapping
-    public ApiResponse<PageResult<Product>> list(@Valid PageQuery pageQuery) {
-        return ApiResponse.ok(service.list(pageQuery));
+    public ApiResponse<PageResult<Product>> list(@Valid PageQuery pageQuery,
+                                                  @RequestParam(required = false) java.util.Map<String, String> allParams) {
+        return ApiResponse.ok(service.list(pageQuery, allParams));
     }
 
     @GetMapping("/{id}")

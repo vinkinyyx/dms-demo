@@ -39,7 +39,19 @@ body {
 .error { background:#ffebee; border:1px solid #ef9a9a; color:#c62828; padding:10px 14px; border-radius:6px; margin-bottom:16px; font-size:13px; display:none; }
 .error.show { display:block; }
 .footer { text-align:center; margin-top:24px; font-size:12px; color:#999; }
-@media (max-width:768px) { .login-container { flex-direction:column; } .brand-features { display:none; } }
+@media (max-width:768px) {
+  body { padding: 0; }
+  .login-container { flex-direction:column; min-height: 100vh; border-radius: 0; box-shadow: none; max-width: 100vw; }
+  .brand-features { display:none; }
+  .login-brand { padding: 32px 24px 24px; }
+  .brand-logo { font-size: 32px; margin-bottom: 8px; }
+  .brand-name { font-size: 18px; margin-bottom: 4px; }
+  .brand-desc { font-size: 13px; }
+  .login-form { padding: 24px; }
+  .form-title { font-size: 22px; }
+  .form-group input { padding: 10px 14px; font-size: 15px; } /* 15px 防 iOS 缩放 */
+  .btn-login { padding: 14px; font-size: 15px; }
+}
 </style>
 </head>
 <body>

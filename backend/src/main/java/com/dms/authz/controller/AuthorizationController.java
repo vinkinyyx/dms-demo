@@ -30,6 +30,11 @@ public class AuthorizationController {
         return ApiResponse.ok(service.list(pageQuery));
     }
 
+    @GetMapping({"/api/authorizations/{id}", "/api/authorizations/{id}/detail"})
+    public ApiResponse<Authorization> get(@PathVariable Long id) {
+        return ApiResponse.ok(service.getDetail(id));
+    }
+
     @PostMapping("/api/authorizations")
     public ApiResponse<Authorization> create(@RequestBody Authorization request) {
         return ApiResponse.ok(service.create(request));

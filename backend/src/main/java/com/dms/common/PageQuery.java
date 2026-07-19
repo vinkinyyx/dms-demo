@@ -20,7 +20,7 @@ public class PageQuery {
     private Integer page = 1;
 
     @Min(value = 1, message = "每页数量至少 1")
-    @Max(value = 200, message = "每页数量不超过 200")
+    @Max(value = 1000, message = "每页数量不超过 1000")
     private Integer size = 20;
 
     /**

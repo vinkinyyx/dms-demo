@@ -6,7 +6,14 @@
 <title>DMS 后台管理</title>
 <link rel="stylesheet" href="/dms.css">
 <style>
-  .dms-sidebar { background:#111827; }
+  /* v3.4.13: 侧栏改为浅色白底深字，提升可读性 */
+  .dms-sidebar { background:#ffffff; border-right:1px solid #e5e7eb; }
+  .dms-sidebar .dms-logo { color:#1f2d3d; border-bottom-color: #e5e7eb; }
+  .dms-sidebar .dms-logo small { color:#8a94a6; }
+  .dms-sidebar .dms-nav-group { color:#8a94a6; }
+  .dms-sidebar .dms-nav-item { color:#374151; }
+  .dms-sidebar .dms-nav-item:hover { background:#f2f5fa; }
+  .dms-sidebar .dms-nav-item.active { background:#e8f0fe; color:#1a56db; border-left-color:#1a56db; }
   .admin-badge {
     display:inline-block;padding:2px 8px;background:#F5222D;color:#fff;
     border-radius:3px;font-size:11px;margin-left:6px;
@@ -20,8 +27,8 @@
       DMS Admin<small>后台管理 · V1.0.0</small>
     </div>
     <div class="dms-nav" id="navMenu"></div>
-    <div style="padding:20px;font-size:12px;color:rgba(255,255,255,0.5);">
-      <a href="/workspace.html" style="color:#7EB6FF;">← 返回业务工作台</a>
+    <div style="padding:20px;font-size:12px;color:#8a94a6;">
+      <a href="/workspace.html" style="color:#1a56db;">← 返回业务工作台</a>
     </div>
   </aside>
   <main class="dms-main">
@@ -78,6 +85,7 @@ var MENU_GROUPS = [
     { key:'dicts',    icon:'📖', label:'数据字典',   render:renderDicts },
     { key:'dictsCrud',icon:'🗂️', label:'字典维护',   render:renderDictsCrud },
     { key:'formCfg',  icon:'🧩', label:'字段配置(低代码)', render:renderFormConfig },
+    { key:'menuCfg',  icon:'🧭', label:'菜单管理', render:renderMenuManage },
     { key:'workflows',icon:'🔄', label:'流程配置',   render:renderWorkflows },
     { key:'rbac',     icon:'🛡️', label:'RBAC 权限矩阵', render:renderRbac }
   ]},
@@ -697,6 +705,82 @@ function delFormField(id){
     DMS.api('/api/form-configs/'+id, {method:'DELETE'}).then(function(d){
       if(d.code===0){ DMS.toast('已删除','success'); loadFormFields(); }
     });
+  });
+}
+
+// ============ v3.4.15 菜单管理（调整前台菜单所属分组/排序/显隐）============
+// 前台 workspace 菜单目录（key/默认分组/标签），与 workspace.html 的 MENU_GROUPS 对应
+var WORKSPACE_MENU_CATALOG = [
+  {key:'home',group:'概览',label:'工作台首页'},
+  {key:'products',group:'主数据管理',label:'产品管理'},
+  {key:'categories',group:'主数据管理',label:'产品分类'},
+  {key:'dealers',group:'主数据管理',label:'经销商管理'},
+  {key:'hospitals',group:'主数据管理',label:'医院/终端'},
+  {key:'warehouses',group:'主数据管理',label:'仓库管理'},
+  {key:'suppliers',group:'主数据管理',label:'供应商管理'},
+  {key:'product-prices',group:'主数据管理',label:'产品价格'},
+  {key:'contracts',group:'合同与授权',label:'合同管理'},
+  {key:'authorizations',group:'合同与授权',label:'授权管理'},
+  {key:'orders',group:'销售业务',label:'销售订单'},
+  {key:'sales-outs',group:'销售业务',label:'销售出库'},
+  {key:'sales-returns',group:'销售业务',label:'销售退货'},
+  {key:'purchase-orders',group:'采购业务',label:'采购订单'},
+  {key:'receipts',group:'采购业务',label:'收货入库'},
+  {key:'purchase-returns',group:'采购业务',label:'采购退货'},
+  {key:'inventory',group:'库存管理',label:'库存查询'},
+  {key:'stock-moves',group:'库存管理',label:'库存移动'},
+  {key:'inventory-adjustments',group:'库存管理',label:'库存调整'},
+  {key:'surgery-reports',group:'手术业务',label:'手术报台'},
+  {key:'implant-records',group:'手术业务',label:'植入记录'},
+  {key:'promotions',group:'促销与营销',label:'促销活动'},
+  {key:'users',group:'用户与权限',label:'用户管理'},
+  {key:'roles',group:'用户与权限',label:'角色管理'},
+  {key:'sales-positions',group:'销售组织',label:'销售岗位'}
+];
+var _menuCfgMap = {};
+function renderMenuManage(){
+  document.getElementById('content').innerHTML =
+    '<div class="dms-page-title">🧭 菜单管理</div>' +
+    '<div class="dms-page-sub">调整前台各菜单所属分组、排序与显隐。保存后前台刷新即生效。</div>' +
+    '<div class="dms-card"><div class="dms-card-title"><span>菜单分组配置</span>' +
+      '<div class="actions"><button class="dms-btn dms-btn-primary" onclick="saveMenuCfg()">💾 保存全部</button> ' +
+      '<button class="dms-btn" onclick="renderMenuManage()">🔄 重置</button></div></div>' +
+    '<div id="menuCfgBox"><div class="dms-loading">加载中...</div></div></div>';
+  DMS.api('/api/menu-configs').then(function(r){
+    _menuCfgMap = {};
+    if (r.code===0 && Array.isArray(r.data)) r.data.forEach(function(c){ _menuCfgMap[c.menuKey]=c; });
+    var h = '<table class="dms-table" style="width:100%;"><thead><tr>' +
+      '<th>菜单</th><th>所属分组</th><th>排序</th><th>显示</th></tr></thead><tbody>';
+    WORKSPACE_MENU_CATALOG.forEach(function(m){
+      var ov = _menuCfgMap[m.key] || {};
+      var grp = ov.group != null ? ov.group : m.group;
+      var sort = ov.sortOrder != null ? ov.sortOrder : 100;
+      var vis = ov.visible !== false;
+      h += '<tr data-key="'+m.key+'" data-label="'+m.label+'">' +
+        '<td>'+m.label+' <span style="color:#aaa;font-size:11px;">('+m.key+')</span></td>' +
+        '<td><input class="mc-group" value="'+grp+'" style="width:140px;padding:4px 6px;"></td>' +
+        '<td><input class="mc-sort" type="number" value="'+sort+'" style="width:70px;padding:4px 6px;"></td>' +
+        '<td><input class="mc-vis" type="checkbox" '+(vis?'checked':'')+'></td>' +
+        '</tr>';
+    });
+    h += '</tbody></table>';
+    document.getElementById('menuCfgBox').innerHTML = h;
+  });
+}
+function saveMenuCfg(){
+  var items = [];
+  document.querySelectorAll('#menuCfgBox tbody tr').forEach(function(tr){
+    items.push({
+      menuKey: tr.getAttribute('data-key'),
+      label: tr.getAttribute('data-label'),
+      group: tr.querySelector('.mc-group').value.trim() || '未分组',
+      sortOrder: Number(tr.querySelector('.mc-sort').value || 100),
+      visible: tr.querySelector('.mc-vis').checked
+    });
+  });
+  DMS.api('/api/menu-configs/upsert', {method:'POST', body: items}).then(function(d){
+    if (d.code===0) DMS.toast('已保存（'+(d.data&&d.data.saved)+' 项），前台刷新生效', 'success');
+    else DMS.toast('保存失败：'+d.message, 'error');
   });
 }
 

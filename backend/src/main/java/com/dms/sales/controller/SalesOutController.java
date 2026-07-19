@@ -24,10 +24,7 @@ public class SalesOutController {
 
     private final SalesOutService service;
 
-    @GetMapping
-    public ApiResponse<PageResult<SalesOut>> list(@Valid PageQuery pageQuery) {
-        return ApiResponse.ok(service.list(pageQuery));
-    }
+    // GET 已移到 BizDocListController（v3.4.6 增强字段）
 
     @PostMapping
     public ApiResponse<SalesOut> create(@RequestBody SalesOutCreateRequest request) {
