@@ -1,11 +1,28 @@
 # DMS API 接口清单（合并版）
 
-**当前版本**: v3.4.15  
-**最后更新**: 2026-07-19
+**当前版本**: v3.5.1  
+**最后更新**: 2026-07-20
 
 ---
 
 ## 变更日志
+
+### v3.5.1 (2026-07-20)
+- **导出 API 路径变更**：14个业务模块的导出接口从`GET /{module}/export`改为`GET /{module}/actions/export`，解决`/{id}`路径将"export"解析为ID导致的400错误
+  - 涉及模块：products、dealers、hospitals、warehouses、regions、suppliers、product-prices、product-categories、sales-orders、purchase-orders、receipts、stock-moves、inventory-adjustments、surgery-reports
+- **模板下载路径同步变更**：从`GET /{module}/export/template`改为`GET /{module}/actions/export/template`
+- **数据字典字段映射修复**：`GET /api/dict-items/{typeCode}`返回字段名从`code/name/seq`改为`itemCode/label/value/sortOrder/status`
+
+### v3.5.0 (2026-07-20)
+> 本次为前端 Vue3 重构迭代，**后端 API 不变**（复用 v3.4.15 全部接口）。前端新增以下调用模式与页面：
+- **前端部署**：Vue3 前端独立部署，端口 8081，Nginx 反向代理 `/api/` 到后端 `http://backend:8080`
+- **前端页面路由**（Vue Router history 模式）：
+  - PC 端：`/login`、`/`（首页仪表盘）、`/module/:key`（通用业务列表）、`/order-create`（订单创建）、`/positions`（销售岗位）、`/admin`（后台管理）
+  - 移动端 H5：`/m/login`、`/m/home`、`/m/orders`、`/m/inventory`、`/m/receipt`（扫码收货）、`/m/report`、`/m/messages`
+- **后端接口无变更**：继续使用 v3.4.15 的全部 60+ API（认证/主数据/订单/采购/库存/报表/系统等）
+- **数据字典接口**（复用既有）：`GET /api/dict-types`、`GET /api/dict-items?typeCode=xxx`
+- **租户管理接口**（复用既有）：`GET/POST/PUT /api/tenants`
+- **操作日志接口**（复用既有）：`GET /api/operation-logs?resourceType=&resourceId=`
 
 ### v3.4.15 (2026-07-19)
 - 新增 `GET /api/authorizations/{id}` 与 `/{id}/detail`：返回授权详情，含 dealerName/categoryNames/terminalNames

@@ -1,8 +1,72 @@
-﻿# DMS 项目主文档索引
+# DMS 项目主文档索引
 
-**当前版本**：v3.4.15  
-**最后更新**：2026-07-19  
-**部署**：http://<SERVER_IP>/
+**当前版本**：v3.5.1  
+**最后更新**：2026-07-20  
+**部署**：PC http://{SERVER_IP}:8081/ ，移动端 http://{SERVER_IP}:8081/m/
+
+---
+
+## 🎯 v3.5.1 交付要点
+
+- **后端路由冲突修复**：14个Controller导出API路径从`/export`改为`/actions/export`，解决`/{id}`路径解析冲突
+- **前端导出路径同步修复**：CrudView.vue导出和模板下载路径同步更新
+- **Vue模板语法修复**：Admin.vue v-else-if链修复；ReceiptEdit.vue标签闭合修复
+- **图标导入路径修复**：Element Plus图标从`@element-plus/icons-vue`导入
+- **数据字典字段映射修复**：DictCrudController返回字段名与前端匹配
+- **标准业务字典数据补充**：Flyway V19迁移新增5个字典类型及字典项
+- **收货入库优化**：PC端自动带出采购订单产品+应收数量，确认收货/取消收货需二次确认；移动端扫码收货完整流程
+- **发货出库优化**：新增SalesOutEdit.vue，自动加载出库单详情，支持部分发货/多次发货/取消发货，确认操作需二次确认
+- **列表页时间列支持**：所有业务模块列表添加createdAt和updatedAt列，默认按updatedAt倒序排序
+- **首页仪表盘恢复**：Home.vue引入Dashboard组件，显示关键指标与图表
+- **订单新建路由修复**：OrderCreate.vue修复从销售/采购订单切换时mode未更新问题
+- **移动端完整业务闭环**：MHome/MOrders/MReceipt/MShipment/MReport/MLayout完善，支持订单、收货、发货、库存、报表全流程
+
+## 📋 待完成事项
+
+### 🔧 部署与验证
+- [ ] 后端新镜像 dms-backend:3.4.16 构建与部署（代码已修改，需服务器构建验证）
+- [ ] 前端新代码构建验证（Vue模板修复后需重新构建部署）
+- [ ] 导出功能端到端测试（`/actions/export`路径）
+- [ ] 删除功能端到端测试
+- [ ] 数据字典管理功能测试
+- [ ] 收货入库/发货出库功能测试
+- [ ] 移动端完整业务流程测试
+
+### 📝 文档更新
+- [ ] docs/05_数据库设计/数据库设计.md（需更新V19迁移内容）
+- [ ] docs/06_API设计/API接口清单.md（需更新导出API路径变更）
+
+## 🧪 测试成绩
+- 后端主套件：**53/53** ✅（v3.4.15 版本）
+- v3.4.12~v3.4.15 累计补充：**12+13+6+12=43/43** ✅
+- v3.5.1 后端修复：待部署后回归验证
+- v3.5.1 前端修复：待部署后回归验证
+
+## 📦 镜像
+- 后端：`dms-backend:3.4.16`（待构建），Flyway V1-V19
+- 前端：`dms-frontend-vue:latest`（待重新构建），端口 8081
+- 4 容器 Up：backend / postgres / redis / frontend-vue（当前运行 v3.4.15）
+
+---
+
+## 🎯 v3.5.0 交付要点
+
+- **Vue3 前端全面重构**：从 Vanilla HTML/JS 迁移至 Vue 3 + Vite 5 组件化架构，PC 端 Element Plus，移动端 H5 Vant 4
+- **移动端扫码收货**：扫码优先交互，扫描序列号自动匹配收货单并累加；已扫描列表管理；部分收货步进器；整单/部分取消
+- **数据字典管理**：后台两级树管理（类型 → 项），支持增删改查，表单下拉统一从字典取数
+- **租户管理模块**：后台多租户管理，创建/编辑/状态切换，租户间数据完全隔离
+- **销售岗位管理增强**：独立左树右详情页面，岗位层级、绑定销售账号、挂载经销商，一人一位/一商一位互斥
+- **列表页全面增强**：顶部固定搜索区 + 列头漏斗筛选（传后端）+ 表头排序 + 导入导出按钮 + 分页
+- **订单创建页重设计**：独立 OrderCreate 组件，经销商/仓库/产品选择器，明细行编辑，合计金额实时计算
+- **后台管理中心**：独立 Admin.vue，包含系统概览、操作日志、通知管理、数据字典、系统参数、租户管理、菜单配置
+- **PC 端收货编辑**：进入编辑页操作收货，序列号批量录入，部分收货，执行明细留痕
+- **部署方式升级**：前端 Docker 多阶段构建（Node 构建 → Nginx 托管），Nginx 反向代理 API + history 路由
+- **后端不变**：Spring Boot 3.2 + Java 17 + Flyway V1-V18，镜像 `dms-backend:3.4.15`，API 完全兼容
+
+## 🧪 测试成绩（v3.5.0）
+- 后端主套件：**53/53** ✅（不变）
+- v3.4.12~v3.4.15 累计补充：**12+13+6+12=43/43** ✅
+- v3.5.0 前端功能：待服务器部署后全量回归验证
 
 ---
 
@@ -233,10 +297,12 @@
 
 - 后端：Spring Boot 3.2 · Java 17 · Flyway 10.11 · Hibernate 6.4
 - 数据库：PostgreSQL 14 · Redis 7
-- 前端：Vanilla HTML/JS/CSS · Material Design 3 · ECharts 5.4
+- 前端（v3.5.0+）：Vue 3 + Vite 5 + Element Plus（PC）+ Vant 4（移动端 H5）+ Pinia + Vue Router
+- 前端（历史）：Vanilla HTML/JS/CSS · 企业风主题 · ECharts 5.4
 - 部署：Docker Compose · Nginx · 阿里云 ECS
 
 ## 📦 镜像信息
-- `dms-backend:3.4.15`
+- `dms-backend:3.4.15`（后端 API，端口 8080）
+- `dms-frontend-vue:latest`（Vue 前端，端口 8081）
 - Flyway 迁移 V1-V18 全部成功
-- 4 容器 (backend/postgres/redis/nginx) 全部 Up
+- 5 容器 (backend / postgres / redis / frontend-vue / nginx) 全部 Up
