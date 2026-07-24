@@ -15,12 +15,17 @@ import com.dms.auth.dto.WechatCallbackResponse;
 import com.dms.auth.dto.WechatQrRequest;
 import com.dms.auth.dto.WechatQrResponse;
 import com.dms.auth.service.AuthService;
+import com.dms.auth.service.LoginLogService;
 import com.dms.auth.service.WechatMockService;
 import com.dms.common.ApiResponse;
 import com.dms.common.BusinessException;
 import com.dms.common.ErrorCode;
 import com.dms.common.util.TenantContext;
+import com.dms.tenant.entity.Tenant;
+import com.dms.tenant.repository.TenantRepository;
 import com.dms.user.dto.UserDTO;
+import com.dms.user.entity.User;
+import com.dms.user.repository.UserRepository;
 import com.dms.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -32,9 +37,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 认证接口：/auth/**。
- */
+import java.util.Optional;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -43,11 +48,29 @@ public class AuthController {
     private final AuthService authService;
     private final WechatMockService wechatMockService;
     private final UserService userService;
+    private final UserRepository userRepository;
+    private final TenantRepository tenantRepository;
+    private final LoginLogService loginLogService;
 
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request,
                                             HttpServletRequest httpRequest) {
-        return ApiResponse.ok(authService.login(request, resolveIp(httpRequest)));
+        String clientIp = resolveIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+        User user = null;
+        try {
+            user = locateUser(request.getTenantCode(), request.getUsername());
+            LoginResponse response = authService.login(request, clientIp);
+            if (user != null) {
+                loginLogService.logSuccess(user, "PASSWORD", clientIp, userAgent);
+            }
+            return ApiResponse.ok(response);
+        } catch (Exception e) {
+            UUID tenantId = resolveTenantId(request.getTenantCode());
+            Long userId = user != null ? user.getId() : null;
+            loginLogService.logFailure(tenantId, userId, "PASSWORD", clientIp, userAgent, e.getMessage());
+            throw e;
+        }
     }
 
     @PostMapping("/logout")
@@ -126,5 +149,31 @@ public class AuthController {
             return header.split(",")[0].trim();
         }
         return request.getRemoteAddr();
+    }
+
+    private UUID resolveTenantId(String tenantCode) {
+        if (tenantCode != null && !tenantCode.isBlank()) {
+            Optional<Tenant> tenant = tenantRepository.findByCode(tenantCode);
+            return tenant.map(Tenant::getId).orElse(null);
+        }
+        return null;
+    }
+
+    private User locateUser(String tenantCode, String username) {
+        UUID tenantId = null;
+        if (tenantCode != null && !tenantCode.isBlank()) {
+            Optional<Tenant> tenant = tenantRepository.findByCode(tenantCode);
+            if (tenant.isEmpty()) {
+                return null;
+            }
+            tenantId = tenant.get().getId();
+        }
+        if (tenantId != null) {
+            return userRepository.findByTenantIdAndUsername(tenantId, username).orElse(null);
+        }
+        return userRepository.findAll().stream()
+                .filter(u -> username.equals(u.getUsername()))
+                .findFirst()
+                .orElse(null);
     }
 }
