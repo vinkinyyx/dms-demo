@@ -324,7 +324,7 @@ public class SalesOutBatchService {
 
     private void assertSerialAvailable(UUID tid, Long warehouseId, Long productId, String batchNo, String serialNo) {
         var q = em.createNativeQuery(
-                "SELECT id FROM stock_serials WHERE tenant_id = ?1 AND warehouse_id = ?2 AND product_id = ?3 AND batch_no = ?4 AND serial_no = ?5 AND shipped_at IS NULL", Tuple.class);
+                "SELECT id FROM stock_serials WHERE tenant_id = ?1 AND warehouse_id = ?2 AND product_id = ?3 AND batch_no = ?4 AND serial_no = ?5 AND shipped_at IS NULL AND stock_status = 'QUALIFIED'", Tuple.class);
         q.setParameter(1, tid).setParameter(2, warehouseId).setParameter(3, productId).setParameter(4, batchNo).setParameter(5, serialNo);
         if (q.getResultList().isEmpty())
             throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "Serial " + serialNo + " not on hand or already shipped");

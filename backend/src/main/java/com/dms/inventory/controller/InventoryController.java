@@ -220,7 +220,7 @@ public class InventoryController {
         StringBuilder sql = new StringBuilder(
                 "SELECT id, warehouse_id, batch_no, serial_no, stock_status, received_at " +
                 "FROM stock_serials " +
-                "WHERE tenant_id = ?1 AND product_id = ?2 AND batch_no = ?3 AND shipped_at IS NULL");
+                "WHERE tenant_id = ?1 AND product_id = ?2 AND batch_no = ?3 AND shipped_at IS NULL AND stock_status = 'QUALIFIED'");
         if (warehouseId != null) sql.append(" AND warehouse_id = ?4");
         sql.append(" ORDER BY id ASC LIMIT 500");
 

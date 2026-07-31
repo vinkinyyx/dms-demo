@@ -353,9 +353,10 @@ async function loadBatchesForProduct(productId) {
 }
 
 async function loadSerialsForRow(row) {
-  if (!row?.productId || !row?.batchNo || !salesOut.warehouseId) { availableSerials.value = []; return }
+  const warehouseId = row?.warehouseId || salesOut.warehouseId
+  if (!row?.productId || !row?.batchNo || !warehouseId) { availableSerials.value = []; return }
   try {
-    const params = new URLSearchParams({ productId: String(row.productId), batchNo: row.batchNo, warehouseId: String(salesOut.warehouseId) })
+    const params = new URLSearchParams({ productId: String(row.productId), batchNo: row.batchNo, warehouseId: String(warehouseId) })
     const res = await request({ url: `/api/inventory/available-serials?${params.toString()}`, method: 'get' })
     availableSerials.value = parseList(res)
   } catch (e) { availableSerials.value = [] }
