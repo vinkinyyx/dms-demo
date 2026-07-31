@@ -232,7 +232,7 @@
 - `PUT /api/sales-orders/{id}` — 更新（仅 DRAFT）
 - `DELETE /api/sales-orders/{id}` — 删除（仅 DRAFT 软删除）
 - `POST /api/sales-orders/{id}/submit` — 提交审批
-- `POST /api/sales-orders/{id}/approve` — 审批通过并自动生成 XS-* 销售出库草稿
+- `POST /api/sales-orders/{id}/approve` — 审批通过并自动生成 GI-* 销售出库草稿
 - `POST /api/sales-orders/{id}/reject`
 - `POST /api/sales-orders/{id}/cancel` — 仅 DRAFT/APPROVED，校验并级联取消出库单
 - `GET /api/sales-orders/actions/export`、`POST /api/sales-orders/batch-import`

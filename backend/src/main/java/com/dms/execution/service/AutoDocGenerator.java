@@ -63,7 +63,7 @@ public class AutoDocGenerator {
             } catch (Exception ignored) {}
         }
 
-        String code = docNoGenerator.next(isRed ? "GIR" : "XS");
+        String code = docNoGenerator.next(isRed ? "GIR" : "GI");
         var ins = em.createNativeQuery(
                 "INSERT INTO sales_outs (tenant_id, code, dealer_id, warehouse_id, is_red, status, auto_created, source_order_id, " +
                 "amount_incl_tax, sales_date, created_at, updated_at) " +
