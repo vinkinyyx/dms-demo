@@ -12,6 +12,7 @@ import com.dms.masterdata.entity.Region;
 import com.dms.masterdata.repository.RegionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,6 +68,17 @@ public class RegionService {
         if (patch.getStatus() != null) old.setStatus(patch.getStatus());
         old.setUpdatedAt(OffsetDateTime.now());
         return repository.save(old);
+    }
+
+    @Transactional
+    public void deleteById(Long id) {
+        try {
+            repository.deleteById(id);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("删除区域失败，存在数据库外键约束: id={}", id, e);
+            throw new BusinessException(ErrorCode.HAS_REFERENCES,
+                "无法删除区域：该数据被其他业务数据引用，请先删除关联数据");
+        }
     }
 
     @Transactional

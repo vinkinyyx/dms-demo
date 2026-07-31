@@ -12,9 +12,12 @@ import com.dms.masterdata.entity.Hospital;
 import com.dms.masterdata.repository.HospitalRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.dms.masterdata.service.ReferenceCheckService;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -25,7 +28,8 @@ import java.util.UUID;
 public class HospitalService {
 
     private final HospitalRepository repository;
-    private final com.dms.execution.service.OperationLogService opLog;
+    private final ReferenceCheckService referenceCheckService;
+    private final com.dms.execution.service.AuditLogService opLog;
 
     @Transactional(readOnly = true)
     public PageResult<Hospital> list(PageQuery pageQuery) {
@@ -81,6 +85,27 @@ public class HospitalService {
         Hospital saved = repository.save(old);
         opLog.log("hospital", id, "UPDATE", "编辑医院 " + saved.getCode());
         return saved;
+    }
+
+    @Transactional
+    public void deleteById(Long id) {
+        Hospital entity = get(id);
+        var refs = referenceCheckService.hospitalReferences(id);
+        long total = referenceCheckService.totalRefs(refs);
+        if (total > 0) {
+            String desc = referenceCheckService.describe(refs);
+            log.warn("删除医院被拒绝: id={} code={} 引用={}", id, entity.getCode(), desc);
+            throw new BusinessException(ErrorCode.HAS_REFERENCES,
+                "无法删除医院：存在 " + total + " 条引用记录 (" + desc + ")");
+        }
+        try {
+            repository.deleteById(id);
+            opLog.log("hospital", id, "DELETE", "删除医院 " + entity.getCode());
+        } catch (DataIntegrityViolationException e) {
+            log.warn("删除医院失败，存在数据库外键约束: id={}", id, e);
+            throw new BusinessException(ErrorCode.HAS_REFERENCES,
+                "无法删除医院：该数据被其他业务数据引用，请先删除关联数据");
+        }
     }
 
     @Transactional

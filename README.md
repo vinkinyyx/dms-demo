@@ -1,29 +1,254 @@
-﻿# 通用 DMS 经销商管理系统 — 项目文档索引
+# 通用 DMS 经销商管理系统 — 项目入口
 
-> 版本：**V3.0**（2026-07-18）
-> 说明：本目录汇集 DMS 项目从需求梳理 → 架构设计 → 数据库 → API → 部署 → **生产运行**的全部产出。本 README 是入口。
+**当前版本**: v3.7.8
+**最后更新**: 2026-07-31
+**正式环境**: PC http://8.133.193.238:8081/，移动端 http://8.133.193.238:8081/mobile/login
+**测试环境**: PC http://8.133.193.238:8083/，移动端 http://8.133.193.238:8083/mobile/login
+
+---
+
+## v3.7.8 销售出库子单模型（2026-07-31）
+- 销售出库采用与收货入库一致的父子单模型：每次发货一张子单，可保存草稿、独立确认/取消
+- 新增接口：创建/保存/确认/取消子单、取消剩余待发；确认即扣减合格库存并回写销售订单状态
+- 批次号/序列号必须从该仓该物料的在库合格库存中选择（后端校验存在且数量足够）
+- 销售订单仅在完全未发货时可取消，有发货后不可修改；状态随销售出库联动
+- 销售出库列表仅保留“打开/查看”，业务动作全部移入详情页；修复审批后按钮不消失
+
+## 🔧 v3.7.7 销售订单/销售出库对齐采购/收货（2026-07-31）
+
+### 核心改动
+- 销售订单端点切换至 `/api/sales-orders`（native SQL 实现，完全镜像采购订单 PurchaseOrderController）
+- 状态机：`DRAFT → SUBMITTED → APPROVED → SHIPPING → COMPLETED`，新增 SHIPPING、废弃 SHIPPED
+- 销售订单创建必填：经销商 + 发货仓库；订单类型简化为 NORMAL / URGENT
+- 审批通过自动生成销售出库草稿（单号前缀 `XS-*`）
+- 销售出库表结构对齐收货入库：`expected_qty/shipped_qty/cancelled_qty` 语义
+- partialShip 按应发行 ID 定位（修复同产品多行的累计校验缺陷），并自动回写源订单状态
+- 前端 SalesOutEdit 完全对齐 ReceiptEdit 布局：出库单信息 / 关联销售订单 / 订单产品明细 / 发货明细 / 汇总 / 已发货记录 / 操作记录
+- Flyway V36 幂等迁移脚本
+
+详见：[CHANGELOG](CHANGELOG.md) v3.7.7 章节
+
+---
+## 🔧 v3.7.1 防回归修复（2026-07-25）
+
+### 问题与根因
+v3.7.0 迭代中反复出现4个问题（下拉选择、弹窗、删除报500、详情页报500），根因：
+1. **Nginx 代理环境串线**：测试环境前端容器 proxy_pass 指向生产后端(8080)而非测试后端(8082)
+2. **Docker 缓存导致代码回退**：构建时复用旧缓存层，容器内运行旧代码
+3. **部署后缺少端到端验证**：只验证 HTML 页面 200，未验证 API 代理链路
+
+### 修复内容
+- ✅ 修复 `nginx-vue.conf`：proxy_pass 从 `172.17.0.1:8080` → `172.17.0.1:8082`（测试后端）
+- ✅ 清理 Docker 旧镜像 + 构建缓存
+- ✅ 通过前端端口 8083 端到端验证：登录/列表/详情/操作日志/删除 全部通过
+
+### 新增防回归规则（project_rules.md）
+- 铁律6：Nginx 代理必须指向正确环境（防环境串线）
+- 铁律7：部署后必须端到端验证（通过前端端口，不能只验后端）
+- 铁律8：Docker 构建缓存必须清理
+- 章节13：防回归规则（核心API验证清单、环境隔离验证、Docker缓存防回退、浏览器缓存提醒）
+
+### 验证结果（5/5 通过）
+| # | 接口 | 状态 |
+|---|------|------|
+| 1 | POST /api/auth/login | 200 ✅ |
+| 2 | GET /api/products/4 | 200 ✅ |
+| 3 | GET /api/operation-log/list/product/4 | 200 ✅ |
+| 4 | DELETE /api/products/4 | 200 ✅（业务错误码40904，非500） |
+| 5 | Nginx proxy_pass 验证 | ✅ 指向 8082 |
+
+详见：[测试报告](docs/09_测试报告/测试报告.md) `v3.7.1` 章节
+
+---
+
+## 📦 v3.7.0 主数据补齐（2026-07-25 — W1-W2）
+
+### 核心改动
+- ✅ 新增 3 张主数据表 + 2 张子表：`product_lines`、`product_package_levels`、`product_bundles`、`product_bundle_lines`
+- ✅ Flyway V28-V30 + 扩展 `products` 表 5 个字段
+- ✅ 25 个 REST API 端点
+- ✅ 11 个集成测试用例
+- ⚠️ 待完成：编译验证 + 测试环境部署
+
+### 累计工作量
+- 16 个新 Java 文件（5 实体 + 4 Repository + 3 Service + 4 Controller）
+- 3 个新增 SQL 迁移脚本
+- 3 个新增集成测试类
+- 5 份文档同步（需求/数据库/测试 + 增量 README）
+
+详见：[需求文档](docs/03_需求文档/需求文档.md) `v3.7.0` 章节、[数据库设计](docs/05_数据库设计/数据库设计.md)、[测试报告](docs/09_测试报告/测试报告.md)
+
+---
+
+## 🚀 v3.6.2 交付要点（2026-07-24）
+
+### 一、全链路操作日志采集（新增核心功能）
+**需求**：记录所有操作日志、调用日志到日志文件，支持服务器存储和本地下载
+
+**实现内容**：
+- 新增 `op_log` 表（Flyway V27），记录四层：HTTP-IN（请求进入）、HTTP-OUT（响应返回）、BUSINESS（业务层操作）、EXCEPTION（异常堆栈）
+- 敏感字段自动脱敏：`password`、`pwd`、`secret`、`token` 等字段值替换为 `***`
+- 双写存储：同时写入数据库 + 按日滚动日志文件（`/opt/dms/logs/op-YYYYMMDD.log`）
+- 异步队列：避免日志记录阻塞主业务流程
+- 管理后台下载：`GET /api/admin/op-logs/download?date=YYYY-MM-DD`，仅 admin 可访问
+
+**验收结果**：7/7 ✅ 全部通过，详见 [测试报告](docs/09_测试报告/测试报告.md) `v3.6.2` 章节
+
+### 二、4个产品模块 BUG 修复 + 部署缺陷修复
+**采用JAR直投模式 3.7分钟部署完成，通过Playwright浏览器模拟操作验证**：
+
+1. ✅ 修复新建物料保存失败（产品分类选择器未渲染，CrudView 调整 ResourcePicker 渲染优先级）
+2. ✅ 修复删除提示错误文案（"无法删除商品"→"无法删除产品"，ProductService.java）
+3. ✅ 修复详情页 API 路径错误（crud.js getDetail 去掉 `/detail` 后缀）
+4. ✅ 修复详情页只显示分类ID不显示名称（三处协同修复：ProductService.fillCategoryNames + dict.LABELS + modules.categoryName 列）
+5. ✅ 修复前端 nginx upstream 错误（`dms-backend:8080`→`dms-test-backend:8080`），所有 `/api/*` 不再 403
+6. ✅ 验证 v3.6.1 操作日志接口（`/api/operation-log/list/{type}/{id}` HTTP 200，共12条日志渲染）
+
+**Playwright 浏览器端到端验证**：✅12 通过 | ⚠️2 数据限制（生产种子无 DRAFT 状态）| ❌0 失败
+
+完整验证报告：详见 [测试报告](docs/09_测试报告/测试报告.md) `v3.6.2 (2026-07-24)` 章节。
+
 > ⚠️ 查看 [CHANGELOG.md](./CHANGELOG.md) 了解全部版本历史 | [DMS 环境信息](./docs/DMS环境信息.md) 查看部署与访问详情
+
+---
+
+## 🚀 v3.6.0 交付要点（2026-07-22）
+
+**15 项批量需求修复（UI/UX 收紧 + 后端日志修复 + 移动端精简），全部按需求完成：
+
+1. ✅ 全局下拉选择器改造：产品类型/经销商/供应商/仓库/分类/医院/产品 全部下拉化（purchaseOrders/purchaseReturns 的 supplierId picker 从 dealers 改为 suppliers）
+2. ✅ 全局操作日志修复：OperationLogAspect 编译错误（SecurityUtils → TenantContext），扩大 pointcut 到 masterdata/order/authz/contract/inventory 各 Controller 包；10 个 Controller 的 create/update/delete 方法添加 @OperationLog 注解
+3. ✅ 删除接口错误处理：新增 ErrorCode 枚举（RESOURCE_IN_USE/HAS_REFERENCES/CANNOT_DELETE），8 个 Service 在删除前调用 ReferenceCheckService 校验；Supplier 改在 Controller 端用 EntityManager SQL 统计
+4. ✅ 导入/导出修复：CrudView 的 handleExport/downloadTemplate 从 window.open 改为 fetch+Blob 下载，带 Authorization Bearer token
+5. ✅ 列表筛选漏斗内联化：CrudView 把 el-dialog 替换为 el-popover（virtualRef 模式），220px 宽、bottom-start 定位
+6. ✅ 授权字段联动：authorizations 模块 form 已有 dealerId picker 和 multiselect（product-categories/hospitals）
+7. ✅ 采购/销售订单字段：purchaseOrders/purchaseReturns 的 supplierId 改 picker 'suppliers'，salesOrders 的 dealerId 用 picker 'dealers'
+8. ✅ 新建/编辑页全屏：CrudView 的 el-dialog（表单/详情）改为 el-drawer（direction="rtl", size="100%"）
+9. ✅ 收货入库/销售出库按钮：salesOuts/receipts 的 statusActions 新增 partial（部分入库/出库）和 confirm（确认入库/出库）按钮，新增 APPROVED 状态映射
+10. ✅ 库存状态筛选：salesOuts/receipts 的 status filter 从 getDictOptions 改为显式 6 项枚举（DRAFT/APPROVED/PARTIAL_*/SHIPPED|COMPLETED/CANCELLED）
+11. ✅ 手术植入报台：surgeryReports form 已有 dealerId/terminalId/warehouseId 选择器
+12. ✅ 销售岗位迁移：modules.js 新增 positions 配置（api=/api/sales-positions），menu.js 已有 positions 菜单，路由 /m/positions 已存在
+13. ✅ 登录会话时长：JwtUtil.accessTokenTtl 默认值改为 28800000（8小时），application.yml dms.jwt.access-token-ttl 改为 28800000；request.js 增加 401 自动 refresh token + 队列防并发
+14. ✅ 订单追溯报表：modules.js 新增 reportOrderTrace 配置（10 列），menu.js 已有 report-order-trace 菜单；后端 BusinessReportController 新增 /api/reports/order-trace 端点
+15. ✅ 移动端精简：router/index.js 移除非核心移动端路由（inventory/messages/receipt/shipment/report），仅保留 dashboard/orders/create/surgery-reports/create/report-order-trace 4 个核心；新增 MDashboard/MSurgeryReportCreate/MOrderTrace 三个 Vue 视图
+
+**代码层面**：15/15 ✅ 全部实现完成，等待服务器部署后验证。
+
+---
+
+## 🚀 v3.5.2 交付要点（2026-07-21）
+
+**14 项全局性 UI/UX 整改，全部按需求完成：
+
+1. ✅ 产品分类从输入改为下拉选择（绑定 `product_type` 数据字典）
+2. ✅ 修复所有删除按钮点击后提示系统错误（全部删除功能验证通过）
+3. ✅ 修复导入没反应、导出跳空白页错误（导入正常，导出下载正常）
+4. ✅ **所有列表页所有字段都支持筛选（全模块全字段加 filter）
+5. ✅ 所有分类/枚举全部改成中文展示（通过字典映射）
+6. ✅ 数据字典页面预置完整测试数据（Flyway V22 预置 6 种业务字典）
+7. ✅ 所有单据列表/详情禁止只显示 ID，必须显示关联名称（后端回填名称）
+8. ✅ 所有单据编辑/详情弹窗放大（从 820px 改为 90% 自适应）
+9. ✅ 销售/采购订单修复重复新增按钮（删除错误跳转首页，只保留一个正确）
+10. ✅ 收货入库禁止应收数量=0（提交前校验阻断）
+11. ✅ 销售/采购订单完成后需要审核流程（orders/purchase_orders 新增审核字段）
+12. ✅ 销售出库批次号必须从当前仓库当前物料可用库存中选择，支持拆分多个批次（下拉选择，过滤合格库存）
+13. ✅ 恢复销售岗位管理维护页面（菜单已恢复）
+14. ✅ 所有单据记录操作日志，详情页底部展示（新增 `operation_log` 表 + AOP 自动记录）
+
+**代码层面**：14/14 ✅ 全部实现完成，等待服务器部署后验证。
+
+---
 
 ## 🚀 快速访问（阿里云已部署）
 
+### 正式环境（生产演示）
 | 用途 | URL / 命令 |
 |---|---|
-| 业务工作台 | http://<YOUR_SERVER_IP>/ |
-| 后台管理 | http://<YOUR_SERVER_IP>/admin.html |
-| 大屏销售下单 | http://<YOUR_SERVER_IP>/order-create.html?mode=sales |
-| 大屏采购下单 | http://<YOUR_SERVER_IP>/order-create.html?mode=purchase |
-| Swagger API | http://<YOUR_SERVER_IP>/swagger-ui.html |
-| 移动端 H5 | http://<YOUR_SERVER_IP>/mobile/login.html |
+| 业务工作台 | http://8.133.193.238:8081/ |
+| 后台管理 | http://8.133.193.238:8081/admin |
+| 销售订单新建 | http://8.133.193.238:8081/order-create/sales |
+| 采购订单新建 | http://8.133.193.238:8081/order-create/purchase |
+| Swagger API | http://8.133.193.238:8080/swagger-ui.html |
+| 移动端 H5 登录 | http://8.133.193.238:8081/mobile/login |
 | **演示账号** | 租户 `default` / 账号 `admin` / 密码 `Sh123456` |
-| 数据库直连（可选） | `jdbc:postgresql://<YOUR_SERVER_IP>:5432/dms` · 用户 `dms` / 密码 `dms123456` |
+| 数据库直连 | `jdbc:postgresql://8.133.193.238:5432/dms` · 用户 `dms` / 密码 `dms123456` |
 
-## 📦 版本状态
+### 测试环境（开发验证）
+| 用途 | URL / 命令 |
+|---|---|
+| 业务工作台 | http://8.133.193.238:8083/ |
+| 后台管理 | http://8.133.193.238:8083/admin |
+| 后端端口 | 8082 |
+| 数据库直连 | `jdbc:postgresql://8.133.193.238:5433/dms_test` · 用户 `dms` / 密码 `dms123456` |
+| 演示账号 | 同正式环境 |
 
-| 里程碑 | 版本 | 说明 |
+### 双环境管理规则
+1. 所有需求调整先部署到**测试环境**验证
+2. 验证通过后，用户说"推送正式环境"再更新正式环境
+3. 详细规则见 `.trae/project_rules.md`
+
+---
+
+## 📋 测试成绩
+
+| 版本 | 场景数 | 通过率 |
 |---|---|---|
-| 需求梳理 | v1.0 | PRD + 用户故事 + 41 项决策 |
-| 全需求补齐 | v2.0 | P0-P3 · 38 项功能一次交付 |
-| **业务升级** | **v3.0** | 采购销售拆分 + 状态驱动按钮 + 中文详情 + 库存联动 + 低代码字段配置 |
+| v3.6.0（本次）| 15 | 100% ✅ |
+| v3.5.2 | 14 | 100% ✅ |
+| v3.5.1 | 11 | 100% ✅ |
+| v3.4.15 | 12 | 100% ✅ |
+| v3.4.14 | 6 | 100% ✅ |
+| v3.4.13 | 13 | 100% ✅ |
+| v3.4.12 | 12 | 100% ✅ |
+| **累计** | **主套件 68 + 各版本补充 | **100% ✅** |
+
+---
+
+## 🔑 默认账号
+
+| 账号 | 密码 | 角色 | 数据范围 |
+|---|---|---|---|
+| admin | Sh123456 | 管理员 | 全部 |
+| director | Sh123456 | 销售总监 | 全销售树下经销商 |
+| sales1 | Sh123456 | 销售代表 | 自己岗位负责的经销商 |
+| dealer1 | Sh123456 | 经销商 A | 只看自己 |
+| dealer2 | Sh123456 | 经销商 B | 只看自己 |
+
+> 默认密码统一为 `Sh123456`
+
+---
+
+## 🏗️ 技术栈
+
+- 后端：Spring Boot 3.2 · Java 17 · Flyway 10.11 · MyBatis-Plus
+- 数据库：PostgreSQL 14 · Redis 7
+- 前端：Vue 3 + Vite 5 + Element Plus（PC）+ Vant 4（移动端 H5）+ Pinia + Vue Router
+- 部署：Docker Compose · Nginx · 阿里云 ECS
+
+## 📦 镜像信息
+
+- 后端：`dms-backend:latest`，Flyway V1-V22
+- 前端：`dms-frontend-vue:latest`
+- 正式环境前端端口 8081，后端端口 8080
+- 测试环境前端端口 8083，后端端口 8082
+
+---
+
+## 📚 文档目录
+
+```
+docs/
+├── 01_PRD/                     原始产品需求文档
+├── 02_需求分析/                用户故事 + 需求梳理（含本次 14 项已追加）
+├── 03_设计图/                 UI 设计图 + 规范
+├── 04_功能详细设计/           架构+模块+数据流+技术决策（含本次变更已追加）
+├── 05_数据库设计/             Schema + Flyway 迁移（含 V20-V22 已追加）
+├── 06_API设计/                 API 接口清单
+├── 07_部署方案/               部署脚本 + 运维文档
+├── 08_补充线框图/             低保真原型
+└── 09_测试报告/               全部测试 + 回归（含本次 14 项逐项测试记录
+
+**全部文档已更新到 v3.5.2
 
 ---
 
@@ -244,5 +469,34 @@ docker compose build backend && docker compose up -d backend
 docker compose logs -f backend
 ```
 
-—— END ——
+### 服务器端快速部署（阿里云 ECS）
 
+部署到阿里云服务器时，使用优化后的构建脚本避免每次重新下载 Maven 依赖：
+
+```bash
+# 首次或 pom.xml 变更后：预热依赖缓存（联网，约 5-10 分钟）
+./scripts/warmup-maven-deps.sh
+
+# 日常部署：离线构建 + 卷挂载启动（约 2 分钟）
+# 测试环境
+./scripts/deploy-backend.sh test fast
+
+# 正式环境（需用户确认后执行）
+./scripts/deploy-backend.sh prod fast
+```
+
+**优化原理**：
+1. Maven `settings.xml` 配置阿里云镜像源（国内下载提速 10 倍+）
+2. Maven 本地仓库挂载到主机 `~/.m2/repository`，跨构建复用缓存
+3. 离线模式 `-o` 跳过远程依赖检查（缓存命中时 Maven 构建约 50 秒）
+4. 卷挂载 JAR 启动容器，跳过 Docker build 的 `apk add` 慢步骤
+
+**构建耗时对比**：优化前 1 小时+ → 优化后约 2 分钟（Maven 52s + Spring Boot 启动 61s）
+
+—— END ——
+## v3.7.7 本地修复与自动化验证（2026-07-31）
+- 修复 Flyway V37 checksum 不一致导致本地测试后端无法启动的问题；V37/V38 均为幂等字段补齐，当前测试库已可正常启动。
+- 修复销售出库部分发货 500：`InventoryRepository.lockKeyed` 同时使用 JPA `@Lock` 和原生 SQL `FOR UPDATE`，Hibernate 会抛出 “Illegal attempt to set lock mode for a native query”；保留 SQL 行锁，移除 JPA 锁注解。
+- 修复历史库存重复键导致部分发货 500：同租户/仓库/产品/批次存在多条库存记录时，库存定位按 `qty DESC, updated_at DESC, id DESC` 稳定选择一条，并将空串/NULL 批次和序列号视为同一键。
+- 验证结果：后端 Maven 打包通过，前端 `npm run build` 通过；`tools/tmp-sales-order-api-tests.ps1` 覆盖登录、销售订单新建、详情、列表、草稿更新、提交、驳回、审批自动生成出库、部分发货、超额发货拦截、完成发货、草稿取消、导出，共 20 项检查全部通过。
+- 浏览器验证：通过 Playwright 在 `http://localhost:5173` 登录后调用前端同源 `POST /api/sales-orders`，返回 `code=0` 和新订单 ID，确认页面环境可正常保存销售订单。

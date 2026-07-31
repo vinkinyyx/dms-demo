@@ -17,7 +17,7 @@ import java.util.*;
 
 @RestController
 @RequiredArgsConstructor
-public class OperationLogController {
+public class ExecutionOperationLogController {
 
     private final EntityManager em;
 

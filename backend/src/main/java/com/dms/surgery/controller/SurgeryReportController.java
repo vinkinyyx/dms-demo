@@ -13,9 +13,15 @@
  */
 package com.dms.surgery.controller;
 
+import com.dms.annotation.OperationLog;
 import com.dms.common.ApiResponse;
+import com.dms.common.enums.OperationAction;
 import com.dms.common.BusinessException;
 import com.dms.common.ErrorCode;
+import com.dms.common.util.ExcelExportUtils;
+import com.dms.common.util.ExcelImportUtils;
+import com.dms.common.util.ContentDispositionUtils;
+import org.springframework.web.multipart.MultipartFile;
 import com.dms.common.util.TenantContext;
 import com.dms.inventory.service.InventoryStatusOps;
 import com.dms.org.controller.SalesOrgResolver;
@@ -23,6 +29,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -124,6 +133,7 @@ public class SurgeryReportController {
 
     @PostMapping
     @Transactional
+    @OperationLog(businessType = "surgeryReport", action = OperationAction.CREATE, remark = "手术报台-创建")
     public ApiResponse<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         UUID tid = TenantContext.getTenantId();
         Long uid = TenantContext.getUserId();
@@ -296,6 +306,157 @@ public class SurgeryReportController {
         String role;
         Long salesUserId;
         Long dealerId;
+    }
+
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        UUID tid = TenantContext.getTenantId();
+        int aff = em.createNativeQuery("UPDATE surgery_reports SET deleted_at = now() WHERE id = ?1 AND tenant_id = ?2")
+                .setParameter(1, id).setParameter(2, tid).executeUpdate();
+        if (aff == 0) throw new BusinessException(ErrorCode.NOT_FOUND, "手术报台单不存在");
+        return ApiResponse.ok();
+    }
+
+    @GetMapping("/actions/export")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ResponseEntity<byte[]> export() throws Exception {
+        UUID tid = TenantContext.getTenantId();
+        Long uid = TenantContext.getUserId();
+        UserCtx ctx = loadUserCtx(uid);
+
+        Set<Long> allowed = SalesOrgResolver.resolveAccessibleDealerIds(em, tid,
+                ctx.role, ctx.salesUserId, ctx.dealerId);
+
+        String where = "WHERE tenant_id = ?1 AND (deleted_at IS NULL)";
+        if (allowed != null) {
+            if (allowed.isEmpty()) {
+                List<Map<String, Object>> list = Collections.emptyList();
+                String[] headers = {"ID", "报台单号", "经销商ID", "终端ID", "仓库ID", "销售用户ID", "手术日期", "患者信息", "医生姓名", "状态", "备注", "创建时间", "更新时间", "创建人", "更新人", "经销商名称", "终端名称", "仓库名称"};
+                String[] fieldNames = {"id", "code", "dealerId", "terminalId", "warehouseId", "salesUserId", "surgeryDate", "patientInfo", "doctorName", "status", "remark", "createdAt", "updatedAt", "createdBy", "updatedBy", "dealerName", "terminalName", "warehouseName"};
+                byte[] excelBytes = ExcelExportUtils.exportMapToExcel(list, headers, fieldNames);
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionUtils.attachment("手术报台列表.xlsx"))
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .body(excelBytes);
+            }
+            where += " AND dealer_id = ANY(?2)";
+        }
+
+        String listSql = "SELECT sr.id, sr.code, sr.dealer_id, sr.terminal_id, sr.warehouse_id, sr.sales_user_id, " +
+                " sr.surgery_date, sr.patient_info, sr.doctor_name, sr.status, sr.remark, sr.created_at, sr.updated_at, sr.created_by, sr.updated_by, " +
+                " d.name AS dealer_name, h.name AS terminal_name, w.name AS warehouse_name " +
+                "FROM surgery_reports sr " +
+                "LEFT JOIN dealers d ON d.id = sr.dealer_id " +
+                "LEFT JOIN hospitals h ON h.id = sr.terminal_id " +
+                "LEFT JOIN warehouses w ON w.id = sr.warehouse_id " +
+                where.replace("tenant_id", "sr.tenant_id").replace("deleted_at", "sr.deleted_at").replace("dealer_id", "sr.dealer_id") +
+                " ORDER BY sr.updated_at DESC NULLS LAST, sr.id DESC";
+        var lq = em.createNativeQuery(listSql, Tuple.class);
+        lq.setParameter(1, tid);
+        if (allowed != null) { lq.setParameter(2, allowed.toArray(new Long[0])); }
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = lq.getResultList();
+
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.get("id"));
+            m.put("code", t.get("code"));
+            m.put("dealerId", t.get("dealer_id"));
+            m.put("dealerName", t.get("dealer_name"));
+            m.put("terminalId", t.get("terminal_id"));
+            m.put("terminalName", t.get("terminal_name"));
+            m.put("warehouseId", t.get("warehouse_id"));
+            m.put("warehouseName", t.get("warehouse_name"));
+            m.put("salesUserId", t.get("sales_user_id"));
+            m.put("surgeryDate", com.dms.common.util.DateFmt.fmt(t.get("surgery_date")));
+            m.put("patientInfo", t.get("patient_info"));
+            m.put("doctorName", t.get("doctor_name"));
+            m.put("status", t.get("status"));
+            m.put("remark", t.get("remark"));
+            m.put("createdAt", com.dms.common.util.DateFmt.fmt(t.get("created_at")));
+            m.put("updatedAt", com.dms.common.util.DateFmt.fmt(t.get("updated_at")));
+            m.put("createdBy", t.get("created_by"));
+            m.put("updatedBy", t.get("updated_by"));
+            list.add(m);
+        }
+
+        String[] headers = {"ID", "报台单号", "经销商ID", "终端ID", "仓库ID", "销售用户ID", "手术日期", "患者信息", "医生姓名", "状态", "备注", "创建时间", "更新时间", "创建人", "更新人", "经销商名称", "终端名称", "仓库名称"};
+        String[] fieldNames = {"id", "code", "dealerId", "terminalId", "warehouseId", "salesUserId", "surgeryDate", "patientInfo", "doctorName", "status", "remark", "createdAt", "updatedAt", "createdBy", "updatedBy", "dealerName", "terminalName", "warehouseName"};
+
+        byte[] excelBytes = ExcelExportUtils.exportMapToExcel(list, headers, fieldNames);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=surgery-reports.xlsx")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(excelBytes);
+    }
+
+    @PostMapping("/batch-import")
+    @Transactional
+    public ApiResponse<java.util.Map<String, Object>> batchImport(@RequestParam("file") MultipartFile file) throws Exception {
+        if (file.isEmpty()) {
+            return ApiResponse.fail(40001, "请选择要导入的文件");
+        }
+
+        java.util.List<java.util.Map<String, Object>> data = ExcelImportUtils.importFromExcel(file.getInputStream(), file.getOriginalFilename());
+        if (data.isEmpty()) {
+            return ApiResponse.fail(40002, "Excel 文件中没有数据");
+        }
+
+        int success = 0, failed = 0;
+        java.util.List<java.util.Map<String, Object>> errors = new java.util.ArrayList<>();
+
+        for (int i = 0; i < data.size(); i++) {
+            java.util.Map<String, Object> row = data.get(i);
+            try {
+                Long dealerId = toLong(row.get("经销商ID"));
+                Long terminalId = toLong(row.get("终端ID"));
+                Long warehouseId = toLong(row.get("仓库ID"));
+                String surgeryDate = strOr(row.get("手术日期"), null);
+                String patientInfo = strOr(row.get("患者信息"), null);
+                String doctorName = strOr(row.get("医生姓名"), null);
+                String status = strOr(row.get("状态"), "DRAFT");
+
+                if (dealerId == null) {
+                    throw new IllegalArgumentException("经销商ID不能为空");
+                }
+                if (terminalId == null) {
+                    throw new IllegalArgumentException("终端ID不能为空");
+                }
+                if (warehouseId == null) {
+                    throw new IllegalArgumentException("仓库ID不能为空");
+                }
+
+                String sql = "INSERT INTO surgery_reports (dealer_id, terminal_id, warehouse_id, surgery_date, patient_info, doctor_name, status, tenant_id) " +
+                        "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)";
+                em.createNativeQuery(sql)
+                        .setParameter(1, dealerId)
+                        .setParameter(2, terminalId)
+                        .setParameter(3, warehouseId)
+                        .setParameter(4, surgeryDate)
+                        .setParameter(5, patientInfo)
+                        .setParameter(6, doctorName)
+                        .setParameter(7, status)
+                        .setParameter(8, TenantContext.getTenantId())
+                        .executeUpdate();
+                success++;
+            } catch (Exception e) {
+                failed++;
+                java.util.Map<String, Object> err = new java.util.LinkedHashMap<>();
+                err.put("row", i + 2);
+                err.put("error", e.getMessage());
+                errors.add(err);
+            }
+        }
+
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("total", data.size());
+        result.put("success", success);
+        result.put("failed", failed);
+        result.put("errors", errors);
+        return ApiResponse.ok(result);
     }
 
     private Long toLong(Object o) {

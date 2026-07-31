@@ -61,6 +61,11 @@ public class OrderService {
     @PersistenceContext
     private jakarta.persistence.EntityManager em;
 
+    @Transactional
+    public void deleteById(Long id) {
+        orderRepository.deleteById(id);
+    }
+
     @Transactional(readOnly = true)
     public PageResult<Order> list(PageQuery pageQuery) {
         UUID tenantId = TenantContext.getTenantId();

@@ -42,13 +42,15 @@ public class SalesPositionController {
                 .setParameter(1, tid).getSingleResult()).longValue();
 
         var q = em.createNativeQuery(
-                "SELECT sp.id, sp.code, sp.name, sp.level, sp.parent_id, sp.region, sp.status, " +
+                "SELECT sp.id, sp.code, sp.name, sp.level, sp.parent_id, sp.region, sp.status, sp.sort_order, " +
                 "  (SELECT username FROM users u WHERE u.sales_position_id = sp.id LIMIT 1) AS bound_user, " +
                 "  (SELECT id FROM users u WHERE u.sales_position_id = sp.id LIMIT 1) AS bound_user_id, " +
                 "  (SELECT COUNT(*) FROM dealers d WHERE d.sales_position_id = sp.id) AS dealer_count, " +
+                "  (SELECT COUNT(*) FROM position_users pu WHERE pu.position_id = sp.id) AS position_user_count, " +
+                "  (SELECT COUNT(*) FROM position_dealers pd WHERE pd.position_id = sp.id) AS position_dealer_count, " +
                 "  sp.created_at, sp.updated_at " +
                 "FROM sales_positions sp WHERE sp.tenant_id = ?1 AND sp.deleted_at IS NULL " +
-                "ORDER BY sp.level, sp.id LIMIT ?2 OFFSET ?3", Tuple.class);
+                "ORDER BY sp.sort_order, sp.level, sp.id LIMIT ?2 OFFSET ?3", Tuple.class);
         q.setParameter(1, tid).setParameter(2, size).setParameter(3, offset);
         @SuppressWarnings("unchecked")
         List<Tuple> rows = q.getResultList();
@@ -63,9 +65,12 @@ public class SalesPositionController {
             m.put("parentId", t.get("parent_id") == null ? "" : t.get("parent_id"));
             m.put("region", t.get("region") == null ? "" : t.get("region"));
             m.put("status", t.get("status"));
+            m.put("sortOrder", t.get("sort_order"));
             m.put("boundUser", t.get("bound_user") == null ? "" : t.get("bound_user"));
             m.put("boundUserId", t.get("bound_user_id") == null ? "" : t.get("bound_user_id"));
             m.put("dealerCount", t.get("dealer_count"));
+            m.put("positionUserCount", t.get("position_user_count"));
+            m.put("positionDealerCount", t.get("position_dealer_count"));
             m.put("createdAt", com.dms.common.util.DateFmt.fmt(t.get("created_at")));
             m.put("updatedAt", com.dms.common.util.DateFmt.fmt(t.get("updated_at")));
             list.add(m);
@@ -77,18 +82,28 @@ public class SalesPositionController {
     }
 
     /**
-     * v3.4.8: 仅返回销售角色的用户，供岗位绑定时使用
-     * 返回字段：id, username, name, boundPositionId, boundPositionName
+     * v3.7.3: 返回销售/经销商角色的用户，供岗位绑定时使用
+     * 返回字段：id, username, name, userType, boundPositionId, boundPositionName
+     * v3.4.8: 仅返回销售角色的用户
      */
     @GetMapping("/candidate-users")
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
-    public ApiResponse<List<Map<String, Object>>> candidateUsers() {
+    public ApiResponse<List<Map<String, Object>>> candidateUsers(
+            @RequestParam(required = false) String role) {
         UUID tid = TenantContext.getTenantId();
-        var q = em.createNativeQuery(
-                "SELECT u.id, u.username, u.name, u.sales_position_id, sp.name AS position_name " +
+        StringBuilder sql = new StringBuilder(
+                "SELECT u.id, u.username, u.name, u.role, u.sales_position_id, sp.name AS position_name " +
                 "FROM users u LEFT JOIN sales_positions sp ON sp.id = u.sales_position_id " +
-                "WHERE u.tenant_id = ?1 AND u.role = 'sales' AND (u.deleted_at IS NULL) " +
-                "ORDER BY u.username", Tuple.class);
+                "WHERE u.tenant_id = ?1 AND u.deleted_at IS NULL ");
+        if ("sales".equals(role)) {
+            sql.append("AND u.role = 'sales' ");
+        } else if ("dealer".equals(role)) {
+            sql.append("AND u.role = 'dealer' ");
+        } else {
+            sql.append("AND u.role IN ('sales', 'dealer') ");
+        }
+        sql.append("ORDER BY u.role, u.username");
+        var q = em.createNativeQuery(sql.toString(), Tuple.class);
         q.setParameter(1, tid);
         @SuppressWarnings("unchecked")
         List<Tuple> rows = q.getResultList();
@@ -98,6 +113,7 @@ public class SalesPositionController {
             m.put("id", t.get("id"));
             m.put("username", t.get("username"));
             m.put("name", t.get("name") == null ? "" : t.get("name"));
+            m.put("userType", t.get("role"));
             m.put("boundPositionId", t.get("sales_position_id") == null ? "" : t.get("sales_position_id"));
             m.put("boundPositionName", t.get("position_name") == null ? "" : t.get("position_name"));
             list.add(m);
@@ -110,10 +126,12 @@ public class SalesPositionController {
     public ApiResponse<List<Map<String, Object>>> tree() {
         UUID tid = TenantContext.getTenantId();
         var q = em.createNativeQuery(
-                "SELECT sp.id, sp.code, sp.name, sp.level, sp.parent_id, sp.region, " +
+                "SELECT sp.id, sp.code, sp.name, sp.level, sp.parent_id, sp.region, sp.status, sp.sort_order, " +
                 "  (SELECT username FROM users u WHERE u.sales_position_id = sp.id LIMIT 1) AS bound_user, " +
-                "  (SELECT COUNT(*) FROM dealers d WHERE d.sales_position_id = sp.id) AS dealer_count " +
-                "FROM sales_positions sp WHERE sp.tenant_id = ?1 AND sp.deleted_at IS NULL ORDER BY sp.level, sp.id",
+                "  (SELECT COUNT(*) FROM dealers d WHERE d.sales_position_id = sp.id) AS dealer_count, " +
+                "  (SELECT COUNT(*) FROM position_users pu WHERE pu.position_id = sp.id) AS user_count, " +
+                "  (SELECT COUNT(*) FROM position_dealers pd WHERE pd.position_id = sp.id) AS bind_dealer_count " +
+                "FROM sales_positions sp WHERE sp.tenant_id = ?1 AND sp.deleted_at IS NULL ORDER BY sp.sort_order, sp.level, sp.id",
                 Tuple.class);
         q.setParameter(1, tid);
         @SuppressWarnings("unchecked")
@@ -128,8 +146,12 @@ public class SalesPositionController {
             node.put("name", t.get("name"));
             node.put("level", t.get("level"));
             node.put("region", t.get("region"));
+            node.put("status", t.get("status"));
+            node.put("sortOrder", t.get("sort_order"));
             node.put("boundUser", t.get("bound_user"));
             node.put("dealerCount", t.get("dealer_count"));
+            node.put("userCount", t.get("user_count"));
+            node.put("bindDealerCount", t.get("bind_dealer_count"));
             node.put("children", new ArrayList<>());
             map.put(id, node);
         }
@@ -312,6 +334,123 @@ public class SalesPositionController {
             res.put("dealerIds", ids);
         }
         return ApiResponse.ok(res);
+    }
+
+    @PostMapping("/{id}/bind-users")
+    @Transactional
+    public ApiResponse<Map<String, Object>> bindUsers(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Object> userIds = (List<Object>) body.getOrDefault("userIds", Collections.emptyList());
+
+        em.createNativeQuery("UPDATE users SET sales_position_id = NULL WHERE sales_position_id = ?1")
+                .setParameter(1, id).executeUpdate();
+
+        int count = 0;
+        for (Object o : userIds) {
+            Long uid = toLong(o);
+            if (uid == null) continue;
+            var chk = em.createNativeQuery("SELECT sales_position_id FROM users WHERE id = ?1");
+            chk.setParameter(1, uid);
+            Object cur = null;
+            try { cur = chk.getSingleResult(); } catch (Exception ignored) {}
+            if (cur != null && !((Number) cur).equals(id)) continue;
+            em.createNativeQuery("UPDATE users SET sales_position_id = ?1 WHERE id = ?2")
+                    .setParameter(1, id).setParameter(2, uid).executeUpdate();
+            count++;
+        }
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("positionId", id); res.put("boundCount", count);
+        return ApiResponse.ok(res);
+    }
+
+    /**
+     * v3.7.3: 返回岗位下的销售/经销商账号，支持按角色过滤
+     * GET /api/sales-positions/{id}/users?role=sales|dealer
+     */
+    @GetMapping("/{id}/users")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ApiResponse<List<Map<String, Object>>> getPositionUsers(@PathVariable Long id,
+                                                                    @RequestParam(required = false) String role) {
+        UUID tid = TenantContext.getTenantId();
+        StringBuilder sql = new StringBuilder(
+                "SELECT u.id, u.username, u.name, u.role " +
+                "FROM users u WHERE u.tenant_id = ?1 AND u.sales_position_id = ?2 AND u.deleted_at IS NULL ");
+        if ("sales".equals(role)) sql.append("AND u.role = 'sales' ");
+        else if ("dealer".equals(role)) sql.append("AND u.role = 'dealer' ");
+        sql.append("ORDER BY u.role, u.username");
+        var q = em.createNativeQuery(sql.toString(), Tuple.class);
+        q.setParameter(1, tid).setParameter(2, id);
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.get("id"));
+            m.put("username", t.get("username"));
+            m.put("name", t.get("name") == null ? "" : t.get("name"));
+            m.put("userType", t.get("role"));
+            list.add(m);
+        }
+        return ApiResponse.ok(list);
+    }
+
+    @GetMapping("/{id}/dealers")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ApiResponse<List<Map<String, Object>>> getPositionDealers(@PathVariable Long id) {
+        UUID tid = TenantContext.getTenantId();
+        var q = em.createNativeQuery(
+                "SELECT d.id, d.dealer_code, d.dealer_name " +
+                "FROM dealers d WHERE d.tenant_id = ?1 AND d.sales_position_id = ?2 AND d.deleted_at IS NULL " +
+                "ORDER BY d.dealer_code", Tuple.class);
+        q.setParameter(1, tid).setParameter(2, id);
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.get("id"));
+            m.put("code", t.get("dealer_code"));
+            m.put("name", t.get("dealer_name"));
+            list.add(m);
+        }
+        return ApiResponse.ok(list);
+    }
+
+    /**
+     * v3.7.3: 返回岗位下挂的经销商账号（dealer 角色用户）
+     */
+    @GetMapping("/{id}/dealer-accounts")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ApiResponse<List<Map<String, Object>>> getPositionDealerAccounts(@PathVariable Long id) {
+        UUID tid = TenantContext.getTenantId();
+        var q = em.createNativeQuery(
+                "SELECT u.id, u.username, u.name, u.dealer_id, d.dealer_name " +
+                "FROM users u LEFT JOIN dealers d ON d.id = u.dealer_id " +
+                "WHERE u.tenant_id = ?1 AND u.sales_position_id = ?2 AND u.role = 'dealer' AND u.deleted_at IS NULL " +
+                "ORDER BY u.username", Tuple.class);
+        q.setParameter(1, tid).setParameter(2, id);
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.get("id"));
+            m.put("username", t.get("username"));
+            m.put("name", t.get("name") == null ? "" : t.get("name"));
+            m.put("dealerId", t.get("dealer_id"));
+            m.put("dealerName", t.get("dealer_name"));
+            list.add(m);
+        }
+        return ApiResponse.ok(list);
+    }
+
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        UUID tid = TenantContext.getTenantId();
+        em.createNativeQuery("UPDATE sales_positions SET deleted_at = now(), updated_at = now() WHERE id = ?1 AND tenant_id = ?2")
+                .setParameter(1, id).setParameter(2, tid).executeUpdate();
+        return ApiResponse.ok(null);
     }
 
     // helpers

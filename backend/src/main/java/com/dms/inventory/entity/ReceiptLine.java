@@ -46,6 +46,12 @@ public class ReceiptLine {
     @Column(name = "received_qty", precision = 14, scale = 4)
     private BigDecimal receivedQty;
 
+    @Column(name = "cancelled_qty", precision = 14, scale = 4)
+    private BigDecimal cancelledQty;
+
+    @Column(name = "cancelled_at")
+    private OffsetDateTime cancelledAt;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 }

@@ -17,7 +17,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OperationLogService {
+public class AuditLogService {
 
     private final EntityManager em;
 
@@ -26,6 +26,18 @@ public class OperationLogService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(String resourceType, Long resourceId, String action, String detail) {
+        logInternal(resourceType, String.valueOf(resourceId), action, detail);
+    }
+
+    /**
+     * 记录一条操作日志（独立事务，不影响主流程）- UUID 版本
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void log(String resourceType, UUID resourceId, String action, String detail) {
+        logInternal(resourceType, String.valueOf(resourceId), action, detail);
+    }
+
+    private void logInternal(String resourceType, String resourceId, String action, String detail) {
         try {
             UUID tid = TenantContext.getTenantId();
             Long uid = TenantContext.getUserId();
@@ -34,7 +46,7 @@ public class OperationLogService {
                     "VALUES (?1, ?2, ?3, ?4, ?5, CAST(?6 AS jsonb), '127.0.0.1', now())")
                 .setParameter(1, tid).setParameter(2, uid)
                 .setParameter(3, action).setParameter(4, resourceType)
-                .setParameter(5, String.valueOf(resourceId))
+                .setParameter(5, resourceId)
                 .setParameter(6, detail == null ? "{}" : "{\"note\":\"" + detail.replace("\"", "'") + "\"}")
                 .executeUpdate();
         } catch (Exception e) {

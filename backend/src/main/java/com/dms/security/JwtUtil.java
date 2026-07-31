@@ -34,7 +34,7 @@ public class JwtUtil {
     private String secret;
 
     @Getter
-    @Value("${dms.jwt.access-token-ttl:3600000}")
+    @Value("${dms.jwt.access-token-ttl:28800000}")
     private long accessTokenTtl;
 
     @Getter

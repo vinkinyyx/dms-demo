@@ -64,3 +64,14 @@ temp/
 *.zip
 *.7z
 !docs/**/*.zip
+
+# ============ 本地运行/工具 ============
+.local/
+.memory/
+.trae/
+dms-dev-team/
+.backend.pid
+_probe.txt
+backend-run.log
+backend-err.log
+*.ps1.bak

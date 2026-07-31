@@ -1,0 +1,120 @@
+import axios from 'axios'
+import { ElMessage } from 'element-plus'
+import { getToken, setToken, getRefreshToken, setRefreshToken, clearAuth } from '@/utils/auth'
+import router from '@/router'
+
+const service = axios.create({
+  baseURL: '',
+  timeout: 300000
+})
+
+service.interceptors.request.use(
+  (config) => {
+    const token = getToken()
+    if (token) {
+      config.headers['Authorization'] = 'Bearer ' + token
+    }
+    return config
+  },
+  (error) => Promise.reject(error)
+)
+
+let isRefreshing = false
+const pendingQueue = []
+
+function flushQueue(error, token = null) {
+  pendingQueue.forEach(({ resolve, reject, config }) => {
+    if (error) {
+      reject(error)
+    } else {
+      config.headers['Authorization'] = 'Bearer ' + token
+      resolve(service(config))
+    }
+  })
+  pendingQueue.length = 0
+}
+
+function doRefresh() {
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) {
+    return Promise.reject(new Error('no refresh token'))
+  }
+  return axios
+    .create({ baseURL: '', timeout: 300000 })
+    .post('/auth/refresh', { refreshToken })
+    .then((resp) => {
+      const data = resp && resp.data ? resp.data.data || resp.data : null
+      if (!data || !data.accessToken) {
+        throw new Error('refresh response invalid')
+      }
+      setToken(data.accessToken)
+      if (data.refreshToken) {
+        setRefreshToken(data.refreshToken)
+      }
+      return data.accessToken
+    })
+}
+
+service.interceptors.response.use(
+  (response) => {
+    const res = response.data
+    if (res == null) return res
+    if (res.code === undefined) return res
+    if (res.code === 0) {
+      return res
+    }
+    ElMessage.error(res.message || '请求失败（' + res.code + '）')
+    return Promise.reject(new Error(res.message || 'Error'))
+  },
+  (error) => {
+    const status = error.response && error.response.status
+    const originalConfig = error.config || {}
+
+    if (status === 401) {
+      if (originalConfig.url && originalConfig.url.indexOf('/auth/refresh') >= 0) {
+        ElMessage.error('登录已过期，请重新登录')
+        clearAuth()
+        router.replace('/login')
+        return Promise.reject(error)
+      }
+      if (!getRefreshToken()) {
+        ElMessage.error('登录已过期，请重新登录')
+        clearAuth()
+        router.replace('/login')
+        return Promise.reject(error)
+      }
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          pendingQueue.push({ resolve, reject, config: originalConfig })
+        })
+      }
+      isRefreshing = true
+      return doRefresh()
+        .then((newToken) => {
+          isRefreshing = false
+          originalConfig.headers = originalConfig.headers || {}
+          originalConfig.headers['Authorization'] = 'Bearer ' + newToken
+          flushQueue(null, newToken)
+          return service(originalConfig)
+        })
+        .catch((refreshErr) => {
+          isRefreshing = false
+          flushQueue(refreshErr, null)
+          ElMessage.error('登录已过期，请重新登录')
+          clearAuth()
+          router.replace('/login')
+          return Promise.reject(refreshErr)
+        })
+    }
+
+    if (status === 403) {
+      ElMessage.error('没有权限访问该资源')
+      return Promise.reject(error)
+    }
+
+    ElMessage.error((error.response && error.response.data && error.response.data.message) || error.message || '网络错误')
+    return Promise.reject(error)
+  }
+)
+
+export default service

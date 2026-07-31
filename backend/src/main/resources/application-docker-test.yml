@@ -1,0 +1,42 @@
+# DMS 后端 Docker 测试环境 profile
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:postgres-test}:${DB_PORT:5432}/${DB_NAME:dms_test}
+    username: ${DB_USER:dms}
+    password: ${DB_PASSWORD:dms123456}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:redis-test}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      timeout: 3000ms
+
+dms:
+  jwt:
+    secret: ${JWT_SECRET:dms-super-secret-key-please-change-in-prod-1234567890abcdef}
+    access-token-ttl: 28800000
+    refresh-token-ttl: 604800000
+  wechat:
+    app-id: ${WECHAT_APP_ID:mock_appid}
+    app-secret: ${WECHAT_APP_SECRET:mock_secret}
+  seed:
+    enabled: ${SEED_ENABLED:false}
+
+logging:
+  level:
+    root: INFO
+    com.dms: DEBUG
+    org.springframework.web: INFO

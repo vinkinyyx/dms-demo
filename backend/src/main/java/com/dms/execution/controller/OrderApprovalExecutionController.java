@@ -15,7 +15,8 @@ import com.dms.common.ApiResponse;
 import com.dms.common.BusinessException;
 import com.dms.common.ErrorCode;
 import com.dms.common.util.TenantContext;
-import com.dms.execution.service.OperationLogService;
+import com.dms.common.util.DocNoGenerator;
+import com.dms.execution.service.AuditLogService;
 import com.dms.inventory.service.InventoryStatusOps;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
@@ -33,8 +34,9 @@ import java.util.*;
 public class OrderApprovalExecutionController {
 
     private final EntityManager em;
+    private final DocNoGenerator docNoGenerator;
     private final InventoryStatusOps inventoryOps;
-    private final OperationLogService opLog;
+    private final AuditLogService opLog;
 
     /**
      * 审批订单（销售/销退）→ 状态=APPROVED → 自动生成销售出库草稿单
@@ -61,7 +63,7 @@ public class OrderApprovalExecutionController {
                 .setParameter(1, id).executeUpdate();
 
         // 自动建单：销售出库草稿
-        String code = (isRed ? "SR-" : "SO-") + System.currentTimeMillis();
+        String code = docNoGenerator.next(isRed ? "GIR" : "GI");
         var ins = em.createNativeQuery(
                 "INSERT INTO sales_outs (tenant_id, code, dealer_id, is_red, status, auto_created, source_order_id, sales_date, created_at, updated_at) " +
                 "VALUES (?1, ?2, ?3, ?4, 'DRAFT', true, ?5, now(), now(), now()) RETURNING id");

@@ -1,90 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <property name="LOG_PATH" value="logs"/>
+    <property name="APP_NAME" value="dms-backend"/>
 
-&lt;?xml version="1.0" encoding="UTF-8"?&gt;
-&lt;configuration&gt;
-    &lt;property name="LOG_PATH" value="logs"/&gt;
-    &lt;property name="APP_NAME" value="dms-backend"/&gt;
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
 
-    &lt;!-- 控制台输出 --&gt;
-    &lt;appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender"&gt;
-        &lt;encoder&gt;
-            &lt;pattern&gt;%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n&lt;/pattern&gt;
-            &lt;charset&gt;UTF-8&lt;/charset&gt;
-        &lt;/encoder&gt;
-    &lt;/appender&gt;
+    <appender name="AUDIT_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/audit.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/audit.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
 
-    &lt;!-- 审计日志输出 --&gt;
-    &lt;appender name="AUDIT_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender"&gt;
-        &lt;file&gt;${LOG_PATH}/audit.log&lt;/file&gt;
-        &lt;rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy"&gt;
-            &lt;fileNamePattern&gt;${LOG_PATH}/audit.%d{yyyy-MM-dd}.log&lt;/fileNamePattern&gt;
-            &lt;maxHistory&gt;30&lt;/maxHistory&gt;
-        &lt;/rollingPolicy&gt;
-        &lt;encoder&gt;
-            &lt;pattern&gt;%d{yyyy-MM-dd HH:mm:ss.SSS} [%tenantId] [%userId] [%businessType] [%action] %msg%n&lt;/pattern&gt;
-            &lt;charset&gt;UTF-8&lt;/charset&gt;
-        &lt;/encoder&gt;
-    &lt;/appender&gt;
+    <appender name="OPERATION_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/operation.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/operation.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
 
-    &lt;!-- 操作日志输出 --&gt;
-    &lt;appender name="OPERATION_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender"&gt;
-        &lt;file&gt;${LOG_PATH}/operation.log&lt;/file&gt;
-        &lt;rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy"&gt;
-            &lt;fileNamePattern&gt;${LOG_PATH}/operation.%d{yyyy-MM-dd}.log&lt;/fileNamePattern&gt;
-            &lt;maxHistory&gt;30&lt;/maxHistory&gt;
-        &lt;/rollingPolicy&gt;
-        &lt;encoder&gt;
-            &lt;pattern&gt;%d{yyyy-MM-dd HH:mm:ss.SSS} [%tenantId] [%userId] [%businessType] [%action] [%remark] %msg%n&lt;/pattern&gt;
-            &lt;charset&gt;UTF-8&lt;/charset&gt;
-        &lt;/encoder&gt;
-    &lt;/appender&gt;
+    <appender name="LOGIN_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/login.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/login.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
 
-    &lt;!-- 登录日志输出 --&gt;
-    &lt;appender name="LOGIN_LOG_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender"&gt;
-        &lt;file&gt;${LOG_PATH}/login.log&lt;/file&gt;
-        &lt;rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy"&gt;
-            &lt;fileNamePattern&gt;${LOG_PATH}/login.%d{yyyy-MM-dd}.log&lt;/fileNamePattern&gt;
-            &lt;maxHistory&gt;30&lt;/maxHistory&gt;
-        &lt;/rollingPolicy&gt;
-        &lt;encoder&gt;
-            &lt;pattern&gt;%d{yyyy-MM-dd HH:mm:ss.SSS} [%tenantId] [%userId] [%loginType] [%success] [%ip] %msg%n&lt;/pattern&gt;
-            &lt;charset&gt;UTF-8&lt;/charset&gt;
-        &lt;/encoder&gt;
-    &lt;/appender&gt;
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP_NAME}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
 
-    &lt;!-- 普通日志输出 --&gt;
-    &lt;appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender"&gt;
-        &lt;file&gt;${LOG_PATH}/${APP_NAME}.log&lt;/file&gt;
-        &lt;rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy"&gt;
-            &lt;fileNamePattern&gt;${LOG_PATH}/${APP_NAME}.%d{yyyy-MM-dd}.log&lt;/fileNamePattern&gt;
-            &lt;maxHistory&gt;30&lt;/maxHistory&gt;
-        &lt;/rollingPolicy&gt;
-        &lt;encoder&gt;
-            &lt;pattern&gt;%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n&lt;/pattern&gt;
-            &lt;charset&gt;UTF-8&lt;/charset&gt;
-        &lt;/encoder&gt;
-    &lt;/appender&gt;
+    <logger name="AUDIT_LOGGER" level="INFO" additivity="false">
+        <appender-ref ref="AUDIT_LOG_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
 
-    &lt;!-- 审计日志记录器 --&gt;
-    &lt;logger name="AUDIT_LOGGER" level="INFO" additivity="false"&gt;
-        &lt;appender-ref ref="AUDIT_LOG_FILE"/&gt;
-        &lt;appender-ref ref="CONSOLE"/&gt;
-    &lt;/logger&gt;
+    <logger name="OPERATION_LOGGER" level="INFO" additivity="false">
+        <appender-ref ref="OPERATION_LOG_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
 
-    &lt;!-- 操作日志记录器 --&gt;
-    &lt;logger name="OPERATION_LOGGER" level="INFO" additivity="false"&gt;
-        &lt;appender-ref ref="OPERATION_LOG_FILE"/&gt;
-        &lt;appender-ref ref="CONSOLE"/&gt;
-    &lt;/logger&gt;
+    <logger name="LOGIN_LOGGER" level="INFO" additivity="false">
+        <appender-ref ref="LOGIN_LOG_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
 
-    &lt;!-- 登录日志记录器 --&gt;
-    &lt;logger name="LOGIN_LOGGER" level="INFO" additivity="false"&gt;
-        &lt;appender-ref ref="LOGIN_LOG_FILE"/&gt;
-        &lt;appender-ref ref="CONSOLE"/&gt;
-    &lt;/logger&gt;
-
-    &lt;!-- 根日志记录器 --&gt;
-    &lt;root level="INFO"&gt;
-        &lt;appender-ref ref="CONSOLE"/&gt;
-        &lt;appender-ref ref="FILE"/&gt;
-    &lt;/root&gt;
-&lt;/configuration&gt;
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>

@@ -4,6 +4,7 @@
 package com.dms.security;
 
 import com.dms.common.util.TenantContext;
+import com.dms.rbac.service.PermissionQueryService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -23,6 +24,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.UUID;
 
 @Slf4j
@@ -34,6 +38,7 @@ public class JwtFilter extends OncePerRequestFilter {
     private static final String PREFIX = "Bearer ";
 
     private final JwtUtil jwtUtil;
+    private final PermissionQueryService permissionQueryService;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -59,8 +64,7 @@ public class JwtFilter extends OncePerRequestFilter {
                     TenantContext.setTenantId(tenantId);
 
                     UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(username, null,
-                                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+                            new UsernamePasswordAuthenticationToken(username, null, loadAuthorities(userId));
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
@@ -75,5 +79,16 @@ public class JwtFilter extends OncePerRequestFilter {
         } finally {
             TenantContext.clear();
         }
+    }
+    private List<SimpleGrantedAuthority> loadAuthorities(Long userId) {
+        if (userId == null) {
+            return Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
+        }
+        Set<String> permissions = permissionQueryService.loadPermissionsForUser(userId);
+        List<SimpleGrantedAuthority> authorities = permissions.stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+        authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+        return authorities;
     }
 }

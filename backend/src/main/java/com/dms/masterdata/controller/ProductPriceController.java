@@ -7,11 +7,18 @@ package com.dms.masterdata.controller;
 import com.dms.common.ApiResponse;
 import com.dms.common.BusinessException;
 import com.dms.common.ErrorCode;
+import com.dms.common.util.ExcelExportUtils;
+import com.dms.common.util.ExcelImportUtils;
+import com.dms.common.util.ContentDispositionUtils;
+import org.springframework.web.multipart.MultipartFile;
 import com.dms.common.util.TenantContext;
-import com.dms.execution.service.OperationLogService;
+import com.dms.execution.service.AuditLogService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +31,7 @@ import java.util.*;
 public class ProductPriceController {
 
     private final EntityManager em;
-    private final OperationLogService opLog;
+    private final AuditLogService opLog;
 
     @GetMapping
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
@@ -151,6 +158,83 @@ public class ProductPriceController {
         return ApiResponse.ok(r);
     }
 
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        UUID tid = TenantContext.getTenantId();
+        int aff = em.createNativeQuery("DELETE FROM product_prices WHERE id = ?1 AND tenant_id = ?2")
+                .setParameter(1, id).setParameter(2, tid).executeUpdate();
+        if (aff == 0) throw new BusinessException(ErrorCode.NOT_FOUND, "价格记录不存在");
+        return ApiResponse.ok();
+    }
+
+    @GetMapping("/actions/export")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ResponseEntity<byte[]> export() throws Exception {
+        UUID tid = TenantContext.getTenantId();
+        String sql = "SELECT pp.id, pp.product_id, pp.partner_type, pp.partner_id, " +
+                "pp.purchase_price, pp.sales_price, pp.currency, pp.effective_date, pp.expire_date, pp.status, " +
+                "p.code AS product_code, p.name_cn AS product_name, p.unit_type AS product_unit, " +
+                "CASE WHEN pp.partner_type = 'DEALER' THEN d.name WHEN pp.partner_type = 'SUPPLIER' THEN s.name " +
+                "WHEN pp.partner_type = 'GLOBAL' THEN '全局' ELSE NULL END AS partner_name, " +
+                "pp.created_at, pp.updated_at " +
+                "FROM product_prices pp " +
+                "LEFT JOIN products p ON p.id = pp.product_id " +
+                "LEFT JOIN dealers d ON pp.partner_type = 'DEALER' AND d.id = pp.partner_id " +
+                "LEFT JOIN suppliers s ON pp.partner_type = 'SUPPLIER' AND s.id = pp.partner_id " +
+                "WHERE pp.tenant_id = ?1 ORDER BY pp.product_id, pp.partner_type";
+        var q = em.createNativeQuery(sql, Tuple.class);
+        q.setParameter(1, tid);
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.get("id"));
+            m.put("productId", t.get("product_id"));
+            m.put("productCode", val(t.get("product_code")));
+            m.put("productName", val(t.get("product_name")));
+            m.put("productUnit", val(t.get("product_unit")));
+            m.put("partnerType", t.get("partner_type"));
+            m.put("partnerId", t.get("partner_id"));
+            m.put("partnerName", val(t.get("partner_name")));
+            m.put("purchasePrice", t.get("purchase_price"));
+            m.put("salesPrice", t.get("sales_price"));
+            m.put("currency", t.get("currency"));
+            m.put("effectiveDate", com.dms.common.util.DateFmt.fmt(t.get("effective_date")));
+            m.put("expireDate", com.dms.common.util.DateFmt.fmt(t.get("expire_date")));
+            m.put("status", t.get("status"));
+            m.put("createdAt", com.dms.common.util.DateFmt.fmt(t.get("created_at")));
+            m.put("updatedAt", com.dms.common.util.DateFmt.fmt(t.get("updated_at")));
+            list.add(m);
+        }
+
+        String[] headers = {"ID", "产品ID", "产品编码", "产品名称", "产品单位", "合作方类型", "合作方ID", "合作方名称", "采购价", "销售价", "币种", "生效日期", "失效日期", "状态", "创建时间", "更新时间"};
+        String[] fieldNames = {"id", "productId", "productCode", "productName", "productUnit", "partnerType", "partnerId", "partnerName", "purchasePrice", "salesPrice", "currency", "effectiveDate", "expireDate", "status", "createdAt", "updatedAt"};
+
+        byte[] excelBytes = ExcelExportUtils.exportMapToExcel(list, headers, fieldNames);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=product-prices.xlsx")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(excelBytes);
+    }
+
+    @GetMapping("/actions/export/template")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ResponseEntity<byte[]> exportTemplate() throws Exception {
+        String[] headers = {"产品ID", "合作方类型", "合作方ID", "采购价", "销售价", "币种", "状态"};
+        String[] fieldNames = {"productId", "partnerType", "partnerId", "purchasePrice", "salesPrice", "currency", "status"};
+        String[] examples = {"1", "GLOBAL", "0", "100.00", "120.00", "CNY", "active"};
+
+        byte[] excelBytes = ExcelExportUtils.exportTemplate(headers, fieldNames, examples);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionUtils.attachment("产品价格导入模板.xlsx"))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(excelBytes);
+    }
+
     private static String blankToNull(Object o) {
         if (o == null) return null;
         String s = String.valueOf(o);
@@ -159,6 +243,69 @@ public class ProductPriceController {
     private static java.math.BigDecimal toBdOrNull(Object o) {
         if (o == null) return null;
         try { return new java.math.BigDecimal(String.valueOf(o)); } catch (Exception e) { return null; }
+    }
+
+    @PostMapping("/batch-import")
+    @Transactional
+    public ApiResponse<java.util.Map<String, Object>> batchImport(@RequestParam("file") MultipartFile file) throws Exception {
+        if (file.isEmpty()) {
+            return ApiResponse.fail(40001, "请选择要导入的文件");
+        }
+
+        java.util.List<java.util.Map<String, Object>> data = ExcelImportUtils.importFromExcel(file.getInputStream(), file.getOriginalFilename());
+        if (data.isEmpty()) {
+            return ApiResponse.fail(40002, "Excel 文件中没有数据");
+        }
+
+        int success = 0, failed = 0;
+        java.util.List<java.util.Map<String, Object>> errors = new java.util.ArrayList<>();
+
+        for (int i = 0; i < data.size(); i++) {
+            java.util.Map<String, Object> row = data.get(i);
+            try {
+                Long productId = toLong(row.get("产品ID"));
+                String partnerType = str(row.get("合作方类型"));
+                Long partnerId = toLong(row.get("合作方ID"));
+                java.math.BigDecimal purchasePrice = toBd(row.get("采购价"));
+                java.math.BigDecimal salesPrice = toBd(row.get("销售价"));
+                String currency = str(row.get("币种"));
+                String status = str(row.get("状态"));
+
+                if (productId == null) {
+                    throw new IllegalArgumentException("产品ID不能为空");
+                }
+                if (partnerType == null || partnerType.trim().isEmpty()) {
+                    throw new IllegalArgumentException("合作方类型不能为空");
+                }
+
+                String sql = "INSERT INTO product_prices (product_id, partner_type, partner_id, purchase_price, sales_price, currency, status, tenant_id) " +
+                        "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)";
+                em.createNativeQuery(sql)
+                        .setParameter(1, productId)
+                        .setParameter(2, partnerType)
+                        .setParameter(3, partnerId)
+                        .setParameter(4, purchasePrice)
+                        .setParameter(5, salesPrice)
+                        .setParameter(6, currency != null ? currency : "CNY")
+                        .setParameter(7, status != null ? status : "active")
+                        .setParameter(8, TenantContext.getTenantId())
+                        .executeUpdate();
+                success++;
+            } catch (Exception e) {
+                failed++;
+                java.util.Map<String, Object> err = new java.util.LinkedHashMap<>();
+                err.put("row", i + 2);
+                err.put("error", e.getMessage());
+                errors.add(err);
+            }
+        }
+
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("total", data.size());
+        result.put("success", success);
+        result.put("failed", failed);
+        result.put("errors", errors);
+        return ApiResponse.ok(result);
     }
 
     private static String str(Object o) { return o == null ? null : String.valueOf(o); }

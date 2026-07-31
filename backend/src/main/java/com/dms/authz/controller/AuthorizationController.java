@@ -3,6 +3,7 @@
  */
 package com.dms.authz.controller;
 
+import com.dms.annotation.OperationLog;
 import com.dms.authz.dto.AuthorizationCheckRequest;
 import com.dms.authz.dto.AuthorizationCheckResult;
 import com.dms.authz.entity.Authorization;
@@ -11,6 +12,7 @@ import com.dms.authz.service.AuthorizationService;
 import com.dms.common.ApiResponse;
 import com.dms.common.PageQuery;
 import com.dms.common.PageResult;
+import com.dms.common.enums.OperationAction;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -36,6 +38,7 @@ public class AuthorizationController {
     }
 
     @PostMapping("/api/authorizations")
+    @OperationLog(businessType = "authorization", action = OperationAction.CREATE, remark = "授权-创建")
     public ApiResponse<Authorization> create(@RequestBody Authorization request) {
         return ApiResponse.ok(service.create(request));
     }
@@ -46,6 +49,7 @@ public class AuthorizationController {
     }
 
     @PostMapping("/api/temp-authorizations")
+    @OperationLog(businessType = "tempAuthorization", action = OperationAction.CREATE, remark = "临时授权-创建")
     public ApiResponse<TempAuthorization> createTemp(@RequestBody TempAuthorization request) {
         return ApiResponse.ok(service.createTemp(request));
     }

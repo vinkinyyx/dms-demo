@@ -15,6 +15,7 @@ import com.dms.inventory.entity.Inventory;
 import com.dms.inventory.entity.InventoryTransaction;
 import com.dms.inventory.repository.InventoryRepository;
 import com.dms.inventory.repository.InventoryTransactionRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -32,6 +33,7 @@ public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
     private final InventoryTransactionRepository txnRepository;
+    private final EntityManager em;
 
     @Transactional(readOnly = true)
     public PageResult<Inventory> query(Long dealerId, Long productId, String batchNo, PageQuery pageQuery) {
@@ -107,5 +109,39 @@ public class InventoryService {
                 .build();
         txnRepository.save(txn);
         return saved;
+    }
+
+    /**
+     * v3.7.3 增强：支持记录 source_line_id / reversal_of_id 的对冲事务版本。
+     * 用于部分取消、红字冲销等需要明确指向原事务/明细行的场景。
+     */
+    @Transactional
+    public Inventory applyTransactionWithSource(UUID tenantId, Long dealerId, Long warehouseId,
+                                                Long productId, String batchNo, String serialNo,
+                                                BigDecimal qtyChange, String txnType,
+                                                String refDocType, Long refDocId,
+                                                Long sourceLineId, Long reversalOfId) {
+        Inventory inv = applyTransaction(tenantId, dealerId, warehouseId,
+                productId, batchNo, serialNo, qtyChange, txnType, refDocType, refDocId);
+        // 直接更新最近一条流水（applyTransaction 已写）的对冲字段
+        if (sourceLineId != null || reversalOfId != null) {
+            em.createNativeQuery(
+                    "UPDATE inventory_transactions " +
+                    "SET source_line_id = COALESCE(?1, source_line_id), " +
+                    "    reversal_of_id = COALESCE(?2, reversal_of_id) " +
+                    "WHERE id = (SELECT id FROM inventory_transactions " +
+                    "            WHERE tenant_id = ?3 AND ref_doc_type = ?4 AND ref_doc_id = ?5 " +
+                    "              AND product_id = ?6 AND qty_change = ?7 " +
+                    "            ORDER BY id DESC LIMIT 1)")
+                    .setParameter(1, sourceLineId)
+                    .setParameter(2, reversalOfId)
+                    .setParameter(3, tenantId)
+                    .setParameter(4, refDocType)
+                    .setParameter(5, refDocId)
+                    .setParameter(6, productId)
+                    .setParameter(7, qtyChange)
+                    .executeUpdate();
+        }
+        return inv;
     }
 }

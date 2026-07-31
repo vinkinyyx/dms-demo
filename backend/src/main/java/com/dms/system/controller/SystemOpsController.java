@@ -124,11 +124,10 @@ public class SystemOpsController {
         int total = 0;
         for (int hours : new int[]{24, 48, 72}) {
             try {
-                var q = em.createNativeQuery(
-                        "SELECT id, code FROM contract_applications " +
-                        "WHERE status = 'SUBMITTED' AND created_at < now() - (?1 || ' hours')::interval " +
-                        "LIMIT 20", Tuple.class);
-                q.setParameter(1, String.valueOf(hours));
+                String sql = "SELECT id, code FROM contract_applications " +
+                        "WHERE status = 'SUBMITTED' AND created_at < (now() - INTERVAL '" + hours + " hours') " +
+                        "LIMIT 20";
+                var q = em.createNativeQuery(sql, Tuple.class);
                 @SuppressWarnings("unchecked")
                 List<Tuple> rows = q.getResultList();
                 for (Tuple t : rows) {

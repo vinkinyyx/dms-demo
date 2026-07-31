@@ -12,6 +12,7 @@ import com.dms.masterdata.entity.ProductCategory;
 import com.dms.masterdata.repository.ProductCategoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class ProductCategoryService {
 
     private final ProductCategoryRepository repository;
+    private final ReferenceCheckService referenceCheckService;
 
     @Transactional(readOnly = true)
     public PageResult<ProductCategory> list(PageQuery pageQuery) {
@@ -77,6 +79,26 @@ public class ProductCategoryService {
         if (patch.getStatus() != null) old.setStatus(patch.getStatus());
         old.setUpdatedAt(OffsetDateTime.now());
         return repository.save(old);
+    }
+
+    @Transactional
+    public void deleteById(Long id) {
+        ProductCategory entity = get(id);
+        var refs = referenceCheckService.categoryReferences(id);
+        long total = referenceCheckService.totalRefs(refs);
+        if (total > 0) {
+            String desc = referenceCheckService.describe(refs);
+            log.warn("删除商品分类被拒绝: id={} code={} 引用={}", id, entity.getCode(), desc);
+            throw new BusinessException(ErrorCode.HAS_REFERENCES,
+                "无法删除商品分类：存在 " + total + " 条引用记录 (" + desc + ")");
+        }
+        try {
+            repository.deleteById(id);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("删除商品分类失败，存在数据库外键约束: id={}", id, e);
+            throw new BusinessException(ErrorCode.HAS_REFERENCES,
+                "无法删除商品分类：该数据被其他业务数据引用，请先删除关联数据");
+        }
     }
 
     @Transactional

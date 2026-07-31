@@ -62,6 +62,24 @@ public class SalesOut {
     @Column(name = "amount_incl_tax", precision = 18, scale = 2)
     private BigDecimal amountInclTax;
 
+    @Column(name = "shipped_at")
+    private OffsetDateTime shippedAt;
+
+    @Column(name = "cancelled_at")
+    private OffsetDateTime cancelledAt;
+
+    @Column(name = "completed_at")
+    private OffsetDateTime completedAt;
+
+    @Column(name = "auto_created")
+    private Boolean autoCreated;
+
+    @Column(name = "source_order_id")
+    private Long sourceOrderId;
+
+    @Column(name = "warehouse_id")
+    private Long warehouseId;
+
     @Column(name = "created_by")
     private Long createdBy;
 
@@ -84,3 +102,5 @@ public class SalesOut {
         if (surgeryInfo == null) surgeryInfo = new HashMap<>();
     }
 }
+
+

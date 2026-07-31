@@ -3,6 +3,7 @@
  */
 package com.dms.config;
 
+import com.dms.operationlog.interceptor.RequestLoggingInterceptor;
 import com.dms.security.TenantInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +15,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     private final TenantInterceptor tenantInterceptor;
+    private final RequestLoggingInterceptor requestLoggingInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -21,11 +23,20 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/**")
                 .excludePathPatterns(
                         "/auth/**",
+                        "/api/auth/**",
                         "/actuator/**",
                         "/swagger-ui/**",
                         "/swagger-ui.html",
                         "/v3/api-docs/**",
                         "/open/**"
+                );
+        registry.addInterceptor(requestLoggingInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns(
+                        "/actuator/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**"
                 );
     }
 }

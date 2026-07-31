@@ -5,17 +5,26 @@
  */
 package com.dms.inventory.controller;
 
+import com.dms.annotation.OperationLog;
 import com.dms.common.ApiResponse;
+import com.dms.common.enums.OperationAction;
 import com.dms.common.BusinessException;
 import com.dms.common.ErrorCode;
 import com.dms.common.util.DateFmt;
+import com.dms.common.util.ExcelExportUtils;
+import com.dms.common.util.ExcelImportUtils;
+import com.dms.common.util.ContentDispositionUtils;
+import org.springframework.web.multipart.MultipartFile;
 import com.dms.common.util.TenantContext;
-import com.dms.execution.service.OperationLogService;
+import com.dms.execution.service.AuditLogService;
 import com.dms.inventory.service.InventoryStatusOps;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -31,10 +40,11 @@ public class StockMoveController {
 
     private final EntityManager em;
     private final InventoryStatusOps inventoryOps;
-    private final OperationLogService opLog;
+    private final AuditLogService opLog;
 
     @PostMapping
     @Transactional
+    @OperationLog(businessType = "stockMove", action = OperationAction.CREATE, remark = "库存移动-创建")
     public ApiResponse<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         UUID tid = TenantContext.getTenantId();
         if (tid == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
@@ -141,6 +151,114 @@ public class StockMoveController {
         }
         head.put("lines", lines);
         return ApiResponse.ok(head);
+    }
+
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        UUID tid = TenantContext.getTenantId();
+        int aff = em.createNativeQuery("DELETE FROM stock_moves WHERE id = ?1 AND tenant_id = ?2")
+                .setParameter(1, id).setParameter(2, tid).executeUpdate();
+        if (aff == 0) throw new BusinessException(ErrorCode.NOT_FOUND, "库存移动单不存在");
+        return ApiResponse.ok();
+    }
+
+    @GetMapping("/actions/export")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ResponseEntity<byte[]> export() throws Exception {
+        UUID tid = TenantContext.getTenantId();
+        var q = em.createNativeQuery(
+                "SELECT m.id, m.code, m.src_warehouse_id, sw.name AS src_name, m.dst_warehouse_id, dw.name AS dst_name, " +
+                "m.status, m.reason, m.created_at, m.updated_at " +
+                "FROM stock_moves m " +
+                "LEFT JOIN warehouses sw ON sw.id = m.src_warehouse_id " +
+                "LEFT JOIN warehouses dw ON dw.id = m.dst_warehouse_id " +
+                "WHERE m.tenant_id = ?1", Tuple.class);
+        q.setParameter(1, tid);
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.get("id"));
+            m.put("code", t.get("code"));
+            m.put("fromWarehouseId", t.get("src_warehouse_id"));
+            m.put("fromWarehouseName", t.get("src_name"));
+            m.put("toWarehouseId", t.get("dst_warehouse_id"));
+            m.put("toWarehouseName", t.get("dst_name"));
+            m.put("status", t.get("status"));
+            m.put("remark", t.get("reason"));
+            m.put("createdAt", DateFmt.fmt(t.get("created_at")));
+            m.put("updatedAt", DateFmt.fmt(t.get("updated_at")));
+            list.add(m);
+        }
+
+        String[] headers = {"ID", "移动单号", "源仓库ID", "源仓库名称", "目标仓库ID", "目标仓库名称", "状态", "备注", "创建时间", "更新时间"};
+        String[] fieldNames = {"id", "code", "fromWarehouseId", "fromWarehouseName", "toWarehouseId", "toWarehouseName", "status", "remark", "createdAt", "updatedAt"};
+
+        byte[] excelBytes = ExcelExportUtils.exportMapToExcel(list, headers, fieldNames);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionUtils.attachment("库存移动列表.xlsx"))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(excelBytes);
+    }
+
+    @PostMapping("/batch-import")
+    @Transactional
+    public ApiResponse<java.util.Map<String, Object>> batchImport(@RequestParam("file") MultipartFile file) throws Exception {
+        if (file.isEmpty()) {
+            return ApiResponse.fail(40001, "请选择要导入的文件");
+        }
+
+        java.util.List<java.util.Map<String, Object>> data = ExcelImportUtils.importFromExcel(file.getInputStream(), file.getOriginalFilename());
+        if (data.isEmpty()) {
+            return ApiResponse.fail(40002, "Excel 文件中没有数据");
+        }
+
+        int success = 0, failed = 0;
+        java.util.List<java.util.Map<String, Object>> errors = new java.util.ArrayList<>();
+
+        for (int i = 0; i < data.size(); i++) {
+            java.util.Map<String, Object> row = data.get(i);
+            try {
+                Long fromWarehouseId = toLong(row.get("源仓库ID"));
+                Long toWarehouseId = toLong(row.get("目标仓库ID"));
+                String reason = strOr(row.get("备注"), null);
+                String status = strOr(row.get("状态"), "DRAFT");
+
+                if (fromWarehouseId == null) {
+                    throw new IllegalArgumentException("源仓库ID不能为空");
+                }
+                if (toWarehouseId == null) {
+                    throw new IllegalArgumentException("目标仓库ID不能为空");
+                }
+
+                String sql = "INSERT INTO stock_moves (src_warehouse_id, dst_warehouse_id, reason, status, tenant_id) " +
+                        "VALUES (?1, ?2, ?3, ?4, ?5)";
+                em.createNativeQuery(sql)
+                        .setParameter(1, fromWarehouseId)
+                        .setParameter(2, toWarehouseId)
+                        .setParameter(3, reason)
+                        .setParameter(4, status)
+                        .setParameter(5, TenantContext.getTenantId())
+                        .executeUpdate();
+                success++;
+            } catch (Exception e) {
+                failed++;
+                java.util.Map<String, Object> err = new java.util.LinkedHashMap<>();
+                err.put("row", i + 2);
+                err.put("error", e.getMessage());
+                errors.add(err);
+            }
+        }
+
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("total", data.size());
+        result.put("success", success);
+        result.put("failed", failed);
+        result.put("errors", errors);
+        return ApiResponse.ok(result);
     }
 
     private Long toLong(Object o) {

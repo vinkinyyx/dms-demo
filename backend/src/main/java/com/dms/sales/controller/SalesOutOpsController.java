@@ -8,10 +8,13 @@
  */
 package com.dms.sales.controller;
 
+import com.dms.annotation.OperationLog;
 import com.dms.common.ApiResponse;
 import com.dms.common.BusinessException;
 import com.dms.common.ErrorCode;
+import com.dms.common.enums.OperationAction;
 import com.dms.common.util.TenantContext;
+import com.dms.common.util.DocNoGenerator;
 import com.dms.inventory.service.InventoryStatusOps;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
@@ -32,6 +35,7 @@ import java.util.*;
 public class SalesOutOpsController {
 
     private final EntityManager em;
+    private final DocNoGenerator docNoGenerator;
     private final InventoryStatusOps inventoryOps;
 
     /**
@@ -46,6 +50,7 @@ public class SalesOutOpsController {
      */
     @PostMapping
     @Transactional
+    @OperationLog(businessType = "salesOut", action = OperationAction.CREATE, remark = "销售出库-增强创建(含红字)")
     public ApiResponse<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         UUID tid = TenantContext.getTenantId();
         if (tid == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
@@ -90,7 +95,7 @@ public class SalesOutOpsController {
         }
 
         // 生成单号
-        String code = (isRed ? "SR-" : "SO-") + System.currentTimeMillis();
+        String code = docNoGenerator.next(isRed ? "GIR" : "GI");
 
         // 插入销售出库主表
         BigDecimal totalAmt = BigDecimal.ZERO;

@@ -54,14 +54,15 @@ public class BizDocListController {
         for (int i = 0; i < params.size(); i++) cntQ.setParameter(i + 1, params.get(i));
         long total = ((Number) cntQ.getSingleResult()).longValue();
 
-        String sql = "SELECT so.id, so.code, so.is_red, so.dealer_id, so.terminal_id, so.sales_date, " +
+        String sql = "SELECT so.id, so.code, so.is_red, so.dealer_id, so.terminal_id, so.warehouse_id, so.sales_date, " +
                 "so.amount_incl_tax, so.status, so.auto_created, so.source_order_id, " +
                 "so.created_at, so.updated_at, " +
-                "d.name AS dealer_name, h.name AS terminal_name, " +
+                "d.name AS dealer_name, h.name AS terminal_name, w.name AS warehouse_name, " +
                 "o.code AS source_order_code " +
                 "FROM sales_outs so " +
                 "LEFT JOIN dealers d ON d.id = so.dealer_id " +
                 "LEFT JOIN hospitals h ON h.id = so.terminal_id " +
+                "LEFT JOIN warehouses w ON w.id = so.warehouse_id " +
                 "LEFT JOIN orders o ON o.id = so.source_order_id " +
                 where +
                 " ORDER BY so.updated_at DESC NULLS LAST, so.id DESC LIMIT ?" + idx + " OFFSET ?" + (idx + 1);
@@ -88,6 +89,8 @@ public class BizDocListController {
             m.put("autoCreated", t.get("auto_created"));
             m.put("sourceOrderId", t.get("source_order_id"));
             m.put("sourceOrderCode", t.get("source_order_code"));
+            try { m.put("warehouseId", t.get("warehouse_id")); } catch (Exception ignored) {}
+            try { m.put("warehouseName", t.get("warehouse_name")); } catch (Exception ignored) {}
             m.put("createdAt", com.dms.common.util.DateFmt.fmt(t.get("created_at")));
             m.put("updatedAt", com.dms.common.util.DateFmt.fmt(t.get("updated_at")));
             list.add(m);
@@ -173,3 +176,4 @@ public class BizDocListController {
         return ApiResponse.ok(data);
     }
 }
+

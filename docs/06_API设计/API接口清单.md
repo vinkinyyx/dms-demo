@@ -1,11 +1,75 @@
 # DMS API 接口清单（合并版）
 
-**当前版本**: v3.5.1  
-**最后更新**: 2026-07-20
+**当前版本**: v3.7.0
+**最后更新**: 2026-07-25
 
 ---
 
 ## 变更日志
+
+### v3.7.0 (2026-07-25) — 主数据补齐（W1-W2）
+
+#### 新增 API 模块（25 个端点）
+
+#### 1. 产品线 API `/api/product-lines`
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/product-lines` | 分页查询（支持 tenant/status/level 筛选） |
+| GET | `/api/product-lines/{id}` | 按ID查询 |
+| GET | `/api/product-lines/by-level/{level}` | 按层级查（1=BU / 2=产品线 / 3=分类） |
+| GET | `/api/product-lines/by-parent/{parentId}` | 按父级ID查子节点 |
+| POST | `/api/product-lines` | 创建（带审计日志） |
+| PUT | `/api/product-lines/{id}` | 更新（带审计日志） |
+| POST | `/api/product-lines/{id}/deactivate` | 停用（带审计日志） |
+
+#### 2. 包装层级 API `/api/product-package-levels`
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/product-package-levels` | 分页查询 |
+| GET | `/api/product-package-levels/{id}` | 按ID查询 |
+| GET | `/api/product-package-levels/by-product/{productId}` | 按产品ID查所有层级 |
+| GET | `/api/product-package-levels/by-product/{productId}/roots` | 查根节点层级 |
+| GET | `/api/product-package-levels/by-parent/{parentId}` | 查子节点层级 |
+| POST | `/api/product-package-levels` | 创建 |
+| PUT | `/api/product-package-levels/{id}` | 更新 |
+| POST | `/api/product-package-levels/{id}/deactivate` | 停用 |
+
+#### 3. 组套 API `/api/product-bundles`
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/product-bundles` | 分页查询 |
+| GET | `/api/product-bundles/{id}` | 按ID查询 |
+| GET | `/api/product-bundles/by-product/{productId}` | 按产品ID查组套 |
+| GET | `/api/product-bundles/{id}/lines` | 查所有明细 |
+| GET | `/api/product-bundles/{id}/lines/fixed` | 查固定件明细 |
+| POST | `/api/product-bundles` | 创建（pricingType: INHERIT/OVERRIDE/COMPONENT） |
+| PUT | `/api/product-bundles/{id}` | 更新 |
+| POST | `/api/product-bundles/{id}/deactivate` | 停用 |
+| POST | `/api/product-bundles/{id}/lines` | 添加明细 |
+| DELETE | `/api/product-bundles/{id}/lines/{lineId}` | 删除明细 |
+
+#### 审计日志
+所有 POST/PUT/DELETE 操作均通过 `@OperationLog` 注解自动记录到 `op_log` 表。
+
+### v3.6.2 (2026-07-24)
+- 前端 nginx upstream 修复：所有 `/api/*` 路径代理到 `http://dms-test-backend:8080`（之前错误指向不存在的 `dms-backend:8080`，导致所有业务 API 返回 403）
+- v3.6.1 配置保留：`/api/operation-log/list/{businessType}/{businessId}` HTTP 200，验证 total=1 条
+- **无新增/修改 API**
+
+### v3.6.1 (2026-07-23)
+- **后端配置变更**：新增 `MybatisPlusConfig.java` 配置 `MybatisPlusInterceptor` + `PaginationInnerInterceptor(DbType.POSTGRE_SQL)`，修复 MyBatis-Plus 分页查询 500 错误
+- **nginx 配置变更**：`nginx-test.conf` `/api/auth/` 保留 rewrite 规则，`/api/` 其余路径取消 rewrite，修复所有业务 API 404 问题
+- **数据库变更**：全库 jsonb 列转 text；V24/V25 手动执行并注册到 flyway_schema_history
+
+### v3.6.0 (2026-07-22)
+- **新增** `GET /api/reports/order-trace`：订单追溯报表（10 列：单号/订单类型/经销商/下单日期/审核日期/出库日期/收货日期/状态/金额/产品数），基于 `orders` JOIN `sales_outs` JOIN `receipts` 返回全链路追溯数据
+- **后端配置变更**：`dms.jwt.access-token-ttl` 默认值改为 `28800000`（8 小时），影响 `/api/auth/refresh` 返回的 access_token 有效期
+- **删除接口错误码新增**：`RESOURCE_IN_USE`（资源被引用）、`HAS_REFERENCES`（存在外键引用）、`CANNOT_DELETE`（不可删除），影响 `/api/products/{id}` `/api/product-categories/{id}` `/api/dealers/{id}` `/api/hospitals/{id}` `/api/warehouses/{id}` `/api/suppliers/{id}` `/api/orders/{id}` `/api/purchase-orders/{id}` 共 8 个模块的 DELETE 响应
+- **`/api/sales-positions` 模块化**：modules.js 新增 `positions` 配置（`api: '/api/sales-positions'`），前端独立销售岗位页面，接口本身不变
+- **`/api/sales-positions/candidate-users`**：仍按既有逻辑只返回 `role=sales` 用户
 
 ### v3.5.1 (2026-07-20)
 - **导出 API 路径变更**：14个业务模块的导出接口从`GET /{module}/export`改为`GET /{module}/actions/export`，解决`/{id}`路径将"export"解析为ID导致的400错误
@@ -162,23 +226,39 @@
 - `PUT /api/sales-positions/{id}/bind-dealers` — 挂载经销商
 - `GET /api/sales-positions/my-scope` — 当前用户数据范围
 
-### 📤 销售订单 (SO/RSO)
-- `GET/POST /api/orders`
-- `GET /api/orders/{id}/detail`
-- `POST /api/orders/{id}/submit`
-- `POST /api/orders/{id}/approve` — 触发自动建 CK
-- `POST /api/orders/{id}/reject`
-- `POST /api/orders/{id}/cancel`
+### 📤 销售订单 (SO/RSO) — v3.7.7 起使用新端点
+- `GET/POST /api/sales-orders`（v3.7.7 新端点，原生 SQL，镜像 PurchaseOrderController）
+- `GET /api/sales-orders/{id}` — 详情（含 lines + allowedActions）
+- `PUT /api/sales-orders/{id}` — 更新（仅 DRAFT）
+- `DELETE /api/sales-orders/{id}` — 删除（仅 DRAFT 软删除）
+- `POST /api/sales-orders/{id}/submit` — 提交审批
+- `POST /api/sales-orders/{id}/approve` — 审批通过并自动生成 XS-* 销售出库草稿
+- `POST /api/sales-orders/{id}/reject`
+- `POST /api/sales-orders/{id}/cancel` — 仅 DRAFT/APPROVED，校验并级联取消出库单
+- `GET /api/sales-orders/actions/export`、`POST /api/sales-orders/batch-import`
+- 旧端点 `/api/orders`（JPA 实现）仅用于销退红字订单（`extraParams.isRed=true`）
 
 ### 📥 采购订单 (PO/RPO)
 - `GET/POST /api/purchase-orders`
 - `POST /api/purchase-orders/{id}/approve` — 触发自动建 RK
 
-### 🛒 销售出库 (CK)
-- `GET /api/sales-outs`
-- `GET /api/sales-outs/{id}/detail`
-- `POST /api/sales-outs/{id}/execute` — 弹窗填批次 → 扣 QUALIFIED
-- `POST /api/sales-outs/{id}/cancel-draft`
+### 🛒 销售出库 (XS) — v3.7.7 表结构对齐收货入库
+- `GET /api/sales-outs`（BizDocListController，返回 warehouseName/sourceOrderCode）
+- `GET /api/sales-outs/{id}/detail` — 返回 head + lines（应发）+ shippedLines（执行记录）+ soLines（订单行）+ sourceOrder（来源销售订单）
+- `POST /api/sales-outs/{id}/partial-ship` — body `{lines:[{expectedLineId, productId, warehouseId, batchNo, serialNo, qty, unitPrice}]}`，按应发行累计校验，自动回写订单 SHIPPING/COMPLETED
+- `POST /api/sales-outs/{id}/cancel-partial` — 按已发货执行行恢复库存
+- `POST /api/sales-outs/{id}/cancel-full` — 整单作废，全部库存回滚
+- `POST /api/sales-outs/{id}/red-cancel` — 红字冲销
+
+#### v3.7.8 销售出库子单（发货批次）模型
+- `POST /api/sales-outs/{id}/batches` — 创建一张 DRAFT 发货子单（code = 父单号-序号）
+- `PUT  /api/sales-out-batches/{bid}` — 保存子单明细（整单覆盖）。body `{lines:[{expectedLineId, shipLineNo, productId, warehouseId, qty, stockBatchId, batchNo, serialNo, unitPrice}]}`
+- `POST /api/sales-out-batches/{bid}/confirm` — 确认发货：扣减 QUALIFIED 合格库存（批次合并/序列号逐件）、写库存流水、置序列号 shipped_at、累加应发行 shipped_qty、回写父单与源订单状态
+- `POST /api/sales-out-batches/{bid}/cancel` — 取消本次（仅 DRAFT，不影响库存）
+- `POST /api/sales-outs/{id}/cancel-remaining` — 取消剩余待发（未发数置 cancelled_qty、取消 DRAFT 子单、父单 COMPLETED/CANCELLED、回写源订单）
+- 批次/序列号约束：必须来自该仓该物料的在库合格库存（`GET /api/inventory/available-batches`、`/available-serials`），后端校验存在且数量足够；序列号产品每行 qty=1 且必选在库序列号
+- 状态：父单 DRAFT/APPROVED -> PARTIAL_SHIPPED -> COMPLETED；源订单 APPROVED -> SHIPPING -> COMPLETED；销售订单仅在未发货时可取消
+
 
 ### 📦 采购入库 (RK)
 - `GET /api/receipts`
@@ -216,6 +296,7 @@
 - `GET /api/reports/surgery-stats` — 编码/级别/经销商数/医生数/平均植入/最近手术
 - `GET /api/reports/receivables` — 编码/级别/账龄 30/60/90/最早未收
 - `GET /api/reports/overview` — 概览
+- `GET /api/reports/order-trace` — v3.6.0 订单追溯（单号/类型/经销商/下单/审核/出库/收货/状态/金额/产品数）
 
 ### 📊 通用规范
 所有列表 API 支持：
@@ -223,3 +304,34 @@
 - `?sort=field,desc` 排序（驼峰属性）
 - `?keyword=xxx` 关键字搜索
 - 返回结构 `{code, message, data:{total, page, size, list}}`
+
+
+---
+
+## v3.7.6 变更 (2026-07-26)
+
+### 单号规则 (返回 code 字段)
+| 业务 | v3.7.5 前 | v3.7.6 后 |
+|------|-----------|-----------|
+| 收货入库 | `RK-YYYYMMDD-N` | `GR-YYYYMMDD-N` |
+| 收货子单 | `RK-*-M` | `GR-*-M` |
+| 销售出库 | `CK-*` / `SO-timestamp` | `GI-YYYYMMDD-N` |
+| 采购退入库 | `RRK-*` | `GRR-*` |
+| 销退出库 | `RCK-*` | `GIR-*` |
+
+### /api/purchase-orders list 响应字段新增
+- `auditUserName` (string): 审核人姓名, users JOIN po.approved_by
+- `auditAt` (string): 审核时间 (对应 po.approved_at)
+
+### /api/purchase-orders/{id}/cancel 副作用
+- 级联 `UPDATE receipts SET status='CANCELLED'` where source_po_id = {id} AND status IN (DRAFT/RECEIVING/PARTIAL_RECEIVED/APPROVED)
+- 级联 `UPDATE receipt_batches SET status='CANCELLED', cancel_reason='源 PO 已取消'` for DRAFT 子单
+
+### /api/receipt-batches/{bid}/confirm 副作用
+- 更新 receipt_batches.confirmed_at = now(), confirmed_by = current user
+- 更新 receipts.received_at, receipts.status (可能 COMPLETED)
+- 更新 purchase_orders.status (可能 COMPLETED, completed_at = now())
+
+### /api/operation-log/list/receipt/{receiptId}
+- businessId 已由 aspect 统一为 receiptId (从 result.receiptId 提取)
+- 一次收货完整流程可查到: CREATE / UPDATE 更新明细 / UPDATE 确认收货 (或 UPDATE 取消本次)

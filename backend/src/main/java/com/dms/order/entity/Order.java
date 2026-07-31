@@ -92,6 +92,18 @@ public class Order {
     @Column(name = "updated_by")
     private Long updatedBy;
 
+    @Column(name = "audit_user_id")
+    private Long auditUserId;
+
+    @Column(name = "audit_user_name", length = 64)
+    private String auditUserName;
+
+    @Column(name = "audit_time")
+    private OffsetDateTime auditTime;
+
+    @Column(name = "audit_remark", length = 512)
+    private String auditRemark;
+
     @Version
     private Integer version;
 

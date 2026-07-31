@@ -164,4 +164,84 @@ public class InventoryController {
         }
         return ApiResponse.ok(out);
     }
+
+    /**
+     * v3.7.3 批次选择器（SAP MM MBQL 风格）：列出某产品在某仓库的可用批次（含批次号、可用数量、过期日）。
+     * GET /api/inventory/available-batches?productId=X&warehouseId=Y
+     */
+    @GetMapping("/available-batches")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ApiResponse<List<Map<String, Object>>> availableBatches(
+            @RequestParam Long productId,
+            @RequestParam(required = false) Long warehouseId) {
+        UUID tid = TenantContext.getTenantId();
+        StringBuilder sql = new StringBuilder(
+                "SELECT id, warehouse_id, batch_no, SUM(qty) AS qty, MIN(exp_date) AS exp_date, " +
+                "stock_status, MIN(prod_date) AS prod_date " +
+                "FROM inventory " +
+                "WHERE tenant_id = ?1 AND product_id = ?2 AND stock_status = 'QUALIFIED' AND qty > 0");
+        if (warehouseId != null) sql.append(" AND warehouse_id = ?3");
+        sql.append(" GROUP BY id, warehouse_id, batch_no, stock_status");
+        sql.append(" ORDER BY exp_date NULLS LAST, batch_no NULLS LAST LIMIT 500");
+
+        var q = em.createNativeQuery(sql.toString(), Tuple.class);
+        q.setParameter(1, tid).setParameter(2, productId);
+        if (warehouseId != null) q.setParameter(3, warehouseId);
+
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.get("id"));
+            m.put("warehouseId", t.get("warehouse_id"));
+            m.put("batchNo", t.get("batch_no"));
+            m.put("qty", t.get("qty"));
+            m.put("stockStatus", t.get("stock_status"));
+            m.put("expDate", com.dms.common.util.DateFmt.fmt(t.get("exp_date")));
+            m.put("prodDate", com.dms.common.util.DateFmt.fmt(t.get("prod_date")));
+            m.put("label", "批次: " + t.get("batch_no") + " (可用 " + t.get("qty") + ")");
+            out.add(m);
+        }
+        return ApiResponse.ok(out);
+    }
+
+    /**
+     * v3.7.3 序列号选择器：列出某产品某批次在某仓库在库序列号清单。
+     * GET /api/inventory/available-serials?productId=X&batchNo=Y&warehouseId=Z
+     */
+    @GetMapping("/available-serials")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ApiResponse<List<Map<String, Object>>> availableSerials(
+            @RequestParam Long productId,
+            @RequestParam String batchNo,
+            @RequestParam(required = false) Long warehouseId) {
+        UUID tid = TenantContext.getTenantId();
+        StringBuilder sql = new StringBuilder(
+                "SELECT id, warehouse_id, batch_no, serial_no, stock_status, received_at " +
+                "FROM stock_serials " +
+                "WHERE tenant_id = ?1 AND product_id = ?2 AND batch_no = ?3 AND shipped_at IS NULL");
+        if (warehouseId != null) sql.append(" AND warehouse_id = ?4");
+        sql.append(" ORDER BY id ASC LIMIT 500");
+
+        var q = em.createNativeQuery(sql.toString(), Tuple.class);
+        q.setParameter(1, tid).setParameter(2, productId).setParameter(3, batchNo);
+        if (warehouseId != null) q.setParameter(4, warehouseId);
+
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.get("id"));
+            m.put("warehouseId", t.get("warehouse_id"));
+            m.put("batchNo", t.get("batch_no"));
+            m.put("serialNo", t.get("serial_no"));
+            m.put("stockStatus", t.get("stock_status"));
+            m.put("receivedAt", com.dms.common.util.DateFmt.fmt(t.get("received_at")));
+            m.put("label", "SN: " + t.get("serial_no"));
+            out.add(m);
+        }
+        return ApiResponse.ok(out);
+    }
 }

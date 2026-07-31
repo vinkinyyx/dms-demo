@@ -5,13 +5,22 @@
  */
 package com.dms.order.controller;
 
+import com.dms.annotation.OperationLog;
 import com.dms.common.ApiResponse;
+import com.dms.common.enums.OperationAction;
+import com.dms.common.util.ExcelExportUtils;
+import com.dms.common.util.ContentDispositionUtils;
+import com.dms.common.util.ExcelImportUtils;
+import org.springframework.web.multipart.MultipartFile;
 import com.dms.common.util.TenantContext;
 import com.dms.execution.service.AutoDocGenerator;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -65,10 +74,10 @@ public class PurchaseOrderController {
                 .replace("status", "po.status")
                 .replace("supplier_id", "po.supplier_id");
         var q = em.createNativeQuery(
-                "SELECT po.id, po.code, po.order_type, po.supplier_id, po.supplier_name, po.warehouse_id, " +
-                "w.name AS warehouse_name, " +
+                "SELECT po.id, po.code, po.order_type, po.supplier_id, COALESCE(NULLIF(po.supplier_name,''), s.name) AS supplier_name, po.warehouse_id, " +
+                "w.name AS warehouse_name, u.name AS audit_user_name, po.approved_at AS audit_at, " +
                 "po.amount_incl_tax, po.final_amount, po.expected_date, po.status, po.extra, po.created_at " +
-                "FROM purchase_orders po LEFT JOIN warehouses w ON w.id = po.warehouse_id " +
+                "FROM purchase_orders po LEFT JOIN warehouses w ON w.id = po.warehouse_id LEFT JOIN suppliers s ON s.id = po.supplier_id LEFT JOIN users u ON u.id = po.approved_by " +
                 whereQualified +
                 " ORDER BY po.created_at DESC LIMIT " + limitParam + " OFFSET " + offsetParam,
                 Tuple.class);
@@ -131,6 +140,7 @@ public class PurchaseOrderController {
 
     /** 创建（DRAFT） */
     @PostMapping
+    @OperationLog(businessType = "purchaseOrder", action = OperationAction.CREATE, remark = "采购订单-创建")
     @Transactional
     public ApiResponse<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         UUID tid = TenantContext.getTenantId();
@@ -142,7 +152,7 @@ public class PurchaseOrderController {
         var insertPo = em.createNativeQuery(
                 "INSERT INTO purchase_orders (tenant_id, code, order_type, supplier_id, supplier_name, warehouse_id, is_red, " +
                 "amount_incl_tax, final_amount, expected_date, status, remark, extra, created_at, updated_at) " +
-                "VALUES (:tid, :code, :ot, :sid, :sname, :wid, :isred, :amt, :famt, :ed, 'DRAFT', :rmk, CAST(:ext AS jsonb), now(), now()) RETURNING id");
+                "VALUES (:tid, :code, :ot, :sid, :sname, :wid, :isred, :amt, :famt, CAST(:ed AS date), 'DRAFT', :rmk, CAST(:ext AS jsonb), now(), now()) RETURNING id");
         insertPo.setParameter("tid", tid);
         insertPo.setParameter("code", code);
         insertPo.setParameter("ot", body.getOrDefault("orderType", "NORMAL"));
@@ -168,6 +178,7 @@ public class PurchaseOrderController {
 
     /** 更新（仅 DRAFT 可改） */
     @PutMapping("/{id}")
+    @OperationLog(businessType = "purchaseOrder", action = OperationAction.UPDATE, remark = "采购订单-更新")
     @Transactional
     public ApiResponse<Map<String, Object>> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         UUID tid = TenantContext.getTenantId();
@@ -177,7 +188,7 @@ public class PurchaseOrderController {
         BigDecimal total = calcTotal(body);
         em.createNativeQuery(
                 "UPDATE purchase_orders SET order_type = :ot, supplier_id = :sid, warehouse_id = :wid, " +
-                "amount_incl_tax = :amt, final_amount = :famt, expected_date = :ed, remark = :rmk, extra = CAST(:ext AS jsonb), updated_at = now() " +
+                "amount_incl_tax = :amt, final_amount = :famt, expected_date = CAST(:ed AS date), remark = :rmk, extra = CAST(:ext AS jsonb), updated_at = now() " +
                 "WHERE id = :id AND tenant_id = :tid")
             .setParameter("ot", body.getOrDefault("orderType", "NORMAL"))
             .setParameter("sid", body.get("supplierId"))
@@ -201,6 +212,7 @@ public class PurchaseOrderController {
 
     /** 提交审批 */
     @PostMapping("/{id}/submit")
+    @OperationLog(businessType = "purchaseOrder", action = OperationAction.UPDATE, remark = "采购订单-提交审批")
     @Transactional
     public ApiResponse<Map<String, Object>> submit(@PathVariable Long id) {
         return doTransition(id, "DRAFT", "SUBMITTED", "PO_SUBMIT");
@@ -208,6 +220,7 @@ public class PurchaseOrderController {
 
     /** 审批通过 - v3.4 增强：自动生成采购入库草稿 */
     @PostMapping("/{id}/approve")
+    @OperationLog(businessType = "purchaseOrder", action = OperationAction.APPROVE, remark = "采购订单-审批通过")
     @Transactional
     public ApiResponse<Map<String, Object>> approve(@PathVariable Long id) {
         ApiResponse<Map<String, Object>> res = doTransition(id, "SUBMITTED", "APPROVED", "PO_APPROVE");
@@ -227,6 +240,7 @@ public class PurchaseOrderController {
 
     /** 驳回 */
     @PostMapping("/{id}/reject")
+    @OperationLog(businessType = "purchaseOrder", action = OperationAction.REJECT, remark = "采购订单-驳回")
     @Transactional
     public ApiResponse<Map<String, Object>> reject(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
         return doTransition(id, "SUBMITTED", "REJECTED", "PO_REJECT");
@@ -238,10 +252,33 @@ public class PurchaseOrderController {
     public ApiResponse<Map<String, Object>> cancel(@PathVariable Long id) {
         UUID tid = TenantContext.getTenantId();
         String status = getStatus(id, tid);
-        if (!"DRAFT".equals(status) && !"SUBMITTED".equals(status)) {
+        if (!"DRAFT".equals(status) && !"APPROVED".equals(status)) {
             return ApiResponse.fail(40009, "当前状态不允许取消: " + status);
         }
+        // v3.7.4 D1: APPROVED 状态下, 需所有关联收货单为 DRAFT 且累计已收 = 0
+        if ("APPROVED".equals(status) || "RECEIVING".equals(status)) {
+            Object cntObj = em.createNativeQuery(
+                    "SELECT COUNT(*) FROM receipts WHERE tenant_id = ?1 AND source_po_id = ?2 AND status NOT IN ('DRAFT')")
+                    .setParameter(1, tid).setParameter(2, id).getSingleResult();
+            long badReceipts = ((Number) cntObj).longValue();
+            if (badReceipts > 0) {
+                return ApiResponse.fail(40009, "存在非草稿收货单, 不能取消采购订单");
+            }
+            Object rcvObj = em.createNativeQuery(
+                    "SELECT COALESCE(SUM(received_qty),0) FROM purchase_order_lines WHERE po_id = ?1")
+                    .setParameter(1, id).getSingleResult();
+            java.math.BigDecimal rcv = new java.math.BigDecimal(String.valueOf(rcvObj));
+            if (rcv.signum() > 0) {
+                return ApiResponse.fail(40009, "已存在收货记录, 不能取消采购订单");
+            }
+        }
+
         em.createNativeQuery("UPDATE purchase_orders SET status='CANCELLED', updated_at=now() WHERE id=?1 AND tenant_id=?2")
+          .setParameter(1, id).setParameter(2, tid).executeUpdate();
+        // v3.7.6 R3: 同步取消关联的收货入库单 (仅 DRAFT/RECEIVING 可取消，已完成保留)
+        em.createNativeQuery("UPDATE receipts SET status='CANCELLED', updated_at=now() WHERE source_po_id=?1 AND tenant_id=?2 AND status IN ('DRAFT','RECEIVING','PARTIAL_RECEIVED','APPROVED')")
+          .setParameter(1, id).setParameter(2, tid).executeUpdate();
+        em.createNativeQuery("UPDATE receipt_batches SET status='CANCELLED', cancelled_at=now(), cancel_reason=COALESCE(cancel_reason,'源 PO 已取消'), updated_at=now() WHERE receipt_id IN (SELECT id FROM receipts WHERE source_po_id=?1 AND tenant_id=?2) AND status='DRAFT'")
           .setParameter(1, id).setParameter(2, tid).executeUpdate();
         audit(id, "PO_CANCEL");
         Map<String, Object> res = new LinkedHashMap<>();
@@ -420,7 +457,7 @@ public class PurchaseOrderController {
     private Map<String, Object> readOne(Long id, UUID tid) {
         try {
             var q = em.createNativeQuery(
-                    "SELECT id, code, order_type, supplier_id, supplier_name, warehouse_id, " +
+                    "SELECT id, code, order_type, supplier_id, COALESCE(NULLIF(supplier_name,''), (SELECT name FROM suppliers WHERE id=supplier_id)) AS supplier_name, warehouse_id, " +
                     "amount_incl_tax, final_amount, expected_date, status, remark, extra, " +
                     "created_at, updated_at, submitted_at, approved_at, completed_at " +
                     "FROM purchase_orders WHERE id = ?1 AND tenant_id = ?2", Tuple.class);
@@ -441,6 +478,8 @@ public class PurchaseOrderController {
         try { m.put("supplierName", t.get("supplier_name")); } catch (Exception ignored) {}
         try { m.put("warehouseId", t.get("warehouse_id")); } catch (Exception ignored) {}
         try { m.put("warehouseName", t.get("warehouse_name")); } catch (Exception ignored) {}
+        try { m.put("auditUserName", t.get("audit_user_name")); } catch (Exception ignored) {}
+        try { m.put("auditAt", com.dms.common.util.DateFmt.fmt(t.get("audit_at"))); } catch (Exception ignored) {}
         m.put("amountInclTax", t.get("amount_incl_tax"));
         m.put("finalAmount", t.get("final_amount"));
         try { m.put("expectedDate", com.dms.common.util.DateFmt.fmt(t.get("expected_date"))); } catch (Exception ignored) {}
@@ -500,8 +539,8 @@ public class PurchaseOrderController {
         } else if ("SUBMITTED".equals(status)) {
             actions.add(action("approve", "审批通过", "success", "POST", "/approve"));
             actions.add(action("reject", "驳回", "danger", "POST", "/reject"));
-            actions.add(action("cancel", "取消", "default", "POST", "/cancel"));
         } else if ("APPROVED".equals(status)) {
+            actions.add(action("cancel", "取消", "warning", "POST", "/cancel"));
             actions.add(action("receive", "收货入库", "success", "POST", "/receive"));
         } else if ("RECEIVING".equals(status)) {
             actions.add(action("receive", "继续收货", "success", "POST", "/receive"));
@@ -524,6 +563,130 @@ public class PurchaseOrderController {
         if (o == null) return null;
         if (o instanceof Number) return ((Number) o).longValue();
         return Long.valueOf(String.valueOf(o));
+    }
+
+    private String strOr(Object o, String def) {
+        if (o == null) return def;
+        String s = String.valueOf(o).trim();
+        return s.isEmpty() ? def : s;
+    }
+
+    private BigDecimal toBd(Object o) {
+        if (o == null) return BigDecimal.ZERO;
+        if (o instanceof BigDecimal) return (BigDecimal) o;
+        if (o instanceof Number) return BigDecimal.valueOf(((Number) o).doubleValue());
+        return new BigDecimal(String.valueOf(o));
+    }
+
+    @DeleteMapping("/{id}")
+    @OperationLog(businessType = "purchaseOrder", action = OperationAction.DELETE, remark = "采购订单-删除")
+    @Transactional
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        UUID tid = TenantContext.getTenantId();
+        String status = getStatus(id, tid);
+        if (status == null) return ApiResponse.fail(40404, "采购订单不存在");
+        if (!"DRAFT".equals(status)) {
+            return ApiResponse.fail(40009, "仅草稿状态可删除，当前状态: " + status);
+        }
+        int aff = em.createNativeQuery("UPDATE purchase_orders SET deleted_at = now() WHERE id = ?1 AND tenant_id = ?2")
+                .setParameter(1, id).setParameter(2, tid).executeUpdate();
+        if (aff == 0) return ApiResponse.fail(40404, "采购单不存在");
+        return ApiResponse.ok();
+    }
+
+    @GetMapping("/actions/export")
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> export() throws Exception {
+        UUID tid = TenantContext.getTenantId();
+        String whereQualified = " WHERE po.tenant_id = ?1 AND po.deleted_at IS NULL";
+        var q = em.createNativeQuery(
+                "SELECT po.id, po.code, po.order_type, po.supplier_id, COALESCE(NULLIF(po.supplier_name,''), s.name) AS supplier_name, po.warehouse_id, " +
+                "w.name AS warehouse_name, " +
+                "po.amount_incl_tax, po.final_amount, po.expected_date, po.status, po.extra, po.created_at " +
+                "FROM purchase_orders po LEFT JOIN warehouses w ON w.id = po.warehouse_id LEFT JOIN suppliers s ON s.id = po.supplier_id " +
+                whereQualified +
+                " ORDER BY po.created_at DESC",
+                Tuple.class);
+        q.setParameter(1, tid);
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) {
+            list.add(toBrief(t));
+        }
+
+        String[] headers = {"ID", "采购单号", "订单类型", "供应商ID", "供应商名称", "仓库ID", "仓库名称", "含税金额", "最终金额", "期望到货", "状态", "创建时间"};
+        String[] fieldNames = {"id", "code", "orderType", "supplierId", "supplierName", "warehouseId", "warehouseName", "amountInclTax", "finalAmount", "expectedDate", "status", "createdAt"};
+
+        byte[] excelBytes = ExcelExportUtils.exportMapToExcel(list, headers, fieldNames);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionUtils.attachment("采购订单列表.xlsx"))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(excelBytes);
+    }
+
+    @PostMapping("/batch-import")
+    @Transactional
+    public ApiResponse<java.util.Map<String, Object>> batchImport(@RequestParam("file") MultipartFile file) throws Exception {
+        if (file.isEmpty()) {
+            return ApiResponse.fail(40001, "请选择要导入的文件");
+        }
+
+        java.util.List<java.util.Map<String, Object>> data = ExcelImportUtils.importFromExcel(file.getInputStream(), file.getOriginalFilename());
+        if (data.isEmpty()) {
+            return ApiResponse.fail(40002, "Excel 文件中没有数据");
+        }
+
+        int success = 0, failed = 0;
+        java.util.List<java.util.Map<String, Object>> errors = new java.util.ArrayList<>();
+
+        for (int i = 0; i < data.size(); i++) {
+            java.util.Map<String, Object> row = data.get(i);
+            try {
+                String orderType = strOr(row.get("订单类型"), "NORMAL");
+                Long supplierId = toLong(row.get("供应商ID"));
+                Long warehouseId = toLong(row.get("仓库ID"));
+                java.math.BigDecimal amountInclTax = toBd(row.get("含税金额"));
+                java.math.BigDecimal finalAmount = toBd(row.get("最终金额"));
+                String expectedDate = strOr(row.get("期望到货"), null);
+                String status = strOr(row.get("状态"), "DRAFT");
+
+                if (supplierId == null) {
+                    throw new IllegalArgumentException("供应商ID不能为空");
+                }
+                if (warehouseId == null) {
+                    throw new IllegalArgumentException("仓库ID不能为空");
+                }
+
+                String sql = "INSERT INTO purchase_orders (order_type, supplier_id, warehouse_id, amount_incl_tax, final_amount, expected_date, status, tenant_id) " +
+                        "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)";
+                em.createNativeQuery(sql)
+                        .setParameter(1, orderType != null ? orderType : "NORMAL")
+                        .setParameter(2, supplierId)
+                        .setParameter(3, warehouseId)
+                        .setParameter(4, amountInclTax)
+                        .setParameter(5, finalAmount)
+                        .setParameter(6, expectedDate)
+                        .setParameter(7, status != null ? status : "DRAFT")
+                        .setParameter(8, TenantContext.getTenantId())
+                        .executeUpdate();
+                success++;
+            } catch (Exception e) {
+                failed++;
+                java.util.Map<String, Object> err = new java.util.LinkedHashMap<>();
+                err.put("row", i + 2);
+                err.put("error", e.getMessage());
+                errors.add(err);
+            }
+        }
+
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("total", data.size());
+        result.put("success", success);
+        result.put("failed", failed);
+        result.put("errors", errors);
+        return ApiResponse.ok(result);
     }
 
     private String extraToJson(Object extra) {

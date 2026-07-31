@@ -1,0 +1,24 @@
+{
+  "name": "dms",
+  "version": "1.0.0",
+  "description": "**当前版本**: v3.7.1 **最后更新**: 2026-07-25 **正式环境**: PC http://8.133.193.238:8081/，移动端 http://8.133.193.238:8081/mobile/login **测试环境**: PC http://8.133.193.238:8083/，移动端 http://8.133.193.238:8083/mobile/login",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vinkinyyx/dms-demo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/vinkinyyx/dms-demo/issues"
+  },
+  "homepage": "https://github.com/vinkinyyx/dms-demo#readme"
+}

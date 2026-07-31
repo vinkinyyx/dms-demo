@@ -5,6 +5,8 @@
  *   /api/reports/inventory-turnover 库存周转
  *   /api/reports/surgery-stats      手术报台统计
  *   /api/reports/receivables        应收账款
+ *   /api/reports/order-trace        订单追溯（v3.5.2 新增）
+ *   /api/reports/overview           报表概览
  */
 package com.dms.report.controller;
 
@@ -170,7 +172,95 @@ public class BusinessReportController {
                 "aged30", "aged60", "aged90", "earliestUnpaid"));
     }
 
-    // 6. 报表概览
+    // 6. 订单追溯 - 订单→发货→库存缺口 链路追踪
+    // 使用 CTE 避免 SQL 嵌套相关子查询导致的 UnexpectedRollbackException
+    @GetMapping("/order-trace")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ApiResponse<List<Map<String, Object>>> orderTrace(
+            @RequestParam(defaultValue = "500") int limit) {
+        UUID tid = TenantContext.getTenantId();
+        int safeLimit = Math.max(1, Math.min(2000, limit));
+
+        String sql = "WITH order_qty AS ( " +
+                "  SELECT order_id, SUM(qty) AS total_qty FROM order_lines GROUP BY order_id " +
+                "), shipped_qty AS ( " +
+                "  SELECT so.source_order_id AS order_id, COALESCE(SUM(sol.shipped_qty), 0) AS shipped_qty " +
+                "  FROM sales_outs so JOIN sales_out_lines sol ON sol.sales_out_id = so.id " +
+                "  WHERE (so.is_red = false OR so.is_red IS NULL) " +
+                "    AND so.source_order_id IS NOT NULL " +
+                "  GROUP BY so.source_order_id " +
+                "), shipment AS ( " +
+                "  SELECT so.source_order_id AS order_id, so.status AS latest_status, so.created_at AS last_ship_at " +
+                "  FROM sales_outs so " +
+                "  WHERE (so.is_red = false OR so.is_red IS NULL) AND so.source_order_id IS NOT NULL " +
+                "  AND so.id = ( " +
+                "    SELECT MAX(s2.id) FROM sales_outs s2 " +
+                "    WHERE s2.source_order_id = so.source_order_id " +
+                "      AND (s2.is_red = false OR s2.is_red IS NULL) " +
+                "  ) " +
+                "), qualified_stock AS ( " +
+                "  SELECT product_id, SUM(qty) AS qty FROM inventory " +
+                "  WHERE stock_status = 'QUALIFIED' GROUP BY product_id " +
+                "), order_lines_by_product AS ( " +
+                "  SELECT ol.order_id, ol.product_id, SUM(ol.qty) AS qty " +
+                "  FROM order_lines ol GROUP BY ol.order_id, ol.product_id " +
+                "), per_product_shortage AS ( " +
+                "  SELECT olp.order_id, MAX(GREATEST(olp.qty - COALESCE(qs.qty, 0), 0)) AS shortage " +
+                "  FROM order_lines_by_product olp LEFT JOIN qualified_stock qs ON qs.product_id = olp.product_id " +
+                "  GROUP BY olp.order_id " +
+                ") " +
+                "SELECT o.id AS order_id, o.code AS order_code, d.name AS dealer_name, " +
+                "  o.created_at AS order_date, o.status AS approval_status, " +
+                "  COALESCE(oq.total_qty, 0) AS total_qty, " +
+                "  COALESCE(sq.shipped_qty, 0) AS shipped_qty, " +
+                "  COALESCE(sh.latest_status, 'PENDING') AS shipment_status, " +
+                "  sh.last_ship_at AS last_ship_at, " +
+                "  COALESCE(pps.shortage, 0) AS shortage_qty " +
+                "FROM orders o " +
+                "LEFT JOIN dealers d ON d.id = o.dealer_id " +
+                "LEFT JOIN order_qty oq ON oq.order_id = o.id " +
+                "LEFT JOIN shipped_qty sq ON sq.order_id = o.id " +
+                "LEFT JOIN shipment sh ON sh.order_id = o.id " +
+                "LEFT JOIN per_product_shortage pps ON pps.order_id = o.id " +
+                "WHERE (o.is_red = false OR o.is_red IS NULL) " +
+                "  AND o.status NOT IN ('CANCELLED', 'REJECTED') " +
+                "  AND o.tenant_id = ?1 " +
+                "ORDER BY o.created_at DESC LIMIT ?2";
+
+        var q = em.createNativeQuery(sql, Tuple.class);
+        q.setParameter(1, tid).setParameter(2, safeLimit);
+
+        List<Map<String, Object>> out = new ArrayList<>();
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            BigDecimal totalQty = toBd(t.get("total_qty"));
+            BigDecimal shippedQty = toBd(t.get("shipped_qty"));
+            m.put("orderId", ((Number) t.get("order_id")).longValue());
+            m.put("orderCode", t.get("order_code"));
+            m.put("dealerName", t.get("dealer_name"));
+            m.put("orderDate", t.get("order_date"));
+            m.put("approvalStatus", t.get("approval_status"));
+            m.put("totalQty", totalQty);
+            m.put("shippedQty", shippedQty);
+            m.put("unshippedQty", totalQty.subtract(shippedQty));
+            m.put("shortageQty", toBd(t.get("shortage_qty")));
+            m.put("shipmentStatus", t.get("shipment_status"));
+            m.put("lastShipAt", t.get("last_ship_at"));
+            out.add(m);
+        }
+        return ApiResponse.ok(out);
+    }
+
+    private BigDecimal toBd(Object v) {
+        if (v == null) return BigDecimal.ZERO;
+        if (v instanceof BigDecimal) return (BigDecimal) v;
+        if (v instanceof Number) return new BigDecimal(((Number) v).toString());
+        try { return new BigDecimal(v.toString()); } catch (Exception e) { return BigDecimal.ZERO; }
+    }
+
+    // 7. 报表概览
     @GetMapping("/overview")
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public ApiResponse<Map<String, Object>> overview() {

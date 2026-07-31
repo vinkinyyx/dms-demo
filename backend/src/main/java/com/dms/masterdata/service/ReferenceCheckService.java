@@ -8,6 +8,7 @@ import com.dms.common.util.TenantContext;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ReferenceCheckService {
 
@@ -26,10 +28,20 @@ public class ReferenceCheckService {
     public Map<String, Long> productReferences(Long productId) {
         UUID tid = TenantContext.getTenantId();
         Map<String, Long> refs = new LinkedHashMap<>();
-        refs.put("订单明细", countByProduct("order_lines", productId, tid));
-        refs.put("库存",     countByProduct("inventory", productId, tid));
-        refs.put("销售出库明细", countByProduct("sales_out_lines", productId, tid));
-        refs.put("授权记录", countByProduct("authorizations", productId, tid));
+        refs.put("订单明细", countByCol("order_lines", "product_id", productId, tid));
+        refs.put("库存",     countByCol("inventory", "product_id", productId, tid));
+        refs.put("销售出库明细", countByCol("sales_out_lines", "product_id", productId, tid));
+        refs.put("授权记录", countByCol("authorizations", "product_id", productId, tid));
+        refs.put("产品价格", countByCol("product_prices", "product_id", productId, tid));
+        return refs;
+    }
+
+    /** 检查商品分类引用 */
+    public Map<String, Long> categoryReferences(Long categoryId) {
+        UUID tid = TenantContext.getTenantId();
+        Map<String, Long> refs = new LinkedHashMap<>();
+        refs.put("商品", countByCol("products", "category_id", categoryId, tid));
+        refs.put("子分类", countByCol("product_categories", "parent_id", categoryId, tid));
         return refs;
     }
 
@@ -46,12 +58,23 @@ public class ReferenceCheckService {
         return refs;
     }
 
+    /** 检查供应商引用 */
+    public Map<String, Long> supplierReferences(UUID supplierId) {
+        UUID tid = TenantContext.getTenantId();
+        Map<String, Long> refs = new LinkedHashMap<>();
+        refs.put("采购订单", countByCol("purchase_orders", "supplier_id", supplierId, tid));
+        refs.put("采购退货", countByCol("purchase_returns", "supplier_id", supplierId, tid));
+        refs.put("收货",   countByCol("receipts", "supplier_id", supplierId, tid));
+        return refs;
+    }
+
     /** 检查医院/终端引用 */
     public Map<String, Long> hospitalReferences(Long hospitalId) {
         UUID tid = TenantContext.getTenantId();
         Map<String, Long> refs = new LinkedHashMap<>();
         refs.put("销售出库", countByCol("sales_outs", "terminal_id", hospitalId, tid));
         refs.put("授权",     countByCol("authorizations", "terminal_id", hospitalId, tid));
+        refs.put("手术报台", countByCol("surgery_reports", "terminal_id", hospitalId, tid));
         return refs;
     }
 
@@ -61,8 +84,9 @@ public class ReferenceCheckService {
         Map<String, Long> refs = new LinkedHashMap<>();
         refs.put("库存",       countByCol("inventory", "warehouse_id", warehouseId, tid));
         refs.put("收货入库",   countByCol("receipts", "warehouse_id", warehouseId, tid));
+        refs.put("销售出库",   countByCol("sales_outs", "warehouse_id", warehouseId, tid));
         refs.put("调拨(源)",   countByCol("stock_moves", "from_warehouse_id", warehouseId, tid));
-        refs.put("调拨(目标)", countByCol("stock_moves", "to_warehouse_id", warehouseId, tid));
+        refs.put("调拨(目)",   countByCol("stock_moves", "to_warehouse_id", warehouseId, tid));
         return refs;
     }
 
@@ -84,7 +108,7 @@ public class ReferenceCheckService {
      * 每次查询独立事务（REQUIRES_NEW），单条失败不影响其他表
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
-    public long countByCol(String table, String col, Long id, UUID tenantId) {
+    public long countByCol(String table, String col, Object val, UUID tenantId) {
         try {
             // 先判断表是否存在
             var tblChk = em.createNativeQuery(
@@ -103,10 +127,11 @@ public class ReferenceCheckService {
                 ? "SELECT COUNT(*) FROM " + table + " WHERE " + col + " = ?1 AND tenant_id = ?2"
                 : "SELECT COUNT(*) FROM " + table + " WHERE " + col + " = ?1";
             var q = em.createNativeQuery(sql);
-            q.setParameter(1, id);
+            q.setParameter(1, val);
             if (hasTenant) q.setParameter(2, tenantId);
             return ((Number) q.getSingleResult()).longValue();
         } catch (Exception e) {
+            log.warn("countByCol 异常 table={} col={}: {}", table, col, e.getMessage());
             return 0L;
         }
     }

@@ -28,7 +28,11 @@ public enum ErrorCode {
 
     RATE_LIMITED(42901, "请求过于频繁，请稍后再试"),
 
-    INTERNAL_ERROR(50000, "系统内部错误");
+    INTERNAL_ERROR(50000, "系统内部错误"),
+
+    RESOURCE_IN_USE(40903, "资源正在被使用，无法删除"),
+    HAS_REFERENCES(40904, "存在引用记录，无法删除"),
+    CANNOT_DELETE(40905, "不可删除：该资源已被业务数据引用");
 
     private final Integer code;
     private final String message;
