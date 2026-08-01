@@ -21,12 +21,16 @@
           </template>
         </el-table-column>
       </el-table>
+      <div v-if="paginated" class="picker-pager">
+        <el-pagination small layout="prev, pager, next, total" :total="total"
+          :page-size="pageSize" :current-page="page" @current-change="onPageChange" />
+      </div>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { lookup } from '@/api/crud'
 import { statusText, statusTagType, fmt } from '@/utils/dict'
 
@@ -56,25 +60,43 @@ const loading = ref(false)
 const keyword = ref('')
 const list = ref([])
 const displayText = ref(props.displayValue || '')
+// 产品选择器支持服务端分页（每页50条），列出所有产品
+const paginated = computed(() => props.resource === 'products')
+const pageSize = 50
+const page = ref(1)
+const total = ref(0)
 let timer = null
 
 watch(() => props.displayValue, (v) => { displayText.value = v || '' })
 
 function open() {
   visible.value = true
+  page.value = 1
   load()
 }
 function onSearch() {
   if (timer) clearTimeout(timer)
+  page.value = 1
   timer = setTimeout(load, 350)
+}
+function onPageChange(p) {
+  page.value = p
+  load()
 }
 async function load() {
   loading.value = true
   try {
-    const params = { limit: 50, ...props.extraParams }
+    const params = { limit: 500, ...props.extraParams }
+    if (paginated.value) { params.page = page.value; params.size = pageSize }
     if (keyword.value.trim()) params.keyword = keyword.value.trim()
     const res = await lookup(props.resource, params)
-    list.value = res.data || []
+    if (paginated.value && res.data && Array.isArray(res.data.list)) {
+      list.value = res.data.list
+      total.value = res.data.total || 0
+    } else {
+      list.value = res.data || []
+      total.value = list.value.length
+    }
   } finally {
     loading.value = false
   }
@@ -99,4 +121,5 @@ const meta = PICKER_META[props.resource] || { title: '选择', cols: [{ k: 'code
 <style scoped>
 .picker-search { margin-bottom: 12px; }
 .clear-btn { cursor: pointer; }
+.picker-pager { margin-top: 10px; display: flex; justify-content: flex-end; }
 </style>

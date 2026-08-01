@@ -41,38 +41,52 @@ public class LookupController {
     /** 产品 lookup - 支持按经销商授权过滤（v3.4.5） */
     @GetMapping("/products")
     @Transactional(readOnly = true)
-    public ApiResponse<List<Map<String, Object>>> products(
+    public ApiResponse<?> products(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long dealerId,
-            @RequestParam(defaultValue = "50") int limit) {
+            @RequestParam(defaultValue = "500") int limit,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
         UUID tid = TenantContext.getTenantId();
-        // v3.4.10: 与 AuthorizationService.check 语义一致 - 授权可以是 product_id 精确匹配 OR category 范围
-        // v3.4.9: 增加 unit_type + 从 product_prices 取 sales_price（GLOBAL 兜底）
-        StringBuilder sql = new StringBuilder(
-                "SELECT DISTINCT p.id, p.code, p.name_cn AS name, p.spec, p.unit, p.unit_type, " +
-                "p.current_price AS price, " +
-                "(SELECT sales_price FROM product_prices pp WHERE pp.product_id = p.id AND pp.partner_type='GLOBAL' " +
-                " AND pp.tenant_id = p.tenant_id LIMIT 1) AS price_retail, " +
-                "p.status FROM products p ");
+        boolean paged = page != null && size != null && size > 0;
+        int pageSize = paged ? size : limit;
+        int offset = paged ? (page - 1) * size : 0;
+        // v3.7.9: 模糊搜索增加规格 spec；支持分页 page/size 返回 {total,list}；默认上限 500
+        StringBuilder from = new StringBuilder(" FROM products p ");
         boolean withDealer = dealerId != null;
         if (withDealer) {
-            sql.append("JOIN authorizations a ON a.tenant_id = p.tenant_id AND a.dealer_id = :did " +
+            from.append("JOIN authorizations a ON a.tenant_id = p.tenant_id AND a.dealer_id = :did " +
                     "  AND COALESCE(a.status,'active') = 'active' " +
                     "  AND (a.auth_type IS NULL OR a.auth_type = 'ORDER') " +
                     "  AND (a.valid_from IS NULL OR a.valid_from <= CURRENT_DATE) " +
                     "  AND (a.valid_to IS NULL OR a.valid_to >= CURRENT_DATE) " +
                     "  AND ( " +
-                    "     a.product_id IS NULL " +   /* 通配所有产品 */
-                    "     OR a.product_id = p.id " +  /* 精确匹配 */
+                    "     a.product_id IS NULL " +
+                    "     OR a.product_id = p.id " +
                     "     OR (a.category_ids IS NOT NULL AND a.category_ids <> '' " +
                     "         AND CAST(p.category_id AS text) = ANY(string_to_array(a.category_ids, ','))) " +
                     "  ) ");
         }
-        sql.append("WHERE p.tenant_id = :tid AND p.deleted_at IS NULL ");
-        if (keyword != null && !keyword.isBlank()) sql.append(" AND (p.code ILIKE :kw OR p.name_cn ILIKE :kw) ");
-        sql.append(" ORDER BY p.code LIMIT :lim");
-        var q = em.createNativeQuery(sql.toString(), Tuple.class);
-        q.setParameter("tid", tid).setParameter("lim", limit);
+        String where = "WHERE p.tenant_id = :tid AND p.deleted_at IS NULL " +
+                ((keyword != null && !keyword.isBlank())
+                        ? " AND (p.code ILIKE :kw OR p.name_cn ILIKE :kw OR p.spec ILIKE :kw) " : "");
+        String selectCols = "DISTINCT p.id, p.code, p.name_cn AS name, p.spec, p.unit, p.unit_type, " +
+                "p.current_price AS price, " +
+                "(SELECT sales_price FROM product_prices pp WHERE pp.product_id = p.id AND pp.partner_type='GLOBAL' " +
+                " AND pp.tenant_id = p.tenant_id LIMIT 1) AS price_retail, " +
+                "p.is_serial_managed, p.status";
+
+        long total = 0;
+        if (paged) {
+            var cq = em.createNativeQuery("SELECT COUNT(DISTINCT p.id) " + from + where);
+            cq.setParameter("tid", tid);
+            if (withDealer) cq.setParameter("did", dealerId);
+            if (keyword != null && !keyword.isBlank()) cq.setParameter("kw", "%" + keyword + "%");
+            total = ((Number) cq.getSingleResult()).longValue();
+        }
+
+        var q = em.createNativeQuery("SELECT " + selectCols + from + where + " ORDER BY p.code LIMIT :lim OFFSET :off", Tuple.class);
+        q.setParameter("tid", tid).setParameter("lim", pageSize).setParameter("off", offset);
         if (withDealer) q.setParameter("did", dealerId);
         if (keyword != null && !keyword.isBlank()) q.setParameter("kw", "%" + keyword + "%");
         @SuppressWarnings("unchecked")
@@ -89,12 +103,19 @@ public class LookupController {
             m.put("unitType", r.get("unit_type") == null ? "EA" : r.get("unit_type"));
             m.put("price", r.get("price"));
             m.put("priceRetail", r.get("price_retail"));
+            m.put("isSerialManaged", r.get("is_serial_managed"));
             m.put("status", r.get("status"));
             m.put("value", r.get("id"));
-            String c = String.valueOf(r.get("code"));
-            String n = String.valueOf(r.get("name"));
-            m.put("label", c + " · " + n);
+            m.put("label", String.valueOf(r.get("code")) + " 路 " + String.valueOf(r.get("name")));
             out.add(m);
+        }
+        if (paged) {
+            Map<String, Object> pg = new LinkedHashMap<>();
+            pg.put("total", total);
+            pg.put("page", page);
+            pg.put("size", size);
+            pg.put("list", out);
+            return ApiResponse.ok(pg);
         }
         return ApiResponse.ok(out);
     }
