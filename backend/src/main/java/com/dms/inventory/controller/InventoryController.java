@@ -176,12 +176,12 @@ public class InventoryController {
             @RequestParam(required = false) Long warehouseId) {
         UUID tid = TenantContext.getTenantId();
         StringBuilder sql = new StringBuilder(
-                "SELECT id, warehouse_id, batch_no, SUM(qty) AS qty, MIN(exp_date) AS exp_date, " +
+                "SELECT MIN(id) AS id, warehouse_id, batch_no, SUM(qty) AS qty, MIN(exp_date) AS exp_date, " +
                 "stock_status, MIN(prod_date) AS prod_date " +
                 "FROM inventory " +
                 "WHERE tenant_id = ?1 AND product_id = ?2 AND stock_status = 'QUALIFIED' AND qty > 0");
         if (warehouseId != null) sql.append(" AND warehouse_id = ?3");
-        sql.append(" GROUP BY id, warehouse_id, batch_no, stock_status");
+        sql.append(" GROUP BY warehouse_id, batch_no, stock_status");
         sql.append(" ORDER BY exp_date NULLS LAST, batch_no NULLS LAST LIMIT 500");
 
         var q = em.createNativeQuery(sql.toString(), Tuple.class);

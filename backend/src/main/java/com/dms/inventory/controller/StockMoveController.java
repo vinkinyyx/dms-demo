@@ -139,6 +139,8 @@ public class StockMoveController {
             inventoryOps.addByKey(tid, (Long) m.get("productId"), toWh, (String) m.get("batchNo"), (String) m.get("serialNo"),
                     (String) m.get("toStatus"), (BigDecimal) m.get("qty"),
                     "STATUS_ADJUST".equals(moveType) ? "STATUS_ADJUST_IN" : "MOVE_IN", "stock_move", moveId, userId);
+            syncSerialAfterMove(tid, (Long) m.get("productId"), fromWh, toWh,
+                    (String) m.get("batchNo"), (String) m.get("serialNo"), (String) m.get("toStatus"));
         }
 
         opLog.log("stock_move", moveId, "CREATE",
@@ -153,6 +155,48 @@ public class StockMoveController {
         return ApiResponse.ok(res);
     }
 
+    private void syncSerialAfterMove(UUID tid, Long productId, Long fromWh, Long toWh,
+                                     String batchNo, String serialNo, String toStatus) {
+        if (serialNo == null || serialNo.isBlank()) return;
+        if (fromWh.equals(toWh)) {
+            em.createNativeQuery(
+                    "UPDATE stock_serials SET stock_status = ?1 " +
+                    "WHERE tenant_id = ?2 AND product_id = ?3 AND warehouse_id = ?4 " +
+                    "  AND batch_no = ?5 AND serial_no = ?6 AND shipped_at IS NULL")
+              .setParameter(1, toStatus)
+              .setParameter(2, tid).setParameter(3, productId).setParameter(4, fromWh)
+              .setParameter(5, batchNo).setParameter(6, serialNo)
+              .executeUpdate();
+            return;
+        }
+
+        int existing = em.createNativeQuery(
+                "SELECT 1 FROM stock_serials " +
+                "WHERE tenant_id = ?1 AND batch_no = ?2 AND serial_no = ?3 AND warehouse_id = ?4 AND shipped_at IS NULL")
+          .setParameter(1, tid).setParameter(2, batchNo).setParameter(3, serialNo).setParameter(4, toWh)
+          .getResultList().size();
+        if (existing > 0) {
+            em.createNativeQuery(
+                    "UPDATE stock_serials SET product_id = ?1, stock_status = ?2, shipped_at = NULL " +
+                    "WHERE tenant_id = ?3 AND batch_no = ?4 AND serial_no = ?5 AND warehouse_id = ?6")
+              .setParameter(1, productId).setParameter(2, toStatus)
+              .setParameter(3, tid).setParameter(4, batchNo).setParameter(5, serialNo).setParameter(6, toWh)
+              .executeUpdate();
+            em.createNativeQuery(
+                    "UPDATE stock_serials SET stock_status = ?1, shipped_at = now() " +
+                    "WHERE tenant_id = ?2 AND product_id = ?3 AND batch_no = ?4 AND serial_no = ?5 AND warehouse_id = ?6")
+              .setParameter(1, toStatus)
+              .setParameter(2, tid).setParameter(3, productId).setParameter(4, batchNo).setParameter(5, serialNo).setParameter(6, fromWh)
+              .executeUpdate();
+        } else {
+            em.createNativeQuery(
+                    "UPDATE stock_serials SET warehouse_id = ?1, stock_status = ?2, shipped_at = NULL " +
+                    "WHERE tenant_id = ?3 AND product_id = ?4 AND batch_no = ?5 AND serial_no = ?6 AND warehouse_id = ?7")
+              .setParameter(1, toWh).setParameter(2, toStatus)
+              .setParameter(3, tid).setParameter(4, productId).setParameter(5, batchNo).setParameter(6, serialNo).setParameter(7, fromWh)
+              .executeUpdate();
+        }
+    }
     private boolean isValidStockStatus(String s) {
         return "QUALIFIED".equals(s) || "DEFECTIVE".equals(s) || "QUARANTINED".equals(s) || "PENDING".equals(s);
     }

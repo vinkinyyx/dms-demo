@@ -54,4 +54,7 @@ public class StockSerial {
 
     @Column(name = "shipped_at")
     private OffsetDateTime shippedAt;
+
+    @Column(name = "updated_at", insertable = false, updatable = false)
+    private OffsetDateTime updatedAt;
 }

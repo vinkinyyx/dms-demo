@@ -344,7 +344,7 @@ const LINE_ORDER = [
 ]
 
 const orders = {
-  key: 'orders', title: '销售订单', api: '/api/sales-orders', detailable: true, noDelete: true, editableWhen: ['DRAFT'], pageSize: 30,
+  key: 'orders', title: '销售订单', api: '/api/sales-orders', detailable: true, noDelete: true, editableWhen: ['DRAFT'], maxActions: 2, pageSize: 30,
   statusActions: [
     { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'primary', confirm: '确认提交此销售订单进入审批？' },
     { label: '审批通过', when: ['SUBMITTED'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此销售订单？（将自动生成销售出库草稿）' },
@@ -403,7 +403,7 @@ const salesReturns = {
 }
 
 const purchaseOrders = {
-  key: 'purchase-orders', title: '采购订单', api: '/api/purchase-orders', detailable: true, noDelete: true, editableWhen: ['DRAFT'], pageSize: 30,
+  key: 'purchase-orders', title: '采购订单', api: '/api/purchase-orders', detailable: true, noDelete: true, editableWhen: ['DRAFT'], maxActions: 2, pageSize: 30,
   statusActions: [
     { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'primary', confirm: '确认提交此采购订单进入审批？' },
     { label: '审批通过', when: ['SUBMITTED'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此采购订单？（将自动生成收货入库草稿）' },

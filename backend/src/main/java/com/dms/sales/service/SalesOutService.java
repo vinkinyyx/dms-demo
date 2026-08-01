@@ -309,6 +309,10 @@ public class SalesOutService {
                     throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
                             "序列号 " + req.getSerialNo() + " 批次/仓库与本次发货不匹配");
                 }
+                if (!"QUALIFIED".equals(ss.getStockStatus())) {
+                    throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
+                            "序列号 " + req.getSerialNo() + " 不是合格库存，不能出库");
+                }
             }
 
             // 写本次发货执行行（shippedQty 用本次数量，qty 历史字段同步）

@@ -40,11 +40,13 @@
       </el-table-column>
       <el-table-column label="操作" fixed="right" :width="operationWidth">
         <template #default="{ row }">
-          <el-button size="small" @click="openDetail(row)">详情</el-button>
-          <el-button v-if="canEdit && !config.noEdit && rowEditable(row)" size="small" type="primary" @click="openForm(row)">编辑</el-button>
-          <el-button v-for="a in rowActions(row)" :key="a.key || a.label" size="small" :type="a.type || 'primary'"
-            @click="doAction(row, a)">{{ stripEmoji(a.label) }}</el-button>
-          <el-button v-if="canDelete && rowDeletable(row)" size="small" type="danger" @click="onDelete(row)">删除</el-button>
+          <div class="row-actions">
+            <el-button v-if="showDetailButton" size="small" @click="openDetail(row)">详情</el-button>
+            <el-button v-if="canEdit && !config.noEdit && rowEditable(row)" size="small" type="primary" @click="openForm(row)">编辑</el-button>
+            <el-button v-for="a in rowActions(row)" :key="a.key || a.label" size="small" :type="a.type || 'primary'"
+              @click="doAction(row, a)">{{ stripEmoji(a.label) }}</el-button>
+            <el-button v-if="canDelete && rowDeletable(row)" size="small" type="danger" @click="onDelete(row)">删除</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -231,12 +233,15 @@ const canEdit = computed(() => !props.config.readonly)
 const canDelete = computed(() => !props.config.readonly && !props.config.noDelete)
 const canImport = computed(() => !props.config.readonly && props.config.importable !== false)
 const canExport = computed(() => props.config.exportable !== false)
+const hasCodeColumn = computed(() => (props.config.cols || []).some((c) => c.k === 'code'))
+const showDetailButton = computed(() => props.config.showDetailButton === true || !props.config.detailable || !hasCodeColumn.value)
 const operationWidth = computed(() => {
-  let w = 70
-  if (canEdit.value && !props.config.noEdit) w += 62
+  let w = 0
+  if (showDetailButton.value) w += 66
+  if (canEdit.value && !props.config.noEdit) w += 60
   if (canDelete.value) w += 62
-  w += (props.config.maxActions || 0) * 82
-  return Math.min(w, 360)
+  w += (props.config.maxActions || 0) * 76
+  return Math.max(w, 88)
 })
 
 const filterFields = computed(() => (props.config.cols || []).filter((c) => c.filter))
@@ -721,6 +726,8 @@ function onImportError(err, file) {
 }
 .pager { margin-top: 14px; display: flex; justify-content: flex-end; }
 .filter-icon { cursor: pointer; margin-left: 4px; font-size: 14px; }
+.row-actions { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
+.row-actions :deep(.el-button) { margin-left: 0; padding: 7px 8px; }
 
 .crud-form-container { padding: 20px; max-width: 1200px; margin: 0 auto; }
 .crud-form-container.has-lines { max-width: 100%; padding: 20px 24px; }
