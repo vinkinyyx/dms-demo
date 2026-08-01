@@ -33,9 +33,9 @@ public class InventoryListController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sort) {
         return listGeneric("stock_moves", page, size,
-                "id, code, src_warehouse_id, dst_warehouse_id, status, reason, at_time, created_at, updated_at, operator_id",
-                Arrays.asList("id","code","fromWarehouseId","toWarehouseId","status","remark","atTime","createdAt","updatedAt","createdBy"),
-                Arrays.asList("id","code","src_warehouse_id","dst_warehouse_id","status","reason","at_time","created_at","updated_at","operator_id"));
+                "id, code, src_warehouse_id, dst_warehouse_id, move_type, from_stock_status, to_stock_status, status, reason, at_time, created_at, updated_at, operator_id",
+                Arrays.asList("id","code","fromWarehouseId","toWarehouseId","moveType","fromStockStatus","toStockStatus","status","remark","atTime","createdAt","updatedAt","createdBy"),
+                Arrays.asList("id","code","src_warehouse_id","dst_warehouse_id","move_type","from_stock_status","to_stock_status","status","reason","at_time","created_at","updated_at","operator_id"));
     }
 
     // ============ 库存调整列表 ============

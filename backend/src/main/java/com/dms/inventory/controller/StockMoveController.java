@@ -49,58 +49,124 @@ public class StockMoveController {
         UUID tid = TenantContext.getTenantId();
         if (tid == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
 
+        String moveType = strOr(body.get("moveType"), "WAREHOUSE_TRANSFER");
+        if (!"STATUS_ADJUST".equals(moveType) && !"WAREHOUSE_TRANSFER".equals(moveType)) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "moveType 非法，应为 STATUS_ADJUST 或 WAREHOUSE_TRANSFER");
+        }
+
         Long fromWh = toLong(body.get("fromWarehouseId"));
         Long toWh = toLong(body.get("toWarehouseId"));
         String remark = strOr(body.get("remark"), "");
-        String stockStatus = strOr(body.get("stockStatus"), "QUALIFIED");
-
-        if (fromWh == null || toWh == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "源仓库与目标仓库必填");
-        if (fromWh.equals(toWh)) throw new BusinessException(ErrorCode.PARAM_INVALID, "源仓库与目标仓库不能相同");
+        String headerFromStatus = strOr(body.get("fromStockStatus"), null);
+        String headerToStatus = strOr(body.get("toStockStatus"), null);
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> lines = (List<Map<String, Object>>) body.get("lines");
-        if (lines == null || lines.isEmpty()) {
-            throw new BusinessException(ErrorCode.PARAM_MISSING, "移动明细不能为空");
+        if (lines == null || lines.isEmpty()) throw new BusinessException(ErrorCode.PARAM_MISSING, "移动明细不能为空");
+        if (fromWh == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "源仓库必填");
+
+        if ("STATUS_ADJUST".equals(moveType)) {
+            toWh = fromWh;
+        } else {
+            if (toWh == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "目标仓库必填");
+            if (fromWh.equals(toWh)) throw new BusinessException(ErrorCode.PARAM_INVALID, "跨仓移动的源仓库与目标仓库不能相同");
         }
 
-        String code = "MOV-" + java.time.LocalDate.now().toString().replace("-", "") + "-" + (System.currentTimeMillis() % 100000);
+        List<Map<String, Object>> norm = new ArrayList<>();
+        for (int i = 0; i < lines.size(); i++) {
+            Map<String, Object> l = lines.get(i);
+            Long invId = toLong(l.get("srcInventoryId"));
+            BigDecimal qty = toBd(l.get("qty"));
+            if (invId == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "第 " + (i + 1) + " 行必须从库存中选择");
+            if (qty == null || qty.signum() <= 0) throw new BusinessException(ErrorCode.PARAM_INVALID, "第 " + (i + 1) + " 行数量必须 > 0");
 
+            var invQ = em.createNativeQuery(
+                    "SELECT id, product_id, warehouse_id, batch_no, serial_no, stock_status, qty " +
+                    "FROM inventory WHERE id = ?1 AND tenant_id = ?2", Tuple.class);
+            invQ.setParameter(1, invId).setParameter(2, tid);
+            @SuppressWarnings("unchecked")
+            List<Tuple> rs = invQ.getResultList();
+            if (rs.isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND, "第 " + (i + 1) + " 行选择的库存不存在");
+            Tuple inv = rs.get(0);
+
+            Long whId = ((Number) inv.get("warehouse_id")).longValue();
+            if (!whId.equals(fromWh)) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "第 " + (i + 1) + " 行库存不属于源仓库");
+            Long productId = ((Number) inv.get("product_id")).longValue();
+            String batchNo = inv.get("batch_no") == null ? null : String.valueOf(inv.get("batch_no"));
+            String serialNo = inv.get("serial_no") == null ? null : String.valueOf(inv.get("serial_no"));
+            String curStatus = inv.get("stock_status") == null ? "QUALIFIED" : String.valueOf(inv.get("stock_status"));
+            BigDecimal onHand = new BigDecimal(String.valueOf(inv.get("qty")));
+            if (onHand.compareTo(qty) < 0) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "第 " + (i + 1) + " 行数量 " + qty + " 超过在库数量 " + onHand);
+            if (serialNo != null && qty.compareTo(BigDecimal.ONE) != 0) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "第 " + (i + 1) + " 行是序列号库存，数量必须为 1");
+
+            String fromStatus = strOr(l.get("fromStockStatus"), strOr(headerFromStatus, curStatus));
+            if (!fromStatus.equals(curStatus)) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "第 " + (i + 1) + " 行库存状态已变化（当前 " + curStatus + "），请刷新后重试");
+            String toStatus = strOr(l.get("toStockStatus"), headerToStatus);
+            if (toStatus == null || toStatus.isBlank()) toStatus = "WAREHOUSE_TRANSFER".equals(moveType) ? fromStatus : "QUALIFIED";
+            if (!isValidStockStatus(toStatus)) throw new BusinessException(ErrorCode.PARAM_INVALID, "第 " + (i + 1) + " 行目标库存状态非法: " + toStatus);
+            if (fromStatus.equals(toStatus) && fromWh.equals(toWh)) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "第 " + (i + 1) + " 行源状态与目标状态相同且同仓，无需调整");
+
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("invId", invId); m.put("productId", productId); m.put("batchNo", batchNo); m.put("serialNo", serialNo);
+            m.put("qty", qty); m.put("fromStatus", fromStatus); m.put("toStatus", toStatus); m.put("stockBatchId", toLong(l.get("stockBatchId")));
+            norm.add(m);
+        }
+
+        String code = nextMoveCode(tid);
         var ins = em.createNativeQuery(
-                "INSERT INTO stock_moves (tenant_id, code, src_warehouse_id, dst_warehouse_id, status, reason, at_time, created_at, updated_at) " +
-                "VALUES (?1, ?2, ?3, ?4, 'COMPLETED', ?5, now(), now(), now()) RETURNING id");
-        ins.setParameter(1, tid).setParameter(2, code).setParameter(3, fromWh)
-                .setParameter(4, toWh).setParameter(5, remark);
+                "INSERT INTO stock_moves (tenant_id, code, src_warehouse_id, dst_warehouse_id, move_type, " +
+                "from_stock_status, to_stock_status, status, reason, operator_id, at_time, created_at, updated_at) " +
+                "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'COMPLETED', ?8, ?9, now(), now(), now()) RETURNING id");
+        ins.setParameter(1, tid).setParameter(2, code).setParameter(3, fromWh).setParameter(4, toWh)
+           .setParameter(5, moveType).setParameter(6, norm.isEmpty() ? null : String.valueOf(norm.get(0).get("fromStatus")))
+           .setParameter(7, norm.isEmpty() ? null : String.valueOf(norm.get(0).get("toStatus")))
+           .setParameter(8, remark).setParameter(9, TenantContext.getUserId());
         Long moveId = ((Number) ins.getSingleResult()).longValue();
 
-        for (Map<String, Object> l : lines) {
-            Long productId = toLong(l.get("productId"));
-            BigDecimal qty = toBd(l.get("qty"));
-            String batchNo = strOr(l.get("batchNo"), null);
-            String serialNo = strOr(l.get("serialNo"), null);
-            if (productId == null || qty == null || qty.signum() <= 0) {
-                throw new BusinessException(ErrorCode.PARAM_INVALID, "明细 productId/qty 必填且 > 0");
-            }
+        Long userId = TenantContext.getUserId();
+        for (Map<String, Object> m : norm) {
             em.createNativeQuery(
-                    "INSERT INTO stock_move_lines (move_id, product_id, batch_no, serial_no, qty) " +
-                    "VALUES (?1, ?2, ?3, ?4, ?5)")
-                .setParameter(1, moveId).setParameter(2, productId).setParameter(3, batchNo)
-                .setParameter(4, serialNo).setParameter(5, qty)
-                .executeUpdate();
+                    "INSERT INTO stock_move_lines (move_id, product_id, batch_no, serial_no, qty, src_inventory_id, " +
+                    "from_stock_status, to_stock_status, stock_batch_id, created_at) " +
+                    "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, now())")
+              .setParameter(1, moveId).setParameter(2, m.get("productId")).setParameter(3, m.get("batchNo"))
+              .setParameter(4, m.get("serialNo")).setParameter(5, m.get("qty")).setParameter(6, m.get("invId"))
+              .setParameter(7, m.get("fromStatus")).setParameter(8, m.get("toStatus")).setParameter(9, m.get("stockBatchId"))
+              .executeUpdate();
 
-            inventoryOps.change(tid, productId, fromWh, batchNo, qty.negate(), stockStatus, "MOVE_OUT", "stock_move", moveId);
-            inventoryOps.change(tid, productId, toWh, batchNo, qty, stockStatus, "MOVE_IN", "stock_move", moveId);
+            inventoryOps.deductById(tid, (Long) m.get("invId"), (BigDecimal) m.get("qty"),
+                    "STATUS_ADJUST".equals(moveType) ? "STATUS_ADJUST_OUT" : "MOVE_OUT", "stock_move", moveId, userId);
+            inventoryOps.addByKey(tid, (Long) m.get("productId"), toWh, (String) m.get("batchNo"), (String) m.get("serialNo"),
+                    (String) m.get("toStatus"), (BigDecimal) m.get("qty"),
+                    "STATUS_ADJUST".equals(moveType) ? "STATUS_ADJUST_IN" : "MOVE_IN", "stock_move", moveId, userId);
         }
 
-        opLog.log("stock_move", moveId, "CREATE", "库存移动 " + code + "，" + lines.size() + " 项");
+        opLog.log("stock_move", moveId, "CREATE",
+                ("STATUS_ADJUST".equals(moveType) ? "库存状态调整 " : "库存移动 ") + code + "，" + norm.size() + " 行");
 
         Map<String, Object> res = new LinkedHashMap<>();
-        res.put("id", moveId);
-        res.put("code", code);
-        res.put("fromWarehouseId", fromWh);
-        res.put("toWarehouseId", toWh);
-        res.put("lineCount", lines.size());
-        res.put("message", "库存移动完成");
+        res.put("id", moveId); res.put("code", code);
+        res.put("moveType", moveType);
+        res.put("fromWarehouseId", fromWh); res.put("toWarehouseId", toWh);
+        res.put("lineCount", norm.size());
+        res.put("message", "STATUS_ADJUST".equals(moveType) ? "库存状态调整完成" : "库存移动完成");
         return ApiResponse.ok(res);
+    }
+
+    private boolean isValidStockStatus(String s) {
+        return "QUALIFIED".equals(s) || "DEFECTIVE".equals(s) || "QUARANTINED".equals(s) || "PENDING".equals(s);
+    }
+
+    private String nextMoveCode(UUID tid) {
+        String date = java.time.LocalDate.now().toString().replace("-", "");
+        Object seqObj = em.createNativeQuery(
+                "INSERT INTO doc_no_sequences (tenant_id, prefix, date_key, last_seq) " +
+                "VALUES (?1, 'MV', ?2, 1) " +
+                "ON CONFLICT (tenant_id, prefix, date_key) " +
+                "DO UPDATE SET last_seq = doc_no_sequences.last_seq + 1 RETURNING last_seq")
+                .setParameter(1, tid).setParameter(2, date).getSingleResult();
+        long seq = ((Number) seqObj).longValue();
+        return String.format("MV-%s-%05d", date, seq);
     }
 
     @GetMapping({"/{id}/detail", "/{id}"})
@@ -109,7 +175,7 @@ public class StockMoveController {
         UUID tid = TenantContext.getTenantId();
         var q = em.createNativeQuery(
                 "SELECT m.id, m.code, m.src_warehouse_id, sw.name AS src_name, m.dst_warehouse_id, dw.name AS dst_name, " +
-                "m.status, m.reason, m.created_at, m.updated_at " +
+                "m.move_type, m.from_stock_status, m.to_stock_status, m.status, m.reason, m.created_at, m.updated_at " +
                 "FROM stock_moves m " +
                 "LEFT JOIN warehouses sw ON sw.id = m.src_warehouse_id " +
                 "LEFT JOIN warehouses dw ON dw.id = m.dst_warehouse_id " +
@@ -125,14 +191,17 @@ public class StockMoveController {
         head.put("fromWarehouseName", t.get("src_name"));
         head.put("toWarehouseId", t.get("dst_warehouse_id"));
         head.put("toWarehouseName", t.get("dst_name"));
+        head.put("moveType", t.get("move_type"));
+        head.put("fromStockStatus", t.get("from_stock_status"));
+        head.put("toStockStatus", t.get("to_stock_status"));
         head.put("status", t.get("status"));
         head.put("remark", t.get("reason"));
         head.put("createdAt", DateFmt.fmt(t.get("created_at")));
         head.put("updatedAt", DateFmt.fmt(t.get("updated_at")));
 
         var lq = em.createNativeQuery(
-                "SELECT l.product_id, p.name_cn AS product_name, p.code AS product_code, " +
-                "l.batch_no, l.serial_no, l.qty " +
+                "SELECT l.product_id, p.name_cn AS product_name, p.code AS product_code, p.is_serial_managed, " +
+                "l.batch_no, l.serial_no, l.qty, l.from_stock_status, l.to_stock_status, l.src_inventory_id " +
                 "FROM stock_move_lines l LEFT JOIN products p ON p.id = l.product_id " +
                 "WHERE l.move_id = ?1 ORDER BY l.id", Tuple.class);
         lq.setParameter(1, id);
@@ -146,7 +215,11 @@ public class StockMoveController {
             m.put("productCode", l.get("product_code"));
             m.put("batchNo", l.get("batch_no"));
             m.put("serialNo", l.get("serial_no"));
+            m.put("isSerialManaged", l.get("is_serial_managed"));
             m.put("qty", l.get("qty"));
+            m.put("fromStockStatus", l.get("from_stock_status"));
+            m.put("toStockStatus", l.get("to_stock_status"));
+            m.put("srcInventoryId", l.get("src_inventory_id"));
             lines.add(m);
         }
         head.put("lines", lines);
@@ -169,7 +242,7 @@ public class StockMoveController {
         UUID tid = TenantContext.getTenantId();
         var q = em.createNativeQuery(
                 "SELECT m.id, m.code, m.src_warehouse_id, sw.name AS src_name, m.dst_warehouse_id, dw.name AS dst_name, " +
-                "m.status, m.reason, m.created_at, m.updated_at " +
+                "m.move_type, m.from_stock_status, m.to_stock_status, m.status, m.reason, m.created_at, m.updated_at " +
                 "FROM stock_moves m " +
                 "LEFT JOIN warehouses sw ON sw.id = m.src_warehouse_id " +
                 "LEFT JOIN warehouses dw ON dw.id = m.dst_warehouse_id " +
@@ -186,6 +259,9 @@ public class StockMoveController {
             m.put("fromWarehouseName", t.get("src_name"));
             m.put("toWarehouseId", t.get("dst_warehouse_id"));
             m.put("toWarehouseName", t.get("dst_name"));
+            m.put("moveType", t.get("move_type"));
+            m.put("fromStockStatus", t.get("from_stock_status"));
+            m.put("toStockStatus", t.get("to_stock_status"));
             m.put("status", t.get("status"));
             m.put("remark", t.get("reason"));
             m.put("createdAt", DateFmt.fmt(t.get("created_at")));
@@ -193,8 +269,8 @@ public class StockMoveController {
             list.add(m);
         }
 
-        String[] headers = {"ID", "移动单号", "源仓库ID", "源仓库名称", "目标仓库ID", "目标仓库名称", "状态", "备注", "创建时间", "更新时间"};
-        String[] fieldNames = {"id", "code", "fromWarehouseId", "fromWarehouseName", "toWarehouseId", "toWarehouseName", "status", "remark", "createdAt", "updatedAt"};
+        String[] headers = {"ID", "移动单号", "源仓库ID", "源仓库名称", "目标仓库ID", "目标仓库名称", "移动类型", "源库存状态", "目标库存状态", "状态", "备注", "创建时间", "更新时间"};
+        String[] fieldNames = {"id", "code", "fromWarehouseId", "fromWarehouseName", "toWarehouseId", "toWarehouseName", "moveType", "fromStockStatus", "toStockStatus", "status", "remark", "createdAt", "updatedAt"};
 
         byte[] excelBytes = ExcelExportUtils.exportMapToExcel(list, headers, fieldNames);
 

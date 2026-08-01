@@ -544,26 +544,36 @@ const receipts = {
 }
 
 const stockMoves = {
-  key: 'stock-moves', title: '库存移动', api: '/api/stock-moves', detailable: true, noEdit: true,
+  key: 'stock-moves', title: '库存移动', api: '/api/stock-moves', detailable: true,
+  noEdit: true, noDelete: true, importable: false, createPath: '/stock-move-edit/new',
   cols: [
-    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
-    { k: 'code', l: '调拨单号', w: 160, filter: { type: 'text' } }, 
-    { k: 'moveType', l: '移动类型', w: 100, filter: { type: 'select', options: getDictOptions('move_type') } }, 
-    { k: 'fromWarehouseName', l: '源仓库', w: 120, filter: { type: 'text' } }, 
-    { k: 'fromWarehouseId', l: '源仓库ID', w: 100, filter: { type: 'number' } }, 
-    { k: 'toWarehouseName', l: '目标仓库', w: 120, filter: { type: 'text' } }, 
-    { k: 'toWarehouseId', l: '目标仓库ID', w: 100, filter: { type: 'number' } }, 
-    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'CONFIRMED', label: '已确认' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }] } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
+    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
+    { k: 'code', l: '移动单号', w: 170, filter: { type: 'text' } },
+    { k: 'moveType', l: '移动类型', w: 120, filter: { type: 'select', options: [
+      { value: 'STATUS_ADJUST', label: '仓内状态调整' },
+      { value: 'WAREHOUSE_TRANSFER', label: '跨仓移动' }
+    ] } },
+    { k: 'fromWarehouseName', l: '源仓库', w: 140, filter: { type: 'text' } },
+    { k: 'toWarehouseName', l: '目标仓库', w: 140, filter: { type: 'text' } },
+    { k: 'fromStockStatus', l: '源状态', w: 90, filter: { type: 'select', options: [
+      { value: 'QUALIFIED', label: '合格' }, { value: 'DEFECTIVE', label: '不合格' },
+      { value: 'QUARANTINED', label: '隔离' }, { value: 'PENDING', label: '待检' }
+    ] } },
+    { k: 'toStockStatus', l: '目标状态', w: 90, filter: { type: 'select', options: [
+      { value: 'QUALIFIED', label: '合格' }, { value: 'DEFECTIVE', label: '不合格' },
+      { value: 'QUARANTINED', label: '隔离' }, { value: 'PENDING', label: '待检' }
+    ] } },
+    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [
+      { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }
+    ] } },
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
     { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
   ],
-  form: [
-    { key: 'fromWarehouseId', label: '源仓库', required: true, picker: 'warehouses', group: '移动信息' },
-    { key: 'toWarehouseId', label: '目标仓库', required: true, picker: 'warehouses', group: '移动信息' },
-    { key: 'stockStatus', label: '原库位库存状态', type: 'select', value: 'QUALIFIED', group: '移动信息', options: [{ value: 'QUALIFIED', label: '合格' }, { value: 'PENDING', label: '待检' }, { value: 'DEFECTIVE', label: '不合格' }] },
-    { key: 'remark', label: '备注/原因', type: 'textarea', group: '其它' },
-    { key: 'lines', type: 'lines', label: '移动明细', required: true, group: '移动明细', cols: LINE_STOCK }
-  ]
+  statusActions: {
+    COMPLETED: [{ key: 'open', label: '查看', path: '/stock-move-edit', type: 'primary', isRoute: true }],
+    CANCELLED: [{ key: 'open', label: '查看', path: '/stock-move-edit', type: 'default', isRoute: true }]
+  },
+  actions: [{ key: 'open', label: '查看', path: '/stock-move-edit', type: 'primary', isRoute: true }]
 }
 
 const inventoryAdjustments = {

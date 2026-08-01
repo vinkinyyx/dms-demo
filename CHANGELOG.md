@@ -1,3 +1,26 @@
+## v3.7.9 (2026-08-01) - 库存移动两种模式（仓内状态调整 / 跨仓移动）
+
+### 后端
+- `stock_moves` 新增 `move_type`(STATUS_ADJUST/WAREHOUSE_TRANSFER)、`from_stock_status`、`to_stock_status`（Flyway V41，历史数据回填 WAREHOUSE_TRANSFER，move_type 扩到 VARCHAR(24)）。
+- `stock_move_lines` 新增 `src_inventory_id`、`from_stock_status`、`to_stock_status`、`stock_batch_id`。
+- 字典 `stock_status` 新增 `QUARANTINED(隔离)`（QUALIFIED/DEFECTIVE/PENDING 保留）。
+- `POST /api/stock-moves` 重写：两种模式校验、基于 srcInventoryId 读真实库存、数量/序列号/状态一致性校验、单号 `MV-YYYYMMDD-NNNNN`（doc_no_sequences 原子自增）、按 inventory 主键原子扣减 + 按维度 upsert 增加库存、写明细/操作日志/库存流水（STATUS_ADJUST_OUT/IN、MOVE_OUT/IN，含操作人）。
+- `InventoryStatusOps` 新增 `deductById`、`addByKey` 及写流水私有方法。
+- 列表/详情/导出 SQL 增加 move_type、from/to_stock_status 字段。
+- 单据保存即生效（COMPLETED，无草稿/审批）。
+
+### 前端 PC（仅改 frontend-vue，不动 mobile）
+- 新增 `StockMoveEdit.vue`：模式 radio 切换；源仓 picker（跨仓时显示目标仓，仓内时隐藏目标仓）；明细从库存弹窗多选（物料/批次/序列号/当前状态/在库数全部带出，不可手填）；目标状态 select；序列号产品锁定 qty=1；数量与同状态校验；提交 POST /api/stock-moves；已存在单据只读详情。
+- `modules.js` stockMoves：列表清理为移动类型/源仓/目标仓/源状态/目标状态/状态/时间，新增 createPath 跳转专用编辑页，列表仅保留“查看”动作。
+- `CrudView.vue` 新增 `createPath` 支持，配置后“新增”按钮路由跳转而非弹窗。
+- 路由新增 `stock-move-edit/:id`（new 为新建，数字 id 为查看）。
+
+### 验收
+- 仓内状态调整 QUALIFIED→QUARANTINED 成功，库存与流水正确。
+- 跨仓移动并同时改状态（QUALIFIED/QUARANTINED→PENDING）成功，目标仓按目标状态 upsert。
+- 超额数量、跨仓同仓、源状态不匹配均被拒绝。
+- 库存流水完整记录出/入与操作人。
+
 ## v3.7.8 (2026-07-31) - 销售出库子单模型（对齐收货入库）
 
 ### 销售出库（sales_outs）父子单重构

@@ -15,6 +15,7 @@ const routes = [
       { path: 'order-create/purchase', name: 'PurchaseOrderCreate', component: () => import('@/views/OrderCreate.vue'), meta: { title: '新建采购订单' } },
       { path: 'positions', name: 'Positions', component: () => import('@/views/PositionTree.vue'), meta: { title: '销售岗位' } },
       { path: 'receipt-edit/:id', name: 'ReceiptEdit', component: () => import('@/views/ReceiptEdit.vue'), meta: { title: '收货入库' } },
+      { path: 'stock-move-edit/:id', name: 'StockMoveEdit', component: () => import('@/views/StockMoveEdit.vue'), meta: { title: '库存移动' } },
       { path: 'sales-out-edit/:id', name: 'SalesOutEdit', component: () => import('@/views/SalesOutEdit.vue'), meta: { title: '发货出库' } },
       { path: 'm/:key', name: 'Module', component: () => import('@/views/ModuleView.vue'), meta: { title: '业务模块' } }
     ]

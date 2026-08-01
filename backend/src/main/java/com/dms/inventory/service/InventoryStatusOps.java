@@ -121,6 +121,86 @@ public class InventoryStatusOps {
     /**
      * 查询产品在指定状态的可用库存
      */
+    @Transactional
+    public int deductById(UUID tenantId, Long inventoryId, BigDecimal qty,
+                          String txnType, String refDocType, Long refDocId, Long operatorId) {
+        if (inventoryId == null || qty == null || qty.signum() <= 0) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "deductById: inventoryId/qty required and >0");
+        }
+        int upd = em.createNativeQuery(
+                "UPDATE inventory SET qty = qty - ?1, updated_at = now() " +
+                "WHERE id = ?2 AND tenant_id = ?3 AND qty >= ?1")
+                .setParameter(1, qty).setParameter(2, inventoryId).setParameter(3, tenantId)
+                .executeUpdate();
+        if (upd == 0) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
+                    "库存不足或已被其他单据占用(inventoryId=" + inventoryId + ", need=" + qty + ")");
+        }
+        writeTxnByInvId(tenantId, inventoryId, qty.negate(), txnType, refDocType, refDocId, operatorId);
+        return upd;
+    }
+
+    @Transactional
+    public void addByKey(UUID tenantId, Long productId, Long warehouseId, String batchNo, String serialNo,
+                         String stockStatus, BigDecimal qty,
+                         String txnType, String refDocType, Long refDocId, Long operatorId) {
+        if (productId == null || warehouseId == null || qty == null || qty.signum() <= 0) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "addByKey: productId/warehouseId/qty required and >0");
+        }
+        if (stockStatus == null || stockStatus.isBlank()) stockStatus = "QUALIFIED";
+        String bn = batchNo == null ? "" : batchNo;
+        var findQ = em.createNativeQuery(
+                "SELECT id, qty FROM inventory " +
+                "WHERE tenant_id = ?1 AND product_id = ?2 AND warehouse_id = ?3 " +
+                "  AND stock_status = ?4 AND COALESCE(batch_no,'') = ?5 " +
+                "  AND ((CAST(?6 AS varchar) IS NULL AND serial_no IS NULL) OR serial_no = ?6)", Tuple.class);
+        findQ.setParameter(1, tenantId).setParameter(2, productId).setParameter(3, warehouseId)
+              .setParameter(4, stockStatus).setParameter(5, bn).setParameter(6, serialNo);
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = findQ.getResultList();
+        if (rows.isEmpty()) {
+            em.createNativeQuery(
+                    "INSERT INTO inventory (tenant_id, warehouse_id, product_id, batch_no, serial_no, qty, stock_status, in_source, created_at, updated_at) " +
+                    "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, now(), now())")
+              .setParameter(1, tenantId).setParameter(2, warehouseId).setParameter(3, productId)
+              .setParameter(4, bn.isEmpty() ? null : bn).setParameter(5, serialNo)
+              .setParameter(6, qty).setParameter(7, stockStatus).setParameter(8, txnType)
+              .executeUpdate();
+        } else {
+            Tuple t = rows.get(0);
+            em.createNativeQuery("UPDATE inventory SET qty = qty + ?1, updated_at = now() WHERE id = ?2")
+              .setParameter(1, qty).setParameter(2, ((Number) t.get("id")).longValue()).executeUpdate();
+        }
+        writeTxn(tenantId, productId, warehouseId, batchNo, serialNo, qty, txnType, refDocType, refDocId, operatorId);
+    }
+
+    private void writeTxnByInvId(UUID tenantId, Long inventoryId, BigDecimal delta, String txnType,
+                                 String refDocType, Long refDocId, Long operatorId) {
+        Object[] row = (Object[]) em.createNativeQuery(
+                "SELECT product_id, warehouse_id, batch_no, serial_no FROM inventory WHERE id = ?1 AND tenant_id = ?2")
+                .setParameter(1, inventoryId).setParameter(2, tenantId).getSingleResult();
+        writeTxn(tenantId, ((Number) row[0]).longValue(), ((Number) row[1]).longValue(),
+                row[2] == null ? null : String.valueOf(row[2]),
+                row[3] == null ? null : String.valueOf(row[3]),
+                delta, txnType, refDocType, refDocId, operatorId);
+    }
+
+    private void writeTxn(UUID tenantId, Long productId, Long warehouseId, String batchNo, String serialNo,
+                          BigDecimal delta, String txnType, String refDocType, Long refDocId, Long operatorId) {
+        try {
+            em.createNativeQuery(
+                    "INSERT INTO inventory_transactions (tenant_id, warehouse_id, product_id, batch_no, serial_no, " +
+                    "qty_change, txn_type, ref_doc_type, ref_doc_id, at_time, operator_id) " +
+                    "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, now(), ?10)")
+              .setParameter(1, tenantId).setParameter(2, warehouseId).setParameter(3, productId)
+              .setParameter(4, batchNo).setParameter(5, serialNo).setParameter(6, delta)
+              .setParameter(7, txnType).setParameter(8, refDocType).setParameter(9, refDocId == null ? 0L : refDocId)
+              .setParameter(10, operatorId)
+              .executeUpdate();
+        } catch (Exception e) {
+            log.warn("write inventory transaction failed: {}", e.getMessage());
+        }
+    }
     public BigDecimal getAvailableQty(UUID tenantId, Long productId, Long warehouseId, String stockStatus) {
         String sql = "SELECT COALESCE(SUM(qty),0) FROM inventory " +
                 "WHERE tenant_id = ?1 AND product_id = ?2 AND stock_status = ?3";

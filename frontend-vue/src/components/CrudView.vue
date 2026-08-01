@@ -18,7 +18,7 @@
       <slot name="extra-actions" />
       <el-button v-if="canImport" type="success" @click="handleImport"><el-icon><Upload /></el-icon>导入</el-button>
       <el-button v-if="canExport" type="warning" @click="handleExport"><el-icon><Download /></el-icon>导出</el-button>
-      <el-button v-if="canCreate" type="primary" @click="openForm(null)"><el-icon><Plus /></el-icon>新增</el-button>
+      <el-button v-if="canCreate" type="primary" @click="onCreate"><el-icon><Plus /></el-icon>新增</el-button>
     </div>
 
     <el-table :data="rows" v-loading="loading" border stripe size="small" @sort-change="onSortChange" :default-sort="{ prop: 'updatedAt', order: 'descending' }">
@@ -355,6 +355,10 @@ function doAction(row, a) {
     .catch(() => {})
 }
 
+function onCreate() {
+  if (props.config.createPath) { router.push(props.config.createPath); return }
+  openForm(null)
+}
 function openForm(row) {
   editing.value = !!row
   editingId.value = row ? row.id : null

@@ -106,8 +106,9 @@
 ### v3.4.13 (2026-07-19)
 - `POST /api/inventory-adjustments`：改为接受扁平结构 `{warehouseId, category:IN/OUT, type, stockStatus, remark, lines:[{productId,batchNo,serialNo,qty}]}`，直接完成增减并写操作日志
 - `GET /api/inventory-adjustments/{id}` 与 `/{id}/detail`：新增详情（含仓库名/产品名/批次/序列号/数量明细）
-- `POST /api/stock-moves`：改为扁平结构 `{fromWarehouseId, toWarehouseId, stockStatus, remark, lines}`，源仓出库+目标仓入库并写操作日志
-- `GET /api/stock-moves/{id}` 与 `/{id}/detail`：新增详情（源/目标仓名 + 明细）
+- `POST /api/stock-moves`（v3.7.9 重写）：扁平结构 `{moveType, fromWarehouseId, toWarehouseId, remark, lines:[{srcInventoryId,qty,fromStockStatus,toStockStatus}]}`；moveType=STATUS_ADJUST(仓内状态调整，目标仓=源仓) 或 WAREHOUSE_TRANSFER(跨仓移动，可同时改状态)；明细必须从库存选择（srcInventoryId），后端校验库存归属/在库数/序列号/状态一致性；单号 MV-YYYYMMDD-NNNNN；保存即 COMPLETED，原子扣减+upsert 入库，写明细/流水/操作日志。
+- `GET /api/stock-moves` 列表与 `GET /api/stock-moves/{id}`、`/{id}/detail`：返回 moveType、from/toStockStatus，明细含 isSerialManaged/from/toStockStatus/srcInventoryId。
+- 库存状态字典：QUALIFIED(合格)/DEFECTIVE(不合格)/QUARANTINED(隔离)/PENDING(待检)。
 - `GET /api/sales-outs/{id}/detail`：新增 `sourceOrder`（关联销售订单表头：code/orderType/status/amountInclTax/dealerName/createdAt）
 - `GET /api/receipts/{id}/detail`：新增 `sourcePo`（关联采购订单表头：code/status/amountInclTax/supplierName/createdAt）
 - `GET /api/products/{id}`：返回 `categoryName`（按 categoryId 回填）
