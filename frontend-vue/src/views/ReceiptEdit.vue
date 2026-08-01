@@ -123,7 +123,8 @@
           </el-table-column>
           <el-table-column label="数量" width="110">
             <template #default="{ row }">
-              <el-input-number v-if="batch.status === 'DRAFT'" v-model="row.qty" :min="0" :controls="false" size="small" style="width:100%" />
+              <el-input-number v-if="batch.status === 'DRAFT' && !row.isSerialManaged" v-model="row.qty" :min="0" :controls="false" size="small" style="width:100%" />
+              <el-tag v-else-if="batch.status === 'DRAFT' && row.isSerialManaged" type="info" size="small" style="width:100%;text-align:center">{{ row.qty || 0 }} 件</el-tag>
               <span v-else>{{ row.qty || 0 }}</span>
             </template>
           </el-table-column>
@@ -133,9 +134,14 @@
               <span v-else>{{ row.batchNo || '-' }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="序列号" min-width="220">
+          <el-table-column label="序列号" min-width="260">
             <template #default="{ row }">
-              <el-input v-if="batch.status === 'DRAFT' && row.isSerialManaged" v-model="row.serialNos" type="textarea" :rows="2" placeholder="每行一个序列号" />
+              <div v-if="batch.status === 'DRAFT' && row.isSerialManaged" class="serial-cell">
+                <el-input v-model="row.serialNos" type="textarea" :rows="2"
+                  :placeholder="`每行/逗号/空格分隔，共 ${snCount(row).total} 个` + (snCount(row).dup ? '（含重复）' : '')"
+                  :class="{ 'serial-warn': snCount(row).dup }" @paste="onSerialPaste(row, $event)" @input="onSerialInput(row)" />
+                <el-button size="small" link type="primary" @click="openSerialPaste(row)">粘贴序列号</el-button>
+              </div>
               <span v-else-if="row.isSerialManaged" class="serial-preview">{{ row.serialNos || '-' }}</span>
               <span v-else style="color:#c0c4cc">—</span>
             </template>
@@ -204,6 +210,21 @@
       </el-table>
       <el-empty v-if="!opLogs.length" description="暂无操作记录" :image-size="60" />
     </el-card>
+
+    <el-dialog v-model="serialPasteVisible" title="粘贴序列号" width="520px" append-to-body>
+      <el-alert type="info" :closable="false" style="margin-bottom:10px"
+        title="支持换行、逗号、分号、空格、Tab 分隔；系统会自动去重并统计数量。" />
+      <el-input v-model="serialPasteText" type="textarea" :rows="8"
+        placeholder="请粘贴序列号，例如：&#10;SN001,SN002,SN003&#10;或每行一个" />
+      <div style="margin-top:8px;color:#606266;font-size:13px">
+        识别到 <b>{{ serialPasteParsed.length }}</b> 个序列号
+        <span v-if="serialPasteDup" style="color:#e6a23c">（已自动去重 {{ serialPasteDup }} 个）</span>
+      </div>
+      <template #footer>
+        <el-button @click="serialPasteVisible = false">取消</el-button>
+        <el-button type="primary" @click="applySerialPaste">应用</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -315,6 +336,67 @@ function onPoLinePick(row, poLineId) {
   row.serialNos = ''
 }
 
+// ---------- 序列号批量粘贴 ----------
+const serialPasteVisible = ref(false)
+const serialPasteText = ref('')
+let serialPasteTarget = null
+
+function parseSerials(text) {
+  const list = String(text || '').split(/[\r\n,;\s\t]+/).map(x => x.trim()).filter(Boolean)
+  const uniq = []
+  const seen = new Set()
+  let dup = 0
+  for (const sn of list) {
+    if (seen.has(sn)) { dup++; continue }
+    seen.add(sn)
+    uniq.push(sn)
+  }
+  return { list: uniq, total: list.length, dup }
+}
+
+function snCount(row) { return parseSerials(row.serialNos) }
+
+function onSerialInput(row) {
+  // 序列号产品：数量自动等于序列号个数，保持一致
+  if (row.isSerialManaged) {
+    const { list } = parseSerials(row.serialNos)
+    if (list.length) row.qty = list.length
+  }
+}
+
+function onSerialPaste(row, e) {
+  // 拦截粘贴：解析剪贴板内容，规范化为每行一个
+  try {
+    const text = (e.clipboardData || window.clipboardData).getData('text')
+    if (!text) return
+    const { list } = parseSerials(text)
+    if (list.length > 1) {
+      e.preventDefault()
+      // 合并已有值与新粘贴
+      const merged = parseSerials((row.serialNos || '') + '\n' + list.join('\n'))
+      row.serialNos = merged.list.join('\n')
+      row.qty = merged.list.length
+    }
+  } catch (_) { /* 浏览器不支持时走默认粘贴 */ }
+}
+
+function openSerialPaste(row) {
+  serialPasteTarget = row
+  serialPasteText.value = row.serialNos || ''
+  serialPasteVisible.value = true
+}
+const serialPasteParsed = computed(() => parseSerials(serialPasteText.value).list)
+const serialPasteDup = computed(() => parseSerials(serialPasteText.value).dup)
+
+function applySerialPaste() {
+  if (!serialPasteTarget) return serialPasteVisible = false
+  const { list } = parseSerials(serialPasteText.value)
+  serialPasteTarget.serialNos = list.join('\n')
+  if (list.length) serialPasteTarget.qty = list.length
+  serialPasteVisible.value = false
+}
+// ----------------------------------
+
 function validateBatch(batch) {
   const lines = (batch.lines || []).filter(l => l.productId || l.qty || l.batchNo || l.serialNos)
   if (!lines.length) return '至少填写一条明细'
@@ -421,4 +503,7 @@ async function submitCancelRemaining() {
 .batch-meta { color: #909399; font-size: 12px; }
 .batch-actions { margin-top: 10px; display: flex; gap: 8px; }
 .serial-preview { font-size: 12px; color: #606266; white-space: pre-wrap; line-height: 1.4; }
+.serial-cell { display: flex; flex-direction: column; gap: 4px; }
+.serial-cell .el-button { align-self: flex-start; padding: 0; }
+.serial-warn :deep(.el-textarea__inner) { border-color: #e6a23c; }
 </style>
