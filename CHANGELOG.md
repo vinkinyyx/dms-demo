@@ -1,3 +1,23 @@
+## v3.8.1 (2026-08-02) - 销退/采退改造、库存汇总查询接口
+
+### 后端
+- 销退订单：新增 `SalesReturnController`（`/api/sales-returns`，orders 表 is_red=true，单号 RS）。状态机 DRAFT→SUBMITTED→APPROVED→RECEIVING→COMPLETED；审批通过自动生成销退入库草稿单 RGR（库存+、入待检 PENDING），入库进度回写销退单状态。必须关联已发货的发货单，提供 `/shipped-outs`、`/shipped-outs/{id}/lines` 带明细与可退数量，校验退货数量≤可退、行可删除、退货原因必填。
+- 采退订单：新增 `PurchaseReturnController`（`/api/purchase-returns`，purchase_orders 表 is_red=true，单号 RP）。状态机 DRAFT→SUBMITTED→APPROVED→SHIPPING→COMPLETED；审批通过自动生成采退出库草稿单 RGI（库存−，不限库存状态），出库进度回写采退单状态。不限制原单/数量。
+- `AutoDocGenerator` 新增 `createReceiptForSalesReturn`（RGR, ref_doc_type='sales_return'）与 `createSalesOutForPurchaseReturn`（RGI, source_po_id）；`DocNoGenerator` 新增 RS/RP/RGR/RGI 前缀映射。
+- 收货：`ReceiptBatchService` 确认/取消剩余时按 ref_doc_type='sales_return' 回写销退订单状态（RECEIVING/COMPLETED）。
+- 出库：`SalesOutBatchService` 对红字 RGI 单据放宽库存状态限制（QUALIFIED/DEFECTIVE/QUARANTINED/PENDING 均可出），确认时按 source_po_id 回写采退订单状态（SHIPPING/COMPLETED）。
+- 库存查询：新增 `POST /api/inventory/query`（JSON），按 productCodes（必填，多物料）+ warehouseId（选填）汇总库存总数，不展开批次/序列号/库存状态。
+- 数据库迁移 V44：orders.ref_sales_out_id、orders.return_reason、order_lines.batch_no/serial_no、purchase_orders.return_reason、sales_outs.source_po_id。
+
+### 前端（frontend-vue，仅 PC）
+- 新增 `SalesReturnEdit.vue`（选择经销商/收货仓库/已发货单→自动带明细与可退数量，数量只能改小、行可删除、退货原因必填、底部汇总）与 `PurchaseReturnEdit.vue`（供应商/出库仓库/物料明细/汇总）。
+- `modules.js`：sales-returns 改走 `/api/sales-returns`、purchase-returns 改走 `/api/purchase-returns`；列、状态（销退 RECEIVING、采退 SHIPPING）、按钮精简，配置 createPath/detailPath 跳转专用编辑页。
+- 路由新增 `sales-return-edit/:id`、`purchase-return-edit/:id`；`CrudView` 支持 `detailPath`（点单号跳转）。
+- 移动端 mobile/ 本期不动。
+
+### 测试
+- 后端 `mvn compile` 通过；`mvn test` 83/84 通过，唯一失败 `DmsApplicationTests.contextLoads` 因本地未启动 Redis(6380)（环境问题，与本次改动无关）；前端 `npm run build` 通过。
+
 ## v3.8.0 (2026-08-01) - 会话/权限、收货汇总、产品类型修复、库存移动
 
 ### 后端

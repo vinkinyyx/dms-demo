@@ -375,33 +375,23 @@ const orders = {
 }
 
 const salesReturns = {
-  key: 'sales-returns', title: '销退订单', api: '/api/orders', extraParams: { isRed: true }, apiCreate: '/api/orders', detailable: true,
+  key: 'sales-returns', title: '销退订单', api: '/api/sales-returns', detailable: true, noDelete: true, maxActions: 2, pageSize: 30, createPath: '/sales-return-edit/new', detailPath: '/sales-return-edit',
   statusActions: [
-    { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'primary', confirm: '确认提交此销退订单进入审批？' },
-    { label: '审批通过', when: ['SUBMITTED'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此销退订单？' },
+    { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'warning', confirm: '确认提交此销退订单进入审批？' },
+    { label: '审批通过', when: ['SUBMITTED'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此销退订单？（将自动生成销退入库草稿）' },
     { label: '驳回', when: ['SUBMITTED'], method: 'POST', path: '/reject', type: 'danger', confirm: '确认驳回此销退订单？' },
-    { label: '取消', when: ['DRAFT', 'SUBMITTED'], method: 'POST', path: '/cancel', type: 'warning', confirm: '确认取消此销退订单？' }
+    { label: '取消', when: ['DRAFT', 'APPROVED'], method: 'POST', path: '/cancel', type: 'warning', confirm: '确认取消此销退订单？' }
   ],
   cols: [
-    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
-    { k: 'code', l: '销退单号', w: 170, filter: { type: 'text' } }, 
-    { k: 'orderType', l: '类型', w: 90, filter: { type: 'select', options: [{ value: 'RETURN', label: '销退' }, { value: 'EXCHANGE', label: '换货' }] } }, 
-    { k: 'dealerName', l: '经销商', filter: { type: 'text' } }, 
-    { k: 'finalAmount', l: '金额', w: 120, filter: { type: 'number' } }, 
-    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'SUBMITTED', label: '待审批' }, { value: 'APPROVED', label: '已审批' }, { value: 'RECEIVING', label: '收货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
-  ],
-  form: [
-    { key: 'isRed', label: '红字标记', type: 'boolean', value: true, readonly: true, group: '销退信息' },
-    { key: 'orderType', label: '销退类型', type: 'select', required: true, value: 'RETURN', group: '销退信息', options: [{ value: 'RETURN', label: '销退' }, { value: 'EXCHANGE', label: '换货' }] },
-    { key: 'refOrderId', label: '原销售订单', required: true, picker: 'orders', group: '销退信息' },
-    { key: 'dealerId', label: '经销商', required: true, picker: 'dealers', group: '销退信息' },
-    { key: 'remark', label: '销退原因', type: 'textarea', required: true, group: '其它' },
-    { key: 'lines', type: 'lines', label: '销退明细', required: true, group: '销退明细', cols: LINE_ORDER }
+    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
+    { k: 'code', l: '销退单号', w: 170, filter: { type: 'text' } },
+    { k: 'dealerName', l: '经销商', filter: { type: 'text' } },
+    { k: 'warehouseName', l: '收货仓库', w: 120, filter: { type: 'text' } },
+    { k: 'finalAmount', l: '金额', w: 110, filter: { type: 'number' } },
+    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'SUBMITTED', label: '待审批' }, { value: 'APPROVED', label: '已审批' }, { value: 'RECEIVING', label: '收货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } },
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }
   ]
 }
-
 const purchaseOrders = {
   key: 'purchase-orders', title: '采购订单', api: '/api/purchase-orders', detailable: true, noDelete: true, editableWhen: ['DRAFT'], maxActions: 2, pageSize: 30,
   statusActions: [
@@ -434,34 +424,23 @@ const purchaseOrders = {
 }
 
 const purchaseReturns = {
-  key: 'purchase-returns', title: '采退订单', api: '/api/purchase-orders', extraParams: { isRed: true }, apiCreate: '/api/purchase-orders', detailable: true,
+  key: 'purchase-returns', title: '采退订单', api: '/api/purchase-returns', detailable: true, noDelete: true, maxActions: 2, pageSize: 30, createPath: '/purchase-return-edit/new', detailPath: '/purchase-return-edit',
   statusActions: [
-    { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'primary', confirm: '确认提交此采退订单进入审批？' },
-    { label: '审批通过', when: ['SUBMITTED'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此采退订单？' },
+    { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'warning', confirm: '确认提交此采退订单进入审批？' },
+    { label: '审批通过', when: ['SUBMITTED'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此采退订单？（将自动生成采退出库草稿）' },
     { label: '驳回', when: ['SUBMITTED'], method: 'POST', path: '/reject', type: 'danger', confirm: '确认驳回此采退订单？' },
-    { label: '取消', when: ['DRAFT', 'SUBMITTED'], method: 'POST', path: '/cancel', type: 'warning', confirm: '确认取消此采退订单？' }
+    { label: '取消', when: ['DRAFT', 'APPROVED'], method: 'POST', path: '/cancel', type: 'warning', confirm: '确认取消此采退订单？' }
   ],
   cols: [
-    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
-    { k: 'code', l: '采退单号', w: 170, filter: { type: 'text' } }, 
-    { k: 'supplierName', l: '供应商', filter: { type: 'text' } }, 
-    { k: 'warehouseName', l: '出库仓库', w: 120, filter: { type: 'text' } }, 
-    { k: 'finalAmount', l: '金额', w: 120, filter: { type: 'number' } }, 
-    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'SUBMITTED', label: '待审批' }, { value: 'APPROVED', label: '已审批' }, { value: 'RECEIVING', label: '收货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
-  ],
-  form: [
-    { key: 'isRed', label: '红字标记', type: 'boolean', value: true, readonly: true, group: '采退信息' },
-    { key: 'orderType', label: '采退类型', type: 'select', required: true, value: 'RETURN', group: '采退信息', options: [{ value: 'RETURN', label: '采退' }] },
-    { key: 'refPoId', label: '原采购单', required: true, picker: 'purchase-orders', group: '采退信息' },
-    { key: 'supplierId', label: '供应商', required: true, picker: 'suppliers', group: '采退信息' },
-    { key: 'warehouseId', label: '出库仓库', required: true, picker: 'warehouses', group: '采退信息' },
-    { key: 'remark', label: '采退原因', type: 'textarea', required: true, group: '其它' },
-    { key: 'lines', type: 'lines', label: '采退明细', required: true, group: '采退明细', cols: LINE_ORDER }
+    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
+    { k: 'code', l: '采退单号', w: 170, filter: { type: 'text' } },
+    { k: 'supplierName', l: '供应商', filter: { type: 'text' } },
+    { k: 'warehouseName', l: '出库仓库', w: 120, filter: { type: 'text' } },
+    { k: 'finalAmount', l: '金额', w: 110, filter: { type: 'number' } },
+    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'SUBMITTED', label: '待审批' }, { value: 'APPROVED', label: '已审批' }, { value: 'SHIPPING', label: '发货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } },
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }
   ]
 }
-
 const inventory = {
   key: 'inventory', title: '库存查询', api: '/api/inventory', readonly: true,
   cols: [

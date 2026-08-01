@@ -120,6 +120,70 @@ public class InventoryController {
     }
 
     /**
+     * v3.8.1 库存汇总 JSON 查询：按物料编码(必填,可多个)+仓库(选填)汇总库存数量。
+     * 不返回批次/序列号/库存状态明细。
+     * POST /api/inventory/query
+     */
+    @PostMapping("/query")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ApiResponse<Map<String, Object>> queryByCodes(@RequestBody Map<String, Object> body) {
+        UUID tid = TenantContext.getTenantId();
+        @SuppressWarnings("unchecked")
+        List<Object> codeObjs = body == null ? null : (List<Object>) body.get("productCodes");
+        if (codeObjs == null || codeObjs.isEmpty()) {
+            return ApiResponse.fail(40001, "productCodes 不能为空，至少传入一个物料编码");
+        }
+        List<String> codes = new ArrayList<>();
+        for (Object o : codeObjs) {
+            if (o != null && !String.valueOf(o).isBlank()) codes.add(String.valueOf(o).trim());
+        }
+        if (codes.isEmpty()) return ApiResponse.fail(40001, "productCodes 不能为空");
+
+        Long warehouseId = body.get("warehouseId") == null ? null : Long.valueOf(String.valueOf(body.get("warehouseId")));
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT p.id AS product_id, p.code AS product_code, p.name_cn AS product_name, p.spec AS product_spec, p.unit AS product_unit, " +
+                "COALESCE(SUM(inv.qty),0) AS total_qty " +
+                "FROM products p LEFT JOIN inventory inv ON inv.product_id = p.id AND inv.tenant_id = ?1");
+        List<Object> params = new ArrayList<>();
+        params.add(tid);
+        int idx = 2;
+        if (warehouseId != null) {
+            sql.append(" AND inv.warehouse_id = ?").append(idx++);
+            params.add(warehouseId);
+        }
+        sql.append(" WHERE p.tenant_id = ?1 AND p.code IN (");
+        for (int i = 0; i < codes.size(); i++) {
+            if (i > 0) sql.append(",");
+            sql.append("?").append(idx++);
+            params.add(codes.get(i));
+        }
+        sql.append(") GROUP BY p.id, p.code, p.name_cn, p.spec, p.unit ORDER BY p.code");
+
+        var q = em.createNativeQuery(sql.toString(), Tuple.class);
+        for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("productCode", t.get("product_code"));
+            m.put("productName", t.get("product_name"));
+            m.put("productSpec", t.get("product_spec"));
+            m.put("unit", t.get("product_unit"));
+            m.put("totalQty", t.get("total_qty") == null ? 0 : t.get("total_qty"));
+            items.add(m);
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("warehouseId", warehouseId);
+        data.put("items", items);
+        data.put("totalCount", items.size());
+        return ApiResponse.ok(data);
+    }
+
+    /**
      * v3.4 新增：查询产品在仓库中可选批次/序列号（用于出库下拉）
      * GET /api/inventory/available-lots?productId=X&warehouseId=Y&status=QUALIFIED
      */

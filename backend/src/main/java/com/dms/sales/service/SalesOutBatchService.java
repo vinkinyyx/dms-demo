@@ -104,7 +104,7 @@ public class SalesOutBatchService {
     public Map<String, Object> confirmBatch(Long batchId) {
         UUID tid = TenantContext.getTenantId();
         var bq = em.createNativeQuery(
-                "SELECT b.id, b.sales_out_id, b.status, so.warehouse_id, so.dealer_id, so.source_order_id, so.status AS so_status " +
+                "SELECT b.id, b.sales_out_id, b.status, so.warehouse_id, so.dealer_id, so.source_order_id, so.source_po_id, so.status AS so_status, COALESCE(so.is_red,false) AS is_red " +
                 "FROM sales_out_batches b JOIN sales_outs so ON so.id = b.sales_out_id " +
                 "WHERE b.id = ?1 AND b.tenant_id = ?2", Tuple.class);
         bq.setParameter(1, batchId).setParameter(2, tid);
@@ -119,6 +119,8 @@ public class SalesOutBatchService {
         Long soId = ((Number) b.get("sales_out_id")).longValue();
         Long warehouseId = b.get("warehouse_id") == null ? null : ((Number) b.get("warehouse_id")).longValue();
         Long orderId = b.get("source_order_id") == null ? null : ((Number) b.get("source_order_id")).longValue();
+        Long poId = b.get("source_po_id") == null ? null : ((Number) b.get("source_po_id")).longValue();
+        boolean isRed = Boolean.TRUE.equals(b.get("is_red"));
         if (warehouseId == null) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "Out doc has no warehouse");
 
         var lq = em.createNativeQuery(
@@ -131,7 +133,7 @@ public class SalesOutBatchService {
         List<Tuple> lines = lq.getResultList();
         if (lines.isEmpty()) throw new BusinessException(ErrorCode.PARAM_MISSING, "Batch has no lines, please save first");
 
-        validateLoadedLines(tid, soId, lines);
+        validateLoadedLines(tid, soId, lines, isRed);
 
         Long userId = TenantContext.getUserId();
         for (Tuple l : lines) {
@@ -143,8 +145,8 @@ public class SalesOutBatchService {
             BigDecimal unitPrice = l.get("unit_price") == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(l.get("unit_price")));
             boolean isSerial = Boolean.TRUE.equals(l.get("is_serial_managed"));
 
-            if (isSerial) deductSerial(tid, lineWh, productId, batchNo, serialNo);
-            else deductBatch(tid, lineWh, productId, batchNo, qty);
+            if (isSerial) deductSerial(tid, lineWh, productId, batchNo, serialNo, isRed);
+            else deductBatch(tid, lineWh, productId, batchNo, qty, isRed);
 
             em.createNativeQuery(
                 "INSERT INTO inventory_transactions (tenant_id, warehouse_id, product_id, batch_no, serial_no, qty_change, txn_type, ref_doc_type, ref_doc_id, source_line_id, at_time, operator_id) " +
@@ -188,6 +190,7 @@ public class SalesOutBatchService {
           .setParameter(1, newStatus).setParameter(2, soId).executeUpdate();
 
         if (orderId != null) syncOrderStatus(orderId, newStatus);
+        if (poId != null) syncPurchaseReturnStatus(poId, newStatus);
 
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("id", batchId);
@@ -296,7 +299,7 @@ public class SalesOutBatchService {
         }
     }
 
-    private void validateLoadedLines(UUID tid, Long soId, List<Tuple> lines) {
+    private void validateLoadedLines(UUID tid, Long soId, List<Tuple> lines, boolean isRed) {
         List<Map<String, Object>> mapLines = new ArrayList<>();
         for (Tuple l : lines) {
             Map<String, Object> m = new HashMap<>();
@@ -309,6 +312,38 @@ public class SalesOutBatchService {
             mapLines.add(m);
         }
         validateLines(tid, soId, mapLines);
+        // v3.8.1 采退出库(RGI, is_red=true)：不限库存状态，仅校验在库数量足够
+        if (isRed) {
+            for (Tuple l : lines) {
+                Long productId = ((Number) l.get("product_id")).longValue();
+                Long lineWh = l.get("warehouse_id") == null ? null : ((Number) l.get("warehouse_id")).longValue();
+                BigDecimal qty = new BigDecimal(String.valueOf(l.get("qty")));
+                String batchNo = l.get("batch_no") == null ? null : String.valueOf(l.get("batch_no"));
+                String serialNo = l.get("serial_no") == null ? null : String.valueOf(l.get("serial_no"));
+                boolean isSerial = Boolean.TRUE.equals(l.get("is_serial_managed"));
+                if (isSerial) assertSerialAvailableAnyStatus(tid, lineWh, productId, batchNo, serialNo);
+                else assertBatchAvailableAnyStatus(tid, lineWh, productId, batchNo, qty);
+            }
+        }
+    }
+
+    private void assertBatchAvailableAnyStatus(UUID tid, Long warehouseId, Long productId, String batchNo, BigDecimal qty) {
+        var q = em.createNativeQuery(
+                "SELECT COALESCE(SUM(qty),0) AS avail FROM inventory " +
+                "WHERE tenant_id = ?1 AND warehouse_id = ?2 AND product_id = ?3 AND COALESCE(batch_no,'') = COALESCE(?4,'') AND qty > 0", Tuple.class);
+        q.setParameter(1, tid).setParameter(2, warehouseId).setParameter(3, productId).setParameter(4, batchNo);
+        Tuple t = (Tuple) q.getSingleResult();
+        BigDecimal avail = new BigDecimal(String.valueOf(t.get("avail")));
+        if (avail.compareTo(qty) < 0)
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "批次 " + batchNo + " 库存不足（可用 " + avail + "，需 " + qty + "）");
+    }
+
+    private void assertSerialAvailableAnyStatus(UUID tid, Long warehouseId, Long productId, String batchNo, String serialNo) {
+        var q = em.createNativeQuery(
+                "SELECT id FROM inventory WHERE tenant_id = ?1 AND warehouse_id = ?2 AND product_id = ?3 AND COALESCE(batch_no,'') = COALESCE(?4,'') AND serial_no = ?5 AND qty >= 1", Tuple.class);
+        q.setParameter(1, tid).setParameter(2, warehouseId).setParameter(3, productId).setParameter(4, batchNo).setParameter(5, serialNo);
+        if (q.getResultList().isEmpty())
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "序列号 " + serialNo + " 不存在或库存不足");
     }
 
     private void assertBatchAvailable(UUID tid, Long warehouseId, Long productId, String batchNo, BigDecimal qty) {
@@ -341,25 +376,27 @@ public class SalesOutBatchService {
         } catch (Exception e) { return false; }
     }
 
-    private void deductBatch(UUID tid, Long warehouseId, Long productId, String batchNo, BigDecimal qty) {
+    private void deductBatch(UUID tid, Long warehouseId, Long productId, String batchNo, BigDecimal qty, boolean isRed) {
+        String statusCond = isRed ? "qty >= ?1" : "stock_status = 'QUALIFIED' AND qty >= ?1";
         int upd = em.createNativeQuery(
                 "UPDATE inventory SET qty = qty - ?1, updated_at = now() " +
-                "WHERE tenant_id = ?2 AND warehouse_id = ?3 AND product_id = ?4 AND batch_no = ?5 AND stock_status = 'QUALIFIED' AND qty >= ?1")
+                "WHERE tenant_id = ?2 AND warehouse_id = ?3 AND product_id = ?4 AND COALESCE(batch_no,'') = COALESCE(?5,'') AND " + statusCond)
               .setParameter(1, qty).setParameter(2, tid).setParameter(3, warehouseId)
               .setParameter(4, productId).setParameter(5, batchNo).executeUpdate();
-        if (upd == 0) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "Batch " + batchNo + " qualified stock insufficient (maybe locked by another shipment)");
+        if (upd == 0) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "批次 " + batchNo + " 库存不足（可能正被其它出库占用）");
     }
 
-    private void deductSerial(UUID tid, Long warehouseId, Long productId, String batchNo, String serialNo) {
+    private void deductSerial(UUID tid, Long warehouseId, Long productId, String batchNo, String serialNo, boolean isRed) {
+        String statusCond = isRed ? "qty >= 1" : "stock_status = 'QUALIFIED' AND qty >= 1";
         int upd = em.createNativeQuery(
                 "UPDATE inventory SET qty = qty - 1, updated_at = now() " +
-                "WHERE tenant_id = ?1 AND warehouse_id = ?2 AND product_id = ?3 AND batch_no = ?4 AND serial_no = ?5 AND stock_status = 'QUALIFIED' AND qty >= 1")
+                "WHERE tenant_id = ?1 AND warehouse_id = ?2 AND product_id = ?3 AND COALESCE(batch_no,'') = COALESCE(?4,'') AND serial_no = ?5 AND " + statusCond)
               .setParameter(1, tid).setParameter(2, warehouseId).setParameter(3, productId)
               .setParameter(4, batchNo).setParameter(5, serialNo).executeUpdate();
-        if (upd == 0) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "Serial " + serialNo + " stock insufficient or not qualified");
+        if (upd == 0) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "序列号 " + serialNo + " 库存不足或不存在");
         em.createNativeQuery(
                 "UPDATE stock_serials SET shipped_at = now() " +
-                "WHERE tenant_id = ?1 AND warehouse_id = ?2 AND product_id = ?3 AND batch_no = ?4 AND serial_no = ?5 AND shipped_at IS NULL")
+                "WHERE tenant_id = ?1 AND warehouse_id = ?2 AND product_id = ?3 AND COALESCE(batch_no,'') = COALESCE(?4,'') AND serial_no = ?5 AND shipped_at IS NULL")
           .setParameter(1, tid).setParameter(2, warehouseId).setParameter(3, productId)
           .setParameter(4, batchNo).setParameter(5, serialNo).executeUpdate();
     }
@@ -386,6 +423,21 @@ public class SalesOutBatchService {
         safeUpdateOrder(orderId, orderStatus);
     }
 
+    private void syncPurchaseReturnStatus(Long poId, String soStatus) {
+        String poStatus;
+        if ("COMPLETED".equals(soStatus)) poStatus = "COMPLETED";
+        else if ("PARTIAL_SHIPPED".equals(soStatus)) poStatus = "SHIPPING";
+        else return;
+        try {
+            em.createNativeQuery(
+                "UPDATE purchase_orders SET status = ?1, completed_at = CASE WHEN ?1 = 'COMPLETED' THEN COALESCE(completed_at, now()) ELSE completed_at END, updated_at = now() " +
+                "WHERE id = ?2 AND COALESCE(is_red,false)=true AND status IN ('APPROVED','SHIPPING','COMPLETED')")
+              .setParameter(1, poStatus).setParameter(2, poId).executeUpdate();
+        } catch (Exception e) {
+            log.warn("Failed to sync purchase return status poId={}: {}", poId, e.getMessage());
+        }
+    }
+
     private void safeUpdateOrder(Long orderId, String orderStatus) {
         try {
             em.createNativeQuery(
@@ -399,7 +451,7 @@ public class SalesOutBatchService {
 
     private Tuple loadOut(UUID tid, Long salesOutId) {
         var q = em.createNativeQuery(
-                "SELECT id, code, status, warehouse_id, dealer_id, source_order_id FROM sales_outs WHERE id = ?1 AND tenant_id = ?2", Tuple.class);
+                "SELECT id, code, status, warehouse_id, dealer_id, source_order_id, source_po_id, COALESCE(is_red,false) AS is_red FROM sales_outs WHERE id = ?1 AND tenant_id = ?2", Tuple.class);
         q.setParameter(1, salesOutId).setParameter(2, tid);
         List<?> rs = q.getResultList();
         if (rs.isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND, "Sales-out not found");

@@ -17,6 +17,8 @@ const routes = [
       { path: 'receipt-edit/:id', name: 'ReceiptEdit', component: () => import('@/views/ReceiptEdit.vue'), meta: { title: '收货入库' } },
       { path: 'stock-move-edit/:id', name: 'StockMoveEdit', component: () => import('@/views/StockMoveEdit.vue'), meta: { title: '库存移动' } },
       { path: 'sales-out-edit/:id', name: 'SalesOutEdit', component: () => import('@/views/SalesOutEdit.vue'), meta: { title: '发货出库' } },
+      { path: 'sales-return-edit/:id', name: 'SalesReturnEdit', component: () => import('@/views/SalesReturnEdit.vue'), meta: { title: '销退订单' } },
+      { path: 'purchase-return-edit/:id', name: 'PurchaseReturnEdit', component: () => import('@/views/PurchaseReturnEdit.vue'), meta: { title: '采退订单' } },
       { path: 'm/:key', name: 'Module', component: () => import('@/views/ModuleView.vue'), meta: { title: '业务模块' } }
     ]
   },

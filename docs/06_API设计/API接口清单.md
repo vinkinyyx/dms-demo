@@ -273,6 +273,7 @@
 ### 📊 库存
 - `GET /api/inventory` — 分页 + join 产品/仓库/经销商
 - `GET /api/inventory/available-lots?productId&warehouseId` — 可选批次
+- `POST /api/inventory/query` — v3.8.1 库存汇总查询（JSON：productCodes 必填多值、warehouseId 选填；按物料汇总 totalQty，不展开批次/序列号/状态）
 - `GET/POST /api/inventory-adjustments` — 库存调整
 - `GET/POST /api/stock-moves` — 库存移动
 
@@ -336,3 +337,15 @@
 ### /api/operation-log/list/receipt/{receiptId}
 - businessId 已由 aspect 统一为 receiptId (从 result.receiptId 提取)
 - 一次收货完整流程可查到: CREATE / UPDATE 更新明细 / UPDATE 确认收货 (或 UPDATE 取消本次)
+
+
+### 🔁 销退/采退订单（v3.8.1）
+- `GET/POST /api/sales-returns` — 销退订单列表/创建（is_red=true，单号 RS）
+- `GET/PUT/DELETE /api/sales-returns/{id}` — 详情/编辑(仅草稿)/删除(仅草稿)
+- `POST /api/sales-returns/{id}/submit|approve|reject|cancel` — 状态机；approve 自动生成 RGR 入库草稿
+- `GET /api/sales-returns/shipped-outs?orderId&dealerId` — 已发货出库单下拉
+- `GET /api/sales-returns/shipped-outs/{salesOutId}/lines` — 带可退明细与可退数量
+- `GET/POST /api/purchase-returns` — 采退订单列表/创建（单号 RP）
+- `GET/PUT/DELETE /api/purchase-returns/{id}` — 详情/编辑/删除
+- `POST /api/purchase-returns/{id}/submit|approve|reject|cancel` — 状态机；approve 自动生成 RGI 出库草稿
+- 下游 RGR 走 `/api/receipts` 收货；RGI 走 `/api/sales-outs` 发货。

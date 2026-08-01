@@ -131,7 +131,7 @@ public class ReceiptBatchService {
         UUID tid = TenantContext.getTenantId();
 
         var bq = em.createNativeQuery(
-                "SELECT b.id, b.receipt_id, b.status, b.code, r.warehouse_id, r.source_po_id, r.status AS r_status " +
+                "SELECT b.id, b.receipt_id, b.status, b.code, r.warehouse_id, r.source_po_id, r.ref_doc_type, r.ref_doc_id, r.status AS r_status, r.is_red " +
                 "FROM receipt_batches b JOIN receipts r ON r.id = b.receipt_id " +
                 "WHERE b.id = ?1 AND b.tenant_id = ?2", Tuple.class);
         bq.setParameter(1, batchId).setParameter(2, tid);
@@ -147,6 +147,8 @@ public class ReceiptBatchService {
         Long receiptId = ((Number) b.get("receipt_id")).longValue();
         Long warehouseId = b.get("warehouse_id") == null ? null : ((Number) b.get("warehouse_id")).longValue();
         Long poId = b.get("source_po_id") == null ? null : ((Number) b.get("source_po_id")).longValue();
+        String refDocType = b.get("ref_doc_type") == null ? null : String.valueOf(b.get("ref_doc_type"));
+        Long refDocId = b.get("ref_doc_id") == null ? null : ((Number) b.get("ref_doc_id")).longValue();
         if (warehouseId == null) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "收货单未绑定仓库, 无法入库");
 
         var lq = em.createNativeQuery(
@@ -283,6 +285,11 @@ public class ReceiptBatchService {
         // 更新 PO 状态: 若全部 received, PO 转 COMPLETED; 若部分, RECEIVING
         if (poId != null) syncPoStatus(poId);
 
+        // v3.8.1 销退入库(RGR)：回写销退订单(orders is_red=true)状态
+        if ("sales_return".equals(refDocType) && refDocId != null) {
+            syncSalesReturnStatus(refDocId, newStatus);
+        }
+
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("id", batchId);
         res.put("receiptId", receiptId);
@@ -355,14 +362,21 @@ public class ReceiptBatchService {
           .setParameter(1, newStatus).setParameter(2, receiptId).executeUpdate();
 
         // v3.7.6 R1: 取消剩余后, 同步源采购订单为 COMPLETED (不再可收货)
-        var poq = em.createNativeQuery("SELECT source_po_id FROM receipts WHERE id = ?1")
+        var poq = em.createNativeQuery("SELECT source_po_id, ref_doc_type, ref_doc_id FROM receipts WHERE id = ?1")
                     .setParameter(1, receiptId);
         try {
-            Object po = poq.getSingleResult();
+            Tuple r = (Tuple) poq.getSingleResult();
+            Object po = r.get("source_po_id");
             if (po != null) {
                 Long poId2 = ((Number) po).longValue();
                 em.createNativeQuery("UPDATE purchase_orders SET status = ?1, completed_at = now(), updated_at = now() WHERE id = ?2 AND status IN ('APPROVED','RECEIVING')")
                   .setParameter(1, "COMPLETED").setParameter(2, poId2).executeUpdate();
+            }
+            // v3.8.1 销退入库取消剩余 -> 销退单 COMPLETED
+            if ("sales_return".equals(String.valueOf(r.get("ref_doc_type"))) && r.get("ref_doc_id") != null) {
+                Long srId = ((Number) r.get("ref_doc_id")).longValue();
+                em.createNativeQuery("UPDATE orders SET status='COMPLETED', closed_at=COALESCE(closed_at,now()), updated_at=now() WHERE id=?1 AND COALESCE(is_red,false)=true AND status IN ('APPROVED','RECEIVING')")
+                  .setParameter(1, srId).executeUpdate();
             }
         } catch (Exception ignored) {}
 
@@ -420,5 +434,31 @@ public class ReceiptBatchService {
         else return; // 未变
         em.createNativeQuery("UPDATE purchase_orders SET status = ?1, updated_at = now() WHERE id = ?2 AND status IN ('APPROVED','RECEIVING')")
           .setParameter(1, newStatus).setParameter(2, poId).executeUpdate();
+    }
+
+    private void syncSalesReturnStatus(Long orderId, String receiptStatus) {
+        try {
+            // 以销退单关联的 RGR 入库单整体进度判断
+            var q = em.createNativeQuery(
+                    "SELECT COALESCE(SUM(rl.expected_qty),0) AS exp, COALESCE(SUM(rl.received_qty),0) AS rcv, COALESCE(SUM(rl.cancelled_qty),0) AS ccl " +
+                    "FROM receipt_lines rl JOIN receipts r ON r.id=rl.receipt_id " +
+                    "WHERE r.ref_doc_type='sales_return' AND r.ref_doc_id=?1", Tuple.class);
+            q.setParameter(1, orderId);
+            Tuple t = (Tuple) q.getSingleResult();
+            BigDecimal exp = new BigDecimal(String.valueOf(t.get("exp")));
+            BigDecimal rcv = new BigDecimal(String.valueOf(t.get("rcv")));
+            BigDecimal ccl = new BigDecimal(String.valueOf(t.get("ccl")));
+            String orderStatus;
+            if (exp.signum() > 0 && rcv.add(ccl).compareTo(exp) >= 0) orderStatus = "COMPLETED";
+            else if (rcv.signum() > 0) orderStatus = "RECEIVING";
+            else orderStatus = "APPROVED";
+            em.createNativeQuery(
+                    "UPDATE orders SET status=?1, received_at=COALESCE(received_at, CASE WHEN ?1='RECEIVING' THEN now() ELSE received_at END), " +
+                    "closed_at=CASE WHEN ?1='COMPLETED' THEN COALESCE(closed_at,now()) ELSE closed_at END, updated_at=now() " +
+                    "WHERE id=?2 AND COALESCE(is_red,false)=true AND status IN ('APPROVED','RECEIVING','COMPLETED')")
+              .setParameter(1, orderStatus).setParameter(2, orderId).executeUpdate();
+        } catch (Exception e) {
+            // ignore
+        }
     }
 }

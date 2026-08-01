@@ -60,10 +60,10 @@ public class DocNoGenerator {
 
     private boolean codeExists(String prefix, String code) {
         String table = switch (prefix) {
-            case "PO", "RPO" -> "purchase_orders";
-            case "SO", "SR" -> "orders";
-            case "GR", "GRR" -> "receipts";
-            case "GI", "GIR" -> "sales_outs";
+            case "PO", "RPO", "RP" -> "purchase_orders";
+            case "SO", "SR", "RS" -> "orders";
+            case "GR", "GRR", "RGR" -> "receipts";
+            case "GI", "GIR", "RGI" -> "sales_outs";
             case "ADJ" -> "inventory_adjustments";
             case "MV" -> "stock_moves";
             case "CT" -> "contracts";

@@ -433,6 +433,7 @@ function onDelete(row) {
 }
 
 async function openDetail(row) {
+  if (props.config.detailPath) { router.push(props.config.detailPath + '/' + row.id); return }
   detailData.value = row
   detailLines.value = []
   detailLogs.value = []
