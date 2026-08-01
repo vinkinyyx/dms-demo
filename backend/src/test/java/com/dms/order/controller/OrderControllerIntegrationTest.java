@@ -31,6 +31,7 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     private String setupUserAndLogin(String tenantCode, java.util.UUID... tenantIdOut) throws Exception {
         Tenant t = createTestTenant(tenantCode);
         createTestUser(t.getId(), "orderUser", "Admin@1234");
+        Long productId = createTestProduct(t.getId(), "P-ORD", "测试产品-ORD").getId();
         if (tenantIdOut != null && tenantIdOut.length > 0) {
             // 无法真正回传，仅作占位
         }
@@ -55,17 +56,27 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
         authorizationRepository.saveAndFlush(a);
     }
 
+
+    /**
+     * 在指定租户下创建一个测试经销商并返回其ID。
+     */
+    private Long createDealer(java.util.UUID tenantId, String code) {
+        return createTestDealer(tenantId, code, "测试经销商-" + code).getId();
+    }
+
     @Test
     @DisplayName("异常分支：无授权时创建订单返回 40006 授权校验失败")
     void should_returnBusinessRuleError_when_noAuthorization() throws Exception {
         Tenant t = createTestTenant("T-ORD-NOAUTH");
         createTestUser(t.getId(), "orderUser", "Admin@1234");
+        Long productId = createTestProduct(t.getId(), "P-ORD", "测试产品-ORD").getId();
+        Long dealerId = createDealer(t.getId(), "D-ORD-NOAUTH");
         String token = loginAndGetToken("T-ORD-NOAUTH", "orderUser", "Admin@1234");
 
         Map<String, Object> body = Map.of(
-                "dealerId", 501L,
+                "dealerId", dealerId,
                 "lines", List.of(Map.of(
-                        "productId", 1001L,
+                        "productId", productId,
                         "qty", 5,
                         "unitPrice", 100
                 ))
@@ -83,14 +94,16 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     void should_createOrder_when_authorized() throws Exception {
         Tenant t = createTestTenant("T-ORD-OK");
         createTestUser(t.getId(), "orderUser", "Admin@1234");
-        grantOrderAuth(t.getId(), 501L, 1001L);
+        Long productId = createTestProduct(t.getId(), "P-ORD", "测试产品-ORD").getId();
+        Long dealerId = createDealer(t.getId(), "D-ORD-OK");
+        grantOrderAuth(t.getId(), dealerId, productId);
         String token = loginAndGetToken("T-ORD-OK", "orderUser", "Admin@1234");
 
         Map<String, Object> body = Map.of(
-                "dealerId", 501L,
+                "dealerId", dealerId,
                 "orderType", "PURCHASE",
                 "lines", List.of(Map.of(
-                        "productId", 1001L,
+                        "productId", productId,
                         "qty", 5,
                         "unitPrice", 100
                 ))
@@ -112,6 +125,7 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     void should_returnParamMissing_when_linesEmpty() throws Exception {
         Tenant t = createTestTenant("T-ORD-EMP");
         createTestUser(t.getId(), "orderUser", "Admin@1234");
+        Long productId = createTestProduct(t.getId(), "P-ORD", "测试产品-ORD").getId();
         String token = loginAndGetToken("T-ORD-EMP", "orderUser", "Admin@1234");
 
         Map<String, Object> body = Map.of("dealerId", 1L, "lines", List.of());
@@ -128,13 +142,15 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     void should_transitionStatus_when_submitThenApprove() throws Exception {
         Tenant t = createTestTenant("T-ORD-FLW");
         createTestUser(t.getId(), "orderUser", "Admin@1234");
-        grantOrderAuth(t.getId(), 501L, 1001L);
+        Long productId = createTestProduct(t.getId(), "P-ORD", "测试产品-ORD").getId();
+        Long dealerId = createDealer(t.getId(), "D-ORD-FLW");
+        grantOrderAuth(t.getId(), dealerId, productId);
         String token = loginAndGetToken("T-ORD-FLW", "orderUser", "Admin@1234");
 
         // 先创建订单
         Map<String, Object> createBody = Map.of(
-                "dealerId", 501L,
-                "lines", List.of(Map.of("productId", 1001L, "qty", 3, "unitPrice", 50))
+                "dealerId", dealerId,
+                "lines", List.of(Map.of("productId", productId, "qty", 3, "unitPrice", 50))
         );
         MvcResult mr = mockMvc.perform(post("/api/orders")
                         .header("Authorization", "Bearer " + token)
@@ -161,12 +177,14 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     void should_returnBusinessRuleError_when_approveFromDraft() throws Exception {
         Tenant t = createTestTenant("T-ORD-ILL");
         createTestUser(t.getId(), "orderUser", "Admin@1234");
-        grantOrderAuth(t.getId(), 501L, 1001L);
+        Long productId = createTestProduct(t.getId(), "P-ORD", "测试产品-ORD").getId();
+        Long dealerId = createDealer(t.getId(), "D-ORD-ILL");
+        grantOrderAuth(t.getId(), dealerId, productId);
         String token = loginAndGetToken("T-ORD-ILL", "orderUser", "Admin@1234");
 
         Map<String, Object> createBody = Map.of(
-                "dealerId", 501L,
-                "lines", List.of(Map.of("productId", 1001L, "qty", 2, "unitPrice", 10))
+                "dealerId", dealerId,
+                "lines", List.of(Map.of("productId", productId, "qty", 2, "unitPrice", 10))
         );
         MvcResult mr = mockMvc.perform(post("/api/orders")
                         .header("Authorization", "Bearer " + token)
@@ -186,12 +204,14 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     void should_cancelOrder_when_fromDraft() throws Exception {
         Tenant t = createTestTenant("T-ORD-CNL");
         createTestUser(t.getId(), "orderUser", "Admin@1234");
-        grantOrderAuth(t.getId(), 501L, 1001L);
+        Long productId = createTestProduct(t.getId(), "P-ORD", "测试产品-ORD").getId();
+        Long dealerId = createDealer(t.getId(), "D-ORD-CNL");
+        grantOrderAuth(t.getId(), dealerId, productId);
         String token = loginAndGetToken("T-ORD-CNL", "orderUser", "Admin@1234");
 
         Map<String, Object> createBody = Map.of(
-                "dealerId", 501L,
-                "lines", List.of(Map.of("productId", 1001L, "qty", 2, "unitPrice", 10))
+                "dealerId", dealerId,
+                "lines", List.of(Map.of("productId", productId, "qty", 2, "unitPrice", 10))
         );
         MvcResult mr = mockMvc.perform(post("/api/orders")
                         .header("Authorization", "Bearer " + token)
@@ -211,12 +231,14 @@ class OrderControllerIntegrationTest extends BaseIntegrationTest {
     void should_rejectOrder_when_fromSubmitted() throws Exception {
         Tenant t = createTestTenant("T-ORD-REJ");
         createTestUser(t.getId(), "orderUser", "Admin@1234");
-        grantOrderAuth(t.getId(), 501L, 1001L);
+        Long productId = createTestProduct(t.getId(), "P-ORD", "测试产品-ORD").getId();
+        Long dealerId = createDealer(t.getId(), "D-ORD-REJ");
+        grantOrderAuth(t.getId(), dealerId, productId);
         String token = loginAndGetToken("T-ORD-REJ", "orderUser", "Admin@1234");
 
         Map<String, Object> createBody = Map.of(
-                "dealerId", 501L,
-                "lines", List.of(Map.of("productId", 1001L, "qty", 2, "unitPrice", 10))
+                "dealerId", dealerId,
+                "lines", List.of(Map.of("productId", productId, "qty", 2, "unitPrice", 10))
         );
         MvcResult mr = mockMvc.perform(post("/api/orders")
                         .header("Authorization", "Bearer " + token)

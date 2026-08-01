@@ -360,6 +360,26 @@ public class BizDocDetailController {
                 }
                 head.put("poLines", poLines);
             } catch (Exception ignored) {}
+
+            try {
+                var rlq = em.createNativeQuery(
+                        "SELECT expected_qty, received_qty, cancelled_qty FROM receipt_lines WHERE receipt_id = ?1", Tuple.class);
+                rlq.setParameter(1, id);
+                @SuppressWarnings("unchecked")
+                List<Tuple> rls = rlq.getResultList();
+                java.math.BigDecimal expectedTotal = java.math.BigDecimal.ZERO;
+                java.math.BigDecimal receivedTotal = java.math.BigDecimal.ZERO;
+                java.math.BigDecimal cancelledTotal = java.math.BigDecimal.ZERO;
+                for (Tuple rl : rls) {
+                    expectedTotal = expectedTotal.add(toBd(rl.get("expected_qty")));
+                    receivedTotal = receivedTotal.add(toBd(rl.get("received_qty")));
+                    cancelledTotal = cancelledTotal.add(toBd(rl.get("cancelled_qty")));
+                }
+                head.put("totalExpected", expectedTotal);
+                head.put("totalReceived", receivedTotal);
+                head.put("totalCancelled", cancelledTotal);
+                head.put("totalRemaining", expectedTotal.subtract(receivedTotal).subtract(cancelledTotal).max(java.math.BigDecimal.ZERO));
+            } catch (Exception ignored) {}
         }
         
         return ApiResponse.ok(head);
@@ -468,6 +488,11 @@ public class BizDocDetailController {
             m.put(toCamel(name), v);
         }
         return m;
+    }
+
+    private java.math.BigDecimal toBd(Object v) {
+        if (v == null) return java.math.BigDecimal.ZERO;
+        return new java.math.BigDecimal(String.valueOf(v));
     }
 
     private String toCamel(String s) {

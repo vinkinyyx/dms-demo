@@ -70,6 +70,27 @@ public class ProductService {
                 }
             }
         } catch (Exception ignored) {}
+        fillProductTypeNames(products);
+    }
+
+    private void fillProductTypeNames(java.util.List<Product> products) {
+        if (products == null || products.isEmpty()) return;
+        try {
+            @SuppressWarnings("unchecked")
+            java.util.List<Object[]> rows = em.createNativeQuery(
+                "SELECT di.code, di.name FROM dict_items di JOIN dict_types dt ON di.type_id = dt.id " +
+                "WHERE dt.code = 'product_type'")
+                .getResultList();
+            java.util.Map<String, String> typeMap = new java.util.HashMap<>();
+            for (Object[] row : rows) {
+                typeMap.put(String.valueOf(row[0]), String.valueOf(row[1]));
+            }
+            for (Product p : products) {
+                if (p.getProductType() != null) {
+                    p.setProductTypeName(typeMap.getOrDefault(p.getProductType(), p.getProductType()));
+                }
+            }
+        } catch (Exception ignored) {}
     }
 
     @Transactional(readOnly = true)
@@ -85,6 +106,7 @@ public class ProductService {
                 if (name != null) p.setCategoryName(String.valueOf(name));
             } catch (Exception ignored) {}
         }
+        fillProductTypeNames(java.util.List.of(p));
         return p;
     }
 
@@ -103,6 +125,7 @@ public class ProductService {
         if (entity.getTaxRate() == null) entity.setTaxRate(new BigDecimal("0.13"));
         if (entity.getUdiRequired() == null) entity.setUdiRequired(true);
         if (entity.getIsSerialManaged() == null) entity.setIsSerialManaged(false);
+        // productType is accepted as-is from request (dict code, e.g. CONSUMABLE); null allowed.
         if (entity.getWarnMonths() == null) entity.setWarnMonths(3);
         entity.setUpdatedAt(OffsetDateTime.now());
         entity.ensureAttrs();
@@ -123,6 +146,7 @@ public class ProductService {
         if (patch.getNameCn() != null) old.setNameCn(patch.getNameCn());
         if (patch.getNameEn() != null) old.setNameEn(patch.getNameEn());
         if (patch.getCategoryId() != null) old.setCategoryId(patch.getCategoryId());
+        if (patch.getProductType() != null) old.setProductType(patch.getProductType());
         if (patch.getSpec() != null) old.setSpec(patch.getSpec());
         if (patch.getUnit() != null) old.setUnit(patch.getUnit());
         if (patch.getCurrentPrice() != null) old.setCurrentPrice(patch.getCurrentPrice());

@@ -1,3 +1,27 @@
+## v3.8.0 (2026-08-01) - 会话/权限、收货汇总、产品类型修复、库存移动
+
+### 后端
+- 会话：`application-test.yml` access-token-ttl 600000->28800000（8h）、refresh-token-ttl 3600000->604800000（7d）。
+- 安全：`JwtFilter` 令牌解析失败返回 401/40101“登录已过期，请重新登录”；`SecurityConfig` 增加 authenticationEntryPoint(401) 与 accessDeniedHandler(403)。
+- 收货汇总：`BizDocDetailController.receiptDetail` 聚合 receipt_lines 返回 totalExpected/totalReceived/totalCancelled/totalRemaining。
+- 产品：`Product` 实体新增 productType/productTypeName；`ProductService` create/update 持久化 productType，列表/详情回填类型与分类名；Flyway V43 增加 products.product_type。
+- 单号：`DocNoGenerator.next` 单号撞唯一键时自动顺延重试，避免共享测试库/历史数据导致 500。
+- 库存移动 v3.7.9：STATUS_ADJUST 仓内状态调整 / WAREHOUSE_TRANSFER 跨仓移动，srcInventoryId 原子扣减+upsert，序列号/数量/状态校验（见下 v3.7.9）。
+
+### 前端（frontend-vue，PC）
+- `request.js`：401 自动 refresh + 请求排队重放；403 展示后端 message；统一中文文案。
+- `ReceiptEdit.vue`：底部新增“收货汇总”卡片，字段缺失时前端按 poLines 兜底求和。
+- 产品表单/列表：产品类型可保存并回显（modules.js 既有 productType 配置现已生效）。
+- 物料选择器：分页每页 50，模糊搜索覆盖编码/名称/规格。
+
+### 数据迁移
+- 测试环境需应用 V39-V43（此前停留在 V38）；test profile 关闭 Flyway，部署时手动执行并补 flyway_schema_history。
+
+### 测试
+- 后端 `mvn test`：84 个测试全部通过（修复了历史测试路径 /auth->/api/auth、外键种子数据、DocNoGenerator 适配等）。
+- 新增 ProductControllerIntegrationTest 覆盖产品类型/分类保存与回显。
+- API 冒烟：34 个核心接口 200，0 个 500；前端 npm run build 通过。
+
 ## v3.7.9 (2026-08-01) - 库存移动两种模式（仓内状态调整 / 跨仓移动）
 
 ### 后端

@@ -32,7 +32,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         String body = objectMapper.writeValueAsString(
                 Map.of("tenantCode", "T-LOGIN-OK", "username", "alice", "password", "Pass1234"));
 
-        mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
@@ -49,7 +49,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         String body = objectMapper.writeValueAsString(
                 Map.of("tenantCode", "T-LOGIN-BAD", "username", "bob", "password", "WrongPwd"));
 
-        mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(40101));
     }
@@ -65,7 +65,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         String body = objectMapper.writeValueAsString(
                 Map.of("tenantCode", "T-LOCKED", "username", "carol", "password", "Pass1234"));
 
-        mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(40301));
     }
@@ -79,7 +79,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         String body = objectMapper.writeValueAsString(
                 Map.of("tenantCode", "T-INACT", "username", "dave", "password", "Pass1234"));
 
-        mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(jsonPath("$.code").value(40301));
     }
 
@@ -88,7 +88,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     void should_returnOk_when_forgotPasswordCalled() throws Exception {
         String body = objectMapper.writeValueAsString(Map.of("email", "someone@test.local"));
 
-        mockMvc.perform(post("/auth/forgot-password").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/auth/forgot-password").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
@@ -96,7 +96,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("正常流程：wechat/qrcode 返回 scene 与 qrUrl")
     void should_returnQrScene_when_requestQrcode() throws Exception {
-        mockMvc.perform(post("/auth/wechat/qrcode").contentType(MediaType.APPLICATION_JSON).content("{}"))
+        mockMvc.perform(post("/api/auth/wechat/qrcode").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.scene").isNotEmpty())
@@ -107,7 +107,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     @DisplayName("异常分支：wechat/callback 非法 code 返回 40001")
     void should_returnBadRequest_when_wechatCodeInvalid() throws Exception {
         String body = objectMapper.writeValueAsString(Map.of("code", "BAD_CODE", "state", "x"));
-        mockMvc.perform(post("/auth/wechat/callback").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/auth/wechat/callback").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(jsonPath("$.code").value(40001));
     }
 
@@ -117,7 +117,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         String body = objectMapper.writeValueAsString(
                 Map.of("code", "MOCK_OPENID_test001", "state", "s"));
 
-        mockMvc.perform(post("/auth/wechat/callback").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/auth/wechat/callback").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.needBind").value(true))
@@ -134,7 +134,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         @SuppressWarnings("unchecked")
         RBucket<String> bucket = Mockito.mock(RBucket.class);
         Mockito.when(bucket.get()).thenReturn("MOCK_OPENID_eric001");
-        Mockito.when(redissonClient.getBucket(Mockito.contains("dms:wechat:bind:BT123"))).thenReturn(bucket);
+        Mockito.doReturn(bucket).when(redissonClient).getBucket(Mockito.contains("dms:wechat:bind:BT123"));
 
         String body = objectMapper.writeValueAsString(Map.of(
                 "bindToken", "BT123",
@@ -143,7 +143,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 "tenantCode", "T-WX-BIND"
         ));
 
-        mockMvc.perform(post("/auth/wechat/bind").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/auth/wechat/bind").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty());
@@ -163,7 +163,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 "tenantCode", "no-such"
         ));
 
-        mockMvc.perform(post("/auth/wechat/bind").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/auth/wechat/bind").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(jsonPath("$.code").value(40006));
     }
 }

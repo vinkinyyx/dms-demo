@@ -63,7 +63,7 @@ service.interceptors.response.use(
     if (res.code === 0) {
       return res
     }
-    ElMessage.error(res.message || '请求失败（' + res.code + '）')
+    ElMessage.error(res.message || '请求失败: ' + res.code)
     return Promise.reject(new Error(res.message || 'Error'))
   },
   (error) => {
@@ -108,7 +108,9 @@ service.interceptors.response.use(
     }
 
     if (status === 403) {
-      ElMessage.error('没有权限访问该资源')
+      const msg = error.response && error.response.data && error.response.data.message
+      if (msg && msg !== 'Forbidden') ElMessage.error(msg)
+      else ElMessage.error('没有权限访问该资源')
       return Promise.reject(error)
     }
 

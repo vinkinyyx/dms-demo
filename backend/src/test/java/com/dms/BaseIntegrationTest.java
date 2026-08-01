@@ -11,6 +11,11 @@ import com.dms.tenant.entity.Tenant;
 import com.dms.tenant.repository.TenantRepository;
 import com.dms.user.entity.User;
 import com.dms.user.repository.UserRepository;
+import com.dms.masterdata.entity.Dealer;
+import com.dms.masterdata.entity.Product;
+import com.dms.masterdata.repository.DealerRepository;
+import com.dms.masterdata.repository.ProductRepository;
+import java.math.BigDecimal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
@@ -48,6 +53,12 @@ public abstract class BaseIntegrationTest {
     protected UserRepository userRepository;
 
     @Autowired
+    protected DealerRepository dealerRepository;
+
+    @Autowired
+    protected ProductRepository productRepository;
+
+    @Autowired
     protected PasswordEncoder passwordEncoder;
 
     /**
@@ -61,7 +72,7 @@ public abstract class BaseIntegrationTest {
         // 每个测试前提供一个宽松的 RBucket mock，避免 NPE
         @SuppressWarnings("unchecked")
         RBucket<String> bucket = Mockito.mock(RBucket.class);
-        Mockito.when(redissonClient.getBucket(Mockito.anyString())).thenReturn(bucket);
+        Mockito.doReturn(bucket).when(redissonClient).getBucket(Mockito.anyString());
         Mockito.when(bucket.get()).thenReturn(null);
         Mockito.when(bucket.isExists()).thenReturn(false);
     }
@@ -113,6 +124,40 @@ public abstract class BaseIntegrationTest {
     }
 
     /**
+     * 在指定租户下创建一个测试经销商。
+     */
+    protected Dealer createTestDealer(UUID tenantId, String code, String name) {
+        Dealer d = Dealer.builder()
+                .tenantId(tenantId)
+                .code(code)
+                .name(name)
+                .level("A")
+                .status("active")
+                .updatedAt(OffsetDateTime.now())
+                .build();
+        return dealerRepository.saveAndFlush(d);
+    }
+
+    /**
+     * 在指定租户下创建一个测试产品。
+     */
+    protected Product createTestProduct(UUID tenantId, String code, String name) {
+        Product p = Product.builder()
+                .tenantId(tenantId)
+                .code(code)
+                .nameCn(name)
+                .spec("TEST-SPEC")
+                .unit("个")
+                .currentPrice(new BigDecimal("100"))
+                .taxRate(new BigDecimal("0.13"))
+                .isSerialManaged(false)
+                .status("active")
+                .updatedAt(OffsetDateTime.now())
+                .build();
+        return productRepository.saveAndFlush(p);
+    }
+
+    /**
      * 使用测试账号密码登录并返回 accessToken（供子类透传到 Authorization 头）。
      */
     protected String loginAndGetToken(String tenantCode, String username, String password) throws Exception {
@@ -120,7 +165,7 @@ public abstract class BaseIntegrationTest {
                 java.util.Map.of("tenantCode", tenantCode, "username", username, "password", password));
         String resp = mockMvc.perform(
                         org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                                .post("/auth/login")
+                                .post("/api/auth/login")
                                 .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                                 .content(body))
                 .andReturn().getResponse().getContentAsString();

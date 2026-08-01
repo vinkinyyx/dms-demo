@@ -42,6 +42,9 @@ public class Product {
     @Column(name = "category_id")
     private Long categoryId;
 
+    @Column(name = "product_type", length = 32)
+    private String productType;
+
     @Column(length = 100)
     private String spec;
 
@@ -90,6 +93,9 @@ public class Product {
 
     @Transient
     private String categoryName;
+
+    @Transient
+    private String productTypeName;
 
     public void ensureAttrs() {
         if (attrs == null) attrs = new HashMap<>();

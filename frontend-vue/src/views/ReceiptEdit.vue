@@ -199,6 +199,16 @@
     </el-dialog>
 
     <el-card shadow="never" style="margin-top:14px">
+      <template #header><el-icon><DataAnalysis /></el-icon> 收货汇总</template>
+      <el-descriptions :column="4" border size="small">
+        <el-descriptions-item label="累计应收">{{ receipt.totalExpected ?? totalExpectedFallback }}</el-descriptions-item>
+        <el-descriptions-item label="累计已收">{{ receipt.totalReceived ?? totalReceivedFallback }}</el-descriptions-item>
+        <el-descriptions-item label="待收">{{ receipt.totalRemaining ?? totalRemainingFallback }}</el-descriptions-item>
+        <el-descriptions-item label="已取消">{{ receipt.totalCancelled ?? totalCancelledFallback }}</el-descriptions-item>
+      </el-descriptions>
+    </el-card>
+
+    <el-card shadow="never" style="margin-top:14px">
       <template #header>
         <el-icon><Tickets /></el-icon>操作记录
       </template>
@@ -232,7 +242,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, Plus, CircleClose, Document, Tickets, Box, Check } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, CircleClose, Document, Tickets, Box, Check, DataAnalysis } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { getDetail, actionResource } from '@/api/crud'
 import { statusText, statusTagType } from '@/utils/dict'
@@ -264,6 +274,11 @@ const cancelRemainingLoading = ref(false)
 
 const canCreateBatch = computed(() => ['DRAFT', 'APPROVED', 'PARTIAL_RECEIVED'].includes(receipt.status))
 const canCancelRemaining = computed(() => ['DRAFT', 'APPROVED', 'PARTIAL_RECEIVED'].includes(receipt.status))
+
+const totalExpectedFallback = computed(() => (poLines.value || []).reduce((sum, line) => sum + Number(line.qty || 0), 0))
+const totalReceivedFallback = computed(() => (poLines.value || []).reduce((sum, line) => sum + Number(line.receivedQty || 0), 0))
+const totalCancelledFallback = computed(() => Math.max(0, totalExpectedFallback.value - totalReceivedFallback.value - Math.max(0, Number(receipt.totalRemaining || 0))))
+const totalRemainingFallback = computed(() => Math.max(0, totalExpectedFallback.value - totalReceivedFallback.value - totalCancelledFallback.value))
 
 onMounted(() => { loadReceipt(); loadOpLogs() })
 

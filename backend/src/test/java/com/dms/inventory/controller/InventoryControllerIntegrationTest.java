@@ -14,6 +14,7 @@ import com.dms.tenant.entity.Tenant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -32,6 +33,9 @@ class InventoryControllerIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     InventoryService inventoryService;
+
+    @Autowired
+    TransactionTemplate transactionTemplate;
 
     private Inventory seedInventory(UUID tenantId, Long dealerId, Long productId, String batchNo, BigDecimal qty) {
         Inventory inv = Inventory.builder()
@@ -52,17 +56,28 @@ class InventoryControllerIntegrationTest extends BaseIntegrationTest {
     void should_returnInventoryList_when_queryWithFilters() throws Exception {
         Tenant t = createTestTenant("T-INV-Q");
         createTestUser(t.getId(), "invUser", "Admin@1234");
-        seedInventory(t.getId(), 501L, 1001L, "B001", new BigDecimal("100"));
-        seedInventory(t.getId(), 501L, 1002L, "B002", new BigDecimal("50"));
+        final UUID tid = t.getId();
+        transactionTemplate.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        final Long[] ids = new Long[2];
+        transactionTemplate.executeWithoutResult(status -> {
+            Long dealerId = createTestDealer(tid, "D-INV-Q", "测试经销商-Q").getId();
+            Long productId = createTestProduct(tid, "P-INV-Q", "测试产品-Q").getId();
+            seedInventory(tid, dealerId, productId, "B001", new BigDecimal("100"));
+            seedInventory(tid, dealerId, productId, "B002", new BigDecimal("50"));
+            ids[0] = dealerId;
+            ids[1] = productId;
+        });
+        Long dealerId = ids[0];
+        Long productId = ids[1];
 
         String token = loginAndGetToken("T-INV-Q", "invUser", "Admin@1234");
 
-        mockMvc.perform(get("/api/inventory?dealerId=501&productId=1001")
+        mockMvc.perform(get("/api/inventory?dealerId=" + dealerId + "&productId=" + productId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.total").value(1))
-                .andExpect(jsonPath("$.data.list[0].productId").value(1001));
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.list[0].productId").value(productId));
     }
 
     @Test
@@ -79,10 +94,12 @@ class InventoryControllerIntegrationTest extends BaseIntegrationTest {
     void should_createInventory_when_positiveTxnWithoutExisting() {
         Tenant t = createTestTenant("T-INV-ADD");
         UUID tid = t.getId();
+        Long dealerId = createTestDealer(tid, "D-INV-ADD", "测试经销商-ADD").getId();
+        Long productId = createTestProduct(tid, "P-INV-ADD", "测试产品-ADD").getId();
         try {
             TenantContext.setTenantId(tid);
             TenantContext.setUserId(1L);
-            Inventory inv = inventoryService.applyTransaction(tid, 501L, 10L, 1001L, "B-A", null,
+            Inventory inv = inventoryService.applyTransaction(tid, dealerId, 10L, productId, "B-A", null,
                     new BigDecimal("20"), "RECEIPT_IN", "RECEIPT", 999L);
             assertThat(inv.getQty()).isEqualByComparingTo(new BigDecimal("20"));
         } finally {
@@ -113,12 +130,14 @@ class InventoryControllerIntegrationTest extends BaseIntegrationTest {
     void should_throwBusinessException_when_deductBelowZero() {
         Tenant t = createTestTenant("T-INV-NEG");
         UUID tid = t.getId();
-        seedInventory(tid, 501L, 1001L, "B001", new BigDecimal("5"));
+        Long dealerId = createTestDealer(tid, "D-INV-NEG", "测试经销商-NEG").getId();
+        Long productId = createTestProduct(tid, "P-INV-NEG", "测试产品-NEG").getId();
+        seedInventory(tid, dealerId, productId, "B001", new BigDecimal("5"));
         try {
             TenantContext.setTenantId(tid);
             TenantContext.setUserId(1L);
             assertThatThrownBy(() -> inventoryService.applyTransaction(
-                    tid, 501L, 1L, 1001L, "B001", null,
+                    tid, dealerId, 1L, productId, "B001", null,
                     new BigDecimal("-10"), "SALES_OUT", "SO", 1L))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("库存不足");
@@ -148,12 +167,14 @@ class InventoryControllerIntegrationTest extends BaseIntegrationTest {
     void should_deductQty_when_validNegativeTxn() {
         Tenant t = createTestTenant("T-INV-DED-OK");
         UUID tid = t.getId();
-        seedInventory(tid, 501L, 1001L, "B001", new BigDecimal("100"));
+        Long dealerId = createTestDealer(tid, "D-INV-OK", "测试经销商-OK").getId();
+        Long productId = createTestProduct(tid, "P-INV-OK", "测试产品-OK").getId();
+        seedInventory(tid, dealerId, productId, "B001", new BigDecimal("100"));
         try {
             TenantContext.setTenantId(tid);
             TenantContext.setUserId(1L);
             Inventory inv = inventoryService.applyTransaction(
-                    tid, 501L, 1L, 1001L, "B001", null,
+                    tid, dealerId, 1L, productId, "B001", null,
                     new BigDecimal("-30"), "SALES_OUT", "SO", 1L);
             assertThat(inv.getQty()).isEqualByComparingTo(new BigDecimal("70"));
         } finally {

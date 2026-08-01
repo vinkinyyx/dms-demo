@@ -1,10 +1,13 @@
 /*
- * JWT 过滤器，从 Authorization: Bearer 头解析令牌并写入 SecurityContext 与 TenantContext。
+ * JWT filter: parses Authorization Bearer token and populates SecurityContext/TenantContext.
  */
 package com.dms.security;
 
+import com.dms.common.ApiResponse;
+import com.dms.common.ErrorCode;
 import com.dms.common.util.TenantContext;
 import com.dms.rbac.service.PermissionQueryService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -39,6 +42,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final PermissionQueryService permissionQueryService;
+    private final ObjectMapper objectMapper;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -50,7 +54,7 @@ public class JwtFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwtUtil.parse(token);
                 if (!jwtUtil.isAccessToken(claims)) {
-                    log.warn("非 access 类型令牌请求资源: {}", request.getRequestURI());
+                    log.warn("Non-access token requests resource: {}", request.getRequestURI());
                 } else {
                     String username = claims.getSubject();
                     Object userIdObj = claims.get(JwtUtil.CLAIM_USER_ID);
@@ -69,8 +73,10 @@ public class JwtFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (JwtException | IllegalArgumentException ex) {
-                log.warn("JWT 解析失败: {}", ex.getMessage());
+                log.warn("JWT parse failed: {}", ex.getMessage());
                 SecurityContextHolder.clearContext();
+                writeUnauthorized(response, "登录已过期，请重新登录");
+                return;
             }
         }
 
@@ -80,6 +86,13 @@ public class JwtFilter extends OncePerRequestFilter {
             TenantContext.clear();
         }
     }
+
+    private void writeUnauthorized(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail(ErrorCode.UNAUTHORIZED, message)));
+    }
+
     private List<SimpleGrantedAuthority> loadAuthorities(Long userId) {
         if (userId == null) {
             return Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
