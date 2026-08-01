@@ -149,28 +149,18 @@ public class InventoryStatusOps {
         }
         if (stockStatus == null || stockStatus.isBlank()) stockStatus = "QUALIFIED";
         String bn = batchNo == null ? "" : batchNo;
-        var findQ = em.createNativeQuery(
-                "SELECT id, qty FROM inventory " +
-                "WHERE tenant_id = ?1 AND product_id = ?2 AND warehouse_id = ?3 " +
-                "  AND stock_status = ?4 AND COALESCE(batch_no,'') = ?5 " +
-                "  AND ((CAST(?6 AS varchar) IS NULL AND serial_no IS NULL) OR serial_no = ?6)", Tuple.class);
-        findQ.setParameter(1, tenantId).setParameter(2, productId).setParameter(3, warehouseId)
-              .setParameter(4, stockStatus).setParameter(5, bn).setParameter(6, serialNo);
-        @SuppressWarnings("unchecked")
-        List<Tuple> rows = findQ.getResultList();
-        if (rows.isEmpty()) {
-            em.createNativeQuery(
-                    "INSERT INTO inventory (tenant_id, warehouse_id, product_id, batch_no, serial_no, qty, stock_status, in_source, created_at, updated_at) " +
-                    "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, now(), now())")
-              .setParameter(1, tenantId).setParameter(2, warehouseId).setParameter(3, productId)
-              .setParameter(4, bn.isEmpty() ? null : bn).setParameter(5, serialNo)
-              .setParameter(6, qty).setParameter(7, stockStatus).setParameter(8, txnType)
-              .executeUpdate();
-        } else {
-            Tuple t = rows.get(0);
-            em.createNativeQuery("UPDATE inventory SET qty = qty + ?1, updated_at = now() WHERE id = ?2")
-              .setParameter(1, qty).setParameter(2, ((Number) t.get("id")).longValue()).executeUpdate();
-        }
+        // upsert：按唯一键 (tenant+warehouse+product+batch+serial)。
+        // 批次库存通常同批次只有一行（历史数据可能按状态分行，则命中已有行累加）；
+        // 序列号库存同序列号唯一，跨状态调整时 ON CONFLICT 更新该行状态并累加。
+        em.createNativeQuery(
+                "INSERT INTO inventory (tenant_id, warehouse_id, product_id, batch_no, serial_no, qty, stock_status, in_source, created_at, updated_at) " +
+                "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, now(), now()) " +
+                "ON CONFLICT (tenant_id, warehouse_id, product_id, batch_no, serial_no) " +
+                "DO UPDATE SET qty = inventory.qty + EXCLUDED.qty, stock_status = EXCLUDED.stock_status, updated_at = now()")
+          .setParameter(1, tenantId).setParameter(2, warehouseId).setParameter(3, productId)
+          .setParameter(4, bn.isEmpty() ? null : bn).setParameter(5, serialNo)
+          .setParameter(6, qty).setParameter(7, stockStatus).setParameter(8, txnType)
+          .executeUpdate();
         writeTxn(tenantId, productId, warehouseId, batchNo, serialNo, qty, txnType, refDocType, refDocId, operatorId);
     }
 

@@ -19,6 +19,7 @@ const products = {
     { k: 'currentPrice', l: '参考单价', w: 100, filter: { type: 'number' } },
     { k: 'taxRate', l: '税率', w: 70, filter: { type: 'number' } }, 
     { k: 'udiRequired', l: 'UDI追溯', w: 80, filter: { type: 'select', options: [{ value: true, label: '是' }, { value: false, label: '否' }] } },
+    { k: 'isSerialManaged', l: '序列号管理', w: 90, filter: { type: 'select', options: [{ value: true, label: '是' }, { value: false, label: '否' }] } },
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } },
     { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
     { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
@@ -34,6 +35,7 @@ const products = {
     { key: 'currentPrice', label: '参考单价', type: 'number', group: '规格与价格' },
     { key: 'taxRate', label: '税率(如 0.13)', type: 'number', group: '规格与价格', value: 0.13 },
     { key: 'udiRequired', label: '需要UDI追溯', type: 'boolean', group: '医疗器械', value: true },
+    { key: 'isSerialManaged', label: '序列号管理', type: 'boolean', group: '医疗器械', value: false },
     { key: 'warnMonths', label: '临期预警(月)', type: 'number', group: '医疗器械', value: 3 },
     { key: 'safetyQty', label: '安全库存', type: 'number', group: '库存参数', value: 10 },
     { key: 'minOrderQty', label: '最小订购量', type: 'number', group: '库存参数', value: 1 },

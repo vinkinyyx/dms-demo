@@ -102,6 +102,7 @@ public class ProductService {
         if (entity.getStatus() == null) entity.setStatus("active");
         if (entity.getTaxRate() == null) entity.setTaxRate(new BigDecimal("0.13"));
         if (entity.getUdiRequired() == null) entity.setUdiRequired(true);
+        if (entity.getIsSerialManaged() == null) entity.setIsSerialManaged(false);
         if (entity.getWarnMonths() == null) entity.setWarnMonths(3);
         entity.setUpdatedAt(OffsetDateTime.now());
         entity.ensureAttrs();
@@ -127,6 +128,7 @@ public class ProductService {
         if (patch.getCurrentPrice() != null) old.setCurrentPrice(patch.getCurrentPrice());
         if (patch.getTaxRate() != null) old.setTaxRate(patch.getTaxRate());
         if (patch.getUdiRequired() != null) old.setUdiRequired(patch.getUdiRequired());
+        if (patch.getIsSerialManaged() != null) old.setIsSerialManaged(patch.getIsSerialManaged());
         if (patch.getWarnMonths() != null) old.setWarnMonths(patch.getWarnMonths());
         if (patch.getSafetyQty() != null) old.setSafetyQty(patch.getSafetyQty());
         if (patch.getMinOrderQty() != null) old.setMinOrderQty(patch.getMinOrderQty());

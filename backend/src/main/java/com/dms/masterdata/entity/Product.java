@@ -57,6 +57,9 @@ public class Product {
     @Column(name = "udi_required")
     private Boolean udiRequired;
 
+    @Column(name = "is_serial_managed")
+    private Boolean isSerialManaged;
+
     @Column(name = "warn_months")
     private Integer warnMonths;
 
