@@ -2,6 +2,7 @@
  * 经销商仓储接口。
  */
 package com.dms.masterdata.repository;
+import java.util.Optional;
 
 import com.dms.masterdata.entity.Dealer;
 import org.springframework.data.domain.Page;
@@ -18,4 +19,5 @@ public interface DealerRepository extends JpaRepository<Dealer, Long>, JpaSpecif
     Page<Dealer> findByTenantId(UUID tenantId, Pageable pageable);
 
     boolean existsByTenantIdAndCode(UUID tenantId, String code);
+    java.util.Optional<Dealer> findByTenantIdAndCode(UUID tenantId, String code);
 }

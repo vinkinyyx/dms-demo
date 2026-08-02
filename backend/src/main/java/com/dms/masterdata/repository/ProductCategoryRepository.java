@@ -2,6 +2,7 @@
  * 商品分类仓储接口。
  */
 package com.dms.masterdata.repository;
+import java.util.Optional;
 
 import com.dms.masterdata.entity.ProductCategory;
 import org.springframework.data.domain.Page;
@@ -18,4 +19,5 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
     Page<ProductCategory> findByTenantId(UUID tenantId, Pageable pageable);
 
     boolean existsByTenantIdAndCode(UUID tenantId, String code);
+    java.util.Optional<ProductCategory> findByTenantIdAndCode(UUID tenantId, String code);
 }

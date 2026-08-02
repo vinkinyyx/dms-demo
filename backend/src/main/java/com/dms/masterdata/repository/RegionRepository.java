@@ -2,6 +2,7 @@
  * 区域仓储接口。
  */
 package com.dms.masterdata.repository;
+import java.util.Optional;
 
 import com.dms.masterdata.entity.Region;
 import org.springframework.data.domain.Page;
@@ -17,4 +18,5 @@ public interface RegionRepository extends JpaRepository<Region, Long> {
     Page<Region> findByTenantId(UUID tenantId, Pageable pageable);
 
     boolean existsByTenantIdAndCode(UUID tenantId, String code);
+    java.util.Optional<Region> findByTenantIdAndCode(UUID tenantId, String code);
 }

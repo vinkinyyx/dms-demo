@@ -91,6 +91,24 @@ public class SupplierService {
         return saved;
     }
 
+
+    @Transactional
+    public boolean upsertByCode(Supplier entity) {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
+        if (entity.getCode() == null || entity.getCode().trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "编码不能为空");
+        }
+        return repository.findByTenantIdAndCode(tenantId, entity.getCode()).map(existing -> {
+            update(existing.getId(), entity);
+            return false;
+        }).orElseGet(() -> {
+            if (entity.getName() == null || entity.getName().trim().isEmpty()) {
+                throw new BusinessException(ErrorCode.PARAM_MISSING, "名称不能为空");
+            }
+            create(entity); return true; });
+    }
+
     @Transactional
     public void deleteById(UUID id) {
         Supplier entity = get(id);

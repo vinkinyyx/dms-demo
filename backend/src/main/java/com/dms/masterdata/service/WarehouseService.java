@@ -84,6 +84,38 @@ public class WarehouseService {
         return saved;
     }
 
+
+    /**
+     * ????? upsert????????????????????????????? true ?????
+     */
+    /**
+     * 按业务编码 upsert（供批量导入）：编码已存在则按非空字段更新，否则新建。返回 true 表示新建。
+     */
+    @Transactional
+    public boolean upsertByCode(Warehouse entity) {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
+        if (entity.getCode() == null || entity.getCode().trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "编码不能为空");
+        }
+        return repository.findFirstByTenantIdAndCode(tenantId, entity.getCode()).map(existing -> {
+            update(existing.getId(), entity);
+            return false;
+        }).orElseGet(() -> {
+            if (entity.getName() == null || entity.getName().trim().isEmpty()) {
+                throw new BusinessException(ErrorCode.PARAM_MISSING, "名称不能为空");
+            }
+            entity.setId(null);
+            entity.setTenantId(tenantId);
+            if (entity.getStatus() == null) entity.setStatus("active");
+            if (entity.getType() == null) entity.setType("main");
+            entity.setUpdatedAt(OffsetDateTime.now());
+            Warehouse saved = repository.save(entity);
+            opLog.log("warehouse", saved.getId(), "CREATE", "新建仓库 " + saved.getCode());
+            return true;
+        });
+    }
+
     @Transactional
     public void deleteById(Long id) {
         Warehouse entity = get(id);

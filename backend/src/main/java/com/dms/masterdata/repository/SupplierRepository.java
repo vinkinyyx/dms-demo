@@ -1,4 +1,5 @@
 package com.dms.masterdata.repository;
+import java.util.Optional;
 
 import com.dms.masterdata.entity.Supplier;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,4 +12,5 @@ import java.util.UUID;
 public interface SupplierRepository extends JpaRepository<Supplier, UUID>, JpaSpecificationExecutor<Supplier> {
 
     boolean existsByTenantIdAndCode(UUID tenantId, String code);
+    java.util.Optional<Supplier> findByTenantIdAndCode(UUID tenantId, String code);
 }

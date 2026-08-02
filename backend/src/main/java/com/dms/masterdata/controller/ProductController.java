@@ -130,10 +130,7 @@ public class ProductController {
                 if (entity.getCode() == null || entity.getCode().trim().isEmpty()) {
                     throw new IllegalArgumentException("编码不能为空");
                 }
-                if (entity.getNameCn() == null || entity.getNameCn().trim().isEmpty()) {
-                    throw new IllegalArgumentException("中文名称不能为空");
-                }
-                service.create(entity);
+                service.upsertByCode(entity);
                 success++;
             } catch (Exception e) {
                 failed++;

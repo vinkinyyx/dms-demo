@@ -14,6 +14,7 @@ import com.dms.common.util.ContentDispositionUtils;
 import org.springframework.web.multipart.MultipartFile;
 import com.dms.common.util.TenantContext;
 import com.dms.execution.service.AuditLogService;
+import com.dms.masterdata.service.SupplierService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class SupplierController {
 
     private final EntityManager em;
     private final AuditLogService opLog;
+    private final SupplierService supplierService;
 
     @GetMapping
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
@@ -288,10 +290,7 @@ public class SupplierController {
                 if (entity.getCode() == null || entity.getCode().trim().isEmpty()) {
                     throw new IllegalArgumentException("编码不能为空");
                 }
-                if (entity.getName() == null || entity.getName().trim().isEmpty()) {
-                    throw new IllegalArgumentException("名称不能为空");
-                }
-                em.persist(entity);
+                supplierService.upsertByCode(entity);
                 success++;
             } catch (Exception e) {
                 failed++;

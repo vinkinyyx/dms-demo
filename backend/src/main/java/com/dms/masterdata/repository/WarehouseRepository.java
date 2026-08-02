@@ -2,6 +2,7 @@
  * 仓库仓储接口。
  */
 package com.dms.masterdata.repository;
+import java.util.Optional;
 
 import com.dms.masterdata.entity.Warehouse;
 import org.springframework.data.domain.Page;
@@ -18,4 +19,5 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Long>, Jpa
     Page<Warehouse> findByTenantId(UUID tenantId, Pageable pageable);
 
     boolean existsByTenantIdAndDealerIdAndCode(UUID tenantId, Long dealerId, String code);
+    java.util.Optional<Warehouse> findFirstByTenantIdAndCode(UUID tenantId, String code);
 }

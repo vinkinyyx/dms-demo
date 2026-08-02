@@ -278,18 +278,29 @@ public class ProductPriceController {
                     throw new IllegalArgumentException("合作方类型不能为空");
                 }
 
-                String sql = "INSERT INTO product_prices (product_id, partner_type, partner_id, purchase_price, sales_price, currency, status, tenant_id) " +
-                        "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)";
-                em.createNativeQuery(sql)
-                        .setParameter(1, productId)
-                        .setParameter(2, partnerType)
-                        .setParameter(3, partnerId)
-                        .setParameter(4, purchasePrice)
-                        .setParameter(5, salesPrice)
-                        .setParameter(6, currency != null ? currency : "CNY")
-                        .setParameter(7, status != null ? status : "active")
-                        .setParameter(8, TenantContext.getTenantId())
-                        .executeUpdate();
+                UUID tid = TenantContext.getTenantId();
+                Long partnerIdVal = partnerId == null ? 0L : partnerId;
+                String currencyVal = currency != null ? currency : "CNY";
+                String statusVal = status != null ? status : "active";
+                Object existing = em.createNativeQuery(
+                        "SELECT id FROM product_prices WHERE tenant_id=?1 AND product_id=?2 AND partner_type=?3 AND partner_id=?4")
+                        .setParameter(1, tid).setParameter(2, productId)
+                        .setParameter(3, partnerType).setParameter(4, partnerIdVal)
+                        .getResultList().stream().findFirst().orElse(null);
+                if (existing != null) {
+                    em.createNativeQuery("UPDATE product_prices SET purchase_price=?1, sales_price=?2, currency=?3, status=?4, updated_at=now() WHERE id=?5")
+                            .setParameter(1, purchasePrice).setParameter(2, salesPrice)
+                            .setParameter(3, currencyVal).setParameter(4, statusVal)
+                            .setParameter(5, ((Number) existing).longValue())
+                            .executeUpdate();
+                } else {
+                    em.createNativeQuery("INSERT INTO product_prices (product_id, partner_type, partner_id, purchase_price, sales_price, currency, status, tenant_id) " +
+                            "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)")
+                            .setParameter(1, productId).setParameter(2, partnerType).setParameter(3, partnerIdVal)
+                            .setParameter(4, purchasePrice).setParameter(5, salesPrice)
+                            .setParameter(6, currencyVal).setParameter(7, statusVal).setParameter(8, tid)
+                            .executeUpdate();
+                }
                 success++;
             } catch (Exception e) {
                 failed++;

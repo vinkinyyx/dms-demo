@@ -122,10 +122,7 @@ public class RegionController {
                 if (entity.getCode() == null || entity.getCode().trim().isEmpty()) {
                     throw new IllegalArgumentException("编码不能为空");
                 }
-                if (entity.getName() == null || entity.getName().trim().isEmpty()) {
-                    throw new IllegalArgumentException("名称不能为空");
-                }
-                service.create(entity);
+                service.upsertByCode(entity);
                 success++;
             } catch (Exception e) {
                 failed++;

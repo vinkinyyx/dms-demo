@@ -158,7 +158,7 @@
         :before-upload="beforeImport">
         <el-button type="primary">选择Excel文件</el-button>
       </el-upload>
-      <p style="margin-top:12px;color:#909399">支持 .xlsx 和 .xls 格式，请按模板填写数据</p>
+      <p style="margin-top:12px;color:#909399">支持 .xlsx 和 .xls 格式，请按模板填写数据。导入按“编码”判断：编码已存在则更新该行（留空的列保留原值），不存在则新增。</p>
       <el-button size="small" type="text" :loading="tplDownloading" @click="downloadTemplate">下载导入模板</el-button>
       <template #footer>
         <el-button @click="importVisible = false">取消</el-button>

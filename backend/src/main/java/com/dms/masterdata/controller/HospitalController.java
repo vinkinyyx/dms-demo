@@ -87,7 +87,7 @@ public class HospitalController {
     @GetMapping("/actions/export/template")
     public ResponseEntity<byte[]> exportTemplate() throws Exception {
         String[] headers = {"编码", "名称", "等级", "联系人", "联系电话", "状态"};
-        String[] fieldNames = {"code", "name", "level", "contactPerson", "contactPhone", "status"};
+        String[] fieldNames = {"code", "name", "level", "contact", "phone", "status"};
         String[] examples = {"HOS-001", "示例医院", "三甲", "张三", "13800138000", "active"};
 
         byte[] excelBytes = ExcelExportUtils.exportTemplate(headers, fieldNames, examples);
@@ -111,7 +111,7 @@ public class HospitalController {
         }
 
         String[] headers = {"编码", "名称", "等级", "联系人", "联系电话", "状态"};
-        String[] fieldNames = {"code", "name", "level", "contactPerson", "contactPhone", "status"};
+        String[] fieldNames = {"code", "name", "level", "contact", "phone", "status"};
 
         int success = 0, failed = 0;
         java.util.List<java.util.Map<String, Object>> errors = new java.util.ArrayList<>();
@@ -129,10 +129,7 @@ public class HospitalController {
                 if (entity.getCode() == null || entity.getCode().trim().isEmpty()) {
                     throw new IllegalArgumentException("编码不能为空");
                 }
-                if (entity.getName() == null || entity.getName().trim().isEmpty()) {
-                    throw new IllegalArgumentException("名称不能为空");
-                }
-                service.create(entity);
+                service.upsertByCode(entity);
                 success++;
             } catch (Exception e) {
                 failed++;

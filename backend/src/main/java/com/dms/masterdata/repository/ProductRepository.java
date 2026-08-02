@@ -2,6 +2,7 @@
  * 商品主数据仓储接口。
  */
 package com.dms.masterdata.repository;
+import java.util.Optional;
 
 import com.dms.masterdata.entity.Product;
 import org.springframework.data.domain.Page;
@@ -18,4 +19,5 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     Page<Product> findByTenantId(UUID tenantId, Pageable pageable);
 
     boolean existsByTenantIdAndCode(UUID tenantId, String code);
+    java.util.Optional<Product> findByTenantIdAndCode(UUID tenantId, String code);
 }

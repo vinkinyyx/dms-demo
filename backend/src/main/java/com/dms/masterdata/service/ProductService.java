@@ -164,6 +164,30 @@ public class ProductService {
         return saved;
     }
 
+
+    /**
+     * ????? upsert????????????????????????????? true ?????
+     */
+    /**
+     * 按业务编码 upsert（供批量导入）：编码已存在则按非空字段更新，否则新建。返回 true 表示新建。
+     */
+    @Transactional
+    public boolean upsertByCode(Product entity) {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
+        if (entity.getCode() == null || entity.getCode().trim().isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "编码不能为空");
+        }
+        return repository.findByTenantIdAndCode(tenantId, entity.getCode()).map(existing -> {
+            update(existing.getId(), entity);
+            return false;
+        }).orElseGet(() -> {
+            if (entity.getNameCn() == null || entity.getNameCn().trim().isEmpty()) {
+                throw new BusinessException(ErrorCode.PARAM_MISSING, "中文名称不能为空");
+            }
+            create(entity); return true; });
+    }
+
     @Transactional
     public void deleteById(Long id) {
         Product entity = get(id);

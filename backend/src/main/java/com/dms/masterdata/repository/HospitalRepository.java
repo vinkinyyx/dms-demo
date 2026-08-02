@@ -2,6 +2,7 @@
  * 医院仓储接口。
  */
 package com.dms.masterdata.repository;
+import java.util.Optional;
 
 import com.dms.masterdata.entity.Hospital;
 import org.springframework.data.domain.Page;
@@ -18,4 +19,5 @@ public interface HospitalRepository extends JpaRepository<Hospital, Long>, JpaSp
     Page<Hospital> findByTenantId(UUID tenantId, Pageable pageable);
 
     boolean existsByTenantIdAndCode(UUID tenantId, String code);
+    java.util.Optional<Hospital> findByTenantIdAndCode(UUID tenantId, String code);
 }
