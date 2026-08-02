@@ -1,3 +1,16 @@
+## v3.8.3 (2026-08-02) - 对外开放接口(销售/采购订单创建)
+
+### 后端
+- 新增对外接口模块 `com.dms.openapi`，路径前缀 `/open/api`，采用 HMAC-SHA256 签名鉴权（appKey + 毫秒时间戳 + nonce + body 摘要），时间戳允许 ±5 分钟偏差，支持来源 IP 白名单。
+- 新增 `open_app` 表（Flyway V46）存储第三方应用凭据（appKey/appSecret/租户/系统标识/状态/IP白名单），并为默认租户预置测试应用 `dms-demo-app`。
+- `POST /open/api/sales-orders`：外部系统创建销售订单（草稿），主数据用 dealerCode/warehouseCode/productCode 传参，自动解析为内部 ID，金额由 DMS 汇总。
+- `POST /open/api/purchase-orders`：外部系统创建采购订单（草稿），主数据用 supplierCode/warehouseCode/productCode 传参。
+- 入站日志过滤器 `ApiCallLogFilter` 同步记录 `/open/api/**` 调用，带 appKey 与 system 标识。
+- 新增独立文档 `docs/06_API设计/DMS对外开放接口文档.md`（含调用方式、签名算法、多语言示例、curl、错误码、排错与安全建议）。
+
+### 测试
+- 测试环境 E2E 通过：HMAC 正确签名可创建 SO/PO（含明细落库）；错误签名/缺签名返回 401；主数据编码不存在/空明细返回对应业务错误码；open 调用正确写入接口调用日志。
+
 ## v3.8.2 (2026-08-02) - 接口调用日志模块
 
 ### 后端

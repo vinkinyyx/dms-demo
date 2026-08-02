@@ -51,6 +51,7 @@ public class ApiCallLogFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String uri = request.getRequestURI();
+        if (uri.startsWith("/open/api/")) return false;
         if (!uri.startsWith("/api/")) return true;
         for (String p : EXCLUDE) if (MATCHER.match(p, uri)) return true;
         return false;
@@ -91,6 +92,10 @@ public class ApiCallLogFilter extends OncePerRequestFilter {
         entry.setTenantId(TenantContext.getTenantId());
         entry.setUserId(TenantContext.getUserId());
         entry.setUsername(TenantContext.getUsername());
+        Object appKey = TenantContext.get("appKey");
+        Object appSystem = TenantContext.get("appSystem");
+        if (appKey != null) entry.setAppKey(String.valueOf(appKey));
+        if (appSystem != null) entry.setSystem(String.valueOf(appSystem));
         entry.setRequestId(MDC.get("requestId"));
         entry.setTraceId(request.getHeader("X-Trace-Id"));
         entry.setAppKey(request.getHeader("X-App-Key"));

@@ -1,11 +1,12 @@
 # DMS API 接口清单（合并版）
 
-**当前版本**: v3.8.2
+**当前版本**: v3.8.3
 **最后更新**: 2026-08-02
 
 ---
 
 ## 变更日志
+> 对外开放接口（HMAC 鉴权）见独立文档：`docs/06_API设计/DMS对外开放接口文档.md`，含 POST /open/api/sales-orders、POST /open/api/purchase-orders。
 
 ### v3.8.2 (2026-08-02) — 接口调用日志模块
 
