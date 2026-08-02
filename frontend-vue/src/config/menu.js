@@ -67,7 +67,8 @@ export const MENU_GROUPS = [
       { key: 'positions', icon: 'OfficeBuilding', label: '销售岗位', route: '/positions' },
       { key: 'users', icon: 'User', label: '账号管理' },
       { key: 'roles', icon: 'Avatar', label: '角色管理' },
-      { key: 'admin', icon: 'Setting', label: '后台管理', route: '/admin' }
+      { key: 'admin', icon: 'Setting', label: '后台管理', route: '/admin' },
+      { key: 'api-call-logs', icon: 'Connection', label: '接口调用日志', route: '/api-call-logs' }
     ]
   }
 ]

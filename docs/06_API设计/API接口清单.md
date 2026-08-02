@@ -1,11 +1,47 @@
 # DMS API 接口清单（合并版）
 
-**当前版本**: v3.7.0
-**最后更新**: 2026-07-25
+**当前版本**: v3.8.2
+**最后更新**: 2026-08-02
 
 ---
 
 ## 变更日志
+
+### v3.8.2 (2026-08-02) — 接口调用日志模块
+
+#### 1. 接口调用日志 `/api/admin/api-call-logs`（仅 admin）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/admin/api-call-logs` | 分页查询，支持 direction/system/method/statusCode/keyword/startTime/endTime |
+| GET | `/api/admin/api-call-logs/{id}` | 详情（含请求头、请求体、响应体、错误信息） |
+
+查询参数：`page`(默认1)、`size`(默认20，最大200)、`direction`(IN/OUT)、`system`(ERP/WMS/HR/UDI/CA/第三方)、`method`(GET/POST/PUT/DELETE/PATCH)、`statusCode`、`keyword`(路径/URL/用户名/appKey 模糊)、`startTime`/`endTime`(yyyy-MM-dd HH:mm:ss)。
+
+列表项字段：`id、direction、system、endpoint、httpMethod、path、statusCode、bizCode、success、clientIp、username、appKey、spentMs、startedAt`。
+
+#### 2. 入站调用自动记录
+- 所有 `/api/**` 请求由 `ApiCallLogFilter` 自动记录到 `api_call_log`（direction=IN），含方法、路径、状态码、业务码、耗时、调用方、请求/响应体摘要（截断 32KB）。
+- 排除 `/actuator/**`、`/swagger-ui/**`、`/v3/api-docs/**`、`/api/admin/api-call-logs/**`（避免查看日志自身产生噪音）。
+
+#### 3. 出站外部调用（DMS 调外部系统）
+- 统一通过 `ApiCallLogService.callExternal(ExternalCall)` 发起，自动记录 direction=OUT，字段含 system/endpoint/url/方法/请求头/请求体/响应体/状态码/耗时/错误。
+- 未来新增对接系统直接复用，无需重复写日志。示例：
+
+```java
+var call = new ApiCallLogService.ExternalCall();
+call.system = "ERP";
+call.endpoint = "stock.query";
+call.url = "https://erp.example.com/api/stock";
+call.method = "POST";
+call.headers = Map.of("Content-Type", "application/json", "Authorization", "Bearer xxx");
+call.body = "{\"productCodes\":[\"PROD-000002\"]}";
+ApiCallLogService.ExternalResult r = apiCallLogService.callExternal(call);
+```
+
+#### 4. 获取 Token
+- `POST /api/auth/login`，Body：`{"tenantCode":"default","username":"admin","password":"Sh123456"}`，返回 `data.accessToken`；后续请求头加 `Authorization: Bearer <accessToken>`。
+- Token 过期可用 `POST /api/auth/refresh`（Body：`{"refreshToken":"..."}`）换新。
 
 ### v3.7.0 (2026-07-25) — 主数据补齐（W1-W2）
 

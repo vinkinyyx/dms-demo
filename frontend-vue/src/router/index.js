@@ -19,7 +19,8 @@ const routes = [
       { path: 'sales-out-edit/:id', name: 'SalesOutEdit', component: () => import('@/views/SalesOutEdit.vue'), meta: { title: '发货出库' } },
       { path: 'sales-return-edit/:id', name: 'SalesReturnEdit', component: () => import('@/views/SalesReturnEdit.vue'), meta: { title: '销退订单' } },
       { path: 'purchase-return-edit/:id', name: 'PurchaseReturnEdit', component: () => import('@/views/PurchaseReturnEdit.vue'), meta: { title: '采退订单' } },
-      { path: 'm/:key', name: 'Module', component: () => import('@/views/ModuleView.vue'), meta: { title: '业务模块' } }
+      { path: 'm/:key', name: 'Module', component: () => import('@/views/ModuleView.vue'), meta: { title: '业务模块' } },
+      { path: 'api-call-logs', name: 'ApiCallLog', component: () => import('@/views/ApiCallLog.vue'), meta: { title: '接口调用日志' } }
     ]
   },
   { path: '/mobile/login', name: 'MLogin', component: () => import('@/views/mobile/MLogin.vue'), meta: { public: true, mobile: true } },

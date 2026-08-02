@@ -1,3 +1,19 @@
+## v3.8.2 (2026-08-02) - 接口调用日志模块
+
+### 后端
+- 新增 `api_call_log` 表（Flyway V45），统一记录入站/出站接口调用：direction(IN/OUT)、system、endpoint、http_method、url/path、status_code、biz_code、success、client_ip、user、app_key、请求头/请求体/响应体、error_msg、spent_ms、起止时间。
+- 新增 `ApiCallLogFilter`（order=60，位于 JwtFilter 之后）自动记录所有 `/api/**` 入站请求，含业务码解析与耗时；排除 actuator/swagger/日志自身路径；响应体经缓存包装回写，不影响正常返回。
+- 新增 `ApiCallLogService.callExternal(...)`：DMS 调用外部系统（ERP/WMS/HR/UDI/CA/第三方）时统一发起并记录 OUT 日志，未来新增对接系统直接复用。
+- 新增 `GET /api/admin/api-call-logs`（分页+多维过滤）与 `GET /api/admin/api-call-logs/{id}`（详情），仅 admin 可访问。
+- 写库通过 `@Async` 异步执行，不阻塞主链路；请求/响应体超 64KB（列表接口 32KB）自动截断。
+
+### 前端（frontend-vue，PC）
+- 新增 `ApiCallLog.vue` 接口调用日志页（方向/系统/方法/状态码/关键字筛选、成功失败标签、耗时、详情抽屉展示请求头/请求体/响应体/错误）。
+- 新增路由 `/api-call-logs`，并在「用户与权限」菜单组加入口。移动端不动。
+
+### 测试
+- 测试环境实测：登录、库存查询、销退列表等入站请求均正确入库，详情含响应体；V45 迁移成功（schema version 45）；后端 `mvn package` 通过、前端 `npm run build` 通过。
+
 ## v3.8.1 (2026-08-02) - 销退/采退改造、库存汇总查询接口
 
 ### 后端
