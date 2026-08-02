@@ -178,6 +178,7 @@ import MultiSelectPicker from '@/components/MultiSelectPicker.vue'
 import LinesEditor from '@/components/LinesEditor.vue'
 import { listResource, createResource, updateResource, deleteResource, getDetail, actionResource, getOperationLogs } from '@/api/crud'
 import { statusText, statusTagType, fmt, labelOf, reloadDicts } from '@/utils/dict'
+import { getToken } from '@/utils/auth'
 
 function dictLabel(col, v) {
   if (v == null || v === '') return '-'
@@ -225,7 +226,7 @@ const uploadRef = ref(null)
 const importing = ref(false)
 const tplDownloading = ref(false)
 const importUrl = computed(() => props.config.api + '/batch-import')
-const uploadHeaders = computed(() => ({ 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }))
+const uploadHeaders = computed(() => ({ 'Authorization': 'Bearer ' + (getToken() || '') }))
 
 const searchable = computed(() => props.config.searchable !== false)
 const canCreate = computed(() => !props.config.readonly && !props.config.noCreate)
@@ -557,7 +558,7 @@ function handleImport() {
 }
 
 function getAuthHeader() {
-  return { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') }
+  return { 'Authorization': 'Bearer ' + (getToken() || '') }
 }
 
 function buildExportQuery() {
