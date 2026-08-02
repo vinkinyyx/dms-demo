@@ -103,7 +103,7 @@ const hospitals = {
     { k: 'code', l: '医院编码', w: 130, filter: { type: 'text' } }, 
     { k: 'name', l: '医院名称', filter: { type: 'text' } }, 
     { k: 'level', l: '等级', w: 90, filter: { type: 'select', options: [{ value: '三甲', label: '三级甲等' }, { value: '三乙', label: '三级乙等' }, { value: '二甲', label: '二级甲等' }, { value: '二乙', label: '二级乙等' }, { value: '一级', label: '一级' }, { value: '未定', label: '未定级' }] } }, 
-    { k: 'contactPhone', l: '联系电话', w: 120, filter: { type: 'text' } }, 
+    { k: 'phone', l: '联系电话', w: 120, filter: { type: 'text' } }, 
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } }, 
     { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
     { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
@@ -113,8 +113,8 @@ const hospitals = {
     { key: 'name', label: '医院名称', required: true, group: '基本信息' },
     { key: 'level', label: '医院等级', type: 'select', group: '基本信息', options: [{ value: '三甲', label: '三级甲等' }, { value: '三乙', label: '三级乙等' }, { value: '二甲', label: '二级甲等' }, { value: '二乙', label: '二级乙等' }, { value: '一级', label: '一级' }, { value: '未定', label: '未定级' }] },
     { key: 'regionId', label: '所属区域', group: '基本信息', picker: 'regions' },
-    { key: 'contactName', label: '联系人', group: '联系信息' },
-    { key: 'contactPhone', label: '联系电话', group: '联系信息' },
+    { key: 'contact', label: '联系人', group: '联系信息' },
+    { key: 'phone', label: '联系电话', group: '联系信息' },
     { key: 'address', label: '地址', type: 'textarea', group: '联系信息' },
     { key: 'status', label: '状态', type: 'select', group: '状态', value: 'active', options: S_ACTIVE }
   ]
@@ -193,7 +193,7 @@ const suppliers = {
     { k: 'name', l: '供应商名称', filter: { type: 'text' } }, 
     { k: 'level', l: '供应商等级', w: 90, filter: { type: 'select', options: getDictOptions('supplier_level') } }, 
     { k: 'contactPerson', l: '联系人', w: 100, filter: { type: 'text' } }, 
-    { k: 'contactPhone', l: '联系电话', w: 120, filter: { type: 'text' } }, 
+    { k: 'phone', l: '联系电话', w: 120, filter: { type: 'text' } }, 
     { k: 'taxNo', l: '税号', w: 160, filter: { type: 'text' } }, 
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE_BLOCK } }, 
     { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
@@ -637,7 +637,7 @@ const positions = {
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '岗位编码', w: 130, filter: { type: 'text' } },
     { k: 'name', l: '岗位名称', filter: { type: 'text' } },
-    { k: 'orgName', l: '所属组织', w: 150, filter: { type: 'text' } },
+    { k: 'parentId', l: '上级岗位', w: 120 },
     { k: 'level', l: '级别', w: 80, filter: { type: 'text' } },
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } },
     { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
@@ -646,9 +646,9 @@ const positions = {
   form: [
     { key: 'code', label: '岗位编码', required: true, group: '基本信息' },
     { key: 'name', label: '岗位名称', required: true, group: '基本信息' },
-    { key: 'orgId', label: '所属组织', picker: 'org-units', group: '基本信息' },
-    { key: 'level', label: '岗位级别', group: '基本信息' },
-    { key: 'description', label: '岗位描述', type: 'textarea', group: '其它' },
+    { key: 'parentId', label: '上级岗位', picker: 'positions', group: '基本信息' },
+    { key: 'level', label: '岗位级别', type: 'number', value: 1, group: '基本信息' },
+    { key: 'sortOrder', label: '排序', type: 'number', value: 0, group: '基本信息' },
     { key: 'status', label: '状态', type: 'select', value: 'active', group: '状态', options: S_ACTIVE }
   ]
 }

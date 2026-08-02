@@ -308,6 +308,61 @@ public class SurgeryReportController {
         Long dealerId;
     }
 
+    @GetMapping("/{id}")
+    @Transactional(readOnly = true)
+    public ApiResponse<Map<String, Object>> getDetail(@PathVariable Long id) {
+        UUID tid = TenantContext.getTenantId();
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = em.createNativeQuery(
+                "SELECT sr.id, sr.code, sr.dealer_id, sr.terminal_id, sr.warehouse_id, sr.sales_user_id, " +
+                " sr.surgery_date, sr.patient_info, sr.doctor_name, sr.status, sr.remark, " +
+                " d.name AS dealer_name, h.name AS terminal_name, w.name AS warehouse_name " +
+                "FROM surgery_reports sr " +
+                "LEFT JOIN dealers d ON d.id = sr.dealer_id " +
+                "LEFT JOIN hospitals h ON h.id = sr.terminal_id " +
+                "LEFT JOIN warehouses w ON w.id = sr.warehouse_id " +
+                "WHERE sr.id = ?1 AND sr.tenant_id = ?2 AND sr.deleted_at IS NULL", Tuple.class)
+                .setParameter(1, id).setParameter(2, tid).getResultList();
+        if (rows.isEmpty()) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "??????");
+        }
+        Tuple t = rows.get(0);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", t.get("id"));
+        m.put("code", t.get("code"));
+        m.put("dealerId", t.get("dealer_id"));
+        m.put("dealerName", t.get("dealer_name"));
+        m.put("terminalId", t.get("terminal_id"));
+        m.put("terminalName", t.get("terminal_name"));
+        m.put("warehouseId", t.get("warehouse_id"));
+        m.put("warehouseName", t.get("warehouse_name"));
+        m.put("salesUserId", t.get("sales_user_id"));
+        m.put("surgeryDate", com.dms.common.util.DateFmt.fmt(t.get("surgery_date")));
+        m.put("patientInfo", t.get("patient_info"));
+        m.put("doctorName", t.get("doctor_name"));
+        m.put("status", t.get("status"));
+        m.put("remark", t.get("remark"));
+        @SuppressWarnings("unchecked")
+        List<Tuple> lineRows = em.createNativeQuery(
+                "SELECT l.product_id, p.name_cn AS product_name, l.qty, l.batch_no, l.serial_no, l.unit_price " +
+                "FROM surgery_report_lines l LEFT JOIN products p ON p.id = l.product_id " +
+                "WHERE l.report_id = ?1 ORDER BY l.id", Tuple.class)
+                .setParameter(1, id).getResultList();
+        List<Map<String, Object>> lines = new ArrayList<>();
+        for (Tuple l : lineRows) {
+            Map<String, Object> lm = new LinkedHashMap<>();
+            lm.put("productId", l.get("product_id"));
+            lm.put("productName", l.get("product_name"));
+            lm.put("qty", l.get("qty"));
+            lm.put("batchNo", l.get("batch_no"));
+            lm.put("serialNo", l.get("serial_no"));
+            lm.put("unitPrice", l.get("unit_price"));
+            lines.add(lm);
+        }
+        m.put("lines", lines);
+        return ApiResponse.ok(m);
+    }
+
     @DeleteMapping("/{id}")
     @Transactional
     public ApiResponse<Void> delete(@PathVariable Long id) {

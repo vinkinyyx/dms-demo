@@ -43,6 +43,8 @@ public class Role {
 
     @Column(name = "name", length = 200, nullable = false)
     private String name;
+    @Column(name = "role_type", length = 16)
+    private String type;
 
     @Column(name = "description")
     private String description;

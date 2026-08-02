@@ -370,12 +370,29 @@ function openForm(row) {
   Object.keys(formData).forEach((k) => delete formData[k])
   Object.keys(displayMap).forEach((k) => delete displayMap[k])
   ;(props.config.form || []).forEach((f) => {
-    if (row) formData[f.key] = row[f.key]
-    else if (f.value !== undefined) formData[f.key] = f.value
+    if (row) {
+      formData[f.key] = row[f.key]
+      if (f.picker || f.type === 'product-picker') {
+        const nameKey = PICKER_NAME_MAP[f.key] || (f.key.replace(/Id$/, '') + 'Name')
+        if (row[nameKey]) displayMap[f.key] = row[nameKey]
+      }
+    } else if (f.value !== undefined) formData[f.key] = f.value
     else if (f.type === 'lines') formData[f.key] = []
     else if (f.type === 'boolean') formData[f.key] = false
     else formData[f.key] = ''
   })
+  if (row && props.config.detailable && props.config.api) {
+    getDetail(props.config.api, row.id).then((res) => {
+      const d = res.data || {}
+      ;(props.config.form || []).forEach((f) => {
+        if (d[f.key] !== undefined && d[f.key] !== null) formData[f.key] = d[f.key]
+        if ((f.picker || f.type === 'product-picker') && d[f.key] != null) {
+          const nameKey = PICKER_NAME_MAP[f.key] || (f.key.replace(/Id$/, '') + 'Name')
+          if (d[nameKey]) displayMap[f.key] = d[nameKey]
+        }
+      })
+    }).catch(() => {})
+  }
   reloadDicts()
   formVisible.value = true
 }

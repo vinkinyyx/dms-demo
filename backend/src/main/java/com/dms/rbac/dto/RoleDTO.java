@@ -23,6 +23,7 @@ public class RoleDTO {
     private UUID tenantId;
     private String code;
     private String name;
+    private String type;
     private String description;
     private String status;
     private OffsetDateTime createdAt;

@@ -74,7 +74,7 @@ public class DealerController {
         java.util.List<Dealer> list = service.list(pq, null).getList();
 
         String[] headers = {"ID", "编码", "名称", "联系人", "电话", "地址", "状态"};
-        String[] fieldNames = {"id", "code", "name", "contactPerson", "contactPhone", "address", "status"};
+        String[] fieldNames = {"id", "code", "name", "contactName", "contactPhone", "regAddress", "status"};
 
         byte[] excelBytes = ExcelExportUtils.exportToExcel(list, headers, fieldNames);
 
@@ -87,7 +87,7 @@ public class DealerController {
     @GetMapping("/actions/export/template")
     public ResponseEntity<byte[]> exportTemplate() throws Exception {
         String[] headers = {"编码", "名称", "级别", "联系人", "联系电话", "状态"};
-        String[] fieldNames = {"code", "name", "level", "contactPerson", "contactPhone", "status"};
+        String[] fieldNames = {"code", "name", "level", "contactName", "contactPhone", "status"};
         String[] examples = {"DLR-001", "示例经销商", "T1", "张三", "13800138000", "active"};
 
         byte[] excelBytes = ExcelExportUtils.exportTemplate(headers, fieldNames, examples);
@@ -111,7 +111,7 @@ public class DealerController {
         }
 
         String[] headers = {"编码", "名称", "级别", "联系人", "联系电话", "状态"};
-        String[] fieldNames = {"code", "name", "level", "contactPerson", "contactPhone", "status"};
+        String[] fieldNames = {"code", "name", "level", "contactName", "contactPhone", "status"};
 
         int success = 0, failed = 0;
         java.util.List<java.util.Map<String, Object>> errors = new java.util.ArrayList<>();

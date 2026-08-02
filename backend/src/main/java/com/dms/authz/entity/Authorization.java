@@ -4,6 +4,8 @@
 package com.dms.authz.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import java.util.List;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -92,4 +94,27 @@ public class Authorization {
 
     @Transient
     private String terminalNames;
+
+    @JsonSetter("categoryIds")
+    public void setCategoryIdsRaw(Object value) { this.categoryIds = toCsv(value); }
+
+    @JsonSetter("terminalIds")
+    public void setTerminalIdsRaw(Object value) { this.terminalIds = toCsv(value); }
+
+    private static String toCsv(Object value) {
+        if (value == null) return null;
+        if (value instanceof String) return ((String) value).isBlank() ? null : ((String) value).trim();
+        if (value instanceof List) {
+            java.util.List<?> list = (java.util.List<?>) value;
+            if (list.isEmpty()) return null;
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) sb.append(",");
+                sb.append(list.get(i));
+            }
+            return sb.toString();
+        }
+        return String.valueOf(value);
+    }
+
 }

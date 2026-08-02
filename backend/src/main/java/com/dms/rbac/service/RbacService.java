@@ -51,6 +51,7 @@ public class RbacService {
             throw new BusinessException(ErrorCode.RESOURCE_CONFLICT, "角色编码已存在");
         }
         Role role = Role.builder()
+                .type(request.getType() == null ? "custom" : request.getType())
                 .tenantId(tenantId)
                 .code(request.getCode())
                 .name(request.getName())
@@ -61,7 +62,24 @@ public class RbacService {
         return toDTO(roleRepository.save(role));
     }
 
+    @Transactional(readOnly = true)
+    public RoleDTO getRole(Long id) {
+        Role r = roleRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "角色不存在"));
+        return toDTO(r);
+    }
+
     @Transactional
+    public RoleDTO updateRole(Long id, RoleCreateRequest request) {
+        Role r = roleRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "角色不存在"));
+        if (request.getName() != null) r.setName(request.getName());
+        if (request.getDescription() != null) r.setDescription(request.getDescription());
+        if (request.getType() != null) r.setType(request.getType());
+        r.setUpdatedAt(OffsetDateTime.now());
+        return toDTO(roleRepository.save(r));
+    }
+
     public void assignRoleToUser(Long userId, List<Long> roleIds) {
         if (roleIds == null || roleIds.isEmpty()) {
             throw new BusinessException(ErrorCode.PARAM_MISSING, "角色列表不能为空");
@@ -81,6 +99,7 @@ public class RbacService {
                 .tenantId(r.getTenantId())
                 .code(r.getCode())
                 .name(r.getName())
+                .type(r.getType())
                 .description(r.getDescription())
                 .status(r.getStatus())
                 .createdAt(r.getCreatedAt())

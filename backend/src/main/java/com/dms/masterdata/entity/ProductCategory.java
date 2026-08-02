@@ -37,6 +37,8 @@ public class ProductCategory {
 
     @Column(nullable = false)
     private Integer level;
+    @Column(name = "sort_order")
+    private Integer sortOrder;
 
     @Column(length = 16)
     private String status;

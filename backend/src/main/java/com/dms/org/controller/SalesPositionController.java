@@ -168,6 +168,24 @@ public class SalesPositionController {
         return ApiResponse.ok(roots);
     }
 
+    @GetMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ApiResponse<Map<String, Object>> getOne(@PathVariable Long id) {
+        var q = em.createNativeQuery(
+                "SELECT sp.id, sp.code, sp.name, sp.level, sp.parent_id, sp.region, sp.status, sp.sort_order, "
+              + "sp.created_at, sp.updated_at FROM sales_positions sp WHERE sp.id = ?1 AND sp.tenant_id = ?2 AND sp.deleted_at IS NULL",
+                jakarta.persistence.Tuple.class);
+        q.setParameter(1, id).setParameter(2, TenantContext.getTenantId());
+        var rows = q.getResultList();
+        if (rows.isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND, "岗位不存在");
+        jakarta.persistence.Tuple t = (jakarta.persistence.Tuple) rows.get(0);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", t.get("id")); m.put("code", t.get("code")); m.put("name", t.get("name"));
+        m.put("level", t.get("level")); m.put("parentId", t.get("parent_id"));
+        m.put("region", t.get("region")); m.put("status", t.get("status")); m.put("sortOrder", t.get("sort_order"));
+        return ApiResponse.ok(m);
+    }
+
     @PostMapping
     @Transactional
     public ApiResponse<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
@@ -176,6 +194,7 @@ public class SalesPositionController {
         String name = strReq(body, "name");
         Integer level = toInt(body.get("level"));
         Long parentId = toLong(body.get("parentId"));
+        Integer sortOrder = toInt(body.get("sortOrder"));
         String region = str(body.get("region"));
 
         if (level == null || level < 1 || level > 6) {
@@ -183,10 +202,11 @@ public class SalesPositionController {
         }
 
         var ins = em.createNativeQuery(
-                "INSERT INTO sales_positions (tenant_id, code, name, level, parent_id, region, status, created_at, updated_at) " +
-                "VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'active', now(), now()) RETURNING id");
+                "INSERT INTO sales_positions (tenant_id, code, name, level, parent_id, region, status, sort_order, created_at, updated_at) " +
+                "VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'active', ?7, now(), now()) RETURNING id");
         ins.setParameter(1, tid).setParameter(2, code).setParameter(3, name)
-                .setParameter(4, level).setParameter(5, parentId).setParameter(6, region);
+                .setParameter(4, level).setParameter(5, parentId).setParameter(6, region)
+                .setParameter(7, sortOrder == null ? 0 : sortOrder);
         Long id = ((Number) ins.getSingleResult()).longValue();
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("id", id); res.put("code", code); res.put("name", name);
@@ -205,12 +225,16 @@ public class SalesPositionController {
         if (name == null || name.isBlank()) throw new BusinessException(ErrorCode.PARAM_INVALID, "name 必填");
         if (level == null || level < 1 || level > 6) throw new BusinessException(ErrorCode.PARAM_INVALID, "level 必须 1-6");
 
+        Long updParentId = toLong(body.get("parentId"));
+        Integer updSortOrder = toInt(body.get("sortOrder"));
         int aff = em.createNativeQuery(
-                "UPDATE sales_positions SET name = ?1, level = ?2, region = ?3, status = ?4, updated_at = now() " +
-                "WHERE id = ?5 AND tenant_id = ?6")
+                "UPDATE sales_positions SET name = ?1, level = ?2, region = ?3, status = ?4, " +
+                "parent_id = COALESCE(?5, parent_id), sort_order = COALESCE(?6, sort_order), updated_at = now() " +
+                "WHERE id = ?7 AND tenant_id = ?8")
                 .setParameter(1, name).setParameter(2, level).setParameter(3, region)
                 .setParameter(4, status == null ? "active" : status)
-                .setParameter(5, id).setParameter(6, tid).executeUpdate();
+                .setParameter(5, updParentId).setParameter(6, updSortOrder)
+                .setParameter(7, id).setParameter(8, tid).executeUpdate();
         if (aff == 0) throw new BusinessException(ErrorCode.NOT_FOUND, "岗位不存在");
 
         Map<String, Object> res = new LinkedHashMap<>();

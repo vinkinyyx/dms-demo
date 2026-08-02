@@ -76,6 +76,7 @@ public class ProductCategoryService {
         if (patch.getName() != null) old.setName(patch.getName());
         if (patch.getParentId() != null) old.setParentId(patch.getParentId());
         if (patch.getLevel() != null) old.setLevel(patch.getLevel());
+        if (patch.getSortOrder() != null) old.setSortOrder(patch.getSortOrder());
         if (patch.getStatus() != null) old.setStatus(patch.getStatus());
         old.setUpdatedAt(OffsetDateTime.now());
         return repository.save(old);

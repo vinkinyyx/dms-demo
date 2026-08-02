@@ -24,6 +24,7 @@ public class RoleCreateRequest {
     @NotBlank(message = "角色名称不能为空")
     @Size(max = 200)
     private String name;
+    private String type;
 
     private String description;
 }
