@@ -69,6 +69,7 @@ public class UserService {
                 .username(request.getUsername())
                 .name(request.getName())
                 .userType(request.getUserType())
+                .role(request.getUserType())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .mustChangePassword(true)
                 .passwordUpdatedAt(OffsetDateTime.now())

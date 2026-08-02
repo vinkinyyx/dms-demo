@@ -19,10 +19,10 @@ export function candidateUsers(role) {
   return request({ url: '/api/sales-positions/candidate-users', method: 'get', params: role ? { role } : {} })
 }
 export function bindDealers(id, data) {
-  return request({ url: '/api/sales-positions/' + id + '/bind-dealers', method: 'post', data })
+  return request({ url: '/api/sales-positions/' + id + '/bind-dealers', method: 'put', data })
 }
 export function bindUsers(id, data) {
-  return request({ url: '/api/sales-positions/' + id + '/bind-users', method: 'post', data })
+  return request({ url: '/api/sales-positions/' + id + '/bind-users', method: 'put', data })
 }
 export function getPositionUsers(id, role) {
   return request({ url: '/api/sales-positions/' + id + '/users', method: 'get', params: role ? { role } : {} })
@@ -30,6 +30,9 @@ export function getPositionUsers(id, role) {
 export function getPositionDealers(id) {
   return request({ url: '/api/sales-positions/' + id + '/dealers', method: 'get' })
 }
-export function getPositionDealerAccounts(id) {
-  return request({ url: '/api/sales-positions/' + id + '/dealer-accounts', method: 'get' })
+export function getCandidateUsers(id) {
+  return request({ url: '/api/sales-positions/' + id + '/candidates/users', method: 'get' })
+}
+export function getCandidateDealers(id) {
+  return request({ url: '/api/sales-positions/' + id + '/candidates/dealers', method: 'get' })
 }

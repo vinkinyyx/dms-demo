@@ -52,6 +52,9 @@ public class User {
     @Column(name = "user_type", length = 16, nullable = false)
     private String userType;
 
+    @Column(name = "role", length = 32)
+    private String role;
+
     @Column(name = "password_hash", length = 255, nullable = false)
     private String passwordHash;
 

@@ -1,3 +1,31 @@
+## v3.8.6 (2026-08-02) - 销售岗位模块改造（多销售账号+业绩占比+经销商归属）
+
+### 背景
+销售岗位需支持一个岗位挂多个销售账号并按比例分配业绩；一个经销商只能归属一个岗位；修复岗位菜单/详情 500、账号分配保存无效、界面过小等问题。
+
+### 后端
+- `SalesPositionController` 重写绑定逻辑：
+  - `PUT /api/sales-positions/{id}/bind-users`，body `{users:[{id, shareRatio}]}`，全量替换；校验账号均为销售角色、未被其他岗位占用、同岗位业绩占比总和 <= 1。
+  - `PUT /api/sales-positions/{id}/bind-dealers`，body `{dealerIds:[]}`，全量替换；一个经销商只能归属一个岗位，跨岗位分配被拒绝。
+  - 新增 `GET /{id}/candidates/users` 与 `GET /{id}/candidates/dealers`，列出全部候选并标注 `boundPositionId/boundPositionName/occupiedByOther`。
+  - `GET /{id}/users` 改读 `position_users` 并返回 `shareRatio`；`GET /{id}/dealers` 读 `position_dealers`；移除有列名 bug 的 `/dealer-accounts`。
+  - 修复 PostgreSQL 数组参数：`IN (?2)` 改为 `= ANY(?2)`、`NOT IN (?2)` 改为 `<> ALL(?2)`；同步冗余字段时先清空旧绑定再写入，避免唯一约束冲突。
+- Flyway V48：`position_users` 增加 `share_ratio NUMERIC(8,4)` 并回填历史绑定。
+- Flyway V49：删除与“一岗多销售”冲突的唯一索引 `ux_users_position`（原限制一个岗位最多 1 个用户）。
+- `User` 实体补齐 `role` 字段映射；`UserService.create` 新建用户时按 `userType` 写入 `role`（修复新用户默认 admin 的安全问题）。
+
+### 前端（PC）
+- 路由 `/positions` 切换到重写后的 `Positions.vue`：左树 + 右侧详情；新增/编辑用 520px 抽屉；分配销售账号 820px 弹窗（含占比输入、实时合计、超上限禁用），分配经销商 760px 弹窗；候选列表展示已被哪个岗位占用并禁用勾选。
+- “分配经销商账号”更名为“分配经销商”。
+- `api/positions.js` 绑定接口改为 PUT，补充候选接口，移除废弃的 dealer-accounts。
+
+### 测试数据
+- 新增 11 个销售账号（`sales_*`，role=sales）。
+- 7 个区域岗位绑定销售账号并设置业绩占比（合计均 <= 1）；42 个经销商按 6 个/岗位分配。
+
+### 测试
+- 测试环境 E2E：多销售账号绑定、占比合计、跨岗位占用拒绝、占比超限拒绝、经销商单岗位归属、跨岗位经销商拒绝均通过；岗位树/详情/候选/我的范围接口全部 200。
+
 ## v3.8.5 (2026-08-02) - 批量导入支持“存在即更新”（upsert）
 
 ### 背景

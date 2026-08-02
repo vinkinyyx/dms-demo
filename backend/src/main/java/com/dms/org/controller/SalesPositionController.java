@@ -243,63 +243,244 @@ public class SalesPositionController {
         return ApiResponse.ok(res);
     }
 
-    @PutMapping("/{id}/bind-user")
+    /**
+     * v3.8.6: 绑定销售账号（全量替换，带业绩占比）。
+     * body: { "users": [ {"id":1,"shareRatio":0.6}, ... ] }
+     * 一个销售只能归属一个岗位；同一岗位占比总和必须 <= 1。
+     */
+    @PutMapping("/{id}/bind-users")
     @Transactional
-    public ApiResponse<Map<String, Object>> bindUser(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        Long userId = toLong(body.get("userId"));
-        // v3.4.7: userId=null 表示解绑
-        if (userId == null) {
-            em.createNativeQuery("UPDATE users SET sales_position_id = NULL WHERE sales_position_id = ?1")
-                    .setParameter(1, id).executeUpdate();
-            Map<String, Object> r = new LinkedHashMap<>();
-            r.put("positionId", id); r.put("userId", null); r.put("message", "已解绑");
-            return ApiResponse.ok(r);
+    public ApiResponse<Map<String, Object>> bindUsers(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        UUID tid = TenantContext.getTenantId();
+        @SuppressWarnings("unchecked")
+        List<Object> items = (List<Object>) body.getOrDefault("users", Collections.emptyList());
+
+        List<Long> ids = new ArrayList<>();
+        java.util.Map<Long, java.math.BigDecimal> ratios = new HashMap<>();
+        java.math.BigDecimal sum = java.math.BigDecimal.ZERO;
+        for (Object o : items) {
+            if (!(o instanceof Map)) continue;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> it = (Map<String, Object>) o;
+            Long uid = toLong(it.get("id"));
+            if (uid == null) continue;
+            java.math.BigDecimal r = toBd(it.get("shareRatio"));
+            if (r.signum() < 0) throw new BusinessException(ErrorCode.PARAM_INVALID, "业绩占比不能为负");
+            ids.add(uid);
+            ratios.put(uid, r);
+            sum = sum.add(r);
         }
-        // 该用户已绑定其他岗位？（业务规则：一人一岗）
-        var chk2 = em.createNativeQuery("SELECT sales_position_id FROM users WHERE id = ?1");
-        chk2.setParameter(1, userId);
-        Object cur = chk2.getSingleResult();
-        if (cur != null && !((Number) cur).equals(id)) {
-            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "该用户已绑定其他岗位，请先解除后再绑");
+        if (sum.compareTo(java.math.BigDecimal.ONE) > 0) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
+                    "该岗位销售账号业绩占比总和为 " + sum + "，不能超过 1");
         }
-        // v3.4.7: 先清空该岗位当前绑定的其他用户（一位一人）
-        em.createNativeQuery("UPDATE users SET sales_position_id = NULL WHERE sales_position_id = ?1 AND id != ?2")
-                .setParameter(1, id).setParameter(2, userId).executeUpdate();
-        // 再绑定目标用户
-        em.createNativeQuery("UPDATE users SET sales_position_id = ?1 WHERE id = ?2")
-                .setParameter(1, id).setParameter(2, userId).executeUpdate();
+
+        for (Long uid : ids) {
+            @SuppressWarnings("unchecked")
+            List<Tuple> chk = em.createNativeQuery(
+                    "SELECT u.role, pu.position_id FROM users u " +
+                    "LEFT JOIN position_users pu ON pu.user_id = u.id AND pu.tenant_id = u.tenant_id " +
+                    "WHERE u.id = ?1 AND u.tenant_id = ?2 AND u.deleted_at IS NULL", Tuple.class)
+                    .setParameter(1, uid).setParameter(2, tid).getResultList();
+            if (chk.isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND, "用户不存在: " + uid);
+            Tuple t = chk.get(0);
+            if (!"sales".equals(String.valueOf(t.get("role")))) {
+                throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "只能绑定销售角色账号: " + uid);
+            }
+            Object pos = t.get("position_id");
+            if (pos != null && ((Number) pos).longValue() != id) {
+                throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "销售账号已被其他岗位占用: " + uid);
+            }
+        }
+
+        em.createNativeQuery("DELETE FROM position_users WHERE tenant_id = ?1 AND position_id = ?2")
+                .setParameter(1, tid).setParameter(2, id).executeUpdate();
+        for (Long uid : ids) {
+            em.createNativeQuery(
+                    "INSERT INTO position_users (tenant_id, position_id, user_id, role_type, share_ratio, created_at) " +
+                    "VALUES (?1, ?2, ?3, 'sales', ?4, now())")
+                    .setParameter(1, tid).setParameter(2, id).setParameter(3, uid)
+                    .setParameter(4, ratios.get(uid)).executeUpdate();
+        }
+        // 冗余同步 users.sales_position_id：先清空该岗位旧绑定，再写入新绑定
+        em.createNativeQuery("UPDATE users SET sales_position_id = NULL WHERE sales_position_id = ?1 AND id <> ALL(?2)")
+                .setParameter(1, id)
+                .setParameter(2, ids.isEmpty() ? new Long[]{-1L} : ids.toArray(new Long[0]))
+                .executeUpdate();
+        if (!ids.isEmpty()) {
+            em.createNativeQuery("UPDATE users SET sales_position_id = ?1 WHERE id = ANY(?2)")
+                    .setParameter(1, id).setParameter(2, ids.toArray(new Long[0])).executeUpdate();
+        }
+
         Map<String, Object> res = new LinkedHashMap<>();
-        res.put("positionId", id); res.put("userId", userId); res.put("message", "绑定成功");
+        res.put("positionId", id);
+        res.put("boundCount", ids.size());
+        res.put("shareSum", sum);
         return ApiResponse.ok(res);
     }
 
+    /**
+     * v3.8.6: 分配经销商（全量替换）。一个经销商只能归属一个岗位。
+     * body: { "dealerIds": [1,2,3] }
+     */
     @PutMapping("/{id}/bind-dealers")
     @Transactional
     public ApiResponse<Map<String, Object>> bindDealers(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        UUID tid = TenantContext.getTenantId();
         @SuppressWarnings("unchecked")
-        List<Object> dealerIds = (List<Object>) body.getOrDefault("dealerIds", Collections.emptyList());
-
-        // v3.4.7: 全量替换语义 —— 先解挂当前岗位所有经销商，再逐个挂新的
-        em.createNativeQuery("UPDATE dealers SET sales_position_id = NULL WHERE sales_position_id = ?1")
-                .setParameter(1, id).executeUpdate();
-
-        int count = 0;
-        for (Object o : dealerIds) {
+        List<Object> raw = (List<Object>) body.getOrDefault("dealerIds", Collections.emptyList());
+        List<Long> ids = new ArrayList<>();
+        for (Object o : raw) {
             Long did = toLong(o);
-            if (did == null) continue;
-            // 校验：一经销商只能挂一个岗位 —— 若目标经销商已属其他岗位，跳过
-            var chk = em.createNativeQuery("SELECT sales_position_id FROM dealers WHERE id = ?1");
-            chk.setParameter(1, did);
-            Object cur = null;
-            try { cur = chk.getSingleResult(); } catch (Exception ignored) {}
-            if (cur != null && !((Number) cur).equals(id)) continue;
-            em.createNativeQuery("UPDATE dealers SET sales_position_id = ?1 WHERE id = ?2")
-                    .setParameter(1, id).setParameter(2, did).executeUpdate();
-            count++;
+            if (did != null) ids.add(did);
         }
+        for (Long did : ids) {
+            @SuppressWarnings("unchecked")
+            List<Tuple> chk = em.createNativeQuery(
+                    "SELECT pd.position_id FROM dealers d " +
+                    "LEFT JOIN position_dealers pd ON pd.dealer_id = d.id AND pd.tenant_id = d.tenant_id " +
+                    "WHERE d.id = ?1 AND d.tenant_id = ?2 AND d.deleted_at IS NULL", Tuple.class)
+                    .setParameter(1, did).setParameter(2, tid).getResultList();
+            if (chk.isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND, "经销商不存在: " + did);
+            Object pos = chk.get(0).get("position_id");
+            if (pos != null && ((Number) pos).longValue() != id) {
+                throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "经销商已归属其他岗位: " + did);
+            }
+        }
+        em.createNativeQuery("DELETE FROM position_dealers WHERE tenant_id = ?1 AND position_id = ?2")
+                .setParameter(1, tid).setParameter(2, id).executeUpdate();
+        for (Long did : ids) {
+            em.createNativeQuery(
+                    "INSERT INTO position_dealers (tenant_id, position_id, dealer_id, created_at) VALUES (?1, ?2, ?3, now())")
+                    .setParameter(1, tid).setParameter(2, id).setParameter(3, did).executeUpdate();
+        }
+        em.createNativeQuery("UPDATE dealers SET sales_position_id = NULL WHERE sales_position_id = ?1 AND id <> ALL(?2)")
+                .setParameter(1, id)
+                .setParameter(2, ids.isEmpty() ? new Long[]{-1L} : ids.toArray(new Long[0]))
+                .executeUpdate();
+        if (!ids.isEmpty()) {
+            em.createNativeQuery("UPDATE dealers SET sales_position_id = ?1 WHERE id = ANY(?2)")
+                    .setParameter(1, id).setParameter(2, ids.toArray(new Long[0])).executeUpdate();
+        }
+
         Map<String, Object> res = new LinkedHashMap<>();
-        res.put("positionId", id); res.put("boundCount", count);
+        res.put("positionId", id);
+        res.put("boundCount", ids.size());
         return ApiResponse.ok(res);
+    }
+
+    /**
+     * 候选销售账号：列出所有 sales，标注是否已被某岗位占用及当前占比。
+     */
+    @GetMapping("/{id}/candidates/users")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ApiResponse<List<Map<String, Object>>> candidateUsersForPosition(@PathVariable Long id) {
+        UUID tid = TenantContext.getTenantId();
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = em.createNativeQuery(
+                "SELECT u.id, u.username, u.name, pu.position_id, sp.name AS position_name, pu.share_ratio " +
+                "FROM users u " +
+                "LEFT JOIN position_users pu ON pu.user_id = u.id AND pu.tenant_id = u.tenant_id " +
+                "LEFT JOIN sales_positions sp ON sp.id = pu.position_id " +
+                "WHERE u.tenant_id = ?1 AND u.role = 'sales' AND u.deleted_at IS NULL " +
+                "ORDER BY u.username", Tuple.class)
+                .setParameter(1, tid).getResultList();
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.get("id"));
+            m.put("username", t.get("username"));
+            m.put("name", t.get("name") == null ? "" : t.get("name"));
+            Object pid = t.get("position_id");
+            m.put("boundPositionId", pid == null ? null : ((Number) pid).longValue());
+            m.put("boundPositionName", t.get("position_name"));
+            m.put("currentShareRatio", t.get("share_ratio"));
+            m.put("occupiedByOther", pid != null && ((Number) pid).longValue() != id);
+            list.add(m);
+        }
+        return ApiResponse.ok(list);
+    }
+
+    /**
+     * 候选经销商：列出所有经销商，标注归属岗位。
+     */
+    @GetMapping("/{id}/candidates/dealers")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ApiResponse<List<Map<String, Object>>> candidateDealersForPosition(@PathVariable Long id) {
+        UUID tid = TenantContext.getTenantId();
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = em.createNativeQuery(
+                "SELECT d.id, d.code, d.name, pd.position_id, sp.name AS position_name " +
+                "FROM dealers d " +
+                "LEFT JOIN position_dealers pd ON pd.dealer_id = d.id AND pd.tenant_id = d.tenant_id " +
+                "LEFT JOIN sales_positions sp ON sp.id = pd.position_id " +
+                "WHERE d.tenant_id = ?1 AND d.deleted_at IS NULL " +
+                "ORDER BY d.code", Tuple.class)
+                .setParameter(1, tid).getResultList();
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.get("id"));
+            m.put("code", t.get("code"));
+            m.put("name", t.get("name"));
+            Object pid = t.get("position_id");
+            m.put("boundPositionId", pid == null ? null : ((Number) pid).longValue());
+            m.put("boundPositionName", t.get("position_name"));
+            m.put("occupiedByOther", pid != null && ((Number) pid).longValue() != id);
+            list.add(m);
+        }
+        return ApiResponse.ok(list);
+    }
+
+    /**
+     * 岗位下绑定的销售账号（含业绩占比）。
+     */
+    @GetMapping("/{id}/users")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ApiResponse<List<Map<String, Object>>> getPositionUsers(@PathVariable Long id) {
+        UUID tid = TenantContext.getTenantId();
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = em.createNativeQuery(
+                "SELECT u.id, u.username, u.name, pu.share_ratio " +
+                "FROM position_users pu JOIN users u ON u.id = pu.user_id " +
+                "WHERE pu.tenant_id = ?1 AND pu.position_id = ?2 AND u.deleted_at IS NULL " +
+                "ORDER BY u.username", Tuple.class)
+                .setParameter(1, tid).setParameter(2, id).getResultList();
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.get("id"));
+            m.put("username", t.get("username"));
+            m.put("name", t.get("name") == null ? "" : t.get("name"));
+            m.put("shareRatio", t.get("share_ratio"));
+            list.add(m);
+        }
+        return ApiResponse.ok(list);
+    }
+
+    /**
+     * 岗位下归属的经销商。
+     */
+    @GetMapping("/{id}/dealers")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public ApiResponse<List<Map<String, Object>>> getPositionDealers(@PathVariable Long id) {
+        UUID tid = TenantContext.getTenantId();
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = em.createNativeQuery(
+                "SELECT d.id, d.code, d.name " +
+                "FROM position_dealers pd JOIN dealers d ON d.id = pd.dealer_id " +
+                "WHERE pd.tenant_id = ?1 AND pd.position_id = ?2 AND d.deleted_at IS NULL " +
+                "ORDER BY d.code", Tuple.class)
+                .setParameter(1, tid).setParameter(2, id).getResultList();
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.get("id"));
+            m.put("code", t.get("code"));
+            m.put("name", t.get("name"));
+            list.add(m);
+        }
+        return ApiResponse.ok(list);
     }
 
     /**
@@ -316,10 +497,11 @@ public class SalesPositionController {
         var q = em.createNativeQuery(
                 "SELECT role, sales_position_id, dealer_id FROM users WHERE id = ?1", Tuple.class);
         q.setParameter(1, uid);
-        List<?> ls = q.getResultList();
+        @SuppressWarnings("unchecked")
+        List<Tuple> ls = q.getResultList();
         if (ls.isEmpty()) { res.put("scope", "NONE"); return ApiResponse.ok(res); }
 
-        Tuple t = (Tuple) ls.get(0);
+        Tuple t = ls.get(0);
         String role = String.valueOf(t.get("role"));
         Object posObj = t.get("sales_position_id");
         Object dealerObj = t.get("dealer_id");
@@ -334,7 +516,6 @@ public class SalesPositionController {
             res.put("dealerIds", dealerObj == null ? Collections.emptyList() : List.of(dealerObj));
             return ApiResponse.ok(res);
         }
-        // sales：走岗位树
         if (posObj == null) {
             res.put("scope", "NONE");
             res.put("dealerIds", Collections.emptyList());
@@ -346,126 +527,16 @@ public class SalesPositionController {
             res.put("scope", "NONE");
             res.put("dealerIds", Collections.emptyList());
         } else {
-            var dq = em.createNativeQuery(
-                    "SELECT id FROM dealers WHERE tenant_id = ?1 AND sales_position_id = ANY(?2)");
-            dq.setParameter(1, tid);
-            dq.setParameter(2, allPos.toArray(new Long[0]));
             @SuppressWarnings("unchecked")
-            List<Object> ids = dq.getResultList();
+            List<Object> ids = em.createNativeQuery(
+                    "SELECT dealer_id FROM position_dealers WHERE tenant_id = ?1 AND position_id = ANY(?2)")
+                    .setParameter(1, tid).setParameter(2, allPos.toArray(new Long[0])).getResultList();
             res.put("scope", "POSITION_TREE");
             res.put("positionId", positionId);
             res.put("subordinatePositionCount", allPos.size());
             res.put("dealerIds", ids);
         }
         return ApiResponse.ok(res);
-    }
-
-    @PostMapping("/{id}/bind-users")
-    @Transactional
-    public ApiResponse<Map<String, Object>> bindUsers(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        @SuppressWarnings("unchecked")
-        List<Object> userIds = (List<Object>) body.getOrDefault("userIds", Collections.emptyList());
-
-        em.createNativeQuery("UPDATE users SET sales_position_id = NULL WHERE sales_position_id = ?1")
-                .setParameter(1, id).executeUpdate();
-
-        int count = 0;
-        for (Object o : userIds) {
-            Long uid = toLong(o);
-            if (uid == null) continue;
-            var chk = em.createNativeQuery("SELECT sales_position_id FROM users WHERE id = ?1");
-            chk.setParameter(1, uid);
-            Object cur = null;
-            try { cur = chk.getSingleResult(); } catch (Exception ignored) {}
-            if (cur != null && !((Number) cur).equals(id)) continue;
-            em.createNativeQuery("UPDATE users SET sales_position_id = ?1 WHERE id = ?2")
-                    .setParameter(1, id).setParameter(2, uid).executeUpdate();
-            count++;
-        }
-        Map<String, Object> res = new LinkedHashMap<>();
-        res.put("positionId", id); res.put("boundCount", count);
-        return ApiResponse.ok(res);
-    }
-
-    /**
-     * v3.7.3: 返回岗位下的销售/经销商账号，支持按角色过滤
-     * GET /api/sales-positions/{id}/users?role=sales|dealer
-     */
-    @GetMapping("/{id}/users")
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
-    public ApiResponse<List<Map<String, Object>>> getPositionUsers(@PathVariable Long id,
-                                                                    @RequestParam(required = false) String role) {
-        UUID tid = TenantContext.getTenantId();
-        StringBuilder sql = new StringBuilder(
-                "SELECT u.id, u.username, u.name, u.role " +
-                "FROM users u WHERE u.tenant_id = ?1 AND u.sales_position_id = ?2 AND u.deleted_at IS NULL ");
-        if ("sales".equals(role)) sql.append("AND u.role = 'sales' ");
-        else if ("dealer".equals(role)) sql.append("AND u.role = 'dealer' ");
-        sql.append("ORDER BY u.role, u.username");
-        var q = em.createNativeQuery(sql.toString(), Tuple.class);
-        q.setParameter(1, tid).setParameter(2, id);
-        @SuppressWarnings("unchecked")
-        List<Tuple> rows = q.getResultList();
-        List<Map<String, Object>> list = new ArrayList<>();
-        for (Tuple t : rows) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", t.get("id"));
-            m.put("username", t.get("username"));
-            m.put("name", t.get("name") == null ? "" : t.get("name"));
-            m.put("userType", t.get("role"));
-            list.add(m);
-        }
-        return ApiResponse.ok(list);
-    }
-
-    @GetMapping("/{id}/dealers")
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
-    public ApiResponse<List<Map<String, Object>>> getPositionDealers(@PathVariable Long id) {
-        UUID tid = TenantContext.getTenantId();
-        var q = em.createNativeQuery(
-                "SELECT d.id, d.dealer_code, d.dealer_name " +
-                "FROM dealers d WHERE d.tenant_id = ?1 AND d.sales_position_id = ?2 AND d.deleted_at IS NULL " +
-                "ORDER BY d.dealer_code", Tuple.class);
-        q.setParameter(1, tid).setParameter(2, id);
-        @SuppressWarnings("unchecked")
-        List<Tuple> rows = q.getResultList();
-        List<Map<String, Object>> list = new ArrayList<>();
-        for (Tuple t : rows) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", t.get("id"));
-            m.put("code", t.get("dealer_code"));
-            m.put("name", t.get("dealer_name"));
-            list.add(m);
-        }
-        return ApiResponse.ok(list);
-    }
-
-    /**
-     * v3.7.3: 返回岗位下挂的经销商账号（dealer 角色用户）
-     */
-    @GetMapping("/{id}/dealer-accounts")
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
-    public ApiResponse<List<Map<String, Object>>> getPositionDealerAccounts(@PathVariable Long id) {
-        UUID tid = TenantContext.getTenantId();
-        var q = em.createNativeQuery(
-                "SELECT u.id, u.username, u.name, u.dealer_id, d.dealer_name " +
-                "FROM users u LEFT JOIN dealers d ON d.id = u.dealer_id " +
-                "WHERE u.tenant_id = ?1 AND u.sales_position_id = ?2 AND u.role = 'dealer' AND u.deleted_at IS NULL " +
-                "ORDER BY u.username", Tuple.class);
-        q.setParameter(1, tid).setParameter(2, id);
-        @SuppressWarnings("unchecked")
-        List<Tuple> rows = q.getResultList();
-        List<Map<String, Object>> list = new ArrayList<>();
-        for (Tuple t : rows) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", t.get("id"));
-            m.put("username", t.get("username"));
-            m.put("name", t.get("name") == null ? "" : t.get("name"));
-            m.put("dealerId", t.get("dealer_id"));
-            m.put("dealerName", t.get("dealer_name"));
-            list.add(m);
-        }
-        return ApiResponse.ok(list);
     }
 
     @DeleteMapping("/{id}")
@@ -491,7 +562,12 @@ public class SalesPositionController {
         if (o instanceof Number) return ((Number) o).longValue();
         try { return Long.valueOf(String.valueOf(o)); } catch (Exception e) { return null; }
     }
-    private Integer toInt(Object o) {
+    private java.math.BigDecimal toBd(Object o) {
+        if (o == null) return java.math.BigDecimal.ZERO;
+        try { return new java.math.BigDecimal(String.valueOf(o)); }
+        catch (Exception e) { return java.math.BigDecimal.ZERO; }
+    }
+        private Integer toInt(Object o) {
         if (o == null) return null;
         if (o instanceof Number) return ((Number) o).intValue();
         try { return Integer.valueOf(String.valueOf(o)); } catch (Exception e) { return null; }
