@@ -5,7 +5,7 @@
  *
  * 业务规则:
  *   1. 经销商必填
- *   2. 医院必须在该经销商当前有效授权的 terminal_ids 内
+ *   2. 医院可选任意未删除的 hospital（v3.8.7 去授权校验）
  *   3. 每行产品必须指定批次(批次品)或序列号(序列号品)
  *   4. 扣减 QUALIFIED 库存
  *   5. 若登录用户是 sales，只能选自己/下级负责的经销商
@@ -163,9 +163,7 @@ public class SurgeryReportController {
         // v3.8.7 经销商报台不再绑定仓库
         if (surgeryDate == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "手术日期必填");
 
-        // 3. 校验医院在经销商授权范围内
-        checkTerminalAuthorized(tid, dealerId, terminalId, surgeryDate);
-
+        // v3.8.7 提交时不再校验经销商-医院授权关系
         // 4. 明细
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> lines = (List<Map<String, Object>>) body.get("lines");
@@ -237,32 +235,7 @@ public class SurgeryReportController {
         return ApiResponse.ok(res);
     }
 
-    private void checkTerminalAuthorized(UUID tid, Long dealerId, Long terminalId, LocalDate atDate) {
-        var q = em.createNativeQuery(
-                "SELECT terminal_ids FROM authorizations " +
-                "WHERE tenant_id = ?1 AND dealer_id = ?2 AND status = 'active' " +
-                "  AND valid_from <= ?3 AND valid_to >= ?3 AND deleted_at IS NULL");
-        q.setParameter(1, tid).setParameter(2, dealerId).setParameter(3, atDate);
-        List<?> rows = q.getResultList();
-        Set<String> allowed = new HashSet<>();
-        for (Object r : rows) {
-            if (r == null) continue;
-            for (String s : String.valueOf(r).split("[,，]")) {
-                String ss = s.trim();
-                if (!ss.isEmpty()) allowed.add(ss);
-            }
-        }
-        if (allowed.isEmpty()) {
-            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
-                    "经销商 " + dealerId + " 在 " + atDate + " 无有效授权");
-        }
-        if (!allowed.contains(String.valueOf(terminalId))) {
-            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
-                    "医院 " + terminalId + " 不在经销商授权范围内 (授权医院: " + allowed + ")");
-        }
-    }
-
-    private boolean isSerialManaged(UUID tid, Long productId) {
+private boolean isSerialManaged(UUID tid, Long productId) {
         try {
             var q = em.createNativeQuery(
                     "SELECT is_serial_managed FROM products WHERE id = ?1 AND tenant_id = ?2");
