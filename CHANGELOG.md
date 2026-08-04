@@ -1,3 +1,49 @@
+## v3.9.0 (2026-08-04) - 移动端精简（销售场景）
+
+### 背景
+原有移动端从 PC 端复制而来，涵盖销售、采购、收货、发货、库存、消息等全量功能。但实际使用显示，销售在手机上的真实需求只有三类：下销售订单、填手术报台、看个人业绩。其他能力造成入口臃肿、加载慢、误操作率高。
+
+### 前端（frontend-vue）
+- 重写 `MLayout.vue`：底部 TabBar 由 5 项精简为 4 项（首页 / 订单 / 报台 / 我的），移除收货与发货。
+- 重写 `MHome.vue`：聚焦销售个人业绩 KPI（今日/本月订单数与金额、本月报台数）+ 4 个快捷入口。
+- 简化 `MOrders.vue`：仅销售订单 Tab，移除内置新建弹窗，统一走 `/mobile/orders/create`。
+- 新增 `MOrderDetail.vue`：`GET /api/orders/{id}`。
+- 重写 `MOrderCreate.vue`：Vant 风格的销售下单页（选经销商/仓库/产品、行内编辑数量单价税率、提交 `POST /api/orders`），与 PC 端 `OrderCreate.vue` 业务一致。
+- 重写 `MSurgeryReportCreate.vue`：Vant 风格的报台创建（选经销商/医院/仓库/产品/批号或序列号/数量/日期/患者/医生/备注），提交 `POST /api/surgery-reports`，修复原版字段缺失导致提交失败的问题。
+- 新增 `MSurgeryReports.vue`：报台列表（`GET /api/surgery-reports`，后端按 sales 角色自动过滤）。
+- 新增 `MSurgeryReportDetail.vue`：报台详情（`GET /api/surgery-reports/{id}`，含产品明细）。
+- 改造 `MDashboard.vue`：仅保留"销售业绩" Tab（月度 KPI + 12 月趋势 + TOP 经销商），移除采购统计与库存预警。
+- 新增 `MProfile.vue`：账户信息 + 退出登录入口。
+- 移除 `MMessages.vue` / `MInventory.vue` / `MReceipt.vue` / `MShipment.vue` / `MOrderTrace.vue` 与对应路由。
+- 路由 `/mobile` 段重写为 9 个子路由（4 Tab + 5 跳转/详情页）。
+
+### 后端
+- 无接口变更。报台列表/详情接口已支持按 sales 角色自动过滤。
+- 修复前端报台提交字段不匹配（前端原提交了 `hospitalName/productName`，后端要求 `dealerId/terminalId/warehouseId/lines`）。
+
+### 部署
+- 阿里云测试 8083：dist zip 上传 + `docker cp` + restart (dist-only 模式，容器 `dms-test-frontend`)
+- 阿里云生产 8081：dist zip + Dockerfile.dist 重建 `dms-frontend-vue:latest` (28a975170d63, 79MB)，备份旧镜像 `backup-before-admin`
+- 生产 nginx 增加 `/admin/` 路由块，dist 增加 admin/ 资源（从 8083 同步）
+- E2E 验证：9/9 业务 API + 主页 + chunk + iPhone UA 全部 200
+
+### 文档
+- 新增 `docs/11_平台后台/13_移动端精简方案_v3.9.0.md`：背景、目标、页面调整清单、路由调整、验证方法
+- 新增 `docs/DMS登录信息手册.md`：测试/生产/平台后台三类入口、登录端点、真实可登录账号、SSH 信息、MinIO/PG/Redis 默认账号、常见登录问题排查
+- 部署手册：`tools/mobile-deploy-v3.9.0.md`
+- 部署脚本：`tools/_deploy_test.py` / `tools/_deploy_prod.py` / `tools/_verify_*.py`（paramiko 实现，替代 MCP ssh-manager）
+
+### 验证
+- `npm run build` 通过（25.67s，11 个移动端 chunk 全部产出）。
+- 销售登录 → 4 个 Tab 切换正常；订单/报台列表可下拉加载更多。
+- 创建销售订单：选经销商 → 选产品 → 行内编辑数量单价 → 提交成功并返回订单号。
+- 创建报台：选经销商 → 选授权医院 → 选产品 → 选批号或序列号 → 提交成功并扣减合格库存。
+- 业绩页：月度趋势 + TOP 经销商数据正常。
+- 退出登录后正确跳转到 `/mobile/login`。
+- 服务器铁律自检通过：源码 100% 替换、旧镜像删除+构建缓存清理、产物校验、临时包保留、rm+mkdir 替换、nginx 代理指向正确、9/9 E2E API、缓存清理。
+
+---
+
 ## v3.8.6 (2026-08-02) - 销售岗位模块改造（多销售账号+业绩占比+经销商归属）
 
 ### 背景

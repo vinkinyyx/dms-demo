@@ -581,27 +581,32 @@ const inventoryAdjustments = {
 const surgeryReports = {
   key: 'surgery-reports', title: '手术植入报台', api: '/api/surgery-reports', detailable: true,
   cols: [
-    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
-    { k: 'code', l: '报台单号', w: 160, filter: { type: 'text' } }, 
-    { k: 'dealerName', l: '经销商', w: 120, filter: { type: 'text' } }, 
-    { k: 'terminalName', l: '医院', w: 120, filter: { type: 'text' } }, 
-    { k: 'surgeryDate', l: '手术日期', w: 110, filter: { type: 'date' } }, 
-    { k: 'doctorName', l: '主刀医生', w: 90, filter: { type: 'text' } }, 
-    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'CONFIRMED', label: '已确认' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }] } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
+    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
+    { k: 'code', l: '报台单号', w: 160, filter: { type: 'text' } },
+    { k: 'dealerName', l: '经销商', w: 120, filter: { type: 'text' } },
+    { k: 'terminalName', l: '医院', w: 120, filter: { type: 'text' } },
+    { k: 'surgeryDate', l: '手术日期', w: 110, filter: { type: 'date' } },
+    { k: 'doctorName', l: '主刀医生', w: 90, filter: { type: 'text' } },
+    { k: 'attachmentName', l: '附件', w: 160, filter: { type: 'text' } },
+    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'CONFIRMED', label: '已确认' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }] } },
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
     { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
   ],
   form: [
     { key: 'dealerId', label: '经销商', required: true, picker: 'dealers', group: '手术信息' },
     { key: 'terminalId', label: '医院/终端(须已授权)', required: true, picker: 'hospitals', group: '手术信息' },
-    { key: 'warehouseId', label: '出库仓库', required: true, picker: 'warehouses', group: '手术信息' },
+    // v3.8.7 经销商报台去除仓库（与厂家库存无关）
     { key: 'surgeryDate', label: '手术日期', type: 'date', required: true, group: '手术信息' },
     { key: 'patientInfo', label: '患者信息', group: '手术详情', placeholder: '如：李某某，男，65岁' },
     { key: 'doctorName', label: '主刀医生', group: '手术详情' },
     { key: 'remark', label: '手术备注', type: 'textarea', group: '其它' },
-    { key: 'lines', type: 'lines', label: '植入产品明细', required: true, group: '植入明细', cols: [
-      { k: 'productId', l: '产品', type: 'picker', picker: 'products', format: 'productName' }, { k: 'qty', l: '数量', type: 'number' },
-      { k: 'batchNo', l: '批次号' }, { k: 'serialNo', l: '序列号' }, { k: 'unitPrice', l: '单价', type: 'number' }
+    { key: 'attachment', label: '附件', type: 'attachment', group: '其它' },
+    { key: 'lines', type: 'lines', importable: true, serialPasteSplit: true, label: '植入产品明细', required: true, group: '植入明细', cols: [
+      { k: 'productId', l: '产品', type: 'picker', picker: 'products', format: 'productName' },
+      { k: 'qty', l: '数量', type: 'number' },
+      { k: 'batchNo', l: '批次号' },
+      { k: 'serialNo', l: '序列号' },
+      { k: 'unitPrice', l: '单价', type: 'number' }
     ] }
   ]
 }

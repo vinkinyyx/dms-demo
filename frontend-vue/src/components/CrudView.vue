@@ -106,6 +106,7 @@
                     <el-option v-for="o in f.options" :key="o.value !== undefined ? o.value : o.label" :label="o.label" :value="o.value" />
                   </el-select>
                   <el-switch v-else-if="f.type === 'boolean'" v-model="formData[f.key]" :disabled="f.readonly" />
+                  <AttachmentUploader v-else-if="f.type === 'attachment'" v-model="formData[f.key]" />
                   <MultiSelectPicker v-else-if="f.type === 'multiselect'" v-model="formData[f.key]" :resource="f.picker && f.picker.resource" />
                   <el-input v-else v-model="formData[f.key]" :placeholder="f.placeholder" />
                 </el-form-item>
@@ -176,6 +177,7 @@ import { Upload, Download, Filter, Search, Plus } from '@element-plus/icons-vue'
 import ResourcePicker from '@/components/ResourcePicker.vue'
 import MultiSelectPicker from '@/components/MultiSelectPicker.vue'
 import LinesEditor from '@/components/LinesEditor.vue'
+import AttachmentUploader from '@/components/AttachmentUploader.vue'
 import { listResource, createResource, updateResource, deleteResource, getDetail, actionResource, getOperationLogs } from '@/api/crud'
 import { statusText, statusTagType, fmt, labelOf, reloadDicts } from '@/utils/dict'
 import { getToken } from '@/utils/auth'
@@ -380,6 +382,7 @@ function openForm(row) {
     } else if (f.value !== undefined) formData[f.key] = f.value
     else if (f.type === 'lines') formData[f.key] = []
     else if (f.type === 'boolean') formData[f.key] = false
+    else if (f.type === 'attachment') formData[f.key] = null
     else formData[f.key] = ''
   })
   if (row && props.config.detailable && props.config.api) {
@@ -431,8 +434,16 @@ async function onSubmit() {
     const payload = {}
     Object.keys(formData).forEach((k) => {
       const v = formData[k]
-      if (v !== '' && v != null) payload[k] = v
+      if (v === '' || v == null) return
+      if (k === 'attachment' && typeof v === 'object') {
+        payload.attachmentFileId = v.fileId
+        payload.attachmentName = v.originalName
+        payload.attachmentUrl = v.url
+        return
+      }
+      payload[k] = v
     })
+    delete payload.attachment
     if (editing.value) { await updateResource(props.config.api, editingId.value, payload); ElMessage.success('更新成功') }
     else {
       const createApi = props.config.apiCreate || props.config.api
