@@ -161,30 +161,6 @@ const regions = {
   ]
 }
 
-const materials = {
-  key: 'materials', title: '物料管理', api: '/api/materials', importable: true, exportable: true,
-  cols: [
-    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
-    { k: 'code', l: '物料编码', w: 130, filter: { type: 'text' } }, 
-    { k: 'nameCn', l: '物料名称', filter: { type: 'text' } }, 
-    { k: 'productId', l: '关联产品', w: 100, format: 'productName' }, 
-    { k: 'spec', l: '规格型号', w: 140, filter: { type: 'text' } }, 
-    { k: 'unit', l: '单位', w: 60, filter: { type: 'select', options: UNITS } }, 
-    { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
-  ],
-  form: [
-    { key: 'code', label: '物料编码', required: true, group: '基本信息' },
-    { key: 'nameCn', label: '物料名称', required: true, group: '基本信息' },
-    { key: 'productId', label: '关联产品', group: '基本信息', picker: 'products' },
-    { key: 'spec', label: '规格型号', group: '基本信息' },
-    { key: 'unit', label: '单位', type: 'select', group: '基本信息', value: '个', options: UNITS },
-    { key: 'remark', label: '备注', type: 'textarea', group: '其它' },
-    { key: 'status', label: '状态', type: 'select', group: '状态', value: 'active', options: S_ACTIVE }
-  ]
-}
-
 const suppliers = {
   key: 'suppliers', title: '供应商管理', api: '/api/suppliers', importable: true, exportable: true,
   cols: [
@@ -269,20 +245,38 @@ const contractApps = {
 }
 
 const contracts = {
-  key: 'contracts', title: '合同', api: '/api/contracts', readonly: true, detailable: true,
+  key: 'contracts', title: '合同', api: '/api/contracts', readonly: true, detailable: true, exportable: true,
   cols: [
-    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
-    { k: 'code', l: '合同编号', w: 180, filter: { type: 'text' } }, 
-    { k: 'category', l: '分类', w: 110, filter: { type: 'text' } }, 
-    { k: 'dealerName', l: '经销商', filter: { type: 'text' } }, 
-    { k: 'validFrom', l: '生效', w: 110, filter: { type: 'date' } }, 
-    { k: 'validTo', l: '截止', w: 110, filter: { type: 'date' } }, 
-    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'ACTIVE', label: '生效' }, { value: 'EXPIRED', label: '到期' }, { value: 'TERMINATED', label: '终止' }] } }
+    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
+    { k: 'code', l: '合同编号', w: 170, filter: { type: 'text' } },
+    { k: 'category', l: '分类', w: 100, filter: { type: 'select', options: [
+      { value: 'SALES', label: '销售合同' },
+      { value: 'DISTRIBUTION', label: '经销合同' },
+      { value: 'AUTHORIZATION', label: '授权合同' },
+      { value: 'SERVICE', label: '服务合同' },
+      { value: 'SUPPLY', label: '供货合同' },
+      { value: 'PROMOTION', label: '促销合同' }
+    ] } },
+    { k: 'dealerName', l: '经销商', w: 180, filter: { type: 'text' } },
+    { k: 'dealerLevel', l: '级别', w: 70 },
+    { k: 'regionName', l: '区域', w: 100 },
+    { k: 'validFrom', l: '生效', w: 110, filter: { type: 'date' } },
+    { k: 'validTo', l: '截止', w: 110, filter: { type: 'date' } },
+    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [
+      { value: 'effective', label: '生效中' },
+      { value: 'active', label: '生效中' },
+      { value: 'draft', label: '草稿' },
+      { value: 'pending', label: '待生效' },
+      { value: 'expired', label: '已到期' },
+      { value: 'terminated', label: '已终止' }
+    ] } },
+    { k: 'signCount', l: '签章', w: 70, align: 'right' },
+    { k: 'attachCount', l: '附件', w: 70, align: 'right' }
   ]
 }
 
 const authorizations = {
-  key: 'authorizations', title: '授权管理', api: '/api/authorizations', detailable: true,
+  key: 'authorizations', title: '授权管理', api: '/api/authorizations', detailable: true, exportable: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '授权编号', w: 160, filter: { type: 'text' } }, 
@@ -345,6 +339,7 @@ const LINE_ORDER = [
 
 const orders = {
   key: 'orders', title: '销售订单', api: '/api/sales-orders', detailable: true, noDelete: true, editableWhen: ['DRAFT'], maxActions: 2, pageSize: 30,
+  importable: true, exportable: true,
   statusActions: [
     { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'primary', confirm: '确认提交此销售订单进入审批？' },
     { label: '审批通过', when: ['SUBMITTED'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此销售订单？（将自动生成销售出库草稿）' },
@@ -394,6 +389,7 @@ const salesReturns = {
 }
 const purchaseOrders = {
   key: 'purchase-orders', title: '采购订单', api: '/api/purchase-orders', detailable: true, noDelete: true, editableWhen: ['DRAFT'], maxActions: 2, pageSize: 30,
+  importable: true, exportable: true,
   statusActions: [
     { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'primary', confirm: '确认提交此采购订单进入审批？' },
     { label: '审批通过', when: ['SUBMITTED'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此采购订单？（将自动生成收货入库草稿）' },
@@ -459,7 +455,7 @@ const inventory = {
 }
 
 const salesOuts = {
-  key: 'sales-outs', title: '销售出库', api: '/api/sales-outs', detailable: true, importable: false, exportable: true, noEdit: true, noCreate: true, noDelete: true, maxActions: 1,
+  key: 'sales-outs', title: '销售出库', api: '/api/sales-outs', detailable: true, importable: false, exportable: false, noEdit: true, noCreate: true, noDelete: true, maxActions: 1,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '出库单号', w: 170, filter: { type: 'text' } },
@@ -526,7 +522,7 @@ const receipts = {
 
 const stockMoves = {
   key: 'stock-moves', title: '库存移动', api: '/api/stock-moves', detailable: true,
-  noEdit: true, noDelete: true, importable: false, createPath: '/stock-move-edit/new',
+  noEdit: true, noDelete: true, importable: false, exportable: true, createPath: '/stock-move-edit/new',
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '移动单号', w: 170, filter: { type: 'text' } },
@@ -559,6 +555,7 @@ const stockMoves = {
 
 const inventoryAdjustments = {
   key: 'inventory-adjustments', title: '库存调整', api: '/api/inventory-adjustments', detailable: true, noEdit: true,
+  importable: true, exportable: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '调整单号', w: 160, filter: { type: 'text' } }, 
@@ -580,6 +577,7 @@ const inventoryAdjustments = {
 
 const surgeryReports = {
   key: 'surgery-reports', title: '手术植入报台', api: '/api/surgery-reports', detailable: true,
+  importable: true, exportable: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '报台单号', w: 160, filter: { type: 'text' } },
@@ -758,7 +756,7 @@ const reportOrderTrace = { ...reportBase, key: 'report-order-trace', title: '订
 }
 
 const productLines = {
-  key: 'product-lines', title: '产品线管理', api: '/api/product-lines', detailable: true, importable: true, exportable: true,
+  key: 'product-lines', title: '产品线管理', api: '/api/product-lines', detailable: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '产品线编码', w: 130, filter: { type: 'text' } },
@@ -782,7 +780,7 @@ const productLines = {
 }
 
 const productPackageLevels = {
-  key: 'product-package-levels', title: '产品包装层级', api: '/api/product-package-levels', detailable: true, importable: true, exportable: true,
+  key: 'product-package-levels', title: '产品包装层级', api: '/api/product-package-levels', detailable: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '包装编码', w: 130, filter: { type: 'text' } },
@@ -815,7 +813,7 @@ const productPackageLevels = {
 }
 
 const productBundles = {
-  key: 'product-bundles', title: '产品组合', api: '/api/product-bundles', detailable: true, importable: true, exportable: true,
+  key: 'product-bundles', title: '产品组合', api: '/api/product-bundles', detailable: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '组合编码', w: 130, filter: { type: 'text' } },
@@ -858,7 +856,7 @@ const productBundles = {
 }
 
 export const MODULE_CONFIGS = {
-  products, categories, dealers, hospitals, warehouses, regions, materials, suppliers,
+  products, categories, dealers, hospitals, warehouses, regions, suppliers,
   'product-lines': productLines, 'product-package-levels': productPackageLevels, 'product-bundles': productBundles,
   'product-prices': productPrices,
   'contract-apps': contractApps, contracts, authorizations, promotions,

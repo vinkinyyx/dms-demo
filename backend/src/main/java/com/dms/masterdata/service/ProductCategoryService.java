@@ -8,6 +8,7 @@ import com.dms.common.ErrorCode;
 import com.dms.common.PageQuery;
 import com.dms.common.PageResult;
 import com.dms.common.util.TenantContext;
+import com.dms.masterdata.dto.TreeNodeDTO;
 import com.dms.masterdata.entity.ProductCategory;
 import com.dms.masterdata.repository.ProductCategoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -133,5 +134,30 @@ public class ProductCategoryService {
         entity.setStatus("inactive");
         entity.setUpdatedAt(OffsetDateTime.now());
         repository.save(entity);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<TreeNodeDTO> tree() {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
+        }
+        return buildTree(repository.findByTenantIdAndStatusOrderByLevelAscSortOrderAscIdAsc(tenantId, "active"));
+    }
+
+    private java.util.List<TreeNodeDTO> buildTree(java.util.List<ProductCategory> categories) {
+        java.util.Map<Long, TreeNodeDTO> map = new java.util.LinkedHashMap<>();
+        for (ProductCategory c : categories) {
+            map.put(c.getId(), TreeNodeDTO.builder()
+                    .id(c.getId()).parentId(c.getParentId()).code(c.getCode()).name(c.getName())
+                    .level(c.getLevel()).sortOrder(c.getSortOrder()).status(c.getStatus())
+                    .children(new java.util.ArrayList<>()).build());
+        }
+        java.util.List<TreeNodeDTO> roots = new java.util.ArrayList<>();
+        for (TreeNodeDTO node : map.values()) {
+            TreeNodeDTO parent = node.getParentId() == null ? null : map.get(node.getParentId());
+            if (parent != null) parent.getChildren().add(node); else roots.add(node);
+        }
+        return roots;
     }
 }

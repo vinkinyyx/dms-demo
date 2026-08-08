@@ -5,6 +5,9 @@ import com.dms.common.util.TenantContext;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +20,7 @@ import java.util.*;
  * <p>GET /api/admin/api-call-logs/{id}   详情（含请求/响应体）
  */
 @RestController
-@RequestMapping("/api/admin/api-call-logs")
+@RequestMapping({"/api/api-call-logs", "/api/admin/api-call-logs"})
 @RequiredArgsConstructor
 public class ApiCallLogController {
 
@@ -31,11 +34,11 @@ public class ApiCallLogController {
             @RequestParam(required = false) String direction,
             @RequestParam(required = false) String system,
             @RequestParam(required = false) String method,
-            @RequestParam(required = false) Integer statusCode,
+            @RequestParam(name = "status", required = false) Integer statusCode,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime) {
-        if (!isAdmin()) return ApiResponse.fail(40300, "无权限");
+        if (!canViewLogs()) return ApiResponse.fail(40300, "无权限");
         if (size > 200) size = 200;
 
         StringBuilder where = new StringBuilder(" WHERE 1=1");
@@ -86,7 +89,7 @@ public class ApiCallLogController {
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
     public ApiResponse<Map<String, Object>> detail(@PathVariable Long id) {
-        if (!isAdmin()) return ApiResponse.fail(40300, "无权限");
+        if (!canViewLogs()) return ApiResponse.fail(40300, "无权限");
         var q = em.createNativeQuery("SELECT * FROM api_call_log WHERE id = ?1", Tuple.class);
         q.setParameter(1, id);
         @SuppressWarnings("unchecked")
@@ -95,7 +98,17 @@ public class ApiCallLogController {
         return ApiResponse.ok(toFull(rows.get(0)));
     }
 
-    private boolean isAdmin() {
+    private boolean canViewLogs() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null) {
+            boolean platformAdmin = authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .anyMatch("ROLE_PLATFORM_ADMIN"::equals);
+            boolean hasPermission = authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .anyMatch("api_log:view"::equals);
+            if (platformAdmin || hasPermission) return true;
+        }
         String u = TenantContext.getUsername();
         return u != null && "admin".equalsIgnoreCase(u);
     }
@@ -129,6 +142,8 @@ public class ApiCallLogController {
         m.put("responseBody", t.get("response_body"));
         m.put("errorMsg", t.get("error_msg"));
         m.put("finishedAt", String.valueOf(t.get("finished_at")));
+        m.put("bizKey", t.get("biz_key"));
+        m.put("bizAction", t.get("biz_action"));
         return m;
     }
 }

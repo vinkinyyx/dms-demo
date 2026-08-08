@@ -1,4 +1,5 @@
 FROM maven:3.9-eclipse-temurin-17 AS builder
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 WORKDIR /build
 
 RUN mkdir -p /root/.m2 && \

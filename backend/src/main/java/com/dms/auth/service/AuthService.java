@@ -63,6 +63,10 @@ public class AuthService {
         if (!"active".equalsIgnoreCase(user.getStatus())) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "账号已被停用");
         }
+        Tenant tenant = tenantRepository.findById(user.getTenantId()).orElse(null);
+        if (tenant == null || !"active".equalsIgnoreCase(tenant.getStatus())) {
+            throw new BusinessException(ErrorCode.TENANT_DISABLED, "租户已停用");
+        }
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             userService.incrementFailCount(user.getId());
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");

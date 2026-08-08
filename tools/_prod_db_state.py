@@ -1,0 +1,15 @@
+﻿import paramiko, sys
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+c=paramiko.SSHClient(); c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+c.connect('8.133.193.238', username='root', password='Welcomeyyx0616', timeout=15, allow_agent=False, look_for_keys=False)
+def run(cmd, timeout=60):
+ print('\n>>>',cmd[:220])
+ si,so,se=c.exec_command(cmd,timeout=timeout)
+ print(so.read().decode('utf-8','replace').rstrip())
+ err=se.read().decode('utf-8','replace').rstrip()
+ if err: print('STDERR:',err[:4000])
+run('curl -s -m 5 http://127.0.0.1:8080/actuator/health || true')
+run("docker exec dms-postgres psql -U dms -d dms -c \"select version,description,success from flyway_schema_history order by installed_rank;\"")
+run("docker exec dms-postgres psql -U dms -d dms -c \"select count(*) as tables from information_schema.tables where table_schema='public';\"")
+run('docker logs --tail 40 dms-backend 2>&1')
+c.close()

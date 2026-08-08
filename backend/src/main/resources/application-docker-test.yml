@@ -1,7 +1,7 @@
 # DMS 后端 Docker 测试环境 profile
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:postgres-test}:${DB_PORT:5432}/${DB_NAME:dms_test}
+    url: jdbc:postgresql://${DB_HOST:postgres-test}:${DB_PORT:5432}/${DB_NAME:dms_test}?stringtype=unspecified
     username: ${DB_USER:dms}
     password: ${DB_PASSWORD:dms123456}
     driver-class-name: org.postgresql.Driver

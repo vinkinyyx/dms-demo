@@ -8,6 +8,7 @@ import com.dms.common.ErrorCode;
 import com.dms.common.PageQuery;
 import com.dms.common.PageResult;
 import com.dms.common.util.TenantContext;
+import com.dms.masterdata.dto.TreeNodeDTO;
 import com.dms.masterdata.entity.Region;
 import com.dms.masterdata.repository.RegionRepository;
 import lombok.RequiredArgsConstructor;
@@ -113,5 +114,27 @@ public class RegionService {
         entity.setStatus("inactive");
         entity.setUpdatedAt(OffsetDateTime.now());
         repository.save(entity);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<TreeNodeDTO> tree() {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
+        }
+        java.util.List<Region> regions = repository.findByTenantIdAndStatusOrderByLevelAscSortOrderAscIdAsc(tenantId, "active");
+        java.util.Map<Long, TreeNodeDTO> map = new java.util.LinkedHashMap<>();
+        for (Region r : regions) {
+            map.put(r.getId(), TreeNodeDTO.builder()
+                    .id(r.getId()).parentId(r.getParentId()).code(r.getCode()).name(r.getName())
+                    .level(r.getLevel()).sortOrder(r.getSortOrder()).status(r.getStatus())
+                    .children(new java.util.ArrayList<>()).build());
+        }
+        java.util.List<TreeNodeDTO> roots = new java.util.ArrayList<>();
+        for (TreeNodeDTO node : map.values()) {
+            TreeNodeDTO parent = node.getParentId() == null ? null : map.get(node.getParentId());
+            if (parent != null) parent.getChildren().add(node); else roots.add(node);
+        }
+        return roots;
     }
 }

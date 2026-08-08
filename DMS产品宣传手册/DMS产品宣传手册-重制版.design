@@ -1,0 +1,756 @@
+{
+  "data": [
+    {
+      "id": "page-index",
+      "title": "DMS 通用经销商管理系统",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 10605,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-de54f7a8",
+          "measuredAt": 1786124200095
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/index.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-print",
+      "title": "DMS 产品宣传手册 · 印刷版",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 320,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 10605,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-ad54ce5e",
+          "measuredAt": 1786124200095
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/print.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "image-001",
+      "title": "01 Pc Login",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/01-pc-login.png"
+      }
+    },
+    {
+      "id": "image-002",
+      "title": "02 Pc Home",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/02-pc-home.png"
+      }
+    },
+    {
+      "id": "image-003",
+      "title": "03 Pc Products",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/03-pc-products.png"
+      }
+    },
+    {
+      "id": "image-004",
+      "title": "04 Pc Dealers",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/04-pc-dealers.png"
+      }
+    },
+    {
+      "id": "image-005",
+      "title": "05 Pc Hospitals",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/05-pc-hospitals.png"
+      }
+    },
+    {
+      "id": "image-006",
+      "title": "06 Pc Warehouses",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/06-pc-warehouses.png"
+      }
+    },
+    {
+      "id": "image-007",
+      "title": "07 Pc Contracts",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/07-pc-contracts.png"
+      }
+    },
+    {
+      "id": "image-008",
+      "title": "08 Pc Contract Apply",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/08-pc-contract-apply.png"
+      }
+    },
+    {
+      "id": "image-009",
+      "title": "09 Pc Authorizations",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/09-pc-authorizations.png"
+      }
+    },
+    {
+      "id": "image-010",
+      "title": "10 Pc Sales Orders",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/10-pc-sales-orders.png"
+      }
+    },
+    {
+      "id": "image-011",
+      "title": "11 Pc Purchase Orders",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/11-pc-purchase-orders.png"
+      }
+    },
+    {
+      "id": "image-012",
+      "title": "12 Pc Sales Returns",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/12-pc-sales-returns.png"
+      }
+    },
+    {
+      "id": "image-013",
+      "title": "13 Pc Purchase Returns",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/13-pc-purchase-returns.png"
+      }
+    },
+    {
+      "id": "image-014",
+      "title": "14 Pc Inventory",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/14-pc-inventory.png"
+      }
+    },
+    {
+      "id": "image-015",
+      "title": "15 Pc Receipts",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/15-pc-receipts.png"
+      }
+    },
+    {
+      "id": "image-016",
+      "title": "16 Pc Stock Moves",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/16-pc-stock-moves.png"
+      }
+    },
+    {
+      "id": "image-017",
+      "title": "17 Pc Stock Adjust",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/17-pc-stock-adjust.png"
+      }
+    },
+    {
+      "id": "image-018",
+      "title": "18 Pc Sales Outs",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/18-pc-sales-outs.png"
+      }
+    },
+    {
+      "id": "image-019",
+      "title": "19 Pc Surgery Reports",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/19-pc-surgery-reports.png"
+      }
+    },
+    {
+      "id": "image-020",
+      "title": "20 Pc Dashboard",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/20-pc-dashboard.png"
+      }
+    },
+    {
+      "id": "image-021",
+      "title": "20B Pc Dealer Profile",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1891,
+          "height": 989
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/20b-pc-dealer-profile.png"
+      }
+    },
+    {
+      "id": "image-022",
+      "title": "21 Pc Users",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/21-pc-users.png"
+      }
+    },
+    {
+      "id": "image-023",
+      "title": "22 Pc Roles",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/22-pc-roles.png"
+      }
+    },
+    {
+      "id": "image-024",
+      "title": "23 Admin Login",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/23-admin-login.png"
+      }
+    },
+    {
+      "id": "image-025",
+      "title": "24 Admin Overview",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/24-admin-overview.png"
+      }
+    },
+    {
+      "id": "image-026",
+      "title": "24 Admin Workspace",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/24-admin-workspace.png"
+      }
+    },
+    {
+      "id": "image-027",
+      "title": "25 Admin Tenants",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/25-admin-tenants.png"
+      }
+    },
+    {
+      "id": "image-028",
+      "title": "27 Admin Users",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/27-admin-users.png"
+      }
+    },
+    {
+      "id": "image-029",
+      "title": "28 Admin Roles",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/28-admin-roles.png"
+      }
+    },
+    {
+      "id": "image-030",
+      "title": "29 Admin Dicts",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/29-admin-dicts.png"
+      }
+    },
+    {
+      "id": "image-031",
+      "title": "30 Admin Api Logs",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/30-admin-api-logs.png"
+      }
+    },
+    {
+      "id": "image-032",
+      "title": "31 Admin Operation Logs",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/31-admin-operation-logs.png"
+      }
+    },
+    {
+      "id": "image-033",
+      "title": "32 Admin Login Logs",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1080
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/32-admin-login-logs.png"
+      }
+    },
+    {
+      "id": "image-034",
+      "title": "33 Mobile Login",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1179,
+          "height": 1980
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/33-mobile-login.png"
+      }
+    },
+    {
+      "id": "image-035",
+      "title": "34 Mobile Home",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1179,
+          "height": 1980
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/34-mobile-home.png"
+      }
+    },
+    {
+      "id": "image-036",
+      "title": "35 Mobile Orders",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1179,
+          "height": 1980
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/35-mobile-orders.png"
+      }
+    },
+    {
+      "id": "image-037",
+      "title": "36 Mobile Inventory",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1179,
+          "height": 1980
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/36-mobile-inventory.png"
+      }
+    },
+    {
+      "id": "image-038",
+      "title": "37 Mobile Surgery",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1179,
+          "height": 1980
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/37-mobile-surgery.png"
+      }
+    },
+    {
+      "id": "image-039",
+      "title": "38 Mobile Receipt",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1179,
+          "height": 1980
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/38-mobile-receipt.png"
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": false,
+    "deviceType": "desktop"
+  }
+}

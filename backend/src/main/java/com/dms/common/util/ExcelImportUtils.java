@@ -85,6 +85,33 @@ public class ExcelImportUtils {
         return true;
     }
 
+    /**
+     * 将 Excel 单元格值归一化为 yyyy-MM-dd 日期字符串，供原生 SQL 的 CAST(? AS date) 使用。
+     * 日期格式单元格会被解析为 LocalDateTime，直接 toString 会得到 2026-01-31T00:00 而无法入库。
+     */
+    public static String toDateString(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof LocalDateTime) {
+            return ((LocalDateTime) value).toLocalDate().toString();
+        }
+        if (value instanceof LocalDate) {
+            return value.toString();
+        }
+        String str = value.toString().trim();
+        if (str.isEmpty()) {
+            return null;
+        }
+        int sep = str.indexOf('T');
+        if (sep > 0) {
+            str = str.substring(0, sep);
+        } else if (str.indexOf(' ') > 0) {
+            str = str.substring(0, str.indexOf(' '));
+        }
+        return str;
+    }
+
     private static Object getCellValue(Cell cell) {
         if (cell == null) {
             return null;
@@ -168,6 +195,14 @@ public class ExcelImportUtils {
             }
             return null;
         }
+    }
+
+    /**
+     * 将 Excel 单元格值转为目标字段类型，供各 Controller 的导入反射赋值复用。
+     * Excel 中同一列可能是文本也可能是数字，直接 (Number) 强转会 ClassCastException。
+     */
+    public static Object coerce(Object value, Class<?> type) {
+        return convertValue(value, type);
     }
 
     private static Object convertValue(Object value, Class<?> type) {

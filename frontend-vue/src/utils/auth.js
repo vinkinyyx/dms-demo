@@ -29,3 +29,22 @@ export function clearAuth() {
   localStorage.removeItem(REFRESH_KEY)
   localStorage.removeItem(USER_KEY)
 }
+
+
+const PERMISSIONS_KEY = 'dms:user:permissions'
+export function getPermissions() {
+  try {
+    const raw = localStorage.getItem(PERMISSIONS_KEY)
+    if (!raw) return []
+    const arr = JSON.parse(raw)
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+export function setPermissions(perms) {
+  localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(Array.isArray(perms) ? perms : []))
+}
+export function clearPermissions() {
+  localStorage.removeItem(PERMISSIONS_KEY)
+}

@@ -151,13 +151,6 @@ public class DealerController {
     private void setFieldValue(Dealer entity, String fieldName, Object value) throws Exception {
         java.lang.reflect.Field field = Dealer.class.getDeclaredField(fieldName);
         field.setAccessible(true);
-        Class<?> type = field.getType();
-        if (type == String.class) {
-            field.set(entity, String.valueOf(value));
-        } else if (type == Long.class || type == long.class) {
-            field.set(entity, ((Number) value).longValue());
-        } else {
-            field.set(entity, value);
-        }
+        field.set(entity, ExcelImportUtils.coerce(value, field.getType()));
     }
 }

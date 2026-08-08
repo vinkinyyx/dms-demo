@@ -11,3 +11,8 @@ export function getInfo() {
 export function logout() {
   return request({ url: '/api/auth/logout', method: 'post' }).catch(() => {})
 }
+
+
+export function getMyPermissions() {
+  return request({ url: '/api/me/permissions', method: 'get' })
+}

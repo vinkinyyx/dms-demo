@@ -1,23 +1,23 @@
-import request from '@/utils/request'
+﻿import request from '@/utils/request'
 
-export function getKpi() {
-  return request({ url: '/api/dashboard/kpi', method: 'get' })
+export function getKpi(params) {
+  return request({ url: '/api/dashboard/kpi', method: 'get', params })
 }
-export function getSalesTrend() {
-  return request({ url: '/api/dashboard/sales-trend', method: 'get' })
+export function getSalesTrend(params) {
+  return request({ url: '/api/dashboard/sales-trend', method: 'get', params })
 }
-export function getInventoryPie() {
-  return request({ url: '/api/dashboard/inventory-pie', method: 'get' })
+export function getInventoryPie(params) {
+  return request({ url: '/api/dashboard/inventory-pie', method: 'get', params })
 }
-export function getTopDealers() {
-  return request({ url: '/api/dashboard/top-dealers', method: 'get' })
+export function getTopDealers(params) {
+  return request({ url: '/api/dashboard/top-dealers', method: 'get', params })
 }
-export function getOrderFunnel() {
-  return request({ url: '/api/dashboard/order-funnel', method: 'get' })
+export function getOrderFunnel(params) {
+  return request({ url: '/api/dashboard/order-funnel', method: 'get', params })
 }
-export function getTopHospitals() {
-  return request({ url: '/api/dashboard/top-hospitals', method: 'get' })
+export function getTopHospitals(params) {
+  return request({ url: '/api/dashboard/top-hospitals', method: 'get', params })
 }
-export function getActivity7d() {
-  return request({ url: '/api/dashboard/activity-7d', method: 'get' })
+export function getActivity7d(params) {
+  return request({ url: '/api/dashboard/activity-7d', method: 'get', params })
 }

@@ -36,3 +36,18 @@ export function opLogsDownload(date) {
     responseType: 'blob'
   })
 }
+
+
+// === D13: 列表页布局 / 按钮配置 ===
+/** 业务前台：聚合下发 filter + page + toolbar + row 四套配置（合并平台默认 + 租户覆盖） */
+export function getPageLayout(pageKey) { return request({ url: '/api/ui/layout/' + pageKey, method: 'get' }) }
+/** 业务前台：单独取某 scope 的按钮列表（toolbar / row） */
+export function getMergedButtons(pageKey, scope) { return request({ url: '/api/button-configs/pages/' + pageKey + '/' + scope, method: 'get' }) }
+
+// === v3.8.9 租户管理员维护本租户列表页覆盖配置 ===
+export function getTenantFilters(pageKey) { return request({ url: '/api/tenant-ui/pages/' + pageKey + '/filters', method: 'get' }) }
+export function saveTenantFilters(pageKey, filters) { return request({ url: '/api/tenant-ui/pages/' + pageKey + '/filters', method: 'post', data: filters }) }
+export function getTenantButtons(pageKey) { return request({ url: '/api/tenant-ui/pages/' + pageKey + '/buttons', method: 'get' }) }
+export function saveTenantButtons(pageKey, buttons) { return request({ url: '/api/tenant-ui/pages/' + pageKey + '/buttons', method: 'post', data: { buttons } }) }
+export function getRolePermissions(roleId) { return request({ url: '/api/roles/' + roleId + '/permissions', method: 'get' }) }
+export function setRolePermissions(roleId, resourceCodes) { return request({ url: '/api/roles/' + roleId + '/permissions', method: 'put', data: { resourceCodes } }) }

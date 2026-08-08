@@ -109,10 +109,15 @@ public class ApiCallLogFilter extends OncePerRequestFilter {
         entry.setFinishedAt(OffsetDateTime.now());
 
         String reqBody = ContentCachingFilter.getBody(request);
-        entry.setRequestBody(truncate(reqBody));
-        String respBody = response.getContentAsString();
-        entry.setResponseBody(truncate(respBody));
+        entry.setRequestBody(sanitize(truncate(reqBody)));
+        // 导出类接口返回的是 xlsx 二进制，不能当文本入库（含 0x00 会被 PostgreSQL 拒绝）
+        String respBody = isTextResponse(response) ? response.getContentAsString() : null;
+        entry.setResponseBody(respBody != null
+                ? sanitize(truncate(respBody))
+                : "<binary " + response.getContentAsBytes().length + " bytes, content-type=" + response.getContentType() + ">");
         entry.setBizCode(extractBizCode(respBody, response));
+        // 传输接口专用:按 URI 推断 biz_action，并从响应体中提取订单号作为 biz_key。
+        deriveBizTags(entry, request, respBody);
         boolean httpOk = response.getStatus() >= 200 && response.getStatus() < 300;
         entry.setSuccess(httpOk && (entry.getBizCode() == null || entry.getBizCode() == 0));
         if (error != null) entry.setErrorMsg(truncate(error));
@@ -144,5 +149,82 @@ public class ApiCallLogFilter extends OncePerRequestFilter {
     private String truncate(String s) {
         if (s == null) return null;
         return s.length() > MAX_BODY ? s.substring(0, MAX_BODY) + "...(truncated)" : s;
+    }
+
+    /** 仅对文本类 Content-Type 记录响应体，避免 Excel/PDF 等二进制写入 text 列。 */
+    private boolean isTextResponse(HttpServletResponse response) {
+        String ct = response.getContentType();
+        if (ct == null) return true;
+        String lower = ct.toLowerCase();
+        return lower.contains("json") || lower.contains("xml") || lower.startsWith("text/")
+                || lower.contains("javascript") || lower.contains("x-www-form-urlencoded");
+    }
+
+
+    /**
+     * 传输接口专用:根据 URI 和响应体推断 biz_action / biz_key。
+     *
+     * <p>规则:
+     * <ul>
+     *   <li>POST /api/orders/transfer         -> biz_action=order.transfer.sales，biz_key=SO-*</li>
+     *   <li>POST /api/purchase-orders/transfer-> biz_action=order.transfer.purchase，biz_key=PO-*</li>
+     *   <li>GET  /api/inventory              -> biz_action=inventory.query，biz_key=warehouseId-productId 形式</li>
+     * </ul>
+     */
+    private void deriveBizTags(ApiCallLog entry, HttpServletRequest request, String respBody) {
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
+        if ("POST".equalsIgnoreCase(method) && "/api/orders/transfer".equals(uri)) {
+            entry.setBizAction("order.transfer.sales");
+            String code = extractBizKeyFromResponse(respBody, "code");
+            if (code != null) entry.setBizKey(code);
+        } else if ("POST".equalsIgnoreCase(method) && "/api/purchase-orders/transfer".equals(uri)) {
+            entry.setBizAction("order.transfer.purchase");
+            String code = extractBizKeyFromResponse(respBody, "code");
+            if (code != null) entry.setBizKey(code);
+        } else if ("GET".equalsIgnoreCase(method) && uri.startsWith("/api/inventory")) {
+            entry.setBizAction("inventory.query");
+            // 优先使用 query 参数合成 biz_key（warehouseId-productId），避免依赖响应体结构。
+            String w = request.getParameter("warehouseId");
+            String pid = request.getParameter("productId");
+            String key = null;
+            if (w != null || pid != null) {
+                key = (w == null ? "*" : w) + "-" + (pid == null ? "*" : pid);
+            }
+            if (key == null) key = extractBizKeyFromResponse(respBody, "id");
+            if (key != null) entry.setBizKey(key);
+        }
+    }
+
+    /**
+     * 从响应体中提取 data.{field} 作作为业务单号;提取失败时退而取 message 前 32 字。
+     */
+    private String extractBizKeyFromResponse(String body, String field) {
+        if (body == null || body.isBlank()) return null;
+        try {
+            JsonNode root = objectMapper.readTree(body);
+            if (root == null) return null;
+            JsonNode data = root.get("data");
+            if (data != null && !data.isNull() && data.isObject()) {
+                JsonNode v = data.get(field);
+                if (v != null && !v.isNull() && (v.isTextual() || v.isNumber())) {
+                    return v.asText();
+                }
+            }
+            JsonNode msg = root.get("message");
+            if (msg != null && msg.isTextual()) {
+                String m = msg.asText();
+                if (m.length() > 32) m = m.substring(0, 32);
+                return m;
+            }
+        } catch (Exception ignore) {
+        }
+        return null;
+    }
+
+    /** PostgreSQL 的 text 列不允许 0x00，否则整条日志写入失败。 */
+    private String sanitize(String s) {
+        if (s == null) return null;
+        return s.indexOf('\u0000') >= 0 ? s.replace("\u0000", "") : s;
     }
 }

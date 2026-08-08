@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
+
+:root {
+  /* Ultramarine Ledger — DMS product brochure (refined) */
+  --dms-paper: #ffffff;
+  --dms-cream: #f8f7f4;
+  --dms-ink: #0f172a;
+  --dms-ink-2: #334155;
+  --dms-muted: #64748b;
+  --dms-muted-2: #94a3b8;
+  --dms-accent: #002fa7;
+  --dms-accent-2: #f59e0b;
+  --dms-accent-soft: rgba(0, 47, 167, 0.08);
+  --dms-accent-soft-2: rgba(0, 47, 167, 0.04);
+  --dms-page: #f8f7f4;
+
+  /* Semantic aliases */
+  --dms-background: var(--dms-page);
+  --dms-foreground: var(--dms-ink);
+  --dms-card: var(--dms-paper);
+  --dms-card-foreground: var(--dms-ink);
+  --dms-popover: var(--dms-paper);
+  --dms-popover-foreground: var(--dms-ink);
+  --dms-primary: var(--dms-accent);
+  --dms-primary-foreground: #ffffff;
+  --dms-secondary: var(--dms-cream);
+  --dms-secondary-foreground: var(--dms-ink-2);
+  --dms-muted-foreground: var(--dms-muted);
+  --dms-accent-foreground: var(--dms-ink);
+  --dms-destructive: #c62828;
+  --dms-destructive-foreground: #ffffff;
+  --dms-border: #e2e4e9;
+  --dms-input: #e2e4e9;
+  --dms-ring: var(--dms-accent);
+
+  --dms-radius-sm: 4px;
+  --dms-radius-md: 8px;
+  --dms-radius-lg: 16px;
+
+  --dms-font-display: "Noto Sans SC", "IBM Plex Sans", "Avenir Next", "Segoe UI", Arial, "Microsoft YaHei UI", sans-serif;
+  --dms-font-body: "Noto Sans SC", "IBM Plex Sans", "Avenir Next", "Segoe UI", Arial, "Microsoft YaHei UI", sans-serif;
+  --dms-font-mono: "IBM Plex Mono", Menlo, Consolas, "Cascadia Mono", monospace;
+}
+
+@theme inline {
+  --color-background: var(--dms-background);
+  --color-foreground: var(--dms-foreground);
+  --color-card: var(--dms-card);
+  --color-card-foreground: var(--dms-card-foreground);
+  --color-popover: var(--dms-popover);
+  --color-popover-foreground: var(--dms-popover-foreground);
+  --color-primary: var(--dms-primary);
+  --color-primary-foreground: var(--dms-primary-foreground);
+  --color-secondary: var(--dms-secondary);
+  --color-secondary-foreground: var(--dms-secondary-foreground);
+  --color-muted: var(--dms-secondary);
+  --color-muted-foreground: var(--dms-muted-foreground);
+  --color-accent: var(--dms-accent-2);
+  --color-accent-foreground: var(--dms-accent-foreground);
+  --color-destructive: var(--dms-destructive);
+  --color-destructive-foreground: var(--dms-destructive-foreground);
+  --color-border: var(--dms-border);
+  --color-input: var(--dms-input);
+  --color-ring: var(--dms-ring);
+  --radius-sm: var(--dms-radius-sm);
+  --radius-md: var(--dms-radius-md);
+  --radius-lg: var(--dms-radius-lg);
+}

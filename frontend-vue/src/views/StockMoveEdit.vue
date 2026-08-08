@@ -109,7 +109,7 @@
           <el-descriptions-item v-if="move.toStockStatus" label="目标状态">
             <el-tag :type="statusTagType(move.toStockStatus)" size="small">{{ statusText(move.toStockStatus) }}</el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="创建时间">{{ move.createdAt || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ formatDateTime(move.createdAt) }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
       <el-card shadow="never" style="margin-top:14px">
@@ -175,6 +175,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Plus, Check, Document, Goods, Search } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import { formatDateTime } from '@/utils/format'
 import { getDetail } from '@/api/crud'
 import { statusText, statusTagType } from '@/utils/dict'
 import ResourcePicker from '@/components/ResourcePicker.vue'

@@ -33,6 +33,11 @@ public class RegionController {
         return ApiResponse.ok(service.list(pageQuery));
     }
 
+    @GetMapping("/tree")
+    public ApiResponse<java.util.List<com.dms.masterdata.dto.TreeNodeDTO>> tree() {
+        return ApiResponse.ok(service.tree());
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<Region> get(@PathVariable Long id) {
         return ApiResponse.ok(service.get(id));
@@ -144,15 +149,6 @@ public class RegionController {
     private void setFieldValue(Region entity, String fieldName, Object value) throws Exception {
         java.lang.reflect.Field field = Region.class.getDeclaredField(fieldName);
         field.setAccessible(true);
-        Class<?> type = field.getType();
-        if (type == String.class) {
-            field.set(entity, String.valueOf(value));
-        } else if (type == Long.class || type == long.class) {
-            field.set(entity, ((Number) value).longValue());
-        } else if (type == Integer.class || type == int.class) {
-            field.set(entity, ((Number) value).intValue());
-        } else {
-            field.set(entity, value);
-        }
+        field.set(entity, ExcelImportUtils.coerce(value, field.getType()));
     }
 }

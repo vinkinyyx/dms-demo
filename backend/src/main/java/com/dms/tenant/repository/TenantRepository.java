@@ -4,6 +4,8 @@
 package com.dms.tenant.repository;
 
 import com.dms.tenant.entity.Tenant;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
@@ -11,13 +13,16 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * 租户仓储：提供基于 UUID 主键的 CRUD 与 code 查询能力。
- */
 @Repository
 public interface TenantRepository extends JpaRepository<Tenant, UUID>, JpaSpecificationExecutor<Tenant> {
 
     Optional<Tenant> findByCode(String code);
 
     boolean existsByCode(String code);
+
+    Page<Tenant> findByTenantType(String tenantType, Pageable pageable);
+
+    Page<Tenant> findByTenantTypeAndStatus(String tenantType, String status, Pageable pageable);
+
+    Page<Tenant> findByOwnerManufacturerId(UUID ownerManufacturerId, Pageable pageable);
 }

@@ -19,9 +19,9 @@
         <el-descriptions-item label="发货仓库">{{ salesOut.warehouseName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="来源订单">{{ salesOut.sourceOrderCode || (salesOut.sourceOrder?.code) || '-' }}</el-descriptions-item>
         <el-descriptions-item label="状态"><el-tag :type="statusTagType(salesOut.status)" size="small">{{ statusText(salesOut.status) }}</el-tag></el-descriptions-item>
-        <el-descriptions-item label="发货日期">{{ formatTime(salesOut.shippedAt) }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ formatTime(salesOut.createdAt) }}</el-descriptions-item>
-        <el-descriptions-item label="更新时间">{{ formatTime(salesOut.updatedAt) }}</el-descriptions-item>
+        <el-descriptions-item label="????">{{ formatDateTime(salesOut.shippedAt) }}</el-descriptions-item>
+        <el-descriptions-item label="????">{{ formatDateTime(salesOut.createdAt) }}</el-descriptions-item>
+        <el-descriptions-item label="????">{{ formatDateTime(salesOut.updatedAt) }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="3">{{ salesOut.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
@@ -37,14 +37,14 @@
         <el-descriptions-item label="订单状态"><el-tag :type="statusTagType(salesOut.sourceOrder.status)" size="small">{{ statusText(salesOut.sourceOrder.status) }}</el-tag></el-descriptions-item>
         <el-descriptions-item label="经销商">{{ salesOut.sourceOrder.dealerName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="发货仓库">{{ salesOut.sourceOrder.warehouseName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="期望发货">{{ salesOut.sourceOrder.expectedDate || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="????">{{ formatDate(salesOut.sourceOrder.expectedDate) }}</el-descriptions-item>
         <el-descriptions-item label="含税金额">{{ salesOut.sourceOrder.amountInclTax != null ? salesOut.sourceOrder.amountInclTax : '-' }}</el-descriptions-item>
         <el-descriptions-item label="税额">{{ salesOut.sourceOrder.taxAmount != null ? salesOut.sourceOrder.taxAmount : '-' }}</el-descriptions-item>
         <el-descriptions-item label="实付金额">{{ salesOut.sourceOrder.finalAmount != null ? salesOut.sourceOrder.finalAmount : '-' }}</el-descriptions-item>
         <el-descriptions-item label="下单人">{{ salesOut.sourceOrder.createdByName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="下单时间">{{ formatTime(salesOut.sourceOrder.createdAt) }}</el-descriptions-item>
+        <el-descriptions-item label="????">{{ formatDateTime(salesOut.sourceOrder.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="审批人">{{ salesOut.sourceOrder.approvedByName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="审批时间" :span="2">{{ formatTime(salesOut.sourceOrder.approvedAt) }}</el-descriptions-item>
+        <el-descriptions-item label="????" :span="2">{{ formatDateTime(salesOut.sourceOrder.approvedAt) }}</el-descriptions-item>
         <el-descriptions-item label="销售备注" :span="3">{{ salesOut.sourceOrder.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
@@ -77,9 +77,9 @@
         <div class="batch-head">
           <span class="batch-code">{{ batch.code }}</span>
           <el-tag :type="batchTagType(batch.status)" size="small" style="margin-left:8px">{{ batchStatusText(batch.status) }}</el-tag>
-          <span class="batch-meta">创建 {{ formatTime(batch.createdAt) }}</span>
-          <span v-if="batch.confirmedAt" class="batch-meta">确认 {{ formatTime(batch.confirmedAt) }} {{ batch.confirmedByName ? '('+batch.confirmedByName+')' : '' }}</span>
-          <span v-if="batch.cancelledAt" class="batch-meta">取消 {{ formatTime(batch.cancelledAt) }} {{ batch.cancelReason ? '('+batch.cancelReason+')' : '' }}</span>
+          <span class="batch-meta">?? {{ formatDateTime(batch.createdAt) }}</span>
+          <span v-if="batch.confirmedAt" class="batch-meta">?? {{ formatDateTime(batch.confirmedAt) }} {{ batch.confirmedByName ? '('+batch.confirmedByName+')' : '' }}</span>
+          <span v-if="batch.cancelledAt" class="batch-meta">?? {{ formatDateTime(batch.cancelledAt) }} {{ batch.cancelReason ? '('+batch.cancelReason+')' : '' }}</span>
         </div>
 
         <el-table :data="batch.lines || []" border size="small" style="width:100%">
@@ -168,7 +168,7 @@
       <el-empty v-if="!availableSerials.length" description="该批次下无在库序列号" :image-size="60" />
       <el-radio-group v-else v-model="selectedSerialNo" style="width:100%">
         <div v-for="s in availableSerials" :key="s.id" style="margin-bottom:6px">
-          <el-radio :value="s.serialNo">{{ s.serialNo }} <span style="color:#909399;font-size:12px">{{ s.receivedAt || '' }}</span></el-radio>
+          <el-radio :value="s.serialNo">{{ s.serialNo }} <span style="color:#909399;font-size:12px">{{ formatTime(s.receivedAt) }}</span></el-radio>
         </div>
       </el-radio-group>
       <template #footer>
@@ -196,7 +196,7 @@
         <el-table-column label="批次号" width="140" prop="batchNo" />
         <el-table-column label="序列号" width="180" prop="serialNo" />
         <el-table-column label="发货数量" width="100" prop="qty" />
-        <el-table-column label="发货时间" width="160" prop="confirmedAt" />
+        <el-table-column label="????" width="160"><template #default="{ row }">{{ formatDateTime(row.confirmedAt) }}</template></el-table-column>
         <el-table-column label="发货人" width="120" prop="confirmedByName" />
       </el-table>
       <el-empty v-if="!confirmedBatchLines.length" description="暂无发货记录" :image-size="60" />
@@ -205,7 +205,7 @@
     <el-card shadow="never" style="margin-top:14px">
       <template #header><el-icon><Tickets /></el-icon>操作记录</template>
       <el-table :data="opLogs" border size="small" style="width:100%">
-        <el-table-column label="时间" width="170" prop="createdAt" />
+        <el-table-column label="??" width="170"><template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template></el-table-column>
         <el-table-column label="操作人" width="120" prop="operatorName" />
         <el-table-column label="操作" width="120" prop="action" />
         <el-table-column label="备注" prop="remark" />
@@ -222,6 +222,7 @@ import { ArrowLeft, Plus, CircleClose, Document, Tickets, Box, Check, Goods, Dat
 import request from '@/utils/request'
 import { getDetail, actionResource } from '@/api/crud'
 import { statusText, statusTagType } from '@/utils/dict'
+import { formatDateTime, formatDate } from '@/utils/format'
 
 const route = useRoute()
 const salesOutId = computed(() => route.params.id)
@@ -250,7 +251,7 @@ const activeParentStatuses = ['DRAFT', 'APPROVED', 'PARTIAL_SHIPPED']
 const canCreateBatch = computed(() => activeParentStatuses.includes(salesOut.status))
 const canCancelRemaining = computed(() => activeParentStatuses.includes(salesOut.status))
 
-function formatTime(s) { return s ? String(s).substring(0, 19).replace('T', ' ') : '-' }
+function formatTime(s) { return formatDateTime(s) }
 function orderTypeText(t) { return ({ NORMAL: '常规销售', URGENT: '紧急销售', RETURN: '退货' })[t] || t || '-' }
 function batchStatusText(s) { return ({ DRAFT: '草稿', CONFIRMED: '已确认', CANCELLED: '已取消' })[s] || s || '-' }
 function batchTagType(s) { return ({ DRAFT: 'warning', CONFIRMED: 'success', CANCELLED: 'info' })[s] || 'default' }

@@ -4,6 +4,8 @@
 package com.dms.inventory.service;
 
 import com.dms.common.BusinessException;
+import com.dms.common.PageQuery;
+import com.dms.common.PageResult;
 import com.dms.common.ErrorCode;
 import com.dms.common.util.TenantContext;
 import com.dms.inventory.entity.Stocktake;
@@ -12,6 +14,7 @@ import com.dms.inventory.repository.StocktakeLineRepository;
 import com.dms.inventory.repository.StocktakeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +32,15 @@ public class StocktakeService {
 
     private final StocktakeRepository stocktakeRepository;
     private final StocktakeLineRepository lineRepository;
+
+    @Transactional(readOnly = true)
+    public PageResult<Stocktake> list(PageQuery pageQuery) {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
+        }
+        return PageResult.of(stocktakeRepository.findByTenantId(tenantId, pageQuery.toPageable()));
+    }
 
     @Transactional
     public Stocktake upload(Stocktake stocktake, List<StocktakeLine> lines) {

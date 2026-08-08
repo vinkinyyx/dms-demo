@@ -7,6 +7,8 @@ import com.dms.common.ApiResponse;
 import com.dms.rbac.dto.AssignRolesRequest;
 import com.dms.rbac.dto.RoleCreateRequest;
 import com.dms.rbac.dto.RoleDTO;
+import com.dms.rbac.dto.RolePermissionsDTO;
+import com.dms.rbac.dto.RolePermissionsRequest;
 import com.dms.rbac.service.RbacService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +52,17 @@ public class RbacController {
     @PutMapping("/roles/{id}")
     public ApiResponse<RoleDTO> update(@PathVariable Long id, @Valid @RequestBody RoleCreateRequest request) {
         return ApiResponse.ok(rbacService.updateRole(id, request));
+    }
+
+    @GetMapping("/roles/{id}/permissions")
+    public ApiResponse<RolePermissionsDTO> getPermissions(@PathVariable Long id) {
+        return ApiResponse.ok(rbacService.getRolePermissions(id));
+    }
+
+    @PutMapping("/roles/{id}/permissions")
+    public ApiResponse<RolePermissionsDTO> setPermissions(@PathVariable Long id,
+                                                          @Valid @RequestBody RolePermissionsRequest request) {
+        return ApiResponse.ok(rbacService.setRolePermissions(id, request));
     }
 
     @PostMapping("/users/{id}/roles")

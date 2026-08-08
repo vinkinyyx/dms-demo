@@ -1,0 +1,18 @@
+﻿import paramiko, sys
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+c=paramiko.SSHClient(); c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+c.connect('8.133.193.238', username='root', password='Welcomeyyx0616', timeout=15, allow_agent=False, look_for_keys=False)
+def run(cmd, timeout=120):
+ print('\n>>>',cmd[:260])
+ si,so,se=c.exec_command(cmd,timeout=timeout)
+ print(so.read().decode('utf-8','replace').rstrip())
+ err=se.read().decode('utf-8','replace').rstrip()
+ if err: print('STDERR:',err[:4000])
+run('ls -lh /opt/dms/backups')
+run("docker exec dms-postgres psql -U dms -d postgres -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='dms_flyway_preview' AND pid <> pg_backend_pid();\"")
+run("docker exec dms-postgres psql -U dms -d postgres -c 'DROP DATABASE IF EXISTS dms_flyway_preview;'")
+run("docker exec dms-postgres psql -U dms -d postgres -c 'CREATE DATABASE dms_flyway_preview OWNER dms;'")
+run('gunzip -c /opt/dms/backups/dms_20260808_165335.sql.gz | docker exec -i dms-postgres psql -U dms -d dms_flyway_preview -v ON_ERROR_STOP=1 > /tmp/preview_restore.log 2>&1; tail -30 /tmp/preview_restore.log', timeout=300)
+run("docker exec dms-postgres psql -U dms -d dms_flyway_preview -c \"select max(version) as max_version, count(*) as applied from flyway_schema_history;\"")
+run("docker exec dms-postgres psql -U dms -d dms_flyway_preview -c \"select count(*) as tables from information_schema.tables where table_schema='public';\"")
+c.close()

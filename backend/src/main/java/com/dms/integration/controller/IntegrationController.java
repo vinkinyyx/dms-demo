@@ -63,7 +63,7 @@ public class IntegrationController {
         try {
             var upd = em.createNativeQuery(
                     "INSERT INTO system_settings (scope, key, value_json, description) " +
-                    "VALUES ('system', ?1, ?2::jsonb, '集成模式开关') " +
+                    "VALUES ('system', ?1, CAST(?2 AS jsonb), '集成模式开关') " +
                     "ON CONFLICT (scope, key) DO UPDATE SET value_json = EXCLUDED.value_json");
             upd.setParameter(1, key);
             upd.setParameter(2, "\"" + mode + "\"");

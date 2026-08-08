@@ -1,41 +1,131 @@
-<template>
-  <div class="mobile-dashboard">
-    <van-nav-bar title="仪表盘" />
-    <div class="content">
-      <van-grid :column-num="2" gutter="10">
-        <van-grid-item icon="orders-o" text="今日订单" :badge="stats.todayOrders || 0" @click="$router.push('/mobile/orders/create')" />
-        <van-grid-item icon="todo-list-o" text="本月销售" :badge="stats.monthAmount || 0" />
-        <van-grid-item icon="balance-o" text="应收账款" :badge="stats.receivable || 0" />
-        <van-grid-item icon="chart-trending-o" text="销售趋势" />
-      </van-grid>
-      <van-cell-group inset title="最近订单" style="margin-top: 20px;">
-        <van-cell v-for="o in recentOrders" :key="o.id" :title="o.code" :value="o.status" :label="o.createdAt" />
+﻿<template>
+  <div>
+    <van-nav-bar title="我的业绩" />
+    <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+      <div class="kpi-block">
+        <div class="kpi-title">本月销售</div>
+        <van-grid :column-num="2" :border="false" gutter="8" class="kpi-grid">
+          <van-grid-item>
+            <div class="kpi-v">¥ {{ fmtAmount(monthKpi.totalSales) }}</div>
+            <div class="kpi-l">销售金额</div>
+          </van-grid-item>
+          <van-grid-item>
+            <div class="kpi-v">{{ monthKpi.totalOrders || 0 }}</div>
+            <div class="kpi-l">销售订单数</div>
+          </van-grid-item>
+        </van-grid>
+      </div>
+
+      <div class="sec-title">近 12 月销售趋势</div>
+      <van-cell-group inset>
+        <div class="trend-body">
+          <div v-for="t in salesTrend" :key="t.month" class="trend-row">
+            <span class="trend-l">{{ t.month }}</span>
+            <div class="trend-bar-wrap">
+              <div class="trend-bar" :style="{ width: barPct(t.amount) + '%' }"></div>
+            </div>
+            <span class="trend-v">¥ {{ fmtAmount(t.amount) }}</span>
+          </div>
+          <van-empty v-if="!salesTrend.length" description="暂无数据" />
+        </div>
       </van-cell-group>
-    </div>
+
+      <div class="sec-title">本月 TOP 经销商</div>
+      <van-cell-group inset>
+        <van-cell
+          v-for="(d, idx) in topDealers" :key="idx"
+          :title="d.name"
+        >
+          <template #icon>
+            <van-tag :type="idx < 3 ? 'danger' : 'primary'" style="margin-right:8px">{{ idx + 1 }}</van-tag>
+          </template>
+          <template #value>
+            <span class="amt">¥ {{ fmtAmount(d.value) }}</span>
+          </template>
+        </van-cell>
+        <van-empty v-if="!topDealers.length" description="暂无数据" />
+      </van-cell-group>
+
+      <div class="sec-title">订单状态分布（本月）</div>
+      <van-cell-group inset>
+        <van-cell
+          v-for="(s, idx) in orderFunnel" :key="idx"
+          :title="s.name"
+          :value="s.value"
+        />
+        <van-empty v-if="!orderFunnel.length" description="none" />
+      </van-cell-group>
+
+      <div class="sec-title">更多报表</div>
+      <van-cell-group inset>
+        <van-cell title="销售业绩排行" is-link @click="goReport('sales-ranking')" />
+        <van-cell title="产品销售 TOP10" is-link @click="goReport('product-top10')" />
+        <van-cell title="应收款项" is-link @click="goReport('receivables')" />
+        <van-cell title="订单追溯" is-link @click="goReport('order-trace')" />
+        <van-cell title="手术报台统计" is-link @click="goReport('surgery-stats')" />
+        <van-cell title="PC 端报表中心更全" is-link @click="goReport(null)" />
+      </van-cell-group>
+    </van-pull-refresh>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import request from '@/utils/request'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { showToast } from 'vant'
+import { getKpi, getSalesTrend, getTopDealers, getOrderFunnel } from '@/api/dashboard'
 
-const stats = ref({})
-const recentOrders = ref([])
+const monthKpi = reactive({})
+const salesTrend = ref([])
+const topDealers = ref([])
+const orderFunnel = ref([])
+const refreshing = ref(false)
+const router = useRouter()
 
-onMounted(async () => {
+const maxAmount = computed(() => Math.max(1, ...salesTrend.value.map(t => Number(t.amount) || 0)))
+function barPct(v) { return Math.max(2, Math.round((Number(v || 0) / maxAmount.value) * 100)) }
+function fmtAmount(v) {
+  const n = Number(v || 0)
+  return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+async function loadAll() {
+  try { Object.assign(monthKpi, (await getKpi({ period: 'month' })).data || {}) } catch (e) { /* ignore */ }
+  try { salesTrend.value = (await getSalesTrend()).data || [] } catch (e) { /* ignore */ }
   try {
-    const res = await request.get('/api/dashboard/mobile')
-    if (res.data?.data) {
-      stats.value = res.data.data.stats || {}
-      recentOrders.value = res.data.data.recentOrders || []
-    }
-  } catch (e) {
-    console.error('加载仪表盘失败', e)
-  }
-})
+    const r = await getTopDealers({ period: 'month' })
+    const d = r.data || []
+    topDealers.value = d.map(x => ({ name: x.name, value: x.value }))
+  } catch (e) { /* ignore */ }
+  try {
+    const r = await getOrderFunnel({ period: 'month' })
+    const d = r.data || []
+    orderFunnel.value = d.map(x => ({ name: x.name, value: x.value }))
+  } catch (e) { /* ignore */ }
+}
+
+async function onRefresh() {
+  await loadAll()
+  refreshing.value = false
+  showToast('已刷新')
+}
+
+function goReport(key) { if (key) router.push({ path: '/reports', query: { key } }); else showToast('PC 端报表中心更全，请登录') }
+
+onMounted(loadAll)
 </script>
 
 <style scoped>
-.mobile-dashboard { padding: 16px; background: #f5f5f5; min-height: 100vh; }
-.content { padding: 0 8px; }
+.kpi-block { background: #fff; margin: 10px 12px; border-radius: 12px; padding: 14px 8px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.kpi-title { font-size: 14px; font-weight: 600; color: #323233; margin: 0 6px 8px; }
+.kpi-v { font-size: 22px; font-weight: 700; color: #2C4B8E; }
+.kpi-l { font-size: 12px; color: #969799; margin-top: 4px; }
+.sec-title { font-size: 15px; font-weight: 600; margin: 16px 16px 8px; color: #323233; }
+.trend-body { padding: 8px 16px 12px; }
+.trend-row { display: flex; align-items: center; padding: 6px 0; font-size: 13px; }
+.trend-l { width: 64px; color: #646566; }
+.trend-bar-wrap { flex: 1; background: #f2f3f5; height: 8px; border-radius: 4px; margin: 0 8px; overflow: hidden; }
+.trend-bar { background: linear-gradient(90deg, #2C4B8E, #1989fa); height: 100%; }
+.trend-v { color: #ee0a24; font-weight: 600; min-width: 88px; text-align: right; }
+.amt { color: #ee0a24; font-weight: 600; }
 </style>

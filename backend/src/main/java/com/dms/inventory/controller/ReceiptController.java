@@ -139,8 +139,8 @@ public class ReceiptController {
         pq.setSize(10000);
         java.util.List<Receipt> list = service.list(pq).getList();
 
-        String[] headers = {"ID", "收货单号", "采购订单", "仓库", "状态", "收货数量", "创建时间", "更新时间"};
-        String[] fieldNames = {"id", "code", "purchaseOrderId", "warehouseName", "status", "totalQty", "createdAt", "updatedAt"};
+        String[] headers = {"ID", "收货单号", "收货类型", "源单类型", "源单ID", "仓库ID", "状态", "收货时间", "创建时间", "更新时间"};
+        String[] fieldNames = {"id", "code", "receiptType", "refDocType", "refDocId", "warehouseId", "status", "receivedAt", "createdAt", "updatedAt"};
 
         byte[] excelBytes = ExcelExportUtils.exportToExcel(list, headers, fieldNames);
 
@@ -150,7 +150,20 @@ public class ReceiptController {
                 .body(excelBytes);
     }
 
+    @GetMapping("/actions/export/template")
+    public ResponseEntity<byte[]> exportTemplate() throws Exception {
+        String[] headers = {"采购订单", "仓库", "状态"};
+        String[] fieldNames = {"refDocId", "warehouseId", "status"};
+        String[] examples = {"1", "1", "DRAFT"};
+        byte[] excelBytes = ExcelExportUtils.exportTemplate(headers, fieldNames, examples);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionUtils.attachment("收货入库导入模板.xlsx"))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(excelBytes);
+    }
+
     @PostMapping("/batch-import")
+    @Transactional
     public ApiResponse<java.util.Map<String, Object>> batchImport(@RequestParam("file") MultipartFile file) throws Exception {
         if (file.isEmpty()) {
             return ApiResponse.fail(40001, "请选择要导入的文件");
@@ -168,13 +181,16 @@ public class ReceiptController {
             java.util.Map<String, Object> row = data.get(i);
             try {
                 Receipt entity = new Receipt();
-                if (row.get("采购订单") != null) {
-                    entity.setRefDocId(((Number) row.get("采购订单")).longValue());
+                Long refDocId = toLong(row.get("采购订单"));
+                if (refDocId != null) {
+                    entity.setRefDocId(refDocId);
                     entity.setRefDocType("PURCHASE_ORDER");
                 }
-                if (row.get("仓库") != null) {
-                    entity.setWarehouseId(((Number) row.get("仓库")).longValue());
+                Long warehouseId = toLong(row.get("仓库"));
+                if (warehouseId == null) {
+                    throw new IllegalArgumentException("仓库不能为空");
                 }
+                entity.setWarehouseId(warehouseId);
                 if (row.get("状态") != null) {
                     entity.setStatus(String.valueOf(row.get("状态")));
                 } else {
@@ -197,5 +213,15 @@ public class ReceiptController {
         result.put("failed", failed);
         result.put("errors", errors);
         return ApiResponse.ok(result);
+    }
+
+    private Long toLong(Object o) {
+        if (o == null) return null;
+        if (o instanceof Number) return ((Number) o).longValue();
+        String str = String.valueOf(o).trim();
+        if (str.isEmpty()) return null;
+        try { return Long.valueOf(str); } catch (Exception e) {
+            throw new IllegalArgumentException("无法解析为数字: " + str);
+        }
     }
 }

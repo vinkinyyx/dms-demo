@@ -74,7 +74,7 @@ public class HospitalController {
         java.util.List<Hospital> list = service.list(pq, null).getList();
 
         String[] headers = {"ID", "编码", "名称", "联系人", "电话", "地址", "状态"};
-        String[] fieldNames = {"id", "code", "name", "contactPerson", "contactPhone", "address", "status"};
+        String[] fieldNames = {"id", "code", "name", "contact", "phone", "address", "status"};
 
         byte[] excelBytes = ExcelExportUtils.exportToExcel(list, headers, fieldNames);
 
@@ -151,13 +151,6 @@ public class HospitalController {
     private void setFieldValue(Hospital entity, String fieldName, Object value) throws Exception {
         java.lang.reflect.Field field = Hospital.class.getDeclaredField(fieldName);
         field.setAccessible(true);
-        Class<?> type = field.getType();
-        if (type == String.class) {
-            field.set(entity, String.valueOf(value));
-        } else if (type == Long.class || type == long.class) {
-            field.set(entity, ((Number) value).longValue());
-        } else {
-            field.set(entity, value);
-        }
+        field.set(entity, ExcelImportUtils.coerce(value, field.getType()));
     }
 }

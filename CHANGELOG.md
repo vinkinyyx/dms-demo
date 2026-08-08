@@ -1,3 +1,260 @@
+## v3.8.11 (2026-08-08) - 全站日期格式、日志复制与中文标签修复
+
+### 修复
+- 统一业务前台与后台管理端日期时间展示：新增 `formatDateTime`、`formatDate`、`formatAuto`，公共列表、报表和详情默认按 `YYYY-MM-DD HH:mm:ss` 渲染，避免直接显示 ISO 原始字符串。
+- 业务前台接口调用日志详情增加请求头、请求体、响应头、响应体、错误信息复制按钮；后台 API 日志与审计日志也提供报文复制能力。
+- 后台日志文件读取在 MinIO 对象缺失或不可用时降级为空内容，避免复制按钮返回 500。
+- 修复经销商画像行操作按钮被硬编码为 `????` 的问题，恢复为“查看画像”，保留 KPI、月度达成、返利、合同、库存等页签入口。
+- 修复入库、销售出库、经销商画像等页面少量中文标签和时间字段展示。
+- 修复接口调用日志公共列表 render 单元格为空的问题，恢复方向、方法、结果、时间等列内容；重写日志页中文文案，并隐藏未实现的导出按钮。
+- 新增 V71，修复接口日志状态筛选标签为“状态”并修正状态字典 500 文案错字。
+
+### 数据
+- 保持已执行的 V68 不变，新增 V69/V70 修复历史编码损坏造成的按钮与字典标签问号。
+- 平台默认与租户覆盖继续共用 `platform_button_configs`，以 `tenant_id IS NULL / NOT NULL` 区分。
+
+### 验证
+- 后端 Maven package、业务前台 Vite build、后台管理端 Vite build 均通过。
+- 测试环境已部署：业务前台 `http://8.133.193.238:8083/`，后台 `http://8.133.193.238:8083/admin/`。
+- `tools/_e2e_v389_final.py` 通过；额外 smoke 验证画像按钮返回“查看画像”、后台 API/审计日志可访问、请求报文复制接口返回 200。
+
+---
+## v3.8.10 (2026-08-07) - ????????????????
+
+### ??
+v3.8.9 ?????????????? P0 ????? `permissionCode` ? `resources.code` ????????/????/????????????????????????????????????????????????????? `/api/admin/**`??? token ???? 401?
+
+### ??
+- Flyway `V67__fix_menu_permissions_profile_and_api_log.sql`??? `dashboard:view`?`products:view`?6 ?????????`api_log:view` ??????????????? `api_call_status` ?????????????? `status`?????????????????????
+- `ApiCallLogController`???????? `/api/api-call-logs` ???? `/api/admin/api-call-logs`???????????? `api_log:view`/?????????? admin ???
+- `PlatformPageLayoutController`??????????????? `view=????`????????????????????
+- `RbacService` / `ResourceRepository`?????????????????????????????
+
+### ??
+- `directives/has.js` / `layout/index.vue`?????????????? `/api/me/permissions`?????????????????/?????????
+- `ListPageLayout.vue`??????????????????? 1 ??????????????????????? `view`??????????????
+- `ApiCallLog.vue`?????? `/api/api-call-logs`??????? `status/startTime/endTime`?
+- `Roles.vue`??????????????????????/?????????????
+
+### ??
+- `backend/mvn -q -DskipTests package` ???
+- `frontend-vue/npm run build` ???
+- ????????Flyway ??? V67?Redis `dms:cfg:*` ????
+- `tools/_e2e_v389_final.py` ??????/??/?????????? 7 ?????????????????? 6 ? Tab????????????/???????????/???
+
+---
+## v3.8.9 (2026-08-07) - 列表页规范全站收口 + 租户角色权限闭环
+
+### 背景
+v3.8.8 已接入页面布局接口，但仍有四个缺口：`CrudView` 搜索字段和租户筛选覆盖未完全闭环、销售订单等旧业务动作折叠后可能无回调、经销商画像入口需要保留“查看画像”、租户管理员无法在业务前台直接维护角色菜单/按钮权限和页面搜索字段。本版本按 Layer 2 第十八章 v3.8.9 规则完成收口。
+
+### 后端
+- Flyway `V66__tenant_filter_override_and_layout_fixes.sql`：新增 `tenant_filter_configs`，唯一键 `(tenant_id,page_key,filter_key)`；修正筛选/按钮中文文案；经销商画像默认隐藏导入/导出/新增；销售订单补齐驳回、取消按钮与权限资源。
+- `TenantUiConfigController`：新增 `/api/tenant-ui/pages/{pageKey}/filters` 与 `/buttons`，业务 token 可维护当前租户覆盖。
+- `RbacController` / `RbacService`：新增 `/api/roles/{id}/permissions`，按角色同名策略维护菜单、按钮、接口权限，并做租户隔离。
+- `UiConfigService`：平台默认筛选与租户筛选合并；租户筛选保存改为按 `filterKey` upsert，重复保存不再触发唯一键冲突。
+- `PlatformButtonConfigService`：按钮覆盖保存改为按 `scope+buttonKey` upsert；租户保存时强制补回并开启 `search/reset`，避免查询/重置被误隐藏。
+- `StrategyResource`：补齐 `operations` 映射，角色权限保存默认写入 `['view']`，修复 `strategy_resources.operations` 非空约束导致的 500。
+
+### 前端
+- `CrudView.vue`：搜索区、工具栏、行按钮均由 `/api/ui/layout/{pageKey}` 驱动；行内按钮超过 1 个只平铺第 1 个，其余进入“更多 ▾”；桥接旧 `statusActions/actions` 和标准 `submit/approve/reject/cancel/confirm/execute`；`view` 优先执行业务回调或路由。
+- `ListPageLayout.vue`：统一独立列表页搜索、固定查询/重置、工具栏排序、权限指令和行按钮折叠；修复原实现把 `rowActions` 对象当数组判断的问题。
+- `DealerProfileList.vue`：修复乱码，保留“查看画像”，不展示未实现的导入/导出/新增。
+- `Roles.vue`：专用“角色权限”页面，使用 `el-tree` 勾选菜单、按钮、接口资源。
+- `TenantPageConfigs.vue`：租户管理员可按页面调整搜索字段、工具栏按钮、行内按钮显示与排序；查询/重置开关禁用且后端强制可见。
+- `menu.js` / `router/index.js` / `api/admin.js`：补充“角色权限”“列表页配置”的菜单、路由和 API。
+
+### 验证
+- `backend/mvn -q -DskipTests package` 通过。
+- `frontend-vue/npm run build` 通过。
+- 测试环境已部署后端 `dms-test-backend` 与前端 `dms-test-frontend`，Flyway 为 V66，Redis `dms:cfg:*` 已清理。
+- `tools/_e2e_v389_final.py` 通过：健康检查、admin 权限码、`orders` 7 个行按钮、`dealer-profile` 仅保留查询/重置/查看画像、租户筛选隐藏/恢复、租户按钮隐藏/恢复、角色权限更新/回滚。
+
+---
+## v3.8.7 (2026-08-06) - 列表页布局统一规范 + 平台/租户按钮配置 (D13)
+
+### 背景
+DMS 列表页硬编码风格不统一：搜索区/工具栏/行内操作按钮的摆放、顺序、折叠、权限控制都散落在每个 .vue 文件里，按钮位置东一个西一个；行内操作超 3 个时直接撑爆“操作”列；按钮能否展示没法按租户调整；权限只控制到页面，没控制到按钮。本版本沉淀 Layer 2 第十八章《列表页布局规范》（冻结区） + Layer 4 D13 决策，配套
+新增 platform_button_configs 表 + 9 个后端类 + 1 个前端组件 + 1 个权限指令。
+
+### 核心铁律
+1. 每个列表页必须先有搜索区，查询按钮始终展示并位于工具栏第一位。
+2. 顶部工具栏按钮从左到右固定顺序：`查询 → 重置 → 导入 → 导出 → 新增 → 业务专属`；同组 `gap: 8px`，禁止东一个西一个。
+3. 行内操作按钮数量 > 1 时自动折叠进 `更多 ▾` 下拉，> 4 时全部折叠仅留 1 个最高频平铺。
+4. 所有按钮必须受权限控制，统一通过 `v-has` 指令过滤；无权限按钮不渲染、不留白。
+5. 搜索字段、按钮的可见性由租户管理员在租户后台调整，调整只影响本租户。
+
+### 后端新增
+- Flyway `V59__platform_button_configs.sql`：新建表，2 类唯一键（平台默认 / 租户覆盖），预置 14 条 seed（dealer-applications 8 条 + dealer-profile 6 条）。
+- `PlatformButtonConfig` 实体 / Repository / DTO / Service / 2 个 Controller。
+- `PlatformPageLayoutController`：聚合下发 `GET /api/ui/layout/{pageKey}`，一次返回 filter + columns + toolbar + rowButtons。
+- `MyPermissionsController`：`GET /api/me/permissions` 返回当前用户的全量资源权限码。
+- 修复 `V60__api_call_log_transfer_fields.sql` 中文引号语法错（`‘ → '`）。
+- Dockerfile.aliyun 加 `ENV LANG=C.UTF-8` 修复 maven 编码错。
+
+### 前端新增
+- `frontend-vue/src/directives/has.js`：`v-has` 指令（4 路数据源回退，无权限从 DOM 移除）。
+- `frontend-vue/src/components/ListPageLayout.vue`：统一列表页组件（搜索区 + 工具栏 + 表格 + 行内折叠 + 分页 + 空态）。
+- `utils/auth.js` 新增 getPermissions/setPermissions/clearPermissions。
+- `store/user.js` 登录后自动调用 `/api/me/permissions` 写入 Pinia + localStorage。
+- 重构 `DealerProfileList.vue` 为 ListPageLayout 示范页（pageKey=`dealer-profile`）。
+- `admin-vue/src/views/config/UiConfigs.vue` 增加 `按钮配置` Tab（区分 PLATFORM_DEFAULT / TENANT_OVERRIDE）。
+
+### 平台 / 租户双层覆盖模型
+- `tenant_id IS NULL` → 平台默认（admin 预置，对所有租户生效）
+- `tenant_id = 租户ID` → 租户覆盖（只对当前租户生效）
+- 读路径合并：LinkedHashMap.put(scope+buttonKey, 默认) → put(scope+buttonKey, 覆盖)，同 key 覆盖
+- 唯一键：`UNIQUE (page_key, scope, button_key) WHERE tenant_id IS NULL` + `UNIQUE (tenant_id, page_key, scope, button_key) WHERE tenant_id IS NOT NULL`
+
+### 部署
+- 测试环境已部署并验证：8083 / 后端 health 200；Flyway V59 + V60 成功；/api/ui/layout/dealer-applications 返回 8 条按钮；/api/me/permissions 返回完整权限码。
+- 本地 mvn -B -DskipTests clean package BUILD SUCCESS；frontend-vue + admin-vue vite build 成功。
+
+### 验收清单（每个列表页上线前自检）
+- [ ] 关键字搜索框在第一位，回车可触发查询
+- [ ] `查询` 按钮始终在工具栏第一位
+- [ ] 工具栏按钮按 `查询 → 重置 → 导入 → 导出 → 新增 → 业务` 顺序排列，无错位
+- [ ] 行内按钮 > 1 时折叠到 `更多 ▾`，> 4 时全部折叠
+- [ ] 删除类按钮二次确认
+- [ ] 用无权限账号登录，所有越权按钮不渲染、不留白
+- [ ] 租户管理员隐藏一个搜索字段后，该字段前端不再渲染
+- [ ] 列表为空时空态正确显示
+
+### v3.8.7 增量 (2026-08-06 晚) — 完成所有后续建议
+
+#### 一、权限码对账（V61 / V63）
+- 新增 V61__rbac_button_resources.sql：给 6 个非系统租户各补 128 条 type=button 的 rbac_resources，与 platform_button_configs.permissionCode 一一对应。
+- 新增 V63__button_resource_auto_link.sql：trigger，任何租户新增 type=button 资源自动关联到 strategy_id=1（即 [全部权限]），admin 用户立即生效。
+- admin 用户的权限码从 20 涨到 148（6 api + 14 menu + 128 button）。
+
+#### 二、pageKey 全量灌种（V62）
+- V62__platform_button_configs_seed.sql：16 个 pageKey 共 120 条 platform_button_configs 平台默认按钮。
+- 覆盖：dealer-profile / dealer-applications / sales-orders / purchase-orders / receipts / sales-out / inventory / stock-moves / products / product-mappings / hospitals / contracts / reports / api-call-log / positions / users。
+
+#### 三、老列表页迁移
+- ApiCallLog.vue 重构为 ListPageLayout，保留详情抽屉。
+- ProductMappings.vue 重构为 ListPageLayout，保留租户切换 + 手工新增弹窗。
+- ListPageLayout.vue 加 defineExpose({ load })，支持父组件刷新。
+
+#### 四、验证（测试环境 8.133.193.238:8083）
+- 16 个 pageKey 的 /api/ui/layout/{pageKey} 全部 200。
+- admin 用户 /api/me/permissions 返回 148 条权限码，button 类 128 条。
+- V63 trigger 实测：新增 button 资源后自动挂到 strategy 1。
+- 前端 vite build 成功；ApiCallLog / ProductMappings chunk 已上线。
+- 后端 mvn -B -DskipTests package BUILD SUCCESS。
+
+## v4.2.0 (2026-08-06) - 传输接口（库存查询/销售订单/采购订单）落地与日志增强
+
+### 背景
+原有库存查询（GET /api/inventory）走 JWT 鉴权 + 入站日志，但缺少与库存查询"配对"的写入能力。
+本版本新增两个传输端点，并把 3 个接口全部纳入"传输接口日志"体系（按业务单号回溯）。
+
+### 后端新增
+- `POST /api/orders/transfer`        销售订单传输（同步）。成功返回 `data.code=SO-20260806-00001`；失败 `code` 为业务错误码 + `message` 即失败原因。
+- `POST /api/purchase-orders/transfer` 采购订单传输（同步）。成功返回 `data.code=PO-20260806-00001`；失败同上。
+- 响应 DTO：`com.dms.order.dto.TransferResponse`（id / code / orderType / status / amount）。
+- 调用日志增强：
+  - 新增字段 `biz_key`（业务单号，传输成功=SO-/PO- 单号；库存查询=warehouseId-productId）和 `biz_action`（inventory.query / order.transfer.sales / order.transfer.purchase）。
+  - 新增 Flyway 迁移 `V60__api_call_log_transfer_fields.sql`（含 3 个索引 + 字段注释）。
+  - `ApiCallLogFilter#deriveBizTags` 按 URI 自动打标，方便按业务单号检索。
+
+### 3 个传输/查询接口全景
+| 端点 | 鉴权 | 同步 | 业务单号 | 失败原因 | 日志 action |
+|------|------|------|----------|----------|-------------|
+| `GET  /api/inventory`                   | JWT | 是 | warehouseId-productId | `message` 字段 | `inventory.query` |
+| `POST /api/orders/transfer`             | JWT | 是 | `data.code`（SO-*）   | `message` 字段 | `order.transfer.sales` |
+| `POST /api/purchase-orders/transfer`    | JWT | 是 | `data.code`（PO-*）   | `message` 字段 | `order.transfer.purchase` |
+
+### inventory biz_key 取值优先级（v4.2.0 补丁）
+`ApiCallLogFilter#deriveBizTags` 对 `GET /api/inventory` 的 `biz_key` 抽取规则，按以下顺序生效：
+1. `warehouseId` + `productId` 两个 query 参数拼成 `warehouseId-productId`（如 `1-1`）；任一缺失时该位用 `*` 补齐。
+2. 1 未提供时，回退到响应体 `data.list[0].id`。
+3. 仍取不到时，回退到 `message` 前 32 字符。
+早期版本直接走到第 3 步，导致 `biz_key` 出现 `OK` 之类噪音；本次重打包已修复并部署测试环境。
+
+### 部署
+- 同样模式：本地 `mvn -o -DskipTests package` → 上传 jar → `docker restart`。
+- 阿里云测试环境（8.133.193.238:8082）已就位，v4.2.0 jar md5 `E4008E5DCA62267E4C062DB41E43B288`（2026-08-07 00:03 UTC+8 完成重启并 health UP）。
+- 阿里云生产环境（8.133.193.238:8080/8081）等待用户指令再切。
+
+### 端到端验证（阿里云测试环境）
+- `GET /api/inventory?warehouseId=1&productId=1&page=1&size=3` → HTTP 200，`data.total=7`，`biz_key=1-1`。
+- `POST /api/orders/transfer`（`dealerId=1, productId=1, qty=1, unitPrice=100`）→ `code=0`，`data.id=1220`，`data.code=SO-20260807-00002`，`amount=100.00`，`biz_key=SO-20260807-00002`。
+- `POST /api/purchase-orders/transfer`（`supplierId=5, warehouseId=1, productId=1, qty=1, unitPrice=80`）→ `code=0`，`data.id=82`，`data.code=PO-20260807-00001`，`amount=80.00`，`biz_key=PO-20260807-00001`。
+- `api_call_log` 表最近 3 行 `biz_action` 分别为 `inventory.query` / `order.transfer.sales` / `order.transfer.purchase`，`biz_key` 全部命中预期（无 `OK` 兜底）。
+
+## v4.1.1 (2026-08-05) - 报表体系大改版（13 张报表 + 仪表盘）
+
+### 背景
+原有报表分散、缺乏筛选/导出/穿透/时间范围，仪表盘无筛选条件、布局不可调整。一次性大调整：13 张报表（5 业务 + 5 销售/订单/库存/报台/平台 + 3 v4.1.1 新增），全部支持时间范围、维度筛选、xlsx 导出、跳转穿透。
+
+### 后端 `BusinessReportController` v4.1.1
+- 端点：
+  - `GET /api/reports/sales-ranking`    经销商销售业绩排行
+  - `GET /api/reports/product-top10`     产品销售 TOP10（穿透到订单明细）
+  - `GET /api/reports/inventory-turnover` 库存周转
+  - `GET /api/reports/surgery-stats`     手术报台统计
+  - `GET /api/reports/receivables`       应收款项（账龄 30/60/90/90+）
+  - `GET /api/reports/order-trace`       订单追溯（下单→审批→发货→收货）
+  - `GET /api/reports/inventory-aging`   库存呆滞/超期（v4.1.1 新增）
+  - `GET /api/reports/order-approval-stats` 拒单率/审批时长（v4.1.1 新增）
+  - `GET /api/reports/overview`          报表中心总览
+- 公共筛选：`from/to/dealerId/level/region/status/orderType/productId/hospitalId/limit`
+- v4.1.1 修复：4 处 SQL 字段名错（`d.region`→`d.region_id` join `regions`；`sr.hospital_id`→`sr.terminal_id`；`sales_outs.order_id`→`source_order_id`；`receipts.order_id`→`ref_doc_id+ref_doc_type='ORDER'`）
+
+### 前端 v4.1.1
+- **`src/config/reports.js`**：13 张报表 metadata（title/icon/desc/defaultRange/filters/cols/exportable/drills），统一 `rangeFor()` 工具
+- **`src/components/ReportPage.vue`**：v2 元数据驱动，统一样式（筛选条/汇总/表格/分页/图表），内置 xlsx 导出（`xlsx` 库），支持报表间穿透跳转
+- **`src/views/Dashboard.vue`** v2：顶部筛选（时间范围 + 经销商 + 状态 + 类型，默认本年）、6 个可拖拽 ECharts 区块（销售趋势/库存三态/TOP 经销商/订单漏斗/TOP 医院/7 日活动）、`vuedraggable` 拖拽排序、编辑模式下可隐藏/恢复区块、布局存 localStorage
+- **`src/views/Reports.vue`**：报表中心首页，6 个分组卡片，?key=xxx 直跳单张报表
+- **`src/views/mobile/MDashboard.vue`**：新增"更多报表"6 项链接，点击 `router.push('/reports?key=...')`
+- 6 个 `/m/report-*` 菜单改跳 `/reports?key=...`
+- **`admin-vue/src/views/reports/Overview.vue`**：平台后台报表入口
+- 修复 `ReceiptEdit.vue` 等小 bug
+
+### 部署（仅测试环境）
+- 后端：本地 maven 编译 → jar 上传 `/opt/dms/dms-test/backend-src/target/dms-backend.jar` → `docker cp` 进运行容器 → `docker restart`（已确认 `Started DmsApplication`）
+- 前端：本地 `npm run build` × 2（frontend-vue + admin-vue）→ dist zip 上传 → `docker cp` 进 dms-test-frontend → 解压到 `/usr/share/nginx/html/` → `nginx -s reload`
+- 端到端：10/10 报表端点经 8083 (frontend) → nginx → 8082 (backend) 全 200；admin 入口 301→/admin/
+- 正式环境（8081/8080）未动
+
+## v3.9.1 (2026-08-05) - 导入/导出全量修复并部署测试环境
+
+### 背景
+用户反馈合同列表页点"导出"报 `接口不存在: /api/contracts/actions/export`，授权列表页同样失败。排查发现：前端 `CrudView` 对所有模块无条件显示导入/导出按钮，而后端只实现了部分接口；此前的修复也一直停留在本地，从未部署到服务器。本次做全量审计 + 修复 + 部署 + 端到端验证。
+
+### 后端新增导出接口
+- `GET /api/contracts/actions/export` — 合同列表导出（原生 SQL join `dealers` 取经销商名称）。
+- `GET /api/authorizations/actions/export` — 授权列表导出（复用 `service.list` 的 `fillNames`，带出分类/终端名称）。
+- 新增 6 个导入模板接口 `GET .../actions/export/template`：销售订单、采购订单、库存调整、手术报台、库存移动、收货入库（模板表头与各自 `batch-import` 读取的列名严格一致），模板总数 8 → 14。
+
+### 后端导入修复
+- **供应商导入整体失效**：`SupplierController.batchImport` 走的是与实表不符的 JPA 实体（实体声明 `id UUID`/`status Integer`/`attrs jsonb`，实表是 `id bigint`/`status varchar`/无 `attrs`），必然 `column s1_0.attrs does not exist` → 500。改为与该控制器其余方法一致的原生 SQL upsert，`status` 兼容 `1/0`、`启用/停用`、`active/inactive`。
+- **销售订单导入整体失效**：Hibernate 原生 SQL 把 `'{}'::jsonb` 的 `::jsonb` 当成命名参数，报 `syntax error at or near ":"` → 整批回滚。统一改为 `CAST('{}' AS jsonb)`；`IntegrationController` 同类写法一并修正。
+- **产品导入类型强转崩溃**：Excel 同一列可能是文本也可能是数字，`(Number) value` 直接强转抛 `ClassCastException`。新增 `ExcelImportUtils.coerce(value, type)` 作为统一转换入口，产品/医院/经销商/分类/区域/仓库 6 个控制器的 `setFieldValue` 全部改为委托调用。
+- **仓库导入必填字段缺失**：`warehouses.dealer_id NOT NULL`，但模板与导入列都没有经销商ID，新建必然违反非空约束。模板与导入列补 `经销商ID`，并在 `WarehouseService.upsertByCode` 新建分支前置校验，报错文案改为"经销商ID不能为空"。
+- 采购订单导入补 `docNoGenerator.next("PO")`（`code` 列 NOT NULL UNIQUE，原先必然全行失败），另补 `ADJ`/`MV`/`SURG`。
+- 新增 `ExcelImportUtils.toDateString()`：Excel 日期单元格解析为 `LocalDateTime`，`toString` 得到 `2026-01-31T00:00` 无法入 DATE 列；手术日期、采购期望到货、销售期望交付三处 SQL 改用 `CAST(? AS date)`。
+- `surgery_date` 补空值校验；手术报台导入状态由 `DRAFT` 改为 `COMPLETED`。
+- `ReceiptController.batchImport` 补 `@Transactional`，`(Number)` 强转换成容错 `toLong`。
+
+### 后端导出字段修复
+`ExcelExportUtils.getFieldValue` 反射取不到字段时静默返回 null，导致整列空白。修正：产品（`nameCn`/`nameEn`/`currentPrice`/`taxRate`）、医院（`contact`/`phone`）、收货入库（`receiptType`/`refDocType`/`refDocId`/`warehouseId`/`receivedAt`）、销售订单（移除不存在的 `hospitalName`/`surgeryName`）。另将 2 处硬编码英文 `Content-Disposition` 统一为 `ContentDispositionUtils.attachment(...)`（修中文文件名乱码）。
+
+### 接口日志修复
+`ApiCallLogFilter` 把导出接口的 xlsx 二进制当文本写入 `api_call_log.response_body`（text 列），PostgreSQL 报 `invalid byte sequence for encoding "UTF8": 0x00`，每次导出都刷一批 ERROR。改为仅对文本类 Content-Type 记录响应体，二进制记为 `<binary N bytes, content-type=...>`，并对请求/响应体统一去除 `0x00`。
+
+### 前端
+- `CrudView.vue`：`canImport`/`canExport` 由默认开启（`!== false`）改为显式开启（`=== true`），按钮不再凭空出现；新增 `canDownloadTemplate`，修复原先对所有模块无条件请求 `{api}/actions/export/template` 的 bug。
+- `config/modules.js`：合同、授权补 `exportable: true`（本次报错的直接修复）；销售订单、采购订单、库存调整、手术报台补 `importable/exportable`；库存移动补 `exportable`；销售出库改 `exportable: false`；移除产品线/包装层级/组套的虚假导入导出标记；删除已废弃的 `materials` 模块（后端无控制器/表/迁移）。
+- `api/productMapping.js`：5 处模板字符串漏了 `${id}`（如 `/api/product-mappings//enable`），已补全。
+
+### 部署（仅测试环境）
+- 后端：源码 + 本地编译 jar 上传 `/opt/dms/dms-test/backend-src`，`docker rmi` 后重建 `dms-backend-test:latest`，容器内 `unzip /app/app.jar` grep 确认新代码。构建期 alpine 镜像源 TLS 不稳定导致 `apk add` 失败，改用已装好 curl/tzdata 的上一版镜像为 base 只替换 jar（`Dockerfile.jaronly`）。
+- 前端：本地 `npm run build`（含 `admin-vue` dist 置于 `dist/admin/`），重建 `dms-frontend-test:latest`，容器内确认 `proxy_pass` 指向 `172.17.0.1:8082`。
+- 端到端验证（全部经前端 8083）：14 个导出接口全部 200 且返回 xlsx（`504b` 魔数）、12 个模板接口 200、14 个模块 `batch-import` 均可达、11 个模块真实 Excel 回灌导入成功、供应商 upsert 二次导入正确更新、`api_call_log` 不再报错。
+- 正式环境（8081/8080）未改动，等用户明确指令。
+
 ## v3.9.0 (2026-08-04) - 移动端精简（销售场景）
 
 ### 背景
@@ -554,3 +811,39 @@
 - `npm run build`（frontend-vue）通过。
 - 销售订单/销售出库 API 自动化链路 20 项检查全部通过。
 - 浏览器同源保存销售订单返回新订单 ID。
+
+## v3.8.8 (2026-08-07) - 列表页布局规范真正落地：CrudView 接入 platform_button_configs + 菜单按权限过滤
+
+### 背景
+v3.8.7 沉淀了 D13 规范和基础设施（platform_button_configs 表、v-has 指令、ListPageLayout 组件），但只迁移了 ApiCallLog / DealerProfileList / ProductMappings 三个示范页。`CrudView` 仍然写死工具栏按钮（导入 / 导出 / 新增）和行内操作（详情 / 编辑 / 删除），行内按钮永远平铺不折叠，没读 `platform_button_configs`，菜单仍按 `menu.js` 硬编码渲染——租户管理员完全没有可视化的页面入口去调按钮 / 搜索字段。本版本把所有列表页统一通过 `CrudView` 走 `platform_button_configs` + v-has，菜单按 `permissionCode` 过滤，admin-vue 维护入口完善。
+
+### 核心改动
+1. **CrudView 走 platform_button_configs**
+   - 新增 `composables/usePageLayout.js` 拉 `/api/ui/layout/{pageKey}`，内置 5min 内存缓存。
+   - `CrudView.vue` 顶部工具栏：必含 search/reset + 可选业务按钮，按 sortOrder 排；`v-has` 过滤；permissionCode 未命中则不渲染、不留白。
+   - `CrudView.vue` 行内操作：从 `layout.rowButtons` 读取，>4 个自动折叠到 `更多 ▾`（el-dropdown），平铺时统一 1-4 个，`danger` 位置自动加 `text-danger` 样式和分组线。
+   - `operationWidth` 根据按钮数量自适应：1 个=88px、2-3 个=160px、4 个=240px、>4 折叠=200px。
+2. **菜单按权限码过滤**
+   - `config/menu.js` 39 个菜单项全部加 `permissionCode` 字段（如 `sales_order:view`）。
+   - `layout/index.vue` 渲染前 `menuVisible()` 过滤，无权限的菜单不显示，连空分组也自动隐藏。
+3. **admin-vue 维护入口完善**
+   - `RoleTemplates.vue` 权限点对话框：按 `type` 分组（menu / api / button / other），全选可见、关键字搜索、组级勾选。
+   - `Menus.vue` 已有 `permissionCode` 字段（保留）。
+   - `UiConfigs.vue` 按钮配置 Tab 已支持 PLATFORM_DEFAULT / TENANT_OVERRIDE 双层切换。
+
+### 后端新增
+- Flyway `V64__platform_filter_configs_seed.sql`：26 个 pageKey 灌 keyword 搜索字段 + 业务 select/date 字段（status / dealer / supplier / warehouse / category / level 等），共 83 条 seed。
+- Flyway `V65__platform_button_configs_align.sql`：修正历史 seed 的 pageKey 命名不一致（sales-orders → orders / sales-out → sales-outs），补齐 15 个 pageKey 的工具栏 + 行内按钮种子（categories / dealers / warehouses / suppliers / regions / product-prices / product-lines / product-package-levels / product-bundles / contract-apps / authorizations / sales-returns / purchase-returns / inventory-adjustments / surgery-reports / promotions / roles），同步向每个非系统租户的 `rbac_resources` 写入 79 条新 button 资源。
+- `UiConfigService.filtersForTenant` 加 ALL fallback：业务前台按租户类型精确匹配，无数据时 fallback 到 `ALL`，避免 V64 灌种因 tenant_type 区分而无法触达。
+- 后端编译期 BOM 修复：补写时去掉 UTF-8 BOM（maven-compiler-plugin 拒绝 BOM）。
+
+### 验证
+- 26 个 pageKey 拉 `/api/ui/layout/{pageKey}`：toolbar 3-5、row 3-5、filter 1-5 全部有数据。
+- admin 账号 `/api/me/permissions` 返回 227 个权限码（v3.8.7 是 148 个，新增 79 个 button 资源）。
+- 行内按钮 >4 的 8 个 pageKey（contract-apps / contracts / orders / purchase-orders / sales-outs / receipts / positions / users）走折叠逻辑。
+- 部署到测试服务器 8.133.193.238:8082/8083 端到端验证通过。
+
+### 关联决策
+- Layer 2 §18 列表页布局规范保持冻结（v3.8.7 入冻结区，本版未变更规范文字）。
+- Layer 4 D13：本版本正式落地 D13（CrudView 接入、菜单按权限过滤、admin-vue 维护入口完善）。
+- D12 状态：原文 2026-08-06 已因 PowerShell 编码异常丢失；按上下文重写并锁定 deploy-fast 流程。

@@ -105,6 +105,10 @@ public class WarehouseService {
             if (entity.getName() == null || entity.getName().trim().isEmpty()) {
                 throw new BusinessException(ErrorCode.PARAM_MISSING, "名称不能为空");
             }
+            // warehouses.dealer_id NOT NULL，缺失时直接报参数错误，避免落到数据库约束报错
+            if (entity.getDealerId() == null) {
+                throw new BusinessException(ErrorCode.PARAM_MISSING, "经销商ID不能为空");
+            }
             entity.setId(null);
             entity.setTenantId(tenantId);
             if (entity.getStatus() == null) entity.setStatus("active");

@@ -86,9 +86,9 @@ public class WarehouseController {
 
     @GetMapping("/actions/export/template")
     public ResponseEntity<byte[]> exportTemplate() throws Exception {
-        String[] headers = {"编码", "名称", "类型", "地址", "状态"};
-        String[] fieldNames = {"code", "name", "type", "address", "status"};
-        String[] examples = {"WH-001", "示例仓库", "main", "北京市朝阳区XX路XX号", "active"};
+        String[] headers = {"编码", "名称", "经销商ID", "类型", "地址", "状态"};
+        String[] fieldNames = {"code", "name", "dealerId", "type", "address", "status"};
+        String[] examples = {"WH-001", "示例仓库", "1", "main", "北京市朝阳区XX路XX号", "active"};
 
         byte[] excelBytes = ExcelExportUtils.exportTemplate(headers, fieldNames, examples);
 
@@ -110,8 +110,8 @@ public class WarehouseController {
             return ApiResponse.fail(40002, "Excel 文件中没有数据");
         }
 
-        String[] headers = {"编码", "名称", "类型", "地址", "状态"};
-        String[] fieldNames = {"code", "name", "type", "address", "status"};
+        String[] headers = {"编码", "名称", "经销商ID", "类型", "地址", "状态"};
+        String[] fieldNames = {"code", "name", "dealerId", "type", "address", "status"};
 
         int success = 0, failed = 0;
         java.util.List<java.util.Map<String, Object>> errors = new java.util.ArrayList<>();
@@ -151,13 +151,6 @@ public class WarehouseController {
     private void setFieldValue(Warehouse entity, String fieldName, Object value) throws Exception {
         java.lang.reflect.Field field = Warehouse.class.getDeclaredField(fieldName);
         field.setAccessible(true);
-        Class<?> type = field.getType();
-        if (type == String.class) {
-            field.set(entity, String.valueOf(value));
-        } else if (type == Long.class || type == long.class) {
-            field.set(entity, ((Number) value).longValue());
-        } else {
-            field.set(entity, value);
-        }
+        field.set(entity, ExcelImportUtils.coerce(value, field.getType()));
     }
 }

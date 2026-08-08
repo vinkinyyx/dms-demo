@@ -74,8 +74,8 @@ public class ProductController {
         pq.setSize(10000);
         java.util.List<Product> list = service.list(pq, null).getList();
 
-        String[] headers = {"ID", "编码", "名称", "类型", "分类", "规格", "单位", "成本价", "售价", "状态"};
-        String[] fieldNames = {"id", "code", "name", "productType", "categoryId", "spec", "unit", "costPrice", "salePrice", "status"};
+        String[] headers = {"ID", "编码", "中文名称", "英文名称", "产品类型", "分类ID", "规格型号", "单位", "参考单价", "税率", "状态"};
+        String[] fieldNames = {"id", "code", "nameCn", "nameEn", "productType", "categoryId", "spec", "unit", "currentPrice", "taxRate", "status"};
 
         byte[] excelBytes = ExcelExportUtils.exportToExcel(list, headers, fieldNames);
 
@@ -152,17 +152,6 @@ public class ProductController {
     private void setFieldValue(Product entity, String fieldName, Object value) throws Exception {
         java.lang.reflect.Field field = Product.class.getDeclaredField(fieldName);
         field.setAccessible(true);
-        Class<?> type = field.getType();
-        if (type == String.class) {
-            field.set(entity, String.valueOf(value));
-        } else if (type == Long.class || type == long.class) {
-            field.set(entity, ((Number) value).longValue());
-        } else if (type == Double.class || type == double.class) {
-            field.set(entity, ((Number) value).doubleValue());
-        } else if (type == Boolean.class || type == boolean.class) {
-            field.set(entity, "true".equals(String.valueOf(value).toLowerCase()) || "是".equals(value));
-        } else {
-            field.set(entity, value);
-        }
+        field.set(entity, ExcelImportUtils.coerce(value, field.getType()));
     }
 }

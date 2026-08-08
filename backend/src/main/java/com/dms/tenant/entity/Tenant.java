@@ -22,9 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * 租户实体：承载租户级基础信息、模块启用状态、配额与扩展属性。
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -55,6 +52,27 @@ public class Tenant {
 
     @Column(name = "status", length = 16)
     private String status;
+
+    @Column(name = "tenant_type", length = 16, nullable = false)
+    private String tenantType;
+
+    @Column(name = "owner_manufacturer_id")
+    private UUID ownerManufacturerId;
+
+    @Column(name = "deployment_mode", length = 16, nullable = false)
+    private String deploymentMode;
+
+    @Column(name = "disabled_at")
+    private OffsetDateTime disabledAt;
+
+    @Column(name = "disabled_by")
+    private Long disabledBy;
+
+    @Column(name = "disable_reason", length = 500)
+    private String disableReason;
+
+    @Column(name = "enabled_at")
+    private OffsetDateTime enabledAt;
 
     @Convert(converter = JsonMapConverter.class)
     @Column(name = "modules_enabled", columnDefinition = "jsonb")
@@ -96,9 +114,6 @@ public class Tenant {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
-    /**
-     * 保证 JSONB 字段非 null，避免序列化时出现异常。
-     */
     public void ensureJsonFields() {
         if (modulesEnabled == null) modulesEnabled = new HashMap<>();
         if (quota == null) quota = new HashMap<>();

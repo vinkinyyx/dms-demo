@@ -1,12 +1,69 @@
 # DMS API 接口清单（合并版）
 
-**当前版本**: v3.8.3
-**最后更新**: 2026-08-02
+**当前版本**: v3.9.2
+**最后更新**: 2026-08-06
 
 ---
 
 ## 变更日志
 > 对外开放接口（HMAC 鉴权）见独立文档：`docs/06_API设计/DMS对外开放接口文档.md`，含 POST /open/api/sales-orders、POST /open/api/purchase-orders。
+
+### v3.9.2 (2026-08-06) — 列表页布局 / 按钮配置 / 权限下发 (D13)
+### v3.9.3 (2026-08-06 晚) — button 资源对账 + pageKey 全量灌种 + 老页面迁移
+
+新增迁移：
+- V61 bac_button_resources：6 个非系统租户各补 128 条 	ype=button 的 bac_resources。
+- V62 platform_button_configs_seed：16 个 pageKey 共 120 条平台默认按钮 seed。
+- V63 utton_resource_auto_link：trigger，新增 button 资源自动挂到 strategy 1（“全部权限”）。
+
+前端：
+- `ApiCallLog.vue` / `ProductMappings.vue` 重构为 ListPageLayout；`ListPageLayout.vue` 加 defineExpose({ load })。
+
+
+
+新增接口：
+- GET /api/ui/layout/{pageKey} — 聚合下发 filter + page + toolbar + rowButtons 四套配置（合并平台默认 + 租户覆盖）。
+- GET /api/button-configs/pages/{pageKey}/{scope} — 业务前台只读：scope 为 toolbar / row，返回按 sortOrder 排序的按钮列表。
+- GET /api/admin/buttons?pageKey=&tenantType= — 管理后台：列出某页所有按钮（默认 + 覆盖）。
+- POST /api/admin/buttons/batch — 管理后台：批量保存，body 字段 `scopeLevel` 取值 PLATFORM_DEFAULT / TENANT_OVERRIDE。
+- POST /api/admin/buttons/refresh-cache — 刷新 Redis 缓存。
+- GET /api/me/permissions — 当前用户全量资源权限码（resource.code），前端 v-has 指令使用。
+
+修复：
+- V60__api_call_log_transfer_fields.sql 中文单引号 ‘’ 改为 ASCII '，Flyway 不再校验失败。
+
+### v3.9.1 (2026-08-05) — 导入/导出接口补齐与修正
+
+#### 1. 新增导出接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/contracts/actions/export` | 合同列表导出（ID/合同编号/分类/经销商ID/经销商/生效/截止/状态/创建时间/更新时间） |
+| GET | `/api/authorizations/actions/export` | 授权列表导出（含经销商、授权产品分类、授权医院/终端名称） |
+
+#### 2. 新增导入模板接口（模板总数 8 → 14）
+
+`GET /api/{module}/actions/export/template`，新增模块：`sales-orders`、`purchase-orders`、`inventory-adjustments`、`surgery-reports`、`stock-moves`、`receipts`。模板表头与各自 `POST /api/{module}/batch-import` 读取的列名严格一致。
+
+#### 3. 导入接口行为变更
+
+| 接口 | 变更 |
+|------|------|
+| `POST /api/warehouses/batch-import` | 模板与导入列新增必填项 `经销商ID`（`warehouses.dealer_id` NOT NULL）；缺失时返回“经销商ID不能为空” |
+| `POST /api/suppliers/batch-import` | 改为原生 SQL upsert（原 JPA 实体与实表不符导致 500）；`状态` 兼容 `1/0`、`启用/停用`、`active/inactive` |
+| `POST /api/sales-orders/batch-import` | 修复 `::jsonb` 被 Hibernate 误当命名参数导致的整批回滚 |
+| `POST /api/purchase-orders/batch-import` | 补单号生成（`code` NOT NULL UNIQUE），原先必然全行失败 |
+| `POST /api/products/batch-import` | 修复 Excel 文本/数字混合列的 `ClassCastException` |
+| `POST /api/surgery-reports/batch-import` | 导入状态 `DRAFT` → `COMPLETED`；手术日期补空值校验 |
+| `POST /api/receipts/batch-import` | 补 `@Transactional`，数值转换容错 |
+
+日期列统一经 `ExcelImportUtils.toDateString()` 归一化为 `yyyy-MM-dd` 后以 `CAST(? AS date)` 入库。
+
+#### 4. 接口调用日志
+`ApiCallLogFilter` 仅对文本类 Content-Type 记录响应体；导出类二进制响应记为 `<binary N bytes, content-type=...>`，修复之前每次导出都报 `invalid byte sequence for encoding "UTF8": 0x00` 的问题。
+
+#### 5. 仍未提供的导出（前端已隐藏按钮，非缺陷）
+`/api/inventory/actions/export`、`/api/sales-outs/actions/export`、`/api/orders/actions/export/template`、`/api/contracts|authorizations/actions/export/template`（合同/授权为只读模块，无导入需求）。
 
 ### v3.8.2 (2026-08-02) — 接口调用日志模块
 
@@ -386,3 +443,66 @@ ApiCallLogService.ExternalResult r = apiCallLogService.callExternal(call);
 - `GET/PUT/DELETE /api/purchase-returns/{id}` — 详情/编辑/删除
 - `POST /api/purchase-returns/{id}/submit|approve|reject|cancel` — 状态机；approve 自动生成 RGI 出库草稿
 - 下游 RGR 走 `/api/receipts` 收货；RGI 走 `/api/sales-outs` 发货。
+
+
+### v4.2.0 (2026-08-06) - 内部传输接口（与对外 OpenAPI 并列）
+
+> 内部传输接口：JWT 鉴权、调用方已登录 DMS 租户；与 `docs/06_API设计/DMS对外开放接口文档.md` 的 HMAC 对外接口为两套独立通道。`/transfer` 端点统一返回 `{ code, message, data: { id, code, orderType, status, amount } }`，成功时 `code=0`、`data.code` 即业务单号，失败时 `code!=0`、`message` 即失败原因。
+
+| 方法 | 路径 | 说明 | 鉴权 | 业务单号（日志 biz_key） |
+|------|------|------|------|--------------------------|
+| POST | `/api/orders/transfer` | 销售订单传输。请求体复用 `OrderCreateRequest`（必填 `dealerId` + `lines`）。事务内同步落单 + 授权校验 + 促销计算 + 状态机 DRAFT。 | JWT | `data.code`（`SO-YYYYMMDD-#####`） |
+| POST | `/api/purchase-orders/transfer` | 采购订单传输。请求体 Map（必填 `supplierId` / `warehouseId` / `lines`）。事务内同步落单 + 写明细 + 写状态历史。 | JWT | `data.code`（`PO-YYYYMMDD-#####`） |
+| GET  | `/api/inventory` | 库存查询。`dealerId/productId/warehouseId/batchNo/serialNo/keyword/stockStatus/page/size/sort`。join 产品/仓库/经销商返回丰富字段。 | JWT | `warehouseId-productId` 或首条 `data.list[0].id` |
+
+**调用示例（销售订单传输）**
+```bash
+curl -X POST http://host:8080/api/orders/transfer   -H "Authorization: Bearer ${JWT}"   -H "Content-Type: application/json"   -d '{
+    "dealerId": 12,
+    "orderType": "NORMAL",
+    "expectedDate": "2026-08-15",
+    "remark": "上游单号 X123",
+    "lines": [
+      { "productId": 101, "qty": 5, "unitPrice": 199.00, "taxRate": 0.13 }
+    ]
+  }'
+```
+
+**成功响应**
+```json
+{
+  "code": 0,
+  "message": "OK",
+  "data": {
+    "id": 1024,
+    "code": "SO-20260806-00001",
+    "orderType": "NORMAL",
+    "status": "DRAFT",
+    "amount": 995.00
+  }
+}
+```
+
+**失败响应**（如经销商不存在）
+```json
+{
+  "code": 40401,
+  "message": "dealerId=12 不存在",
+  "data": null
+}
+```
+
+### v4.2.0 接口调用日志（api_call_log）字段扩展
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `biz_key` | VARCHAR(64) | 业务单号：SO-/PO- 订单编号，库存查询时为 `warehouseId-productId` |
+| `biz_action` | VARCHAR(64) | 业务动作标签：`inventory.query` / `order.transfer.sales` / `order.transfer.purchase` |
+
+**新增索引**：
+- `idx_api_call_log_biz_key`（按业务单号检索）
+- `idx_api_call_log_biz_action (biz_action, started_at DESC)`（按动作筛选 + 时间倒序）
+- `idx_api_call_log_path_time (path, started_at DESC)`（按路径 + 时间倒序）
+
+**后台查询**（仅 admin）：`GET /api/admin/api-call-logs?bizKey=SO-20260806-00001` 或 `?bizAction=order.transfer.sales&startTime=2026-08-06`
+

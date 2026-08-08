@@ -36,6 +36,14 @@ public class ApiCallLog {
     @Column(length = 32)
     private String endpoint;
 
+    /** 业务单号: SO-/PO- 订单编号、productCode|warehouseCode 等。传输接口专用。 */
+    @Column(name = "biz_key", length = 64)
+    private String bizKey;
+
+    /** 业务动作标签: inventory.query / order.transfer.sales / order.transfer.purchase */
+    @Column(name = "biz_action", length = 64)
+    private String bizAction;
+
     @Column(name = "http_method", length = 8)
     private String httpMethod;
 

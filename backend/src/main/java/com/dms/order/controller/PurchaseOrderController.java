@@ -7,7 +7,10 @@ package com.dms.order.controller;
 
 import com.dms.annotation.OperationLog;
 import com.dms.common.ApiResponse;
+import com.dms.common.BusinessException;
+import com.dms.common.ErrorCode;
 import com.dms.common.enums.OperationAction;
+import com.dms.order.dto.TransferResponse;
 import com.dms.common.util.ExcelExportUtils;
 import com.dms.common.util.ContentDispositionUtils;
 import com.dms.common.util.ExcelImportUtils;
@@ -174,6 +177,90 @@ public class PurchaseOrderController {
         res.put("code", code);
         audit(poId, "CREATE");
         return ApiResponse.ok(res);
+    }
+
+    /**
+     * 采购订单传输接口（同步）。
+     *
+     * <p>外部/上游系统通过本接口将采购订单一次性推送进 DMS。走 JWT 鉴权，
+     * 同步事务（任何步骤失败整体回滚）。</p>
+     *
+     * <p>请求体（与 {@code POST /api/purchase-orders} 一致）：</p>
+     *
+     * <p>成功：{@code code=0}，{@code data.code} 即新采购单号（PO-20260806-00001）。</p>
+     * <p>失败：{@code code!=0}，{@code message} 即失败原因。</p>
+     */
+    @PostMapping("/transfer")
+    @OperationLog(businessType = "purchaseOrder", action = OperationAction.CREATE, remark = "采购订单传输")
+    @Transactional
+    public ApiResponse<TransferResponse> transfer(@RequestBody(required = false) Map<String, Object> body) {
+        if (body == null) {
+            return ApiResponse.fail(ErrorCode.PARAM_MISSING, "请求体不能为空");
+        }
+        if (body.get("supplierId") == null) {
+            return ApiResponse.fail(ErrorCode.PARAM_MISSING, "supplierId 不能为空");
+        }
+        if (body.get("warehouseId") == null) {
+            return ApiResponse.fail(ErrorCode.PARAM_MISSING, "warehouseId 不能为空");
+        }
+        Object linesObj = body.get("lines");
+        if (!(linesObj instanceof List) || ((List<?>) linesObj).isEmpty()) {
+            return ApiResponse.fail(ErrorCode.PARAM_MISSING, "采购订单明细不能为空");
+        }
+        for (Object lo : (List<?>) linesObj) {
+            if (!(lo instanceof Map)) continue;
+            Map<?, ?> lm = (Map<?, ?>) lo;
+            if (lm.get("productId") == null) {
+                return ApiResponse.fail(ErrorCode.PARAM_MISSING, "productId 不能为空");
+            }
+            if (lm.get("qty") == null) {
+                return ApiResponse.fail(ErrorCode.PARAM_MISSING, "qty 不能为空");
+            }
+        }
+        try {
+            boolean isRed = Boolean.TRUE.equals(body.get("isRed"));
+            String code = docNoGenerator.next(isRed ? "RPO" : "PO");
+            BigDecimal total = calcTotal(body);
+
+            var insertPo = em.createNativeQuery(
+                    "INSERT INTO purchase_orders (tenant_id, code, order_type, supplier_id, supplier_name, warehouse_id, is_red, " +
+                    "amount_incl_tax, final_amount, expected_date, status, remark, extra, created_at, updated_at) " +
+                    "VALUES (:tid, :code, :ot, :sid, :sname, :wid, :isred, :amt, :famt, CAST(:ed AS date), 'DRAFT', :rmk, CAST(:ext AS jsonb), now(), now()) RETURNING id");
+            UUID tid = TenantContext.getTenantId();
+            insertPo.setParameter("tid", tid);
+            insertPo.setParameter("code", code);
+            insertPo.setParameter("ot", body.getOrDefault("orderType", "NORMAL"));
+            insertPo.setParameter("sid", body.get("supplierId"));
+            insertPo.setParameter("sname", body.getOrDefault("supplierName", ""));
+            insertPo.setParameter("wid", body.get("warehouseId"));
+            insertPo.setParameter("isred", isRed);
+            insertPo.setParameter("amt", total);
+            insertPo.setParameter("famt", total);
+            insertPo.setParameter("ed", body.get("expectedDate"));
+            insertPo.setParameter("rmk", body.getOrDefault("remark", ""));
+            insertPo.setParameter("ext", extraToJson(body.get("extra")));
+            Long poId = ((Number) insertPo.getSingleResult()).longValue();
+
+            insertLines(poId, body);
+            audit(poId, "CREATE");
+
+            log.info("[transfer] 采购订单创建成功 id={} code={} supplierId={} remark={}",
+                    poId, code, body.get("supplierId"), body.get("remark"));
+            TransferResponse resp = TransferResponse.builder()
+                    .id(poId)
+                    .code(code)
+                    .orderType(String.valueOf(body.getOrDefault("orderType", "NORMAL")))
+                    .status("DRAFT")
+                    .amount(total)
+                    .build();
+            return ApiResponse.ok(resp);
+        } catch (BusinessException be) {
+            log.warn("[transfer] 采购订单创建失败: {}", be.getMessage());
+            return ApiResponse.fail(be.getErrorCode(), be.getMessage());
+        } catch (Exception e) {
+            log.error("[transfer] 采购订单创建异常", e);
+            return ApiResponse.fail(ErrorCode.INTERNAL_ERROR, "采购订单创建失败: " + e.getMessage());
+        }
     }
 
     /** 更新（仅 DRAFT 可改） */

@@ -1,24 +1,77 @@
 <template>
   <div class="crud-container">
-    <div class="panel-title">{{ config.label || '数据管理' }}</div>
+    <div class="panel-title">{{ config.label || config.title || '数据管理' }}</div>
     <div class="page-toolbar">
-      <el-input v-if="searchable" v-model="keyword" placeholder="关键词搜索" clearable style="width: 220px" @keyup.enter="reload">
+      <template v-for="f in layoutFilterFields" :key="f.filterKey">
+        <el-input
+          v-if="f.componentType === 'input'"
+          v-model="layoutFilters[f.filterKey]"
+          :placeholder="f.placeholder || f.label"
+          clearable
+          style="width: 220px"
+          @keyup.enter="reload"
+        />
+        <el-select
+          v-else-if="f.componentType === 'select'"
+          v-model="layoutFilters[f.filterKey]"
+          :placeholder="f.placeholder || f.label"
+          :multiple="!!f.multiple"
+          clearable
+          style="width: 160px"
+          @change="reload"
+        >
+          <el-option v-for="o in filterOptions(f)" :key="o.value" :label="o.label" :value="o.value" />
+        </el-select>
+        <el-date-picker
+          v-else-if="f.componentType === 'date'"
+          v-model="layoutFilters[f.filterKey]"
+          type="date"
+          value-format="YYYY-MM-DD"
+          :placeholder="f.placeholder || f.label"
+          clearable
+          style="width: 160px"
+          @change="reload"
+        />
+        <el-date-picker
+          v-else-if="f.componentType === 'date-range'"
+          v-model="layoutRangeFilters[f.filterKey]"
+          type="daterange"
+          value-format="YYYY-MM-DD"
+          :start-placeholder="f.label + '开始'"
+          :end-placeholder="f.label + '结束'"
+          clearable
+          style="width: 260px"
+          @change="reload"
+        />
+      </template>
+
+      <el-input v-if="showLegacyKeyword" v-model="keyword" placeholder="关键词搜索" clearable style="width: 220px" @keyup.enter="reload">
         <template #prefix><el-icon><Search /></el-icon></template>
       </el-input>
-      <template v-for="f in filterFields" :key="f.k">
+      <template v-for="f in legacyFilterFields" :key="f.k">
         <el-select v-if="f.filter.type === 'select'" v-model="colFilters[f.k]" :placeholder="f.l" clearable
           style="width: 150px" @change="reload">
           <el-option v-for="o in f.filter.options" :key="o.value" :label="o.label" :value="o.value" />
         </el-select>
         <el-date-picker v-else-if="f.filter.type === 'date'" v-model="colFilters[f.k]" type="date" value-format="YYYY-MM-DD"
           :placeholder="f.l" clearable style="width: 150px" @change="reload" />
+        <el-input v-else-if="f.filter.type === 'text'" v-model="colFilters[f.k]" :placeholder="f.l" clearable
+          style="width: 180px" @keyup.enter="reload" />
+        <el-input-number v-else-if="f.filter.type === 'number'" v-model="colFilters[f.k]" :placeholder="f.l" controls-position="right"
+          :min="0" style="width: 130px" @change="reload" />
       </template>
+
       <el-button type="primary" @click="reload"><el-icon><Search /></el-icon>查询</el-button>
+      <el-button @click="onResetForm"><el-icon><RefreshLeft /></el-icon>重置</el-button>
       <div class="spacer" />
       <slot name="extra-actions" />
-      <el-button v-if="canImport" type="success" @click="handleImport"><el-icon><Upload /></el-icon>导入</el-button>
-      <el-button v-if="canExport" type="warning" @click="handleExport"><el-icon><Download /></el-icon>导出</el-button>
-      <el-button v-if="canCreate" type="primary" @click="onCreate"><el-icon><Plus /></el-icon>新增</el-button>
+      <template v-for="b in extraToolbarButtons" :key="b.buttonKey">
+        <el-button
+          :type="b.buttonType || 'default'"
+          v-has="b.permissionCode"
+          @click="onToolbarButtonClick(b)"
+        >{{ b.label }}</el-button>
+      </template>
     </div>
 
     <el-table :data="rows" v-loading="loading" border stripe size="small" @sort-change="onSortChange" :default-sort="{ prop: 'updatedAt', order: 'descending' }">
@@ -35,17 +88,39 @@
           <el-link v-else-if="c.link && row[c.link.valueKey] != null" type="primary"
             @click="goLink(c.link, row)">{{ linkLabel(c, row) }}</el-link>
           <el-link v-else-if="c.k === 'code' && config.detailable" type="primary" @click="openDetail(row)">{{ row[c.k] }}</el-link>
-          <span v-else>{{ dictLabel(c, row[c.k]) }}</span>
+          <span v-else>{{ displayCell(c, row[c.k]) }}</span>
         </template>
       </el-table-column>
       <el-table-column label="操作" fixed="right" :width="operationWidth">
         <template #default="{ row }">
           <div class="row-actions">
-            <el-button v-if="showDetailButton" size="small" @click="openDetail(row)">详情</el-button>
-            <el-button v-if="canEdit && !config.noEdit && rowEditable(row)" size="small" type="primary" @click="openForm(row)">编辑</el-button>
-            <el-button v-for="a in rowActions(row)" :key="a.key || a.label" size="small" :type="a.type || 'primary'"
-              @click="doAction(row, a)">{{ stripEmoji(a.label) }}</el-button>
-            <el-button v-if="canDelete && rowDeletable(row)" size="small" type="danger" @click="onDelete(row)">删除</el-button>
+            <template v-for="(b, idx) in visibleFlatRowButtons(row)" :key="b.buttonKey + '_' + idx">
+              <el-button
+                v-if="idx < maxFlatRowButtons"
+                size="small"
+                :type="b.buttonType || 'default'"
+                v-has="b.permissionCode"
+                @click="onRowButtonClick(b, row)"
+              >{{ b.label }}</el-button>
+            </template>
+            <el-dropdown v-if="overflowRowButtons(row).length" size="small" trigger="click">
+              <el-button size="small">更多<i class="el-icon--right"><el-icon><ArrowDown /></el-icon></i></el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <template v-for="b in overflowRowButtons(row)" :key="b.buttonKey">
+                    <el-dropdown-item
+                      v-has="b.permissionCode"
+                      :divided="b.rowButtonPosition === 'danger'"
+                      @click="onRowButtonClick(b, row)"
+                    >
+                      <span :class="{ 'text-danger': b.buttonType === 'danger' || b.rowButtonPosition === 'danger' }">
+                        {{ b.label }}
+                      </span>
+                    </el-dropdown-item>
+                  </template>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
         </template>
       </el-table-column>
@@ -87,7 +162,7 @@
     </div>
 
     <!-- 表单抽屉 -->
-    <el-drawer v-model="formVisible" :direction="'rtl'" :size="'100%'" :title="editing ? '编辑' : '新增'" :modal="true" :close-on-click-modal="false" destroy-on-close>
+    <el-drawer v-model="formVisible" direction="rtl" size="100%" :title="editing ? '??' : '??'" :modal="true" :close-on-click-modal="false" destroy-on-close>
       <div class="crud-form-container" :class="{ 'has-lines': hasLines }">
         <el-form :model="formData" label-width="150px">
           <template v-for="grp in groupedFields" :key="grp.name">
@@ -160,7 +235,7 @@
         <el-button type="primary">选择Excel文件</el-button>
       </el-upload>
       <p style="margin-top:12px;color:#909399">支持 .xlsx 和 .xls 格式，请按模板填写数据。导入按“编码”判断：编码已存在则更新该行（留空的列保留原值），不存在则新增。</p>
-      <el-button size="small" type="text" :loading="tplDownloading" @click="downloadTemplate">下载导入模板</el-button>
+      <el-button v-if="canDownloadTemplate" size="small" type="text" :loading="tplDownloading" @click="downloadTemplate">下载导入模板</el-button>
       <template #footer>
         <el-button @click="importVisible = false">取消</el-button>
         <el-button type="primary" :loading="importing" @click="submitImport">确认导入</el-button>
@@ -173,14 +248,16 @@
 import { ref, reactive, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Upload, Download, Filter, Search, Plus } from '@element-plus/icons-vue'
+import { Upload, Download, Filter, Search, Plus, ArrowDown, RefreshLeft } from '@element-plus/icons-vue'
 import ResourcePicker from '@/components/ResourcePicker.vue'
 import MultiSelectPicker from '@/components/MultiSelectPicker.vue'
 import LinesEditor from '@/components/LinesEditor.vue'
 import AttachmentUploader from '@/components/AttachmentUploader.vue'
 import { listResource, createResource, updateResource, deleteResource, getDetail, actionResource, getOperationLogs } from '@/api/crud'
-import { statusText, statusTagType, fmt, labelOf, reloadDicts } from '@/utils/dict'
+import { statusText, statusTagType, fmt, labelOf, reloadDicts, loadDict, getDictOptions } from '@/utils/dict'
 import { getToken } from '@/utils/auth'
+import { formatAuto } from '@/utils/format'
+import { usePageLayout, invalidatePageLayoutCache } from '@/composables/usePageLayout'
 
 function dictLabel(col, v) {
   if (v == null || v === '') return '-'
@@ -195,10 +272,16 @@ function dictLabel(col, v) {
 const props = defineProps({ config: { type: Object, required: true } })
 const router = useRouter()
 
+// === D13: 拉取 pageKey 布局配置（platform_button_configs 合并：平台默认 + 租户覆盖） ===
+const { layout: pageLayout, load: loadPageLayout, visibleToolbar, visibleRowButtons } = usePageLayout(props.config && props.config.key)
+watch(() => props.config && props.config.key, (k) => { invalidatePageLayoutCache(k); loadPageLayout(true) }, { immediate: false })
+
 const rows = ref([])
 const loading = ref(false)
 const keyword = ref('')
 const colFilters = reactive({})
+const layoutFilters = reactive({})
+const layoutRangeFilters = reactive({})
 const page = ref(1)
 const size = ref(20)
 const total = ref(0)
@@ -234,20 +317,27 @@ const searchable = computed(() => props.config.searchable !== false)
 const canCreate = computed(() => !props.config.readonly && !props.config.noCreate)
 const canEdit = computed(() => !props.config.readonly)
 const canDelete = computed(() => !props.config.readonly && !props.config.noDelete)
-const canImport = computed(() => !props.config.readonly && props.config.importable !== false)
-const canExport = computed(() => props.config.exportable !== false)
+const canImport = computed(() => !props.config.readonly && props.config.importable === true)
+const canExport = computed(() => props.config.exportable === true)
+const canDownloadTemplate = computed(() => canImport.value && props.config.templateable !== false)
 const hasCodeColumn = computed(() => (props.config.cols || []).some((c) => c.k === 'code'))
 const showDetailButton = computed(() => props.config.showDetailButton === true || !props.config.detailable || !hasCodeColumn.value)
-const operationWidth = computed(() => {
-  let w = 0
-  if (showDetailButton.value) w += 66
-  if (canEdit.value && !props.config.noEdit) w += 60
-  if (canDelete.value) w += 62
-  w += (props.config.maxActions || 0) * 76
-  return Math.max(w, 88)
-})
 
-const filterFields = computed(() => (props.config.cols || []).filter((c) => c.filter))
+
+const activeLayoutFilterKeys = computed(() => new Set((pageLayout.filters || [])
+  .filter((f) => f.visible !== false && f.status !== 'inactive')
+  .map((f) => f.filterKey)))
+
+const layoutFilterFields = computed(() => (pageLayout.filters || [])
+  .filter((f) => f.visible !== false && f.status !== 'inactive')
+  .slice()
+  .sort((a, b) => (a.sortOrder || 100) - (b.sortOrder || 100)))
+
+const hasLayoutFilters = computed(() => layoutFilterFields.value.length > 0)
+const showLegacyKeyword = computed(() => !hasLayoutFilters.value)
+const legacyFilterFields = computed(() => hasLayoutFilters.value
+  ? []
+  : (props.config.cols || []).filter((c) => c.filter))
 
 const groupedFields = computed(() => {
   const fields = props.config.form || []
@@ -278,10 +368,17 @@ const detailKeys = computed(() => {
 })
 const detailLineKeys = computed(() => (detailLines.value.length ? Object.keys(detailLines.value[0]).filter((k) => k !== 'id' && typeof detailLines.value[0][k] !== 'object') : []))
 
-watch(() => props.config, () => {
+watch(() => props.config, async () => {
   page.value = 1
   keyword.value = ''
   Object.keys(colFilters).forEach((k) => delete colFilters[k])
+  Object.keys(layoutFilters).forEach((k) => delete layoutFilters[k])
+  Object.keys(layoutRangeFilters).forEach((k) => delete layoutRangeFilters[k])
+  if (props.config && props.config.key) {
+    invalidatePageLayoutCache(props.config.key)
+    await loadPageLayout(true)
+  }
+  await Promise.all(layoutFilterFields.value.map((f) => f.dictType ? loadDict(f.dictType).catch(() => {}) : null))
   fetchData()
 }, { immediate: true })
 
@@ -291,11 +388,155 @@ const hasLines = computed(() => (props.config.form || []).some((f) => f.type ===
 function pickerResource(f) { return f.type === 'product-picker' ? 'products' : (f.picker && f.picker.resource) || f.picker }
 function stripEmoji(s) { return String(s || '').replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF✅❌✓]/gu, '').trim() }
 
+
+// === D13: 工具栏按钮由 layout 驱动 ===
+// 必含按钮：search/reset；其余为业务按钮（按 sortOrder 排）
+const mustButtonKeys = ['search', 'reset']
+const extraToolbarButtons = computed(() => visibleToolbar()
+  .filter((b) => !mustButtonKeys.includes(b.buttonKey)))
+
+function onResetForm() {
+  keyword.value = ''
+  Object.keys(colFilters).forEach((k) => delete colFilters[k])
+  Object.keys(layoutFilters).forEach((k) => delete layoutFilters[k])
+  Object.keys(layoutRangeFilters).forEach((k) => delete layoutRangeFilters[k])
+  page.value = 1
+  fetchData()
+}
+
+// === D13: 行内按钮由 layout.rowButtons 驱动，支持折叠 ===
+const maxFlatRowButtons = computed(() => visibleRowButtons().length <= 1 ? 1 : 1)
+function visibleFlatRowButtons(row) {
+  return visibleRowButtons().filter((b) => rowActionVisible(b, row))
+}
+function overflowRowButtons(row) {
+  const flat = visibleFlatRowButtons(row)
+  if (flat.length <= maxFlatRowButtons.value) return []
+  return flat.slice(maxFlatRowButtons.value)
+}
+function rowActionVisible(b, row) {
+  if (b.statusIn && Array.isArray(b.statusIn) && b.statusIn.length && !b.statusIn.includes(row && row.status)) return false
+  if (b.statusNotIn && Array.isArray(b.statusNotIn) && b.statusNotIn.length && b.statusNotIn.includes(row && row.status)) return false
+  const legacy = legacyActionForButton(b, row)
+  if (legacy && Array.isArray(legacy.when) && !legacy.when.includes(row && row.status)) return false
+  return true
+}
+
+function legacyActionForButton(b, row) {
+  const cfg = props.config || {}
+  if (b.buttonKey === 'edit') return { key: 'edit' }
+  if (b.buttonKey === 'delete') return { key: 'delete' }
+  if (b.buttonKey === 'view') {
+    if (cfg.detailPath) return { key: 'view', isRoute: true, path: cfg.detailPath }
+    if (cfg.statusActions) {
+      const list = Array.isArray(cfg.statusActions) ? cfg.statusActions : (cfg.statusActions[row && row.status] || [])
+      const open = list.find((a) => normalizeActionKey(a) === 'open')
+      if (open) return open
+    }
+    if (Array.isArray(cfg.actions)) {
+      const open = cfg.actions.find((a) => normalizeActionKey(a) === 'open')
+      if (open) return open
+    }
+    return { key: 'view' }
+  }
+  if (cfg.statusActions) {
+    const list = Array.isArray(cfg.statusActions) ? cfg.statusActions : (cfg.statusActions[row && row.status] || [])
+    const exact = list.find((a) => normalizeActionKey(a) === b.buttonKey)
+    if (exact) return exact
+  }
+  if (Array.isArray(cfg.actions)) {
+    const exact = cfg.actions.find((a) => normalizeActionKey(a) === b.buttonKey)
+    if (exact) return exact
+  }
+  const standardActions = {
+    submit: { method: 'POST', path: '/submit', type: 'warning', confirm: '确认提交？' },
+    approve: { method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过？' },
+    reject: { method: 'POST', path: '/reject', type: 'danger', confirm: '确认驳回？' },
+    cancel: { method: 'POST', path: '/cancel', type: 'warning', confirm: '确认取消？' },
+    confirm: { method: 'POST', path: '/confirm', type: 'success', confirm: '确认执行？' },
+    execute: { method: 'POST', path: '/execute', type: 'success', confirm: '确认执行？' }
+  }
+  return standardActions[b.buttonKey] ? { key: b.buttonKey, ...standardActions[b.buttonKey] } : null
+}
+
+function normalizeActionKey(a) {
+  return a.key || a.buttonKey || actionKeyFromPath(a.path)
+}
+
+function actionKeyFromPath(path) {
+  if (!path) return ''
+  return String(path).replace(/^\//, '').replace(/[^a-zA-Z0-9]+(.)/g, (_, c) => c.toUpperCase())
+}
+
+function filterOptions(f) {
+  if (Array.isArray(f.options) && f.options.length) return f.options
+  if (f.dictType) return getDictOptions(f.dictType)
+  const col = (props.config.cols || []).find((c) => c.k === f.filterKey)
+  return col && col.filter ? col.filter.options || [] : []
+}
+
+function onToolbarButtonClick(b) {
+  // 内置：search/reset 由布局代码直接处理；其余按 buttonKey 分发
+  if (b.buttonKey === 'import') return handleImport()
+  if (b.buttonKey === 'export') return handleExport()
+  if (b.buttonKey === 'create') return onCreate()
+  if (b.buttonKey === 'search') return reload()
+  if (b.buttonKey === 'reset') return onResetForm()
+  if (b.buttonKey === 'batch_delete') {
+    // 业务模块可在 config.batchDeleteHandler 提供
+    if (typeof props.config.batchDeleteHandler === 'function') {
+      return props.config.batchDeleteHandler(selectedRows.value)
+    }
+    ElMessage.warning('请配置 config.batchDeleteHandler')
+    return
+  }
+  // auto: config.toolbarHandlers?.['buttonKey']?.(b)
+  if (props.config.toolbarHandlers && typeof props.config.toolbarHandlers[b.buttonKey] === 'function') {
+    return props.config.toolbarHandlers[b.buttonKey](b)
+  }
+  ElMessage.info('未配置按钮 ' + b.buttonKey + ' 的回调，请在 config.toolbarHandlers 中提供')
+}
+
+async function onRowButtonClick(b, row) {
+  if (props.config.rowActionHandlers && typeof props.config.rowActionHandlers[b.buttonKey] === 'function') {
+    return props.config.rowActionHandlers[b.buttonKey](row, b)
+  }
+  if (b.buttonKey === 'view') {
+    const legacyView = legacyActionForButton(b, row)
+    if (legacyView && legacyView.key !== 'view') return doAction(row, legacyView)
+    return openDetail(row)
+  }
+  if (b.buttonKey === 'edit') return openForm(row)
+  if (b.buttonKey === 'delete') return onDelete(row)
+  const legacy = legacyActionForButton(b, row)
+  if (legacy) return doAction(row, legacy)
+  ElMessage.info('未配置按钮 ' + b.buttonKey + ' 的回调')
+}
+
+const selectedRows = ref([])
+
+// === D13: 动态 operationWidth 适配折叠 ===
+const operationWidth = computed(() => {
+  const n = visibleRowButtons().length
+  if (n <= 1) return 96
+  return 180
+})
 async function fetchData() {
   loading.value = true
   try {
     const params = { page: page.value, size: size.value, limit: size.value }
     if (keyword.value.trim()) params.keyword = keyword.value.trim()
+    Object.keys(layoutFilters).forEach((k) => {
+      const v = layoutFilters[k]
+      if (v !== '' && v != null) params[k] = v
+    })
+    Object.keys(layoutRangeFilters).forEach((k) => {
+      const v = layoutRangeFilters[k]
+      if (Array.isArray(v) && v.length === 2) {
+        params[k + 'From'] = v[0]
+        params[k + 'To'] = v[1]
+      }
+    })
     Object.keys(colFilters).forEach((k) => { if (colFilters[k] !== '' && colFilters[k] != null) params[k] = colFilters[k] })
     if (sortField.value) params.sort = sortField.value + ',' + (sortOrder.value === 'ascending' ? 'asc' : 'desc')
     if (props.config.extraParams) Object.assign(params, props.config.extraParams)
@@ -315,6 +556,10 @@ function onSizeChange() { page.value = 1; fetchData() }
 function onSortChange({ prop, order }) { sortField.value = prop; sortOrder.value = order; fetchData() }
 
 function linkLabel(c, row) { return c.linkLabelKey && row[c.linkLabelKey] ? row[c.linkLabelKey] : row[c.k] }
+function displayCell(c, value) {
+  const label = dictLabel(c, value)
+  return label === value ? formatAuto(value, c.k) : label
+}
 function goLink(link, row) { router.push('/m/' + link.menu) }
 
 
@@ -762,3 +1007,7 @@ function onImportError(err, file) {
 .crud-form-container { padding: 20px; max-width: 1200px; margin: 0 auto; }
 .crud-form-container.has-lines { max-width: 100%; padding: 20px 24px; }
 </style>
+
+
+
+

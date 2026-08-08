@@ -32,7 +32,16 @@ public enum ErrorCode {
 
     RESOURCE_IN_USE(40903, "资源正在被使用，无法删除"),
     HAS_REFERENCES(40904, "存在引用记录，无法删除"),
-    CANNOT_DELETE(40905, "不可删除：该资源已被业务数据引用");
+    CANNOT_DELETE(40905, "不可删除：该资源已被业务数据引用"),
+
+    TENANT_DISABLED(40302, "租户已停用"),
+    TENANT_NOT_FOUND(40402, "租户不存在"),
+    DEALER_ALREADY_BOUND(40906, "dealer 已被启用中的经销商租户绑定"),
+    TENANT_ADMIN_EXISTS(40907, "该租户已存在启用中的租户管理员"),
+    PRODUCT_MAPPING_CONFLICT(40908, "产品对码冲突"),
+    INVALID_MANUFACTURER_SCOPE(40303, "无权访问其他厂家数据"),
+    PLATFORM_AUTH_REQUIRED(40104, "需要平台后台登录"),
+    UI_CONFIG_INVALID(40004, "页面配置不合法");
 
     private final Integer code;
     private final String message;
@@ -42,3 +51,4 @@ public enum ErrorCode {
         this.message = message;
     }
 }
+

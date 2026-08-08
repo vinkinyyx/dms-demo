@@ -20,8 +20,8 @@
         <el-descriptions-item label="状态">
           <el-tag :type="statusTagType(receipt.status)" size="small">{{ statusText(receipt.status) }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ receipt.createdAt || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="更新时间">{{ receipt.updatedAt || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="????">{{ formatDateTime(receipt.createdAt) }}</el-descriptions-item>
+        <el-descriptions-item label="????">{{ formatDateTime(receipt.updatedAt) }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
 
@@ -36,14 +36,14 @@
         <el-descriptions-item label="采购状态"><el-tag :type="statusTagType(receipt.sourcePo.status)" size="small">{{ statusText(receipt.sourcePo.status) }}</el-tag></el-descriptions-item>
         <el-descriptions-item label="供应商">{{ receipt.sourcePo.supplierName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="入库仓库">{{ receipt.sourcePo.warehouseName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="期望到货">{{ receipt.sourcePo.expectedDate || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="????">{{ formatDate(receipt.sourcePo.expectedDate) }}</el-descriptions-item>
         <el-descriptions-item label="含税金额">{{ receipt.sourcePo.amountInclTax != null ? receipt.sourcePo.amountInclTax : '-' }}</el-descriptions-item>
         <el-descriptions-item label="税额">{{ receipt.sourcePo.taxAmount != null ? receipt.sourcePo.taxAmount : '-' }}</el-descriptions-item>
         <el-descriptions-item label="实付金额">{{ receipt.sourcePo.finalAmount != null ? receipt.sourcePo.finalAmount : '-' }}</el-descriptions-item>
         <el-descriptions-item label="下单人">{{ receipt.sourcePo.createdByName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="下单时间">{{ receipt.sourcePo.createdAt || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="????">{{ formatDateTime(receipt.sourcePo.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="审批人">{{ receipt.sourcePo.approvedByName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="审批时间" :span="2">{{ receipt.sourcePo.approvedAt || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="????" :span="2">{{ formatDateTime(receipt.sourcePo.approvedAt) }}</el-descriptions-item>
         <el-descriptions-item label="采购备注" :span="3">{{ receipt.sourcePo.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
@@ -96,9 +96,9 @@
         <div class="batch-head">
           <span class="batch-code">{{ batch.code }}</span>
           <el-tag :type="batchTagType(batch.status)" size="small" style="margin-left:8px">{{ batchStatusText(batch.status) }}</el-tag>
-          <span class="batch-meta">创建 {{ batch.createdAt || '-' }}</span>
-          <span v-if="batch.confirmedAt" class="batch-meta">确认 {{ batch.confirmedAt }}</span>
-          <span v-if="batch.cancelledAt" class="batch-meta">取消 {{ batch.cancelledAt }} {{ batch.cancelReason ? '('+batch.cancelReason+')' : '' }}</span>
+          <span class="batch-meta">?? {{ formatDateTime(batch.createdAt) }}</span>
+          <span v-if="batch.confirmedAt" class="batch-meta">?? {{ formatDateTime(batch.confirmedAt) }}</span>
+          <span v-if="batch.cancelledAt" class="batch-meta">?? {{ formatDateTime(batch.cancelledAt) }} {{ batch.cancelReason ? '('+batch.cancelReason+')' : '' }}</span>
         </div>
 
         <el-table :data="batch.lines || []" border size="small" style="width:100%">
@@ -213,7 +213,7 @@
         <el-icon><Tickets /></el-icon>操作记录
       </template>
       <el-table :data="opLogs" border size="small" style="width:100%">
-        <el-table-column label="时间" width="170" prop="createdAt" />
+        <el-table-column label="??" width="170"><template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template></el-table-column>
         <el-table-column label="操作人" width="120" prop="operatorName" />
         <el-table-column label="操作" width="120" prop="action" />
         <el-table-column label="备注" prop="remark" />
@@ -244,6 +244,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Plus, CircleClose, Document, Tickets, Box, Check, DataAnalysis } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import { formatDateTime, formatDate } from '@/utils/format'
 import { getDetail, actionResource } from '@/api/crud'
 import { statusText, statusTagType } from '@/utils/dict'
 
@@ -257,7 +258,7 @@ async function loadOpLogs() {
   try {
     const res = await request({ url: `/api/operation-log/list/receipt/${receiptId.value}`, method: 'get', params: { size: 200 } })
     const d = res.data || res
-    opLogs.value = (d.records || d.list || []).map(x => ({ ...x, createdAt: (x.createdAt || '').substring(0,19).replace('T',' ') }))
+    opLogs.value = (d.records || d.list || []).map(x => ({ ...x, createdAt: formatDateTime(x.createdAt) }))
   } catch (e) { opLogs.value = [] }
 }
 
@@ -404,7 +405,7 @@ const serialPasteParsed = computed(() => parseSerials(serialPasteText.value).lis
 const serialPasteDup = computed(() => parseSerials(serialPasteText.value).dup)
 
 function applySerialPaste() {
-  if (!serialPasteTarget) return serialPasteVisible = false
+  if (!serialPasteTarget) return (serialPasteVisible.value = false)
   const { list } = parseSerials(serialPasteText.value)
   serialPasteTarget.serialNos = list.join('\n')
   if (list.length) serialPasteTarget.qty = list.length

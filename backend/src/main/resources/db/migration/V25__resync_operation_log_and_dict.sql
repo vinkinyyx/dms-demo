@@ -66,18 +66,14 @@ BEGIN
 
     IF NOT EXISTS (SELECT 1 FROM flyway_schema_history WHERE version='20') THEN
         INSERT INTO flyway_schema_history(installed_rank, version, description, type, script, checksum, installed_by, installed_on, execution_time, success)
-        VALUES (base_rank + 1, '20', 'create operation log table', 'SQL', 'V20__create_operation_log_table.sql', NULL, 'dms', CURRENT_TIMESTAMP, 100, TRUE);
-        base_rank := base_rank + 1;
-    END IF;
+        VALUES (-20, '20', 'create operation log table', 'SQL', 'V20__create_operation_log_table.sql', NULL, 'dms', CURRENT_TIMESTAMP, 100, TRUE);    END IF;
 
     IF NOT EXISTS (SELECT 1 FROM flyway_schema_history WHERE version='21') THEN
         INSERT INTO flyway_schema_history(installed_rank, version, description, type, script, checksum, installed_by, installed_on, execution_time, success)
-        VALUES (base_rank + 1, '21', 'add audit and batch fields', 'SQL', 'V21__add_audit_and_batch_fields.sql', NULL, 'dms', CURRENT_TIMESTAMP, 100, TRUE);
-        base_rank := base_rank + 1;
-    END IF;
+        VALUES (-21, '21', 'add audit and batch fields', 'SQL', 'V21__add_audit_and_batch_fields.sql', NULL, 'dms', CURRENT_TIMESTAMP, 100, TRUE);    END IF;
 
     IF NOT EXISTS (SELECT 1 FROM flyway_schema_history WHERE version='23') THEN
         INSERT INTO flyway_schema_history(installed_rank, version, description, type, script, checksum, installed_by, installed_on, execution_time, success)
-        VALUES (base_rank + 1, '23', 'fix dict types column names', 'SQL', 'V23__fix_dict_types_column_names.sql', NULL, 'dms', CURRENT_TIMESTAMP, 100, TRUE);
+        VALUES (-23, '23', 'fix dict types column names', 'SQL', 'V23__fix_dict_types_column_names.sql', NULL, 'dms', CURRENT_TIMESTAMP, 100, TRUE);
     END IF;
 END $$;

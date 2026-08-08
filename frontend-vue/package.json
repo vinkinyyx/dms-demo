@@ -14,9 +14,11 @@
     "echarts": "^5.5.1",
     "element-plus": "^2.8.4",
     "pinia": "^2.2.2",
+    "sortablejs": "^1.15.7",
     "vant": "^4.9.5",
     "vue": "^3.5.6",
     "vue-router": "^4.4.5",
+    "vuedraggable": "^4.1.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

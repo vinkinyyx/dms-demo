@@ -14,7 +14,6 @@ import com.dms.common.util.ContentDispositionUtils;
 import org.springframework.web.multipart.MultipartFile;
 import com.dms.common.util.TenantContext;
 import com.dms.execution.service.AuditLogService;
-import com.dms.masterdata.service.SupplierService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +33,6 @@ public class SupplierController {
 
     private final EntityManager em;
     private final AuditLogService opLog;
-    private final SupplierService supplierService;
 
     @GetMapping
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
@@ -239,7 +237,7 @@ public class SupplierController {
         byte[] excelBytes = ExcelExportUtils.exportMapToExcel(list, headers, fieldNames);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=suppliers.xlsx")
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionUtils.attachment("供应商列表.xlsx"))
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(excelBytes);
     }
@@ -271,26 +269,52 @@ public class SupplierController {
             return ApiResponse.fail(40002, "Excel 文件中没有数据");
         }
 
-        String[] headers = {"编码", "名称", "联系人", "联系电话", "地址", "状态"};
-        String[] fieldNames = {"code", "name", "contactPerson", "contactPhone", "address", "status"};
-
+        UUID tid = TenantContext.getTenantId();
         int success = 0, failed = 0;
         java.util.List<java.util.Map<String, Object>> errors = new java.util.ArrayList<>();
 
         for (int i = 0; i < data.size(); i++) {
             java.util.Map<String, Object> row = data.get(i);
             try {
-                com.dms.masterdata.entity.Supplier entity = new com.dms.masterdata.entity.Supplier();
-                for (int j = 0; j < headers.length; j++) {
-                    Object value = row.get(headers[j]);
-                    if (value != null) {
-                        setFieldValue(entity, fieldNames[j], value);
-                    }
-                }
-                if (entity.getCode() == null || entity.getCode().trim().isEmpty()) {
+                String code = trimOrNull(row.get("编码"));
+                if (code == null) {
                     throw new IllegalArgumentException("编码不能为空");
                 }
-                supplierService.upsertByCode(entity);
+                String name = trimOrNull(row.get("名称"));
+                String contactPerson = trimOrNull(row.get("联系人"));
+                String contactPhone = trimOrNull(row.get("联系电话"));
+                String address = trimOrNull(row.get("地址"));
+                String status = toStatusText(row.get("状态"));
+
+                Object existingId = em.createNativeQuery(
+                        "SELECT id FROM suppliers WHERE tenant_id = ?1 AND code = ?2")
+                        .setParameter(1, tid).setParameter(2, code)
+                        .getResultStream().findFirst().orElse(null);
+
+                if (existingId == null) {
+                    if (name == null) {
+                        throw new IllegalArgumentException("名称不能为空");
+                    }
+                    em.createNativeQuery(
+                            "INSERT INTO suppliers (tenant_id, code, name, contact_person, contact_phone, address, status) " +
+                            "VALUES (?1,?2,?3,?4,?5,?6,?7)")
+                            .setParameter(1, tid).setParameter(2, code).setParameter(3, name)
+                            .setParameter(4, contactPerson).setParameter(5, contactPhone)
+                            .setParameter(6, address)
+                            .setParameter(7, status != null ? status : "active")
+                            .executeUpdate();
+                } else {
+                    em.createNativeQuery(
+                            "UPDATE suppliers SET name = COALESCE(?1, name), contact_person = COALESCE(?2, contact_person), " +
+                            " contact_phone = COALESCE(?3, contact_phone), address = COALESCE(?4, address), " +
+                            " status = COALESCE(?5, status), deleted_at = NULL, updated_at = now() " +
+                            " WHERE tenant_id = ?6 AND code = ?7")
+                            .setParameter(1, name).setParameter(2, contactPerson)
+                            .setParameter(3, contactPhone).setParameter(4, address)
+                            .setParameter(5, status)
+                            .setParameter(6, tid).setParameter(7, code)
+                            .executeUpdate();
+                }
                 success++;
             } catch (Exception e) {
                 failed++;
@@ -309,17 +333,19 @@ public class SupplierController {
         return ApiResponse.ok(result);
     }
 
-    private void setFieldValue(com.dms.masterdata.entity.Supplier entity, String fieldName, Object value) throws Exception {
-        java.lang.reflect.Field field = com.dms.masterdata.entity.Supplier.class.getDeclaredField(fieldName);
-        field.setAccessible(true);
-        Class<?> type = field.getType();
-        if (type == String.class) {
-            field.set(entity, String.valueOf(value));
-        } else if (type == Long.class || type == long.class) {
-            field.set(entity, ((Number) value).longValue());
-        } else {
-            field.set(entity, value);
-        }
+    private static String trimOrNull(Object o) {
+        if (o == null) return null;
+        String s = String.valueOf(o).trim();
+        return s.isEmpty() ? null : s;
+    }
+
+    /** suppliers.status 在数据库中是 varchar(active/inactive)，导入模板兼容 1/0、启用/停用等写法。 */
+    private static String toStatusText(Object value) {
+        String s = trimOrNull(value);
+        if (s == null) return null;
+        if ("1".equals(s) || "active".equalsIgnoreCase(s) || "启用".equals(s) || "正常".equals(s)) return "active";
+        if ("0".equals(s) || "inactive".equalsIgnoreCase(s) || "停用".equals(s) || "禁用".equals(s)) return "inactive";
+        return s;
     }
 
     private static String str(Object o) { return o == null ? null : String.valueOf(o); }

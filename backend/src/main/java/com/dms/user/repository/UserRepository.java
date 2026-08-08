@@ -7,16 +7,14 @@ import com.dms.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * 用户仓储：按租户 + 用户名、微信 OpenID 检索，及分页查询。
- */
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
 
     Optional<User> findByTenantIdAndUsername(UUID tenantId, String username);
 
@@ -25,4 +23,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findByTenantId(UUID tenantId, Pageable pageable);
 
     boolean existsByTenantIdAndUsername(UUID tenantId, String username);
+
+    long countByTenantIdAndUserTypeAndStatus(UUID tenantId, String userType, String status);
 }

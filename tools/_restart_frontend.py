@@ -1,0 +1,15 @@
+﻿import paramiko, sys, time
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+c=paramiko.SSHClient(); c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+c.connect('8.133.193.238', username='root', password='Welcomeyyx0616', timeout=15, allow_agent=False, look_for_keys=False)
+def run(cmd, timeout=120):
+ print('\n>>>',cmd[:260])
+ si,so,se=c.exec_command(cmd,timeout=timeout)
+ print(so.read().decode('utf-8','replace').rstrip())
+ err=se.read().decode('utf-8','replace').rstrip()
+ if err: print('STDERR:',err[:4000])
+run('docker restart dms-frontend-vue')
+time.sleep(3)
+run('docker exec dms-frontend-vue getent hosts dms-backend')
+run('curl -i -s -m 10 -X POST -H "Content-Type: application/json" -d \'{"tenantCode":"default","username":"admin","password":"Sh123456"}\' http://127.0.0.1:8081/api/auth/login | head -20')
+c.close()

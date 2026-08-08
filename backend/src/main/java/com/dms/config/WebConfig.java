@@ -24,6 +24,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/auth/**",
                         "/api/auth/**",
+                        "/api/admin/auth/**",
                         "/actuator/**",
                         "/swagger-ui/**",
                         "/swagger-ui.html",
@@ -40,3 +41,4 @@ public class WebConfig implements WebMvcConfigurer {
                 );
     }
 }
+

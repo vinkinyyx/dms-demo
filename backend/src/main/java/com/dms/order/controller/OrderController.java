@@ -12,8 +12,11 @@ import com.dms.common.util.ExcelExportUtils;
 import com.dms.common.util.ContentDispositionUtils;
 import com.dms.execution.service.AutoDocGenerator;
 import com.dms.execution.service.AuditLogService;
+import com.dms.common.BusinessException;
+import com.dms.common.ErrorCode;
 import com.dms.order.dto.OrderCreateRequest;
 import com.dms.order.dto.OrderDTO;
+import com.dms.order.dto.TransferResponse;
 import com.dms.order.entity.Order;
 import com.dms.order.service.OrderService;
 import jakarta.validation.Valid;
@@ -55,6 +58,56 @@ public class OrderController {
         OrderDTO dto = service.createOrder(request);
         try { if (dto != null && dto.getOrder() != null) opLog.log("order", dto.getOrder().getId(), "CREATE", "创建销售订单"); } catch (Exception ignored) {}
         return ApiResponse.ok(dto);
+    }
+
+    /**
+     * 销售订单传输接口（同步）。
+     *
+     * <p>外部/上游系统通过本接口将销售订单一次性推送进 DMS。走 JWT 鉴权，
+     * 同步事务（任何步骤失败整体回滚）。</p>
+     *
+     * <p>请求体复用 {@link OrderCreateRequest}：</p>
+     *
+     * <p>成功：{@code code=0}，{@code data.code} 即新订单编号（SO-20260806-00001）。</p>
+     * <p>失败：{@code code!=0}，{@code message} 即失败原因。</p>
+     */
+    @PostMapping("/transfer")
+    @OperationLog(businessType = "order", action = OperationAction.CREATE, remark = "销售订单传输")
+    @Transactional
+    public ApiResponse<TransferResponse> transfer(@RequestBody OrderCreateRequest request) {
+        if (request == null) {
+            return ApiResponse.fail(ErrorCode.PARAM_MISSING, "请求体不能为空");
+        }
+        if (request.getDealerId() == null) {
+            return ApiResponse.fail(ErrorCode.PARAM_MISSING, "dealerId 不能为空");
+        }
+        if (request.getLines() == null || request.getLines().isEmpty()) {
+            return ApiResponse.fail(ErrorCode.PARAM_MISSING, "销售订单明细不能为空");
+        }
+        try {
+            OrderDTO dto = service.createOrder(request);
+            if (dto == null || dto.getOrder() == null) {
+                return ApiResponse.fail(ErrorCode.INTERNAL_ERROR, "订单创建失败，未返回数据");
+            }
+            String code = dto.getOrder().getCode();
+            try { opLog.log("order", dto.getOrder().getId(), "CREATE", "销售订单传输"); } catch (Exception ignored) {}
+            log.info("[transfer] 销售订单创建成功 id={} code={} remark={}",
+                    dto.getOrder().getId(), code, request.getRemark());
+            TransferResponse body = TransferResponse.builder()
+                    .id(dto.getOrder().getId())
+                    .code(code)
+                    .orderType(dto.getOrder().getOrderType())
+                    .status(dto.getOrder().getStatus())
+                    .amount(dto.getOrder().getAmountInclTax())
+                    .build();
+            return ApiResponse.ok(body);
+        } catch (BusinessException be) {
+            log.warn("[transfer] 销售订单创建失败: {}", be.getMessage());
+            return ApiResponse.fail(be.getErrorCode(), be.getMessage());
+        } catch (Exception e) {
+            log.error("[transfer] 销售订单创建异常", e);
+            return ApiResponse.fail(ErrorCode.INTERNAL_ERROR, "销售订单创建失败: " + e.getMessage());
+        }
     }
 
     @PostMapping("/{id}/submit")

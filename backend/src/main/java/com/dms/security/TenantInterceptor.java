@@ -1,5 +1,6 @@
 /*
- * 租户拦截器，从 JWT Claims 已注入的 TenantContext 中兜底，或从超管 header X-Tenant-Id 读取。
+ * 租户拦截器：业务请求从已注入的 TenantContext 兜底，或从超管 header X-Tenant-Id 读取。
+ * 平台后台 /api/admin/** 不设置业务租户，直接放行。
  */
 package com.dms.security;
 
@@ -24,6 +25,9 @@ public class TenantInterceptor implements HandlerInterceptor {
     public boolean preHandle(@NonNull HttpServletRequest request,
                              @NonNull HttpServletResponse response,
                              @NonNull Object handler) {
+        if (request.getRequestURI().startsWith("/api/admin/")) {
+            return true;
+        }
         if (TenantContext.getTenantId() == null) {
             String headerVal = request.getHeader(HEADER_TENANT_ID);
             if (StringUtils.hasText(headerVal)) {
@@ -35,13 +39,5 @@ public class TenantInterceptor implements HandlerInterceptor {
             }
         }
         return true;
-    }
-
-    @Override
-    public void afterCompletion(@NonNull HttpServletRequest request,
-                                @NonNull HttpServletResponse response,
-                                @NonNull Object handler,
-                                Exception ex) {
-        // TenantContext 由 JwtFilter 的 finally 清理，此处不重复处理
     }
 }

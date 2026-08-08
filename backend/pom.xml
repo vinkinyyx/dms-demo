@@ -76,11 +76,6 @@
         </dependency>
 
         <!-- Flyway core 显式声明与 database-postgresql 保持一致 -->
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
-            <version>10.11.0</version>
-        </dependency>
 
         <!-- Redis (Redisson) -->
         <dependency>
@@ -176,8 +171,8 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
-    </dependencies>
 
+    </dependencies>
     <build>
         <finalName>dms-backend</finalName>
         <plugins>

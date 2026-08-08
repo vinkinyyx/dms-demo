@@ -36,6 +36,9 @@ public class StrategyResource {
     @Column(name = "resource_id")
     private Long resourceId;
 
+    @Column(name = "operations", columnDefinition = "varchar(200)[]")
+    private String[] operations;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 }

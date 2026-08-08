@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMS 通用经销商管理系统</title>
+    <style id="theme-vars">
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@400;600;700;900&display=swap');
+
+:root {
+  /* Ultramarine Ledger — DMS product brochure */
+  --dms-paper: #ffffff;
+  --dms-ink: #101319;
+  --dms-muted: #5f6673;
+  --dms-accent: #002fa7;
+  --dms-accent-2: #ffcf33;
+  --dms-accent-soft: rgba(0, 47, 167, 0.12);
+  --dms-page: #f1f1f0;
+
+  /* Semantic aliases */
+  --dms-background: var(--dms-page);
+  --dms-foreground: var(--dms-ink);
+  --dms-card: var(--dms-paper);
+  --dms-card-foreground: var(--dms-ink);
+  --dms-popover: var(--dms-paper);
+  --dms-popover-foreground: var(--dms-ink);
+  --dms-primary: var(--dms-accent);
+  --dms-primary-foreground: #ffffff;
+  --dms-secondary: #f4f5f7;
+  --dms-secondary-foreground: var(--dms-ink);
+  --dms-muted-foreground: var(--dms-muted);
+  --dms-accent-foreground: var(--dms-ink);
+  --dms-destructive: #c62828;
+  --dms-destructive-foreground: #ffffff;
+  --dms-border: #d9dbe0;
+  --dms-input: #d9dbe0;
+  --dms-ring: var(--dms-accent);
+
+  --dms-radius-sm: 4px;
+  --dms-radius-md: 8px;
+  --dms-radius-lg: 16px;
+
+  --dms-font-display: "Noto Serif SC", Georgia, "Source Han Serif SC", SimSun, serif;
+  --dms-font-body: "Noto Sans SC", "IBM Plex Sans", "Avenir Next", "Segoe UI", Arial, "Microsoft YaHei UI", sans-serif;
+  --dms-font-mono: "IBM Plex Mono", Menlo, Consolas, "Cascadia Mono", monospace;
+}
+
+@theme inline {
+  --color-background: var(--dms-background);
+  --color-foreground: var(--dms-foreground);
+  --color-card: var(--dms-card);
+  --color-card-foreground: var(--dms-card-foreground);
+  --color-popover: var(--dms-popover);
+  --color-popover-foreground: var(--dms-popover-foreground);
+  --color-primary: var(--dms-primary);
+  --color-primary-foreground: var(--dms-primary-foreground);
+  --color-secondary: var(--dms-secondary);
+  --color-secondary-foreground: var(--dms-secondary-foreground);
+  --color-muted: var(--dms-secondary);
+  --color-muted-foreground: var(--dms-muted-foreground);
+  --color-accent: var(--dms-accent-2);
+  --color-accent-foreground: var(--dms-accent-foreground);
+  --color-destructive: var(--dms-destructive);
+  --color-destructive-foreground: var(--dms-destructive-foreground);
+  --color-border: var(--dms-border);
+  --color-input: var(--dms-input);
+  --color-ring: var(--dms-ring);
+  --radius-sm: var(--dms-radius-sm);
+  --radius-md: var(--dms-radius-md);
+  --radius-lg: var(--dms-radius-lg);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--dms-background);
+    --color-foreground: var(--dms-foreground);
+    --color-card: var(--dms-card);
+    --color-card-foreground: var(--dms-card-foreground);
+    --color-popover: var(--dms-popover);
+    --color-popover-foreground: var(--dms-popover-foreground);
+    --color-primary: var(--dms-primary);
+    --color-primary-foreground: var(--dms-primary-foreground);
+    --color-secondary: var(--dms-secondary);
+    --color-secondary-foreground: var(--dms-secondary-foreground);
+    --color-muted: var(--dms-muted);
+    --color-muted-foreground: var(--dms-muted-foreground);
+    --color-accent: var(--dms-accent);
+    --color-accent-foreground: var(--dms-accent-foreground);
+    --color-destructive: var(--dms-destructive);
+    --color-destructive-foreground: var(--dms-destructive-foreground);
+    --color-border: var(--dms-border);
+    --color-input: var(--dms-input);
+    --color-ring: var(--dms-ring);
+    --radius-sm: var(--dms-radius-sm);
+    --radius-md: var(--dms-radius-md);
+    --radius-lg: var(--dms-radius-lg);
+  }
+  @layer base {
+    body { background: var(--dms-background); color: var(--dms-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--dms-background); }
+      .text-background { color: var(--dms-background); }
+      .border-background { border-color: var(--dms-background); }
+      .ring-background { --tw-ring-color: var(--dms-background); }
+      .bg-foreground { background-color: var(--dms-foreground); }
+      .text-foreground { color: var(--dms-foreground); }
+      .border-foreground { border-color: var(--dms-foreground); }
+      .ring-foreground { --tw-ring-color: var(--dms-foreground); }
+      .bg-card { background-color: var(--dms-card); }
+      .text-card { color: var(--dms-card); }
+      .border-card { border-color: var(--dms-card); }
+      .ring-card { --tw-ring-color: var(--dms-card); }
+      .bg-card-foreground { background-color: var(--dms-card-foreground); }
+      .text-card-foreground { color: var(--dms-card-foreground); }
+      .border-card-foreground { border-color: var(--dms-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--dms-card-foreground); }
+      .bg-popover { background-color: var(--dms-popover); }
+      .text-popover { color: var(--dms-popover); }
+      .border-popover { border-color: var(--dms-popover); }
+      .ring-popover { --tw-ring-color: var(--dms-popover); }
+      .bg-popover-foreground { background-color: var(--dms-popover-foreground); }
+      .text-popover-foreground { color: var(--dms-popover-foreground); }
+      .border-popover-foreground { border-color: var(--dms-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--dms-popover-foreground); }
+      .bg-primary { background-color: var(--dms-primary); }
+      .text-primary { color: var(--dms-primary); }
+      .border-primary { border-color: var(--dms-primary); }
+      .ring-primary { --tw-ring-color: var(--dms-primary); }
+      .bg-primary-foreground { background-color: var(--dms-primary-foreground); }
+      .text-primary-foreground { color: var(--dms-primary-foreground); }
+      .border-primary-foreground { border-color: var(--dms-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--dms-primary-foreground); }
+      .bg-secondary { background-color: var(--dms-secondary); }
+      .text-secondary { color: var(--dms-secondary); }
+      .border-secondary { border-color: var(--dms-secondary); }
+      .ring-secondary { --tw-ring-color: var(--dms-secondary); }
+      .bg-secondary-foreground { background-color: var(--dms-secondary-foreground); }
+      .text-secondary-foreground { color: var(--dms-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--dms-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--dms-secondary-foreground); }
+      .bg-muted { background-color: var(--dms-muted); }
+      .text-muted { color: var(--dms-muted); }
+      .border-muted { border-color: var(--dms-muted); }
+      .ring-muted { --tw-ring-color: var(--dms-muted); }
+      .bg-muted-foreground { background-color: var(--dms-muted-foreground); }
+      .text-muted-foreground { color: var(--dms-muted-foreground); }
+      .border-muted-foreground { border-color: var(--dms-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--dms-muted-foreground); }
+      .bg-accent { background-color: var(--dms-accent); }
+      .text-accent { color: var(--dms-accent); }
+      .border-accent { border-color: var(--dms-accent); }
+      .ring-accent { --tw-ring-color: var(--dms-accent); }
+      .bg-accent-foreground { background-color: var(--dms-accent-foreground); }
+      .text-accent-foreground { color: var(--dms-accent-foreground); }
+      .border-accent-foreground { border-color: var(--dms-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--dms-accent-foreground); }
+      .bg-destructive { background-color: var(--dms-destructive); }
+      .text-destructive { color: var(--dms-destructive); }
+      .border-destructive { border-color: var(--dms-destructive); }
+      .ring-destructive { --tw-ring-color: var(--dms-destructive); }
+      .bg-destructive-foreground { background-color: var(--dms-destructive-foreground); }
+      .text-destructive-foreground { color: var(--dms-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--dms-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--dms-destructive-foreground); }
+      .bg-border { background-color: var(--dms-border); }
+      .text-border { color: var(--dms-border); }
+      .border-border { border-color: var(--dms-border); }
+      .ring-border { --tw-ring-color: var(--dms-border); }
+      .bg-input { background-color: var(--dms-input); }
+      .text-input { color: var(--dms-input); }
+      .border-input { border-color: var(--dms-input); }
+      .ring-input { --tw-ring-color: var(--dms-input); }
+      .bg-ring { background-color: var(--dms-ring); }
+      .text-ring { color: var(--dms-ring); }
+      .border-ring { border-color: var(--dms-ring); }
+      .ring-ring { --tw-ring-color: var(--dms-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

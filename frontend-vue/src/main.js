@@ -9,6 +9,7 @@ import 'vant/lib/index.css'
 import App from './App.vue'
 import router from './router'
 import '@/styles/global.scss'
+import hasDirective from '@/directives/has'
 
 const app = createApp(App)
 
@@ -20,4 +21,5 @@ app.use(createPinia())
 app.use(router)
 app.use(ElementPlus, { locale: zhCn })
 app.use(Vant)
+app.use(hasDirective)
 app.mount('#app')

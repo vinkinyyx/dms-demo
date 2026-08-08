@@ -58,17 +58,48 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { MENU_GROUPS } from '@/config/menu'
 import { useUserStore } from '@/store/user'
+import { ensurePermissions } from '@/directives/has'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const collapsed = ref(false)
-const menuGroups = MENU_GROUPS
+const permissionsLoaded = ref(false)
+
+onMounted(async () => {
+  await ensurePermissions()
+  permissionsLoaded.value = true
+})
+
+// === D13: 按用户权限过滤菜单（菜单本身的 permissionCode 控制可见性） ===
+import { getPermissions } from '@/utils/auth'
+function permSet() {
+  const out = new Set()
+  try {
+    if (Array.isArray(userStore.permissions)) userStore.permissions.forEach((p) => out.add(p))
+    const u = userStore.user || {}
+    if (Array.isArray(u.permissions)) u.permissions.forEach((p) => out.add(p))
+    if (Array.isArray(u.roles)) u.roles.forEach((p) => out.add(p))
+  } catch { /* store 未就绪 */ }
+  for (const p of getPermissions()) out.add(p)
+  return out
+}
+function menuVisible(item) {
+  if (!item.permissionCode) return true // 未配 permissionCode 的菜单默认可见（向后兼容）
+  return permSet().has(item.permissionCode)
+}
+
+const menuGroups = computed(() => {
+  const all = MENU_GROUPS.filter((g) => !g.manufacturerOnly || userStore.userType === 'vendor')
+  return all
+    .map((g) => ({ ...g, items: (g.items || []).filter((it) => menuVisible(it)) }))
+    .filter((g) => (g.items || []).length > 0)
+})
 
 const activeKey = computed(() => route.path)
 const userTypeLabel = computed(() => (userStore.userType === 'vendor' ? '厂商用户' : userStore.userType === 'dealer' ? '经销商用户' : '用户'))
@@ -118,3 +149,4 @@ function onCommand(cmd) {
 .user-info { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #333; outline: none; }
 .main { background: #f5f7fa; padding: 16px; }
 </style>
+

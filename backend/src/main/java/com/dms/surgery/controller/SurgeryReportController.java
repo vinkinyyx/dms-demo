@@ -46,6 +46,8 @@ import java.util.*;
 public class SurgeryReportController {
 
     private final EntityManager em;
+    private final com.dms.common.util.DocNoGenerator docNoGenerator;
+
     @GetMapping
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public ApiResponse<Map<String, Object>> list(
@@ -412,7 +414,19 @@ private boolean isSerialManaged(UUID tid, Long productId) {
         byte[] excelBytes = ExcelExportUtils.exportMapToExcel(list, headers, fieldNames);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=surgery-reports.xlsx")
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionUtils.attachment("手术报台列表.xlsx"))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(excelBytes);
+    }
+
+    @GetMapping("/actions/export/template")
+    public ResponseEntity<byte[]> exportTemplate() throws Exception {
+        String[] headers = {"经销商ID", "终端ID", "手术日期", "患者信息", "医生姓名", "状态"};
+        String[] fieldNames = {"dealerId", "terminalId", "surgeryDate", "patientInfo", "doctorName", "status"};
+        String[] examples = {"1", "1", "2026-01-31", "示例患者", "张三", "COMPLETED"};
+        byte[] excelBytes = ExcelExportUtils.exportTemplate(headers, fieldNames, examples);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionUtils.attachment("手术报台导入模板.xlsx"))
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(excelBytes);
     }
@@ -437,10 +451,10 @@ private boolean isSerialManaged(UUID tid, Long productId) {
             try {
                 Long dealerId = toLong(row.get("经销商ID"));
                 Long terminalId = toLong(row.get("终端ID"));
-                String surgeryDate = strOr(row.get("手术日期"), null);
+                String surgeryDate = ExcelImportUtils.toDateString(row.get("手术日期"));
                 String patientInfo = strOr(row.get("患者信息"), null);
                 String doctorName = strOr(row.get("医生姓名"), null);
-                String status = strOr(row.get("状态"), "DRAFT");
+                String status = strOr(row.get("状态"), "COMPLETED");
 
                 if (dealerId == null) {
                     throw new IllegalArgumentException("经销商ID不能为空");
@@ -448,16 +462,20 @@ private boolean isSerialManaged(UUID tid, Long productId) {
                 if (terminalId == null) {
                     throw new IllegalArgumentException("终端ID不能为空");
                 }
-String sql = "INSERT INTO surgery_reports (dealer_id, terminal_id, surgery_date, patient_info, doctor_name, status, tenant_id) " +
-                        "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
+                if (surgeryDate == null || surgeryDate.trim().isEmpty()) {
+                    throw new IllegalArgumentException("手术日期不能为空");
+                }
+                String sql = "INSERT INTO surgery_reports (code, dealer_id, terminal_id, surgery_date, patient_info, doctor_name, status, tenant_id) " +
+                        "VALUES (?1, ?2, ?3, CAST(?4 AS date), ?5, ?6, ?7, ?8)";
                 em.createNativeQuery(sql)
-                        .setParameter(1, dealerId)
-                        .setParameter(2, terminalId)
-                        .setParameter(3, surgeryDate)
-                        .setParameter(4, patientInfo)
-                        .setParameter(5, doctorName)
-                        .setParameter(6, status)
-                        .setParameter(7, TenantContext.getTenantId())
+                        .setParameter(1, docNoGenerator.next("SURG"))
+                        .setParameter(2, dealerId)
+                        .setParameter(3, terminalId)
+                        .setParameter(4, surgeryDate)
+                        .setParameter(5, patientInfo)
+                        .setParameter(6, doctorName)
+                        .setParameter(7, status)
+                        .setParameter(8, TenantContext.getTenantId())
                         .executeUpdate();
                 success++;
             } catch (Exception e) {

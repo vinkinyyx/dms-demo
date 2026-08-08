@@ -18,5 +18,7 @@ public interface ResourceRepository extends JpaRepository<Resource, Long> {
 
     List<Resource> findByTenantId(UUID tenantId);
 
+    List<Resource> findByTenantIdAndStatus(UUID tenantId, String status);
+
     List<Resource> findByIdIn(List<Long> ids);
 }

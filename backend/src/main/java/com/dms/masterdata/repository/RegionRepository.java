@@ -10,12 +10,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.UUID;
 
 @Repository
 public interface RegionRepository extends JpaRepository<Region, Long> {
 
     Page<Region> findByTenantId(UUID tenantId, Pageable pageable);
+
+    List<Region> findByTenantIdAndStatusOrderByLevelAscSortOrderAscIdAsc(UUID tenantId, String status);
 
     boolean existsByTenantIdAndCode(UUID tenantId, String code);
     java.util.Optional<Region> findByTenantIdAndCode(UUID tenantId, String code);

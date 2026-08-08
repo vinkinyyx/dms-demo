@@ -43,6 +43,7 @@ public class InventoryAdjustmentController {
     private final EntityManager em;
     private final InventoryStatusOps inventoryOps;
     private final AuditLogService opLog;
+    private final com.dms.common.util.DocNoGenerator docNoGenerator;
 
     @PostMapping
     @Transactional
@@ -207,6 +208,18 @@ public class InventoryAdjustmentController {
                 .body(excelBytes);
     }
 
+    @GetMapping("/actions/export/template")
+    public ResponseEntity<byte[]> exportTemplate() throws Exception {
+        String[] headers = {"仓库ID", "调整方向", "调整类型", "原因", "状态"};
+        String[] fieldNames = {"warehouseId", "category", "type", "reason", "status"};
+        String[] examples = {"1", "IN", "STOCKTAKE", "盘盈调整", "DRAFT"};
+        byte[] excelBytes = ExcelExportUtils.exportTemplate(headers, fieldNames, examples);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionUtils.attachment("库存调整导入模板.xlsx"))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(excelBytes);
+    }
+
     @PostMapping("/batch-import")
     @Transactional
     public ApiResponse<java.util.Map<String, Object>> batchImport(@RequestParam("file") MultipartFile file) throws Exception {
@@ -235,15 +248,16 @@ public class InventoryAdjustmentController {
                     throw new IllegalArgumentException("仓库ID不能为空");
                 }
 
-                String sql = "INSERT INTO inventory_adjustments (warehouse_id, adj_category, adj_type, reason, status, tenant_id) " +
-                        "VALUES (?1, ?2, ?3, ?4, ?5, ?6)";
+                String sql = "INSERT INTO inventory_adjustments (code, warehouse_id, adj_category, adj_type, reason, status, tenant_id) " +
+                        "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)";
                 em.createNativeQuery(sql)
-                        .setParameter(1, warehouseId)
-                        .setParameter(2, category)
-                        .setParameter(3, type)
-                        .setParameter(4, reason)
-                        .setParameter(5, status)
-                        .setParameter(6, TenantContext.getTenantId())
+                        .setParameter(1, docNoGenerator.next("ADJ"))
+                        .setParameter(2, warehouseId)
+                        .setParameter(3, category)
+                        .setParameter(4, type)
+                        .setParameter(5, reason)
+                        .setParameter(6, status)
+                        .setParameter(7, TenantContext.getTenantId())
                         .executeUpdate();
                 success++;
             } catch (Exception e) {
