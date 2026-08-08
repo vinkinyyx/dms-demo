@@ -1,4 +1,6 @@
-# DMS 登录信息手册
+﻿from pathlib import Path
+p = Path(r'D:\Workspace\TRAE\DMS\docs\DMS登录信息手册.md')
+s = '''# DMS 登录信息手册
 
 **更新时间**: 2026-08-08  
 **当前版本**: v3.8.12  
@@ -145,3 +147,6 @@ Content-Type: application/json
 ### 6.3 平台后台路径说明
 
 平台后台页面入口统一使用 `/admin/`，不要使用旧文档中的 `/admin/login`。未登录时由前端路由和平台登录接口处理认证。
+'''
+p.write_text(s, encoding='utf-8', newline='\n')
+print('rewrote login manual')
