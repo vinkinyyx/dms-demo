@@ -1,6 +1,3 @@
-/*
- * 合同附件实体：映射 contract_attachments 表。
- */
 package com.dms.contract.entity;
 
 import jakarta.persistence.*;
@@ -26,11 +23,8 @@ public class ContractAttachment {
     @Column(name = "tenant_id")
     private UUID tenantId;
 
-    @Column(name = "ref_type", length = 16)
-    private String refType;
-
-    @Column(name = "ref_id")
-    private Long refId;
+    @Column(name = "contract_id")
+    private Long contractId;
 
     @Column(length = 64)
     private String category;
@@ -41,7 +35,7 @@ public class ContractAttachment {
     @Column(name = "file_url", columnDefinition = "text")
     private String fileUrl;
 
-    @Column(name = "file_name", length = 255)
+    @Column(name = "file_name")
     private String fileName;
 
     @Column(name = "size_bytes")

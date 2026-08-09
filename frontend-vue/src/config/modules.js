@@ -217,63 +217,9 @@ const productPrices = {
   ]
 }
 
-const contractApps = {
-  key: 'contract-apps', title: '合同申请', api: '/api/contract-applications',
-  maxActions: 2,
-  actions: [
-    { label: '提交审批', method: 'POST', path: '/submit', confirm: '确认提交此申请？', type: 'warning' },
-    { label: '审批通过', method: 'POST', path: '/approve', confirm: '审批通过后将自动生成合同，是否继续？', type: 'success' }
-  ],
-  cols: [
-    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
-    { k: 'code', l: '申请编号', w: 160, filter: { type: 'text' }, link: { menu: 'contracts', valueKey: 'id' } }, 
-    { k: 'applicationType', l: '申请类型', w: 90, filter: { type: 'select', options: [{ value: 'NEW', label: '新签' }, { value: 'MODIFY', label: '变更' }, { value: 'RENEW', label: '续签' }, { value: 'TERMINATE', label: '终止' }] } }, 
-    { k: 'contractCategory', l: '合同分类', w: 100, filter: { type: 'select', options: [{ value: 'SALES', label: '销售合同' }, { value: 'AUTHORIZATION', label: '授权合同' }, { value: 'DISTRIBUTION', label: '经销合同' }] } }, 
-    { k: 'dealerName', l: '经销商', filter: { type: 'text' } }, 
-    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'PENDING_APPROVAL', label: '待审批' }, { value: 'APPROVED', label: '已批准' }, { value: 'REJECTED', label: '已驳回' }] } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
-  ],
-  form: [
-    { key: 'applicationType', label: '申请类型', type: 'select', required: true, group: '基本信息', value: 'NEW', options: [{ value: 'NEW', label: '新签' }, { value: 'MODIFY', label: '变更' }, { value: 'RENEW', label: '续签' }, { value: 'TERMINATE', label: '终止' }] },
-    { key: 'contractCategory', label: '合同分类', type: 'select', required: true, group: '基本信息', value: 'SALES', options: [{ value: 'SALES', label: '销售合同' }, { value: 'AUTHORIZATION', label: '授权合同' }, { value: 'DISTRIBUTION', label: '经销合同' }] },
-    { key: 'dealerId', label: '经销商', required: true, picker: 'dealers', group: '基本信息' },
-    { key: 'validFrom', label: '生效开始', type: 'date', group: '有效期' },
-    { key: 'validTo', label: '生效结束', type: 'date', group: '有效期' },
-    { key: 'remark', label: '备注说明', type: 'textarea', group: '其它' }
-  ]
-}
 
-const contracts = {
-  key: 'contracts', title: '合同', api: '/api/contracts', readonly: true, detailable: true, exportable: true,
-  cols: [
-    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
-    { k: 'code', l: '合同编号', w: 170, filter: { type: 'text' } },
-    { k: 'category', l: '分类', w: 100, filter: { type: 'select', options: [
-      { value: 'SALES', label: '销售合同' },
-      { value: 'DISTRIBUTION', label: '经销合同' },
-      { value: 'AUTHORIZATION', label: '授权合同' },
-      { value: 'SERVICE', label: '服务合同' },
-      { value: 'SUPPLY', label: '供货合同' },
-      { value: 'PROMOTION', label: '促销合同' }
-    ] } },
-    { k: 'dealerName', l: '经销商', w: 180, filter: { type: 'text' } },
-    { k: 'dealerLevel', l: '级别', w: 70 },
-    { k: 'regionName', l: '区域', w: 100 },
-    { k: 'validFrom', l: '生效', w: 110, filter: { type: 'date' } },
-    { k: 'validTo', l: '截止', w: 110, filter: { type: 'date' } },
-    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [
-      { value: 'effective', label: '生效中' },
-      { value: 'active', label: '生效中' },
-      { value: 'draft', label: '草稿' },
-      { value: 'pending', label: '待生效' },
-      { value: 'expired', label: '已到期' },
-      { value: 'terminated', label: '已终止' }
-    ] } },
-    { k: 'signCount', l: '签章', w: 70, align: 'right' },
-    { k: 'attachCount', l: '附件', w: 70, align: 'right' }
-  ]
-}
+
+
 
 const authorizations = {
   key: 'authorizations', title: '授权管理', api: '/api/authorizations', detailable: true, exportable: true,
@@ -342,8 +288,8 @@ const orders = {
   importable: true, exportable: true,
   statusActions: [
     { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'primary', confirm: '确认提交此销售订单进入审批？' },
-    { label: '审批通过', when: ['SUBMITTED'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此销售订单？（将自动生成销售出库草稿）' },
-    { label: '驳回', when: ['SUBMITTED'], method: 'POST', path: '/reject', type: 'danger', confirm: '确认驳回此销售订单？' },
+    { label: '审批通过', when: ['PENDING_APPROVAL'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此销售订单？（将自动生成销售出库草稿）' },
+    { label: '驳回', when: ['PENDING_APPROVAL'], method: 'POST', path: '/reject', type: 'danger', confirm: '确认驳回此销售订单？' },
     { label: '取消', when: ['DRAFT', 'APPROVED'], method: 'POST', path: '/cancel', type: 'warning', confirm: '确认取消此销售订单？' }
   ],
   cols: [
@@ -354,7 +300,7 @@ const orders = {
     { k: 'warehouseName', l: '发货仓库', w: 120, filter: { type: 'text' } }, 
     { k: 'amountInclTax', l: '含税金额', w: 120, filter: { type: 'number' } }, 
     { k: 'finalAmount', l: '实付金额', w: 120, filter: { type: 'number' } }, 
-    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'SUBMITTED', label: '待审批' }, { value: 'APPROVED', label: '已审批' }, { value: 'SHIPPING', label: '发货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } }, 
+    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'PENDING_APPROVAL', label: '审批中' }, { value: 'APPROVED', label: '已审批' }, { value: 'SHIPPING', label: '发货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } }, 
     { k: 'auditUserName', l: '审核人', w: 90, filter: { type: 'text' } }, 
     { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
     { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
@@ -373,8 +319,8 @@ const salesReturns = {
   key: 'sales-returns', title: '销退订单', api: '/api/sales-returns', detailable: true, noDelete: true, maxActions: 2, pageSize: 30, createPath: '/sales-return-edit/new', detailPath: '/sales-return-edit',
   statusActions: [
     { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'warning', confirm: '确认提交此销退订单进入审批？' },
-    { label: '审批通过', when: ['SUBMITTED'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此销退订单？（将自动生成销退入库草稿）' },
-    { label: '驳回', when: ['SUBMITTED'], method: 'POST', path: '/reject', type: 'danger', confirm: '确认驳回此销退订单？' },
+    { label: '审批通过', when: ['PENDING_APPROVAL'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此销退订单？（将自动生成销退入库草稿）' },
+    { label: '驳回', when: ['PENDING_APPROVAL'], method: 'POST', path: '/reject', type: 'danger', confirm: '确认驳回此销退订单？' },
     { label: '取消', when: ['DRAFT', 'APPROVED'], method: 'POST', path: '/cancel', type: 'warning', confirm: '确认取消此销退订单？' }
   ],
   cols: [
@@ -383,7 +329,7 @@ const salesReturns = {
     { k: 'dealerName', l: '经销商', filter: { type: 'text' } },
     { k: 'warehouseName', l: '收货仓库', w: 120, filter: { type: 'text' } },
     { k: 'finalAmount', l: '金额', w: 110, filter: { type: 'number' } },
-    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'SUBMITTED', label: '待审批' }, { value: 'APPROVED', label: '已审批' }, { value: 'RECEIVING', label: '收货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } },
+    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'PENDING_APPROVAL', label: '审批中' }, { value: 'APPROVED', label: '已审批' }, { value: 'RECEIVING', label: '收货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } },
     { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }
   ]
 }
@@ -392,8 +338,8 @@ const purchaseOrders = {
   importable: true, exportable: true,
   statusActions: [
     { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'primary', confirm: '确认提交此采购订单进入审批？' },
-    { label: '审批通过', when: ['SUBMITTED'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此采购订单？（将自动生成收货入库草稿）' },
-    { label: '驳回', when: ['SUBMITTED'], method: 'POST', path: '/reject', type: 'danger', confirm: '确认驳回此采购订单？' },
+    { label: '审批通过', when: ['PENDING_APPROVAL'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此采购订单？（将自动生成收货入库草稿）' },
+    { label: '驳回', when: ['PENDING_APPROVAL'], method: 'POST', path: '/reject', type: 'danger', confirm: '确认驳回此采购订单？' },
     { label: '取消', when: ['DRAFT', 'APPROVED'], method: 'POST', path: '/cancel', type: 'warning', confirm: '确认取消此采购订单？' }
   ],
   cols: [
@@ -404,7 +350,7 @@ const purchaseOrders = {
     { k: 'warehouseName', l: '入库仓库', w: 120, filter: { type: 'text' } }, 
     { k: 'totalAmount', l: '总金额', w: 120, filter: { type: 'number' } }, 
     { k: 'finalAmount', l: '实付金额', w: 120, filter: { type: 'number' } }, 
-    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'SUBMITTED', label: '待审批' }, { value: 'APPROVED', label: '已审批' }, { value: 'RECEIVING', label: '收货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } }, 
+    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'PENDING_APPROVAL', label: '审批中' }, { value: 'APPROVED', label: '已审批' }, { value: 'RECEIVING', label: '收货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } }, 
     { k: 'auditUserName', l: '审核人', w: 90, filter: { type: 'text' } }, 
     { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
     { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
@@ -423,8 +369,8 @@ const purchaseReturns = {
   key: 'purchase-returns', title: '采退订单', api: '/api/purchase-returns', detailable: true, noDelete: true, maxActions: 2, pageSize: 30, createPath: '/purchase-return-edit/new', detailPath: '/purchase-return-edit',
   statusActions: [
     { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'warning', confirm: '确认提交此采退订单进入审批？' },
-    { label: '审批通过', when: ['SUBMITTED'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此采退订单？（将自动生成采退出库草稿）' },
-    { label: '驳回', when: ['SUBMITTED'], method: 'POST', path: '/reject', type: 'danger', confirm: '确认驳回此采退订单？' },
+    { label: '审批通过', when: ['PENDING_APPROVAL'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此采退订单？（将自动生成采退出库草稿）' },
+    { label: '驳回', when: ['PENDING_APPROVAL'], method: 'POST', path: '/reject', type: 'danger', confirm: '确认驳回此采退订单？' },
     { label: '取消', when: ['DRAFT', 'APPROVED'], method: 'POST', path: '/cancel', type: 'warning', confirm: '确认取消此采退订单？' }
   ],
   cols: [
@@ -433,7 +379,7 @@ const purchaseReturns = {
     { k: 'supplierName', l: '供应商', filter: { type: 'text' } },
     { k: 'warehouseName', l: '出库仓库', w: 120, filter: { type: 'text' } },
     { k: 'finalAmount', l: '金额', w: 110, filter: { type: 'number' } },
-    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'SUBMITTED', label: '待审批' }, { value: 'APPROVED', label: '已审批' }, { value: 'SHIPPING', label: '发货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } },
+    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'PENDING_APPROVAL', label: '审批中' }, { value: 'APPROVED', label: '已审批' }, { value: 'SHIPPING', label: '发货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } },
     { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }
   ]
 }
@@ -613,10 +559,12 @@ const users = {
   key: 'users', title: '账号管理', api: '/api/users',
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
-    { k: 'username', l: '账号', filter: { type: 'text' } },
-    { k: 'name', l: '姓名', filter: { type: 'text' } },
+    { k: 'username', l: '账号', w: 130, filter: { type: 'text' } },
+    { k: 'name', l: '姓名', w: 110, filter: { type: 'text' } },
+    { k: 'roleName', l: '角色', w: 120 },
     { k: 'userType', l: '类型', w: 80, filter: { type: 'select', options: [{ value: 'vendor', label: '厂商' }, { value: 'dealer', label: '经销商' }] } },
     { k: 'email', l: '邮箱', filter: { type: 'text' } },
+    { k: 'phone', l: '手机号', w: 130 },
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: [{ value: 'active', label: '启用' }, { value: 'inactive', label: '停用' }, { value: 'locked', label: '锁定' }] } },
     { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
     { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
@@ -625,9 +573,10 @@ const users = {
     { key: 'username', label: '账号', required: true, group: '基本信息' },
     { key: 'name', label: '姓名', required: true, group: '基本信息' },
     { key: 'userType', label: '用户类型', type: 'select', required: true, value: 'vendor', group: '基本信息', options: [{ value: 'vendor', label: '厂商' }, { value: 'dealer', label: '经销商' }] },
-    { key: 'password', label: '初始密码', type: 'password', group: '基本信息', placeholder: '留空则用默认密码' },
-    { key: 'email', label: '邮箱', type: 'email', group: '联系信息' },
-    { key: 'phone', label: '手机号', group: '联系信息' },
+    { key: 'password', label: '初始密码', type: 'password', group: '基本信息', placeholder: '新增时必填，至少 8 位' },
+    { key: 'roleId', label: '角色', type: 'select', required: true, group: '权限', optionsUrl: '/api/roles', optionValue: 'id', optionLabel: 'name', placeholder: '请选择角色' },
+    { key: 'email', label: '邮箱', type: 'email', required: true, group: '联系信息' },
+    { key: 'phone', label: '手机号', required: true, type: 'text', group: '联系信息' },
     { key: 'orgId', label: '所属组织', picker: 'org-units', group: '归属' },
     { key: 'dealerId', label: '所属经销商(dealer)', picker: 'dealers', group: '归属' },
     { key: 'status', label: '状态', type: 'select', value: 'active', group: '状态', options: [{ value: 'active', label: '启用' }, { value: 'inactive', label: '停用' }, { value: 'locked', label: '锁定' }] }
@@ -859,7 +808,7 @@ export const MODULE_CONFIGS = {
   products, categories, dealers, hospitals, warehouses, regions, suppliers,
   'product-lines': productLines, 'product-package-levels': productPackageLevels, 'product-bundles': productBundles,
   'product-prices': productPrices,
-  'contract-apps': contractApps, contracts, authorizations, promotions,
+  authorizations, promotions,
   orders, 'sales-returns': salesReturns, 'purchase-orders': purchaseOrders, 'purchase-returns': purchaseReturns,
   inventory, 'sales-outs': salesOuts, receipts, 'stock-moves': stockMoves, 'inventory-adjustments': inventoryAdjustments,
   'surgery-reports': surgeryReports, users, positions, roles,

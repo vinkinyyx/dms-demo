@@ -89,5 +89,12 @@ _sync_from_server/
 tools/browser-use/api-verify-results.json
 tools/browser-use/reports/
 __pycache__/
+.tmp_*
+tools/_deploy*.py
+tools/_redeploy*.py
+tools/_verify*.py
+tools/_wait*.py
+tools/_dockerps.py
+tools/_e2e_*.py
 # Local developer profile
 backend/src/main/resources/application-local.yml

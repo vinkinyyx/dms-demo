@@ -1,3 +1,12 @@
+
+### v3.11.0 (2026-08-09) — 合同子系统模板驱动重构
+
+- 合并原"合同申请 + 合同"为统一「合同工作台」（/contracts），合同主表贯穿草稿/审批中/已生效/已驳回/已终止/已到期全生命周期
+- 新增「合同模板」菜单（/contracts/templates，权限 `contract_template:manage`），法务上传 Word(.docx) 自动识别内容控件与 `${占位符}` 生成可填字段；发布锁定+版本化
+- 后端方案 A：废弃 `contract_applications`，以单一 `contracts` 实体承载全生命周期；老测试数据丢弃；Flyway `V77` 重建合同表并补发 `contract:view`、`contract_template:manage` 权限
+- 合同提交后用 Apache POI 将字段回填模板 Word 生成成稿，审批详情对 `CONTRACT` 类型按"业务信息 + 审批可见字段"展示
+- 二期暂不实现：浏览器内直接编辑 Word 原文+段落级 diff、表格实时编辑/合计、长文本自动序号、复杂控件识别、第三方系统办结同步、电子签章、对外嵌入式集成
+
 **通用 DMS 经销商管理系统**
 
 产品需求文档 (PRD)
@@ -234,86 +243,173 @@
 | 厂商销售 / 客服 | 全量只读             | 仅查询、导出            |
 | 经销商用户      | 仅本经销商已授权产品 | 仅查询                  |
 
-**6.A.2 合同申请**
+
+**6.A.2 合同工作台（v3.11.0 重构）**
 
 **模块概述**
 
-覆盖经销商的全生命周期：新建、变更、续约、终止、批量延展、批量更新。销售或渠道管理员发起申请后，系统按合同分类自动提示所需上传资质（营业执照、经营许可证、GSP/GMP、法人身份证等），并对关键字段做前置校验；变更申请需列出变更前后对照（表格内容变更与非表格内容变更分开展示），便于审批人快速识别差异。
+合同子系统采用统一的「合同工作台」承载全生命周期。一条 `contracts` 记录贯穿 `draft → pending → effective → rejected/terminated/expired`，不引入独立的"申请单"实体；变更/续签/终止基于原合同生成新合同记录，通过 `ref_contract_id` 关联。配套独立菜单「合同模板」由法务维护，二者通过 `template_id` + `template_version` 关联。整体遵循需求文档 V3.0 的"法务模板配置 → 用户申请 → 审批 → 办结"四段式结构。
 
-**业务逻辑**
+**业务对象**
 
-用户点击「新建申请」进入表单页，逐步填写：合同类型（厂商-LP / 厂商-LS / 厂商-T1 / LP-T2 / LS-BSA / 非正式授权）→ 经销商基础信息 → 授权信息（终端、产品线、区域、有效期）→ 指标信息（年度采购额、Sales-Out 目标、达成分档）→ 上传附件 → 提交。变更申请从既有生效合同复制信息作为基线，允许用户修改字段，系统自动生成"变更前 vs 变更后"对照视图。续约申请支持一键复制历史合同并批量修改到期日；批量延展/批量更新支持一次维护多个合同的指标或到期日。终止申请提交后自动触发授权终止规则（见 6.B.2）。
+- **合同（contracts）**：主表实体，覆盖全生命周期；状态机见 6.A.5。
+- **合同模板（contract_templates）**：法务维护的 Word 模板；含 `fields(jsonb)` 字段定义数组、`original_file_id` 原文件、版本号、状态（draft/published/disabled）；发布后锁定，修改需走新建版本。
+- **合同附件（contract_attachments）**：合同正文成稿与外部附件；`category` 区分 `annex`/`final`。
+- **合同轮次（contract_revisions）**：每次提交/审批/驳回/撤回的留痕，存 `snapshot(jsonb)`。
 
-**字段规则（申请单公共字段）**
+**页面布局**
 
-|  |  |  |  |  |
-|----|----|----|----|----|
-| **字段名** | **类型** | **必填** | **长度/范围** | **说明** |
-| 申请单号 | 文本 | 是 | 自动生成 | 格式：类型码+日期+序号 |
-| 申请类型 | 字典 | 是 | — | 新建/变更/续约/终止/批量延展/批量更新 |
-| 经销商编号 | 文本 | 是 | ≤ 20 | 新建为空由系统生成 |
-| 合同分类 | 字典 | 是 | — | 决定所需附件与审批流 |
-| 授权有效期起 | 日期 | 是 | — | 不早于今日 |
-| 授权有效期止 | 日期 | 是 | — | 晚于起 |
-| 附件 | 文件 | 按分类 | ≤ 20MB/文件 | PDF/JPG/PNG/DOCX |
-| 备注 | 文本 | 否 | ≤ 500 | — |
+1. **合同工作台（/contracts）**
+   - 顶部状态页签：全部 / 草稿 / 审批中 / 已生效 / 已驳回 / 已终止 / 已到期
+   - 筛选：合同编号、合同名称、经销商、合同分类、有效期范围
+   - 列表列：合同编号、合同名称、分类、申请类型、经销商、签约金额、有效期、状态、当前节点、更新时间
+   - 行操作随状态变化：草稿→编辑/提交/删除；审批中→撤回/查看；生效→查看/发起变更/续签/终止；驳回→编辑/查看
 
-**状态流转**
+2. **新建/编辑合同（/contracts/new, /contracts/:id/edit）**
+   - 分区：①基础信息（合同名称、分类、申请类型、经销商、甲乙方、有效期、金额、付款/结算、负责人）②模板动态字段（按所选分类自动匹配已发布模板，渲染 `fields[].label/type/required/group/sort`）③附件上传 ④备注
+   - 操作：保存草稿、保存并提交（生成成稿+启动审批流）
+   - 提交后：状态 `pending`，锁定编辑，生成 `source_file_id`（成稿 Word）
 
-|              |                    |                      |                     |
-|--------------|--------------------|----------------------|---------------------|
-| **当前状态** | **允许操作**       | **下一状态**         | **触发条件**        |
-| 草稿         | 编辑 / 删除 / 提交 | 待审批 / —           | 发起人手动操作      |
-| 待审批       | 通过 / 拒绝 / 撤回 | 审批中 / 拒绝 / 草稿 | 审批人 / 发起人操作 |
-| 审批中       | 通过 / 拒绝        | 待签章 / 拒绝        | 最后一级审批完成    |
-| 待签章       | 双方完成签章       | 生效 / —             | 签章接口回调        |
-| 生效         | 发起变更/续约/终止 | 待审批（新单）       | 任何一方发起        |
-| 拒绝         | 基于原单再次发起   | 草稿                 | 发起人操作          |
+3. **合同详情（/contracts/:id）**
+   - 基础信息 + 动态字段值 + 附件 + 审批时间线（contract_revisions 节点）
+   - 状态相关操作：草稿→编辑/提交；审批中→撤回；生效→发起变更/续签/终止
 
-**6.A.3 合同审批**
+4. **合同模板（/contracts/templates）**
+   - 模板列表：编号、名称、绑定分类、版本、状态、字段数、更新时间
+   - 模板配置（/contracts/templates/:id, /contracts/templates/new）：
+     - 上传 .docx → 后端 Apache POI 解析内容控件 + `${占位符}` → 返回字段定义
+     - 字段表格可编辑标签/类型/必填/审批可见/分组/排序，可手动新增/删除
+     - 绑定业务分类
+     - 保存草稿 / 发布
+
+**字段规则（合同基础信息）**
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| 合同名称 | 文本 | 是 | — |
+| 合同分类 | 字典 | 是 | SALES/DISTRIBUTION/AUTHORIZATION/SERVICE/SUPPLY/PROMOTION |
+| 申请类型 | 字典 | 是 | NEW 新签 / MODIFY 变更 / RENEW 续签 / TERMINATE 终止 |
+| 经销商 | 引用 | 否 | `dealers` |
+| 甲方/乙方 | 文本 | 否 | 自动带入；亦可手工覆盖 |
+| 签订城市 | 文本 | 否 | — |
+| 生效/截止日期 | 日期 | 否 | 草稿可空；提交时校验 validFrom ≤ validTo |
+| 目标/签约金额 | 数值 | 否 | ≥ 0 |
+| 付款条款/结算周期 | 文本 | 否 | — |
+| 负责人/电话 | 文本 | 否 | — |
+| form_data | jsonb | — | 模板动态字段值，结构由 `template.fields` 决定 |
+
+**字段规则（合同模板）**
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| code | 文本 | 是 | 系统生成（`CTT-yyyymmdd-00001`） |
+| name | 文本 | 是 | 模板名称 |
+| category | 字典 | 是 | 与合同分类一致；同分类只能有一个 published |
+| original_file_id | 引用 | 否 | 模板 .docx 文件（files 表） |
+| fields | jsonb 数组 | 是 | `[{key,label,type,required,approvalVisible,group,sort,options}]` |
+| numbering_rules | jsonb | 否 | 长文本序号规则（二期） |
+| version | 整数 | 是 | 从 1 起，发布后修改自动升版本 |
+| status | 字典 | 是 | draft / published / disabled |
+
+**审批与留痕**
+
+- 审批沿用 v3.10.0 引入的独立审批中心（`com.dms.approval`），业务类型 `CONTRACT`
+- 合同提交 → `approvalService.start`（含 `businessSnapshot`）→ 匹配审批模板 → 进入 `pending`
+- 合同回调 `ContractApprovalCallback` 驱动状态流转：onApproved → `effective`（终止类为 `terminated`）；onRejected → `rejected`；onWithdrawn/onReturned → `draft`；onTerminated → `terminated`
+- 每次状态变更写入 `contract_revisions`（含 `round/action/operator/comment/snapshot`），详情页时间线展示
+- 驳回后申请人可基于驳回意见修改并重新提交，保留上一轮 snapshot 与审批意见
+
+**成稿生成（v3.11.0 MVP）**
+
+- 合同 `POST /api/contracts/{id}/submit` 触发 `ContractDocxGenerator`
+- 读取模板 `original_file_id` 对应 .docx，将 `formData` + 系统字段（contract_code/contract_name/vendor_party/dealer_party/valid_from/valid_to）合并
+- 用 Apache POI 替换段落/表格中的 `${key}` 占位符，输出新 .docx 存入 `files(biz_type='contract-final')`，回填 `contracts.source_file_id`
+- 详情页"下载合同成稿"链接到 `/api/files/{id}/download`
+
+**6.A.3 合同模板（v3.11.0 新增菜单）**
 
 **模块概述**
 
-提供 Web 端审批中心与邮件审批双通道。审批流由「流程设定」模块预先按合同分类、金额区间、授权区域等维度配置，运行时动态匹配审批人；不同节点向审批人展示的字段可差异化配置（如财务节点只看金额相关字段，法务节点只看合同条款）。
+独立的「合同模板」菜单由法务或合同管理员维护，配置 Word 模板的字段定义与绑定业务分类。所有合同工作台中"合同分类"自动匹配当前已发布模板；模板支持版本化（修改不影响已生效合同，因合同已快照 `template_version`）。
 
 **业务逻辑**
 
-审批中心以待办列表为入口，支持按类型、发起人、时间筛选。用户点击进入审批详情页，查看合同全字段、变更对照、附件预览；页面底部提供「通过」「拒绝」「转交」「加签」按钮。拒绝时必须填写原因，原因回写至发起人。邮件审批：系统在有新待办时向审批人邮箱发送带一次性 Token 的链接，点击后直达审批详情页无需登录（Token 24 小时失效）；审批结果同步回 Web 端。所有审批动作写入审计日志。
+1. 新建模板：上传 .docx → 后端 `POST /api/contract-templates/upload-and-parse`（POI 解析内容控件 SDT + `${占位符}`）→ 前端展示字段定义 → 法务可手动调整（标签/类型/必填/审批可见/分组/排序）→ 绑定分类 → 保存草稿
+2. 发布：调用 `POST /api/contract-templates/{id}/publish` → 同分类旧 published 自动置 disabled → 新版本 `status='published'`
+3. 新建版本：基于已发布模板创建 version+1 的草稿，原模板保留
+4. 停用：仅允许对 published 模板调用 → 置 disabled
+5. 删除：仅允许对 draft 模板调用
 
-**边界与异常**
+**字段定义（fields[]）结构**
 
-- 审批人离职：由管理员在流程设定中调整默认审批人；未处理的单据自动转派
+```json
+{
+  "key": "party_b_address",
+  "label": "乙方地址",
+  "type": "text | textarea | number | amount | date | select | checkbox",
+  "required": true,
+  "approvalVisible": true,
+  "group": "双方信息",
+  "sort": 3,
+  "options": []
+}
+```
 
-- 并发审批：同一单据在两个节点被同时打开时，先提交者生效，后提交者获得冲突提示；
+MVP 类型覆盖：text/textarea/number/amount/date/select/checkbox；复杂控件（图片、整页附件、嵌套重复表格）保留到二期。
 
-- 超时未审批：24/48/72 小时未处理分别发送提醒、加急、上升到上级。
-
-**6.A.4 电子协议与签章**
+**6.A.4 合同审批与回调**
 
 **模块概述**
 
-审批通过后自动生成电子协议 PDF，按「合同分类 × 经销商类型 × 申请类型」使用不同模板，模板中的动态字段（经销商名称、授权终端、有效期等）自动填充。对于需要特殊条款的经销商，支持"特殊条款批注"上传后走额外审批；不支持电子签章的场景（如线下签约），允许上传纸质协议扫描件替代。签章采用第三方 CA 接口，双方通过短信验证码/UKey 完成身份认证后签章。
+合同审批复用 v3.10.0 审批中心（`com.dms.approval`），业务类型为 `CONTRACT`，由 `ContractApprovalCallback` 驱动合同状态流转。
 
 **业务逻辑**
 
-审批通过后系统在 5 分钟内生成协议 PDF 并通知双方。经销商侧登录后在「待签章」列表中看到该协议，点击进入预览页 → 阅读协议 → 输入短信验证码 → 完成经销商签章。厂商侧合同专员随后在「待厂商签章」列表中进入相同流程完成厂商签章。任意一方拒绝签章则回退到发起人，允许其重新发起变更或作废。签章完成后 PDF 落章版本入库，同步至法务归档，并触发 ERP 主数据同步与授权生成。
+- 合同提交时：构造 `StartApprovalRequest{businessType=CONTRACT, businessId, businessCode, title, businessSnapshot=完整业务快照}` → 启动审批
+- 审批详情（`ApprovalDetailDrawer`）对 `CONTRACT` 类型按"业务信息 + 审批可见字段"展示：
+  1. **业务信息**：合同编号、合同名称、甲方、乙方、有效期、签约金额
+  2. **审批可见的动态字段**：读取合同 `template.fields[]` 中 `approvalVisible=true` 的字段，标签+值对照展示
+  3. （MVP）变更对比：两轮 snapshot JSON 字段级 diff；段落级原文 diff 留二期
+- 通过/驳回/转办/加签由审批中心统一处理
+- 邮件审批 Token（v3.10.0 邮件审批模块）走 `/api/system-ops/approval-tokens/*/approve`，`resourceType=contract` 时后端回写 `contracts.status=effective`（兼容 v3.11 字段名）
+- 回调写 `contract_revisions` 留痕
 
-**字段规则**
+**6.A.5 状态机与到期**
 
-|                |          |          |                  |
-|----------------|----------|----------|------------------|
-| **字段**       | **类型** | **必填** | **说明**         |
-| 协议编号       | 文本     | 是       | 自动生成         |
-| 协议模板       | 字典     | 是       | 按合同分类匹配   |
-| 经销商签章时间 | 日期时间 | 否       | 经销商完成后写入 |
-| 厂商签章时间   | 日期时间 | 否       | 厂商完成后写入   |
-| 特殊条款附件   | 文件     | 否       | ≤ 10MB PDF       |
-| 纸质扫描件     | 文件     | 否       | ≤ 20MB PDF/JPG   |
-| CA 流水号      | 文本     | 否       | 第三方 CA 回写   |
+**合同状态流转**
 
-**6.A.5 外部对接与法务归档**
+| 当前状态 | 允许操作 | 下一状态 | 触发条件 |
+|---|---|---|---|
+| draft | 编辑 / 删除 / 提交 | pending / — | 发起人操作 |
+| pending | 撤回 | draft | 发起人撤回 |
+| pending | 审批通过 | effective | 审批回调 onApproved（非终止类） |
+| pending | 审批通过（终止申请） | terminated | 审批回调 onApproved（TERMINATE） |
+| pending | 驳回 | rejected | 审批回调 onRejected/onReturned |
+| effective | 发起变更/续签 | pending | 提交新合同版本（ref_contract_id 关联） |
+| effective | 发起终止 | pending | 提交 TERMINATE 类型 |
+| effective | 到期 | expired | 每日 `ContractExpiryTask` 扫描 `valid_to < CURRENT_DATE` |
+| rejected | 编辑后再次提交 | pending | 发起人操作（自动转回 draft 再提交） |
+| terminated | — | — | 终态 |
+| expired | — | — | 终态（可视业务需要人工复活） |
 
-电子协议生效后按接口规范推送至 ERP：新增经销商则新增 ERP 客户档案，变更/续约则更新档案，终止则冻结档案。所有生效协议 PDF 归档至法务系统（或本地归档目录），保留期不少于合同到期后 5 年；非电子签章的合同支持扫描件回传归档。归档记录包含合同编号、经销商编号、生效日期、终止日期、附件路径、审计签名，供审计人员随时导出。
+**到期定时任务（`ContractExpiryTask`）**
+
+- 每日 0:05 扫描 `contracts` 中 `status='effective' AND valid_to < CURRENT_DATE` 的记录
+- 批量置 `status='expired'`
+- 后续可对接告警/通知（v3.10.0 邮件提醒复用）
+
+**6.A.6 办结同步（v3.11.0 暂不实现，已在二期）**
+
+- 不实现：定时任务、字段映射、第三方 REST 推送、鉴权（Basic/OAuth2/API Key）、同步日志、指数退避重试、告警通知
+- 预留扩展点：`contracts.effective_at` 字段可作为外部系统拉取游标
+
+**6.A.7 公开接口与回退**
+
+- 原 `/api/contract-applications` 已完全移除
+- 原 `GET /api/contracts/actions/export` 已移除，导出需求由报表中心覆盖
+- 邮件审批旧字段 `contract-application` 改为 `contract`，后端 `SystemOpsController` 已同步更新
+
+
 
 **6.B 进销存子系统 (DMS)**
 

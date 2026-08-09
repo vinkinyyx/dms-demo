@@ -122,11 +122,11 @@
     ]
   },
   "projectFileHashes": {
-    "DMS产品宣传手册-重制版.design": "837fe508283f0553fa91b724abf2f3188a4b4dbe9c79a5f041861fbcd2dc4906",
+    "DMS产品宣传手册-重制版.design": "a2cce6062ba36cb8079c1842efc2eecb4c9caf4abd3575b6f4781fee0c13b2c8",
     "colors_and_type.css": "6b7e1ef989db37e467e12c112c93d18c003ec3a5f4143fee29417bbf1a01731e",
-    "runtime-orchestration-summary.json": "2bc40130d85d99f6f4e08a175a4aa897bd3a6035067118fc60582a95a47e6789",
-    "pages/index.html": "bc5ffca7c50c67d7d974aad86b44fb8bd7ed6337c64991044c6ff0c60c50ff43",
-    "pages/print.html": "c2b86951f1c94ffe29e7460243d7dd00777d13f11501fd48499a0c2c2f48aad6",
+    "runtime-orchestration-summary.json": "361292d7d5995b72291c73c1d5ad4ac6eb59d41e62dc6dbe75efdc0dcf3281d1",
+    "pages/index.html": "80d874da4535e51fd4a53317e2636e7b0bf244176d7939f79240e9929a6cb40b",
+    "pages/print.html": "f4e1ac12aec665fc36ed581538ad2f37d6d2773fde1bfe1376015b2286baecd5",
     "assets/01-pc-login.png": "9a10b34992fd53213ec9690a3cb2da12fb329d450b423db228f0625cbb1a40e3",
     "assets/02-pc-home.png": "a9c095f2c8530f8ffbc4ad48eb06b4c6aaea59f1be88bc6b47f92592248a8cdd",
     "assets/03-pc-products.png": "c8b26052b8c9f77b7eb853f438da411208155f4b5690b36bd2d662813ecd659c",
@@ -134,7 +134,7 @@
     "assets/05-pc-hospitals.png": "5259cb0f5415de85fa195d0d37e226d6fcf0ba90598f5d16c68c22fa2d82ab3d",
     "assets/06-pc-warehouses.png": "f0843f2281a2efc0a4347ca37fea71a5cf2e44579de9ae185ace7ca7b5167194",
     "assets/07-pc-contracts.png": "301bd782b35e433d63639a101a1535ce30ffccd560dbb7412cb4d0dcf1b01245",
-    "assets/08-pc-contract-apply.png": "33d86948994d0821f2aadbc237ee47fcc4030f18d6243865f9b9b29b2d18a49f",
+    "assets/08-pc-contract-apply.png": "e3abccdc33d6f6b4ba0764f9edeab4055f159c58b39b1c2b2dfbd960a3a23f52",
     "assets/09-pc-authorizations.png": "490f158e5d077b9ef83780706ab3cc2df9f0ae09bf9fb37712ef04c1f9f86686",
     "assets/10-pc-sales-orders.png": "0a06984a14fbc5ca6dc9114e3922b66121be7e67defa851716e9c19022ca62f4",
     "assets/11-pc-purchase-orders.png": "28eead08910348dc3aa963f228c809265a423a3c9dbf90f5f2dfc8c2b4d55965",
@@ -147,7 +147,7 @@
     "assets/18-pc-sales-outs.png": "4d1fa262d4062ea4484f6191a019b8a8b036c2591ecb60640a1a2f0907a53591",
     "assets/19-pc-surgery-reports.png": "c3b8eaa70a9c9d844d77f37905a47cbaa8b25e0db4fa39f7305792aa50df227c",
     "assets/20-pc-dashboard.png": "717193880e4335f4f2175a17a6a96b5f8fa4c722f2a82f11e21ee9407d1621e8",
-    "assets/20b-pc-dealer-profile.png": "ed9e20a5e6964fbf90137649f0caae6ac39e43c4e07df8bcd6930653b20d9e51",
+    "assets/20b-pc-dealer-profile.png": "a28722a669c24070614a336660186f99065261d0795bef9d63967e5be5b75db9",
     "assets/21-pc-users.png": "73a45770bf0b0ae53c19ede5d7a0efe68a17b1593c3b94c5e6e35be8d4b3ead1",
     "assets/22-pc-roles.png": "675b73284569c039a8511db4cd129887f07fc4757b7b86ca8706cd950e93b4df",
     "assets/23-admin-login.png": "257b693155be8517fb688c4fa6d998e903d784f15b80718b9d58a1ee0be8864f",
@@ -165,10 +165,12 @@
     "assets/35-mobile-orders.png": "d3baa47e19264717e032c16596d5d9dabeab3448c17605dbd14ae73cddfe83c6",
     "assets/36-mobile-inventory.png": "4c4f042ed28a9ec6ae2b484961f1a6628d67ad92ec4e2f45a8e860230ea18494",
     "assets/37-mobile-surgery.png": "f0028e5ada33ba54cf13df9e1be9b723df9459226fe990936050a0731fe59619",
-    "assets/38-mobile-receipt.png": "bed5483d073e6cb2ad9709cd2730b7e6d1f987549535ae2c6b6488dcfa76a64d"
+    "assets/38-mobile-receipt.png": "bed5483d073e6cb2ad9709cd2730b7e6d1f987549535ae2c6b6488dcfa76a64d",
+    "assets/39-pc-approval-workflow.jpg": "dc7f08b39f058676f4aaa5f1cc70a8a6e5d2908ccfad3dd6ade50d7e81a6d00b",
+    "assets/40-pc-email-logs.jpg": "647280308588f8dea825c3848f9b2b2995bca6cb9448aacaa1b39eccacfbe22b"
   },
   "designDir": "C:\\Users\\vinki\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a75caae7b2e0ffb2059881b\\DMS产品宣传手册-重制版",
-  "expectedPages": 2,
+  "expectedPages": null,
   "requireInteractions": null,
-  "checkedAt": "2026-08-07T17:35:58.248Z"
+  "checkedAt": "2026-08-09T09:55:04.850Z"
 }

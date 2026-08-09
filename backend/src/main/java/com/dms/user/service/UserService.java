@@ -13,6 +13,10 @@ import com.dms.user.dto.UserCreateRequest;
 import com.dms.user.dto.UserDTO;
 import com.dms.user.dto.UserUpdateRequest;
 import com.dms.user.entity.User;
+import com.dms.rbac.entity.Role;
+import com.dms.rbac.entity.UserRole;
+import com.dms.rbac.repository.RoleRepository;
+import com.dms.rbac.repository.UserRoleRepository;
 import com.dms.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 用户业务服务：包含 CRUD、解锁、重置密码、微信绑定解绑、登录失败计数等能力。
@@ -40,6 +47,8 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserRoleRepository userRoleRepository;
+    private final RoleRepository roleRepository;
 
     @Transactional(readOnly = true)
     public PageResult<UserDTO> list(UUID tenantId, PageQuery pageQuery) {
@@ -64,6 +73,12 @@ public class UserService {
         if (userRepository.existsByTenantIdAndUsername(tenantId, request.getUsername())) {
             throw new BusinessException(ErrorCode.RESOURCE_CONFLICT, "用户名在租户内已存在");
         }
+        if (request.getEmail() == null || !request.getEmail().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "邮箱格式不正确");
+        }
+        if (request.getPhone() == null || !request.getPhone().matches("^1[3-9]\\d{9}$")) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "手机号格式不正确");
+        }
         User user = User.builder()
                 .tenantId(tenantId)
                 .username(request.getUsername())
@@ -83,7 +98,11 @@ public class UserService {
                 .updatedAt(OffsetDateTime.now())
                 .build();
         user.ensureAttrs();
-        return toDTO(userRepository.save(user));
+        User saved = userRepository.save(user);
+        if (request.getRoleId() != null) {
+            assignRole(saved, request.getRoleId());
+        }
+        return toDTO(saved);
     }
 
     @Transactional
@@ -98,7 +117,34 @@ public class UserService {
         if (request.getAttrs() != null) user.setAttrs(request.getAttrs());
         user.setUpdatedAt(OffsetDateTime.now());
         user.ensureAttrs();
-        return toDTO(userRepository.save(user));
+        User saved = userRepository.save(user);
+        if (request.getRoleId() != null) {
+            assignRole(saved, request.getRoleId());
+        }
+        return toDTO(saved);
+    }
+
+    private void assignRole(User user, Long roleId) {
+        UUID tenantId = user.getTenantId();
+        List<Long> owned = roleRepository.findByTenantId(tenantId).stream().map(Role::getId).collect(Collectors.toList());
+        if (!owned.contains(roleId)) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "角色不属于当前租户: " + roleId);
+        }
+        userRoleRepository.deleteByUserId(user.getId());
+        Long operator = TenantContext.getUserId();
+        userRoleRepository.save(UserRole.builder().userId(user.getId()).roleId(roleId).grantedBy(operator).build());
+        log.info("用户 {} 分配角色 {}", user.getId(), roleId);
+    }
+
+
+    private Long primaryRoleId(Long userId) {
+        return userRoleRepository.findByUserId(userId).stream().findFirst().map(UserRole::getRoleId).orElse(null);
+    }
+
+    private String primaryRoleName(Long userId) {
+        Long rid = primaryRoleId(userId);
+        if (rid == null) return null;
+        return roleRepository.findById(rid).map(Role::getName).orElse(null);
     }
 
     @Transactional
@@ -201,6 +247,10 @@ public class UserService {
                 .phone(u.getPhone())
                 .orgId(u.getOrgId())
                 .dealerId(u.getDealerId())
+                .roleId(primaryRoleId(u.getId()))
+                .roleName(primaryRoleName(u.getId()))
+                .roleIds(userRoleRepository.findByUserId(u.getId()).stream().map(UserRole::getRoleId).collect(Collectors.toList()))
+                .roleNames(roleRepository.findAllById(userRoleRepository.findByUserId(u.getId()).stream().map(UserRole::getRoleId).collect(Collectors.toList())).stream().map(Role::getName).collect(Collectors.toList()))
                 .status(u.getStatus())
                 .loginFailCount(u.getLoginFailCount())
                 .lockedUntil(u.getLockedUntil())

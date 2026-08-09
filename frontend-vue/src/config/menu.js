@@ -1,4 +1,4 @@
-﻿export const MENU_GROUPS = [
+export const MENU_GROUPS = [
   {
     group: '基础数据',
     items: [
@@ -16,10 +16,10 @@
     ]
   },
   {
-    group: '合同授权',
+    group: '合同管理',
     items: [
-      { key: 'contract-apps', icon: 'EditPen', label: '合同申请', permissionCode: 'contract_application:view' },
-      { key: 'contracts', icon: 'Document', label: '合同', permissionCode: 'contract:view' },
+      { key: 'contracts-workbench', icon: 'Document', label: '合同工作台', route: '/contracts', permissionCode: 'contract:view' },
+      { key: 'contract-templates', icon: 'Files', label: '合同模板', route: '/contracts/templates', permissionCode: 'contract_template:manage' },
       { key: 'authorizations', icon: 'Key', label: '授权管理', permissionCode: 'authorization:view' }
     ]
   },
@@ -76,6 +76,15 @@
     ]
   },
   {
+    group: '审批中心',
+    items: [
+      { key: 'approval-todo', icon: 'Bell', label: '我的审批', route: '/approval/todo' },
+      { key: 'approval-templates', icon: 'SetUp', label: '审批流配置', route: '/approval/templates', permissionCode: 'approval:manage' },
+      { key: 'approval-delegations', icon: 'Switch', label: '审批委托', route: '/approval/delegations', permissionCode: 'approval:manage' },
+      { key: 'approval-admin', icon: 'Monitor', label: '审批监控', route: '/approval/admin', permissionCode: 'approval:admin' }
+    ]
+  },
+  {
     group: '用户与权限',
     items: [
       { key: 'positions', icon: 'OfficeBuilding', label: '销售岗位', route: '/positions', permissionCode: 'position:view' },
@@ -83,6 +92,7 @@
       { key: 'roles-manage', route: '/roles-manage', icon: 'Avatar', label: '角色权限', permissionCode: 'role:view' },
       { key: 'tenant-page-configs', route: '/tenant-page-configs', icon: 'Setting', label: '列表页配置', permissionCode: 'tenant_ui_config:view' },
       { key: 'api-call-logs', icon: 'Connection', label: '接口调用日志', route: '/api-call-logs', permissionCode: 'api_log:view' }
+      ,{ key: 'email-logs', icon: 'Message', label: '邮件发送日志', route: '/email-logs', permissionCode: 'email_log:view' }
     ]
   }
 ]

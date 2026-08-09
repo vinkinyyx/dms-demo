@@ -103,15 +103,15 @@
                 @click="onRowButtonClick(b, row)"
               >{{ b.label }}</el-button>
             </template>
-            <el-dropdown v-if="overflowRowButtons(row).length" size="small" trigger="click">
+            <el-dropdown v-if="overflowRowButtons(row).length" size="small" trigger="click" @command="(cmd) => onRowButtonClick(cmd, row)">
               <el-button size="small">更多<i class="el-icon--right"><el-icon><ArrowDown /></el-icon></i></el-button>
               <template #dropdown>
                 <el-dropdown-menu>
                   <template v-for="b in overflowRowButtons(row)" :key="b.buttonKey">
                     <el-dropdown-item
                       v-has="b.permissionCode"
+                      :command="b"
                       :divided="b.rowButtonPosition === 'danger'"
-                      @click="onRowButtonClick(b, row)"
                     >
                       <span :class="{ 'text-danger': b.buttonType === 'danger' || b.rowButtonPosition === 'danger' }">
                         {{ b.label }}
@@ -162,7 +162,7 @@
     </div>
 
     <!-- 表单抽屉 -->
-    <el-drawer v-model="formVisible" direction="rtl" size="100%" :title="editing ? '??' : '??'" :modal="true" :close-on-click-modal="false" destroy-on-close>
+    <el-drawer v-model="formVisible" direction="rtl" size="100%" :title="editing ? '编辑' : '新增'" :modal="true" :close-on-click-modal="false" destroy-on-close>
       <div class="crud-form-container" :class="{ 'has-lines': hasLines }">
         <el-form :model="formData" label-width="150px">
           <template v-for="grp in groupedFields" :key="grp.name">
@@ -177,8 +177,8 @@
                   <el-input v-else-if="f.type === 'textarea'" v-model="formData[f.key]" type="textarea" :rows="2" :placeholder="f.placeholder" />
                   <el-input-number v-else-if="f.type === 'number'" v-model="formData[f.key]" :controls="false" style="width:100%" />
                   <el-date-picker v-else-if="f.type === 'date'" v-model="formData[f.key]" type="date" value-format="YYYY-MM-DD" style="width:100%" />
-                  <el-select v-else-if="f.type === 'select'" v-model="formData[f.key]" style="width:100%" clearable :teleported="false" popper-class="crud-select-popper">
-                    <el-option v-for="o in f.options" :key="o.value !== undefined ? o.value : o.label" :label="o.label" :value="o.value" />
+                  <el-select v-else-if="f.type === 'select'" v-model="formData[f.key]" style="width:100%" clearable :multiple="!!f.multiple" :collapse-tags="!!f.multiple" :collapse-tags-tooltip="!!f.multiple" :teleported="false" popper-class="crud-select-popper">
+                    <el-option v-for="o in selectOptions(f)" :key="o.value !== undefined ? o.value : o.label" :label="o.label" :value="o.value" />
                   </el-select>
                   <el-switch v-else-if="f.type === 'boolean'" v-model="formData[f.key]" :disabled="f.readonly" />
                   <AttachmentUploader v-else-if="f.type === 'attachment'" v-model="formData[f.key]" />
@@ -253,7 +253,7 @@ import ResourcePicker from '@/components/ResourcePicker.vue'
 import MultiSelectPicker from '@/components/MultiSelectPicker.vue'
 import LinesEditor from '@/components/LinesEditor.vue'
 import AttachmentUploader from '@/components/AttachmentUploader.vue'
-import { listResource, createResource, updateResource, deleteResource, getDetail, actionResource, getOperationLogs } from '@/api/crud'
+import { listResource, createResource, updateResource, deleteResource, getDetail, actionResource, getOperationLogs, httpGet } from '@/api/crud'
 import { statusText, statusTagType, fmt, labelOf, reloadDicts, loadDict, getDictOptions } from '@/utils/dict'
 import { getToken } from '@/utils/auth'
 import { formatAuto } from '@/utils/format'
@@ -357,7 +357,7 @@ const detailKeys = computed(() => {
     const v = data[k]
     return typeof v !== 'object' || v == null
   })
-  const idNamePairs = [['categoryId', 'categoryName'], ['dealerId', 'dealerName'], ['hospitalId', 'hospitalName'], ['warehouseId', 'warehouseName'], ['supplierId', 'supplierName'], ['regionId', 'regionName'], ['productId', 'productName']]
+  const idNamePairs = [['categoryId', 'categoryName'], ['dealerId', 'dealerName'], ['hospitalId', 'hospitalName'], ['warehouseId', 'warehouseName'], ['supplierId', 'supplierName'], ['regionId', 'regionName'], ['productId', 'productName'], ['roleId', 'roleName']]
   idNamePairs.forEach(([idKey, nameKey]) => {
     if (keys.includes(idKey) && keys.includes(nameKey) && data[nameKey]) {
       const idx = keys.indexOf(idKey)
@@ -382,10 +382,42 @@ watch(() => props.config, async () => {
   fetchData()
 }, { immediate: true })
 
+const PICKER_NAME_MAP = {
+  orgId: 'orgName', dealerId: 'dealerName', hospitalId: 'hospitalName',
+  warehouseId: 'warehouseName', supplierId: 'supplierName', regionId: 'regionName',
+  productId: 'productName', categoryId: 'categoryName', contractId: 'contractName'
+}
+
 function isFull(f) { return f.type === 'textarea' || f.full }
 function isLinesField(f) { return f.type === 'lines' }
 const hasLines = computed(() => (props.config.form || []).some((f) => f.type === 'lines'))
 function pickerResource(f) { return f.type === 'product-picker' ? 'products' : (f.picker && f.picker.resource) || f.picker }
+
+// 字段级下拉选项：支持静态 f.options，或 f.optionsUrl 异步加载（带缓存）
+const asyncOptionsCache = {}
+function selectOptions(f) {
+  if (Array.isArray(f.options)) return f.options
+  if (f.optionsUrl) {
+    if (!asyncOptionsCache[f.key]) {
+      asyncOptionsCache[f.key] = ref([])
+      loadAsyncOptions(f)
+    }
+    return asyncOptionsCache[f.key].value
+  }
+  return []
+}
+async function loadAsyncOptions(f) {
+  try {
+    const res = await httpGet(f.optionsUrl, f.optionsParams || {})
+    const list = Array.isArray(res.data) ? res.data : (res.data && (res.data.list || res.data.records)) || []
+    asyncOptionsCache[f.key].value = list.map((it) => ({
+      value: it[f.optionValue || 'id'],
+      label: it[f.optionLabel || 'name'] != null ? String(it[f.optionLabel || 'name']) : String(it[f.optionValue || 'id'])
+    }))
+  } catch (e) {
+    asyncOptionsCache[f.key].value = []
+  }
+}
 function stripEmoji(s) { return String(s || '').replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF✅❌✓]/gu, '').trim() }
 
 
@@ -508,9 +540,39 @@ async function onRowButtonClick(b, row) {
   }
   if (b.buttonKey === 'edit') return openForm(row)
   if (b.buttonKey === 'delete') return onDelete(row)
+  if (b.buttonKey === 'reset_pwd' || b.buttonKey === 'reset-password' || b.buttonKey === 'resetPassword') return onResetPassword(row)
+  if (b.buttonKey === 'unlock') return onUnlock(row)
   const legacy = legacyActionForButton(b, row)
   if (legacy) return doAction(row, legacy)
   ElMessage.info('未配置按钮 ' + b.buttonKey + ' 的回调')
+}
+
+async function onResetPassword(row) {
+  try {
+    const { value } = await ElMessageBox.prompt('请为「' + (row.name || row.username) + '」设置新密码（至少 8 位）', '重置密码', {
+      inputType: 'password',
+      inputPlaceholder: '请输入新密码',
+      confirmButtonText: '确认重置',
+      cancelButtonText: '取消',
+      inputValidator: (v) => {
+        if (!v || v.length < 8) return '密码至少 8 位'
+        if (v.length > 64) return '密码不超过 64 位'
+        return true
+      }
+    })
+    await actionResource(props.config.api, row.id, '/reset-password', 'post', { newPassword: value })
+    ElMessage.success('密码已重置')
+    fetchData()
+  } catch (e) { /* 用户取消 */ }
+}
+
+async function onUnlock(row) {
+  try {
+    await ElMessageBox.confirm('确认解锁账号「' + (row.name || row.username) + '」？', '解锁', { type: 'info' })
+    await actionResource(props.config.api, row.id, '/unlock', 'post')
+    ElMessage.success('账号已解锁')
+    fetchData()
+  } catch (e) { /* 用户取消 */ }
 }
 
 const selectedRows = ref([])
@@ -672,6 +734,15 @@ async function onSubmit() {
         ElMessage.warning('请填写“' + f.label + '”')
         return
       }
+      if (f.type === 'password' && typeof v === 'string' && v.length < 8) {
+        ElMessage.warning('“' + f.label + '”至少 8 位')
+        return
+      }
+    } else if (f.type === 'password' && formData[f.key] && !f.readonly) {
+      if (String(formData[f.key]).length < 8) {
+        ElMessage.warning('“' + f.label + '”至少 8 位')
+        return
+      }
     }
   }
   saving.value = true
@@ -765,8 +836,6 @@ const BUSINESS_TYPE_MAP = {
   receipts: 'receipt',
   'stock-moves': 'stockMove',
   'inventory-adjustments': 'inventoryAdjustment',
-  'contract-apps': 'contractApplication',
-  contracts: 'contract',
   promotions: 'promotion',
   'surgery-reports': 'surgeryReport'
 }

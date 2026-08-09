@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,6 +31,9 @@ public class UserUpdateRequest {
     private Long dealerId;
 
     private String status;
+
+    /** 分配的角色 ID；传 null 表示不变 */
+    private Long roleId;
 
     private Map<String, Object> attrs;
 }

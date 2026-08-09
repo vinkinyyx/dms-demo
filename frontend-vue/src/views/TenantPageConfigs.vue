@@ -66,7 +66,7 @@ import { getPageLayout, saveTenantFilters, saveTenantButtons } from '@/api/admin
 const pageOptions = [
   { key: 'products', label: '产品管理' }, { key: 'categories', label: '产品分类' }, { key: 'dealers', label: '经销商管理' },
   { key: 'hospitals', label: '医院/终端' }, { key: 'warehouses', label: '仓库管理' }, { key: 'suppliers', label: '供应商' },
-  { key: 'contract-apps', label: '合同申请' }, { key: 'contracts', label: '合同' }, { key: 'authorizations', label: '授权管理' },
+  { key: 'contracts', label: '合同工作台' }, { key: 'authorizations', label: '授权管理' },
   { key: 'orders', label: '销售订单' }, { key: 'sales-returns', label: '销退订单' }, { key: 'purchase-orders', label: '采购订单' },
   { key: 'purchase-returns', label: '采退订单' }, { key: 'inventory', label: '库存查询' }, { key: 'sales-outs', label: '销售出库' },
   { key: 'receipts', label: '收货入库' }, { key: 'stock-moves', label: '库存移动' }, { key: 'inventory-adjustments', label: '库存调整' },

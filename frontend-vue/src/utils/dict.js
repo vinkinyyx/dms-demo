@@ -7,6 +7,8 @@ export const LABELS = {
   remark: '备注', description: '说明', version: '版本号', tenantId: '租户ID',
   username: '账号', userType: '用户类型', email: '邮箱', phone: '手机号',
   lastLoginAt: '最近登录', wechatBound: '微信绑定', mustChangePassword: '需改密',
+  roleId: '角色', roleName: '角色', roleIds: '角色', roleNames: '角色',
+  loginFailCount: '登录失败次数', lastLoginIp: '最近登录IP',
   orgId: '组织', dealerId: '经销商', lockedUntil: '锁定至',
   spec: '规格型号', unit: '单位', currentPrice: '参考单价', price: '单价',
   taxRate: '税率', udiRequired: 'UDI追溯', warnMonths: '临期预警(月)',
@@ -62,7 +64,7 @@ export const ENUMS = {
 
 const STATUS_MAP = {
   APPROVED: '已审批', ACTIVE: '启用', COMPLETED: '已完成', EFFECTIVE: '生效',
-  SUBMITTED: '已提交', PENDING: '待处理', DRAFT: '草稿',
+  SUBMITTED: '已提交', PENDING_APPROVAL: '审批中', PENDING: '待处理', DRAFT: '草稿',
   REJECTED: '已驳回', CANCELLED: '已取消', FAILED: '失败', LOCKED: '锁定',
   INACTIVE: '停用', SUSPENDED: '挂起', EXPIRED: '已过期', PAUSED: '暂停', BLOCKED: '冻结',
   PARTIAL_RECEIVED: '部分收货', PARTIAL_SHIPPED: '部分发货', SHIPPING: '发货中', RECEIVING: '收货中', PARTIAL_CANCELLED: '部分取消', TRUE: '是', FALSE: '否'
@@ -92,6 +94,7 @@ export function fmt(v, key) {
   if (typeof v === 'object') return JSON.stringify(v).substring(0, 80)
   const s = String(v)
   if (key && TIME_KEYS.includes(key)) return s.substring(0, 19).replace('T', ' ')
+  if (key && ENUMS[key]) { const m = ENUMS[key].find((o) => String(o.value) === s); if (m) return m.label }
   if (typeof v === 'number' && key && (key.indexOf('mount') > 0 || key.toLowerCase().indexOf('price') >= 0)) {
     return '¥ ' + Number(v).toFixed(2)
   }

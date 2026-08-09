@@ -1,34 +1,20 @@
-/*
- * 合同 REST 控制器。
- */
 package com.dms.contract.controller;
 
+import com.dms.annotation.OperationLog;
+import com.dms.approval.entity.ApprovalInstance;
+import com.dms.approval.service.ApprovalService;
 import com.dms.common.ApiResponse;
-import com.dms.common.PageQuery;
-import com.dms.common.PageResult;
-import com.dms.common.util.ContentDispositionUtils;
-import com.dms.common.util.DateFmt;
-import com.dms.common.util.ExcelExportUtils;
-import com.dms.common.util.TenantContext;
+import com.dms.common.enums.OperationAction;
+import com.dms.contract.dto.ContractRequest;
 import com.dms.contract.entity.Contract;
+import com.dms.contract.entity.ContractAttachment;
 import com.dms.contract.service.ContractService;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Tuple;
-import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/contracts")
@@ -37,121 +23,106 @@ import java.util.UUID;
 public class ContractController {
 
     private final ContractService service;
-    private final EntityManager em;
+    private final ApprovalService approvalService;
 
+    @GetMapping("/actions/export")
+    public org.springframework.http.ResponseEntity<byte[]> export(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long dealerId,
+            @RequestParam(required = false) String category) throws java.io.IOException {
+        byte[] bytes = service.export(status, keyword, dealerId, category);
+        String filename = "contracts_" + java.time.LocalDate.now() + ".xlsx";
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDispositionFormData("attachment", java.net.URLEncoder.encode(filename, java.nio.charset.StandardCharsets.UTF_8));
+        return new org.springframework.http.ResponseEntity<>(bytes, headers, org.springframework.http.HttpStatus.OK);
+    }
     @GetMapping
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
-    public ApiResponse<Map<String, Object>> list(@Valid PageQuery pageQuery) {
-        UUID tid = TenantContext.getTenantId();
-        // 1) count
-        Long total;
-        if (tid == null) {
-            total = ((Number) em.createNativeQuery("SELECT COUNT(*) FROM contracts WHERE deleted_at IS NULL").getSingleResult()).longValue();
-        } else {
-            total = ((Number) em.createNativeQuery("SELECT COUNT(*) FROM contracts WHERE deleted_at IS NULL AND tenant_id = :t").setParameter("t", tid).getSingleResult()).longValue();
-        }
-        // 2) data with dealer / region / contractName
-        int page = pageQuery.getPage();
-        int size = pageQuery.getSize();
-        String where = tid == null ? "c.deleted_at IS NULL" : "c.deleted_at IS NULL AND c.tenant_id = :t";
-        var q = em.createNativeQuery(
-                "SELECT c.id, c.code, c.category, c.dealer_id, d.code AS dealer_code, d.name AS dealer_name, d.level AS dealer_level, " +
-                " r.name AS region_name, " +
-                " c.valid_from, c.valid_to, c.status, c.dealer_signed_at, c.vendor_signed_at, " +
-                " c.ca_serial_no, c.pdf_url, c.application_id, c.created_at, c.updated_at, " +
-                " (SELECT COUNT(*) FROM contract_signatures cs WHERE cs.contract_id = c.id) AS sign_count, " +
-                " (SELECT COUNT(*) FROM contract_attachments ca WHERE ca.ref_type = 'CONTRACT' AND ca.ref_id = c.id) AS attach_count " +
-                " FROM contracts c " +
-                " LEFT JOIN dealers d ON d.id = c.dealer_id " +
-                " LEFT JOIN regions r ON r.id = d.region_id " +
-                " WHERE " + where + " ORDER BY c.id DESC LIMIT :lim OFFSET :off", Tuple.class);
-        if (tid != null) q.setParameter("t", tid);
-        q.setParameter("lim", Math.max(1, Math.min(500, size)));
-        q.setParameter("off", Math.max(0, (page - 1) * size));
-        @SuppressWarnings("unchecked")
-        List<Tuple> rows = q.getResultList();
-        List<Map<String, Object>> list = new ArrayList<>(rows.size());
-        for (Tuple t : rows) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", t.get("id"));
-            m.put("code", t.get("code"));
-            m.put("category", t.get("category"));
-            m.put("dealerId", t.get("dealer_id"));
-            m.put("dealerCode", t.get("dealer_code"));
-            m.put("dealerName", t.get("dealer_name"));
-            m.put("dealerLevel", t.get("dealer_level"));
-            m.put("regionName", t.get("region_name"));
-            m.put("validFrom", t.get("valid_from"));
-            m.put("validTo", t.get("valid_to"));
-            m.put("status", t.get("status"));
-            m.put("dealerSignedAt", t.get("dealer_signed_at"));
-            m.put("vendorSignedAt", t.get("vendor_signed_at"));
-            m.put("caSerialNo", t.get("ca_serial_no"));
-            m.put("pdfUrl", t.get("pdf_url"));
-            m.put("applicationId", t.get("application_id"));
-            m.put("signCount", t.get("sign_count"));
-            m.put("attachCount", t.get("attach_count"));
-            m.put("createdAt", t.get("created_at"));
-            m.put("updatedAt", t.get("updated_at"));
-            list.add(m);
-        }
-        Map<String, Object> res = new LinkedHashMap<>();
-        res.put("total", total);
-        res.put("page", page);
-        res.put("size", size);
-        res.put("list", list);
-        return ApiResponse.ok(res);
+    public ApiResponse<Map<String, Object>> list(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long dealerId,
+            @RequestParam(required = false) String category) {
+        return ApiResponse.ok(service.list(page, size, status, keyword, dealerId, category));
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<Contract> get(@PathVariable Long id) {
-        return ApiResponse.ok(service.get(id));
+    public ApiResponse<Map<String, Object>> get(@PathVariable Long id) {
+        return ApiResponse.ok(service.getDetail(id));
     }
 
-    @GetMapping("/actions/export")
-    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
-    public ResponseEntity<byte[]> export() throws Exception {
-        UUID tid = TenantContext.getTenantId();
-        var q = em.createNativeQuery(
-                "SELECT c.id, c.code, c.category, c.dealer_id, d.name AS dealer_name, " +
-                "c.valid_from, c.valid_to, c.status, c.created_at, c.updated_at " +
-                "FROM contracts c LEFT JOIN dealers d ON d.id = c.dealer_id " +
-                "WHERE c.tenant_id = :tid AND c.deleted_at IS NULL " +
-                "ORDER BY c.id DESC", Tuple.class);
-        q.setParameter("tid", tid);
-        @SuppressWarnings("unchecked")
-        List<Tuple> rows = q.getResultList();
+    @PostMapping
+    public ApiResponse<Contract> create(@RequestBody ContractRequest req) {
+        return ApiResponse.ok(service.create(req));
+    }
 
-        List<Map<String, Object>> list = new ArrayList<>();
-        for (Tuple t : rows) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", t.get("id"));
-            m.put("code", t.get("code"));
-            m.put("category", t.get("category"));
-            m.put("dealerId", t.get("dealer_id"));
-            m.put("dealerName", t.get("dealer_name"));
-            m.put("validFrom", DateFmt.fmt(t.get("valid_from")));
-            m.put("validTo", DateFmt.fmt(t.get("valid_to")));
-            m.put("status", t.get("status"));
-            m.put("createdAt", DateFmt.fmt(t.get("created_at")));
-            m.put("updatedAt", DateFmt.fmt(t.get("updated_at")));
-            list.add(m);
+    @PutMapping("/{id}")
+    public ApiResponse<Contract> update(@PathVariable Long id, @RequestBody ContractRequest req) {
+        return ApiResponse.ok(service.update(id, req));
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ApiResponse.ok();
+    }
+
+    @PostMapping("/{id}/submit")
+    public ApiResponse<Contract> submit(@PathVariable Long id) {
+        return ApiResponse.ok(service.submit(id));
+    }
+
+    @PostMapping("/{id}/withdraw")
+    public ApiResponse<Contract> withdraw(@PathVariable Long id) {
+        return ApiResponse.ok(service.withdraw(id));
+    }
+
+    @PostMapping("/{id}/approve")
+    @OperationLog(businessType = "contract", action = OperationAction.APPROVE, remark = "合同-审批通过")
+    public ApiResponse<Map<String, Object>> approve(@PathVariable Long id,
+                                                    @RequestBody(required = false) Map<String, Object> body) {
+        String comment = body == null ? null : String.valueOf(body.getOrDefault("comment", ""));
+        ApprovalInstance instance = approvalService.approveBusiness("CONTRACT", id, comment);
+        if ("APPROVED".equals(instance.getStatus().name()) || "AUTO_APPROVED".equals(instance.getStatus().name())) {
+            service.markApproved(id);
         }
-
-        String[] headers = {"ID", "\u5408\u540c\u7f16\u53f7", "\u5206\u7c7b", "\u7ecf\u9500\u5546ID", "\u7ecf\u9500\u5546", "\u751f\u6548", "\u622a\u6b62", "\u72b6\u6001", "\u521b\u5efa\u65f6\u95f4", "\u66f4\u65b0\u65f6\u95f4"};
-        String[] fieldNames = {"id", "code", "category", "dealerId", "dealerName", "validFrom", "validTo", "status", "createdAt", "updatedAt"};
-
-        byte[] excelBytes = ExcelExportUtils.exportMapToExcel(list, headers, fieldNames);
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionUtils.attachment("\u5408\u540c\u5217\u8868.xlsx"))
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(excelBytes);
+        return ApiResponse.ok(Map.of(
+                "id", id,
+                "approvalStatus", instance.getStatus().name(),
+                "approvalInstanceId", instance.getId()
+        ));
     }
 
-    @PostMapping("/{id}/terminate")
-    public ApiResponse<Void> terminate(@PathVariable Long id) {
-        service.terminate(id);
+    @PostMapping("/{id}/reject")
+    @OperationLog(businessType = "contract", action = OperationAction.REJECT, remark = "合同-驳回")
+    public ApiResponse<Map<String, Object>> reject(@PathVariable Long id,
+                                                   @RequestBody(required = false) Map<String, Object> body) {
+        String comment = body == null ? null : String.valueOf(body.getOrDefault("comment", ""));
+        ApprovalInstance instance = approvalService.rejectBusiness("CONTRACT", id, comment);
+        service.markRejected(id, comment);
+        return ApiResponse.ok(Map.of(
+                "id", id,
+                "approvalStatus", instance.getStatus().name(),
+                "approvalInstanceId", instance.getId()
+        ));
+    }
+
+    @PostMapping("/{id}/attachments")
+    public ApiResponse<ContractAttachment> addAttachment(
+            @PathVariable Long id,
+            @RequestParam @NotNull Long fileId,
+            @RequestParam(required = false) String fileName,
+            @RequestParam(required = false) Long sizeBytes,
+            @RequestParam(required = false) String category) {
+        return ApiResponse.ok(service.addAttachment(id, fileId, fileName, sizeBytes, category));
+    }
+
+    @DeleteMapping("/{id}/attachments/{attachmentId}")
+    public ApiResponse<Void> deleteAttachment(@PathVariable Long id, @PathVariable Long attachmentId) {
+        service.deleteAttachment(id, attachmentId);
         return ApiResponse.ok();
     }
 }

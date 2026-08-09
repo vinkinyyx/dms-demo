@@ -39,7 +39,7 @@ public class SystemOpsController {
      */
     @PostMapping("/approval-tokens/generate")
     public ApiResponse<Map<String, Object>> genApprovalToken(@RequestBody Map<String, Object> body) {
-        String resType = String.valueOf(body.getOrDefault("resourceType", "contract-application"));
+        String resType = String.valueOf(body.getOrDefault("resourceType", "contract"));
         String resId = String.valueOf(body.get("resourceId"));
         String approver = String.valueOf(body.getOrDefault("approverEmail", "approver@example.com"));
 
@@ -77,8 +77,8 @@ public class SystemOpsController {
         String resId = String.valueOf(raw.get("resourceId"));
 
         // 更新对应实体的状态为 APPROVED
-        if ("contract-application".equals(resType)) {
-            em.createNativeQuery("UPDATE contract_applications SET status = 'APPROVED', updated_at = now() WHERE id = ?1")
+        if ("contract".equals(resType)) {
+            em.createNativeQuery("UPDATE contracts SET status = 'effective', effective_at = now(), updated_at = now() WHERE id = ?1")
               .setParameter(1, Long.valueOf(resId)).executeUpdate();
         } else if ("order".equals(resType)) {
             em.createNativeQuery("UPDATE orders SET status = 'APPROVED', updated_at = now() WHERE id = ?1")
@@ -124,8 +124,8 @@ public class SystemOpsController {
         int total = 0;
         for (int hours : new int[]{24, 48, 72}) {
             try {
-                String sql = "SELECT id, code FROM contract_applications " +
-                        "WHERE status = 'SUBMITTED' AND created_at < (now() - INTERVAL '" + hours + " hours') " +
+                String sql = "SELECT id, code FROM contracts " +
+                        "WHERE status = 'pending' AND created_at < (now() - INTERVAL '" + hours + " hours') " +
                         "LIMIT 20";
                 var q = em.createNativeQuery(sql, Tuple.class);
                 @SuppressWarnings("unchecked")

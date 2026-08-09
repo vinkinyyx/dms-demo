@@ -67,7 +67,6 @@ public class DocNoGenerator {
             case "ADJ" -> "inventory_adjustments";
             case "MV" -> "stock_moves";
             case "CT" -> "contracts";
-            case "CT-APP" -> "contract_applications";
             default -> null;
         };
         if (table == null) {

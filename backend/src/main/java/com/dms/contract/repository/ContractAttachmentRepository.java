@@ -1,6 +1,3 @@
-/*
- * 合同附件仓储接口。
- */
 package com.dms.contract.repository;
 
 import com.dms.contract.entity.ContractAttachment;
@@ -11,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface ContractAttachmentRepository extends JpaRepository<ContractAttachment, Long> {
-    List<ContractAttachment> findByRefTypeAndRefId(String refType, Long refId);
+    List<ContractAttachment> findByContractIdOrderByUploadedAtDesc(Long contractId);
 }

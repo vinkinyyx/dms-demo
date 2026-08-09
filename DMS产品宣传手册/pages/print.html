@@ -1,103 +1,207 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" class="light">
 <head>
-<meta charset="UTF-8">
-<title>DMS 通用经销商管理系统 · 产品宣传手册（横版印刷）</title>
-<style id="theme-vars">
-:root{
-  --dms-primary:#002fa7;--dms-primary-foreground:#ffffff;--dms-background:#ffffff;--dms-foreground:#071126;
-  --dms-muted:#5d6c7f;--dms-border:#dfe2e8;--dms-accent:#d4a843;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMS 通用经销商管理系统 · 产品宣传手册（横版印刷）</title>
+    <style id="theme-vars">
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
+
+:root {
+  /* Ultramarine Ledger — DMS product brochure (refined) */
+  --dms-paper: #ffffff;
+  --dms-cream: #f8f7f4;
+  --dms-ink: #0f172a;
+  --dms-ink-2: #334155;
+  --dms-muted: #64748b;
+  --dms-muted-2: #94a3b8;
+  --dms-accent: #002fa7;
+  --dms-accent-2: #f59e0b;
+  --dms-accent-soft: rgba(0, 47, 167, 0.08);
+  --dms-accent-soft-2: rgba(0, 47, 167, 0.04);
+  --dms-page: #f8f7f4;
+
+  /* Semantic aliases */
+  --dms-background: var(--dms-page);
+  --dms-foreground: var(--dms-ink);
+  --dms-card: var(--dms-paper);
+  --dms-card-foreground: var(--dms-ink);
+  --dms-popover: var(--dms-paper);
+  --dms-popover-foreground: var(--dms-ink);
+  --dms-primary: var(--dms-accent);
+  --dms-primary-foreground: #ffffff;
+  --dms-secondary: var(--dms-cream);
+  --dms-secondary-foreground: var(--dms-ink-2);
+  --dms-muted-foreground: var(--dms-muted);
+  --dms-accent-foreground: var(--dms-ink);
+  --dms-destructive: #c62828;
+  --dms-destructive-foreground: #ffffff;
+  --dms-border: #e2e4e9;
+  --dms-input: #e2e4e9;
+  --dms-ring: var(--dms-accent);
+
+  --dms-radius-sm: 4px;
+  --dms-radius-md: 8px;
+  --dms-radius-lg: 16px;
+
+  --dms-font-display: "Noto Sans SC", "IBM Plex Sans", "Avenir Next", "Segoe UI", Arial, "Microsoft YaHei UI", sans-serif;
+  --dms-font-body: "Noto Sans SC", "IBM Plex Sans", "Avenir Next", "Segoe UI", Arial, "Microsoft YaHei UI", sans-serif;
+  --dms-font-mono: "IBM Plex Mono", Menlo, Consolas, "Cascadia Mono", monospace;
 }
-</style>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
-:root{
-  --ink:#071126;--ink-2:#233044;--muted:#5d6c7f;--muted-2:#94a3b8;
-  --line:#dfe2e8;--line-soft:#eceef2;--paper:#ffffff;--cream:#f7f5f0;--cream-2:#f2efe8;
-  --accent:#002fa7;--accent-2:#0a3fbf;--accent-light:#e8eefc;--gold:#d4a843;
-  --sans:"Noto Sans SC","IBM Plex Sans","Avenir Next","Segoe UI",Arial,"Microsoft YaHei UI",sans-serif;
-  --mono:"IBM Plex Mono",Menlo,Consolas,monospace;
+
+@theme inline {
+  --color-background: var(--dms-background);
+  --color-foreground: var(--dms-foreground);
+  --color-card: var(--dms-card);
+  --color-card-foreground: var(--dms-card-foreground);
+  --color-popover: var(--dms-popover);
+  --color-popover-foreground: var(--dms-popover-foreground);
+  --color-primary: var(--dms-primary);
+  --color-primary-foreground: var(--dms-primary-foreground);
+  --color-secondary: var(--dms-secondary);
+  --color-secondary-foreground: var(--dms-secondary-foreground);
+  --color-muted: var(--dms-secondary);
+  --color-muted-foreground: var(--dms-muted-foreground);
+  --color-accent: var(--dms-accent-2);
+  --color-accent-foreground: var(--dms-accent-foreground);
+  --color-destructive: var(--dms-destructive);
+  --color-destructive-foreground: var(--dms-destructive-foreground);
+  --color-border: var(--dms-border);
+  --color-input: var(--dms-input);
+  --color-ring: var(--dms-ring);
+  --radius-sm: var(--dms-radius-sm);
+  --radius-md: var(--dms-radius-md);
+  --radius-lg: var(--dms-radius-lg);
 }
-*{margin:0;padding:0;box-sizing:border-box;}
-html,body{background:#5a5a5a;}
-body{font-family:var(--sans);color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased;font-size:10pt;}
-img{max-width:100%;display:block;}
-/* 横版 A4 + 3mm 出血 = 303mm × 216mm */
-@page{size:303mm 216mm;margin:0;}
-.sheet{position:relative;width:303mm;height:216mm;margin:0 auto;background:var(--paper);overflow:hidden;page-break-after:always;break-after:page;}
-.sheet:last-child{page-break-after:auto;break-after:auto;}
-.sheet::before{content:"";position:absolute;top:3mm;left:3mm;width:297mm;height:210mm;border:0.5pt dashed rgba(0,47,167,.2);pointer-events:none;z-index:90;}
-@media print{.sheet::before{display:none;}html,body{background:#fff;}}
-.crop{position:absolute;width:3mm;height:0.5pt;background:#000;z-index:95;}
-.crop.v{width:0.5pt;height:3mm;}
-.crop.tl{top:2.75mm;left:0;}.crop.tr{top:2.75mm;right:0;}
-.crop.bl{bottom:2.75mm;left:0;}.crop.br{bottom:2.75mm;right:0;}
-.crop.tl-v{left:2.75mm;top:0;}.crop.tr-v{right:2.75mm;top:0;}
-.crop.bl-v{left:2.75mm;bottom:0;}.crop.br-v{right:2.75mm;bottom:0;}
-/* 内容安全区：距裁切线约 10mm */
-.page{position:absolute;top:14mm;left:15mm;width:273mm;height:188mm;z-index:2;display:flex;flex-direction:column;}
-.bleed-bg{position:absolute;inset:0;z-index:1;}
-.runninghead{position:absolute;top:7mm;left:15mm;right:15mm;display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:7pt;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);z-index:20;}
-.runninghead .rh-mark{display:flex;align-items:center;gap:7pt;}
-.runninghead .rh-mark .sq{width:7pt;height:7pt;background:var(--accent);}
-.runningfoot{position:absolute;bottom:7mm;left:15mm;right:15mm;display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:7pt;letter-spacing:.16em;color:var(--muted-2);z-index:20;}
-.runningfoot .pn{font-size:9pt;color:var(--ink);font-weight:600;letter-spacing:.05em;}
-.sec-num{font-family:var(--mono);font-size:9pt;font-weight:600;color:var(--accent);letter-spacing:.12em;display:flex;align-items:center;gap:12pt;margin-bottom:8pt;}
-.sec-num::after{content:"";flex:1;height:.8pt;background:var(--line);}
-h1,h2,h3,h4{font-family:var(--sans);line-height:1.18;letter-spacing:-.01em;color:var(--ink);}
-h1.h1{font-size:24pt;font-weight:900;line-height:1.2;}
-.lead{font-size:10pt;color:var(--muted);line-height:1.7;}
-.card{border:.7pt solid var(--line);background:var(--paper);padding:12pt 14pt;border-radius:4pt;}
-.card.cream{background:var(--cream);border-color:var(--line-soft);}
-.card.dark{background:var(--ink);border-color:var(--ink);color:#fff;}
-.card.accent{background:var(--accent);border-color:var(--accent);color:#fff;}
-.card h4{font-size:11pt;font-weight:700;margin-bottom:5pt;}
-.card p{font-size:8.5pt;color:var(--muted);line-height:1.6;}
-.card.dark p,.card.accent p{color:rgba(255,255,255,.78);}
-.card .ico{width:24pt;height:24pt;border-radius:4pt;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:8pt;font-size:9.5pt;font-weight:700;font-family:var(--mono);}
-.card.dark .ico{background:rgba(255,255,255,.12);color:var(--gold);}
-/* 截图框：图片区严格 16:9，与 PC 截图真实比例一致，无灰边无变形 */
-.shot{border:.7pt solid var(--line);border-radius:4pt;overflow:hidden;background:#fff;display:flex;flex-direction:column;}
-.shot-bar{height:15pt;display:flex;align-items:center;gap:5pt;padding:0 9pt;border-bottom:.7pt solid var(--line);background:linear-gradient(180deg,#fff,#f6f5f1);flex-shrink:0;}
-.shot-dot{width:5.5pt;height:5.5pt;border-radius:50%;flex:none;}
-.shot-dot.r{background:#ef4444;}.shot-dot.y{background:#f59e0b;}.shot-dot.g{background:#22c55e;}
-.shot-url{margin-left:6pt;font-family:var(--mono);font-size:6.5pt;color:var(--muted);line-height:11pt;padding:0 7pt;border-radius:2pt;background:#eef0f4;flex:1;overflow:hidden;white-space:nowrap;}
-.shot-img-wrap{position:relative;width:100%;aspect-ratio:16/9;background:#fff;overflow:hidden;flex-shrink:0;}
-.shot-img-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:block;}
-.shot-cap{text-align:center;font-size:7.5pt;color:var(--muted);margin-top:5pt;flex:none;}
-.shot-cap b{color:var(--ink);font-weight:600;}
-/* 手机模型：外框与屏幕区同比例，用 box-shadow 描边避免挤压内容，禁止任何拉伸 */
-.phone{position:relative;width:100%;aspect-ratio:1179/1980;border-radius:7pt;overflow:hidden;background:#0a0f18;flex:none;box-shadow:0 0 0 1.3pt #161f2e, inset 0 0 0 1.3pt #161f2e;}
-.phone-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:26%;height:5pt;border-radius:0 0 5pt 5pt;background:#0a0f18;z-index:3;}
-.phone-screen{position:absolute;inset:0;border-radius:6pt;overflow:hidden;background:#f1f3f7;}
-.phone-screen img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:block;}
-/* 手机网格容器 */
-.phone-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12pt 14pt;align-items:end;justify-items:center;}
-.phone-grid .phone-item{display:flex;flex-direction:column;align-items:center;width:100%;max-width:34mm;}
-.phone-grid .phone-label{font-size:8pt;color:var(--muted);margin-top:5pt;text-align:center;}
-.phone-grid.dark .phone-label{color:rgba(255,255,255,.6);}
-ul.feat{list-style:none;}
-ul.feat li{position:relative;padding-left:14pt;font-size:9.5pt;color:var(--ink-2);line-height:1.55;margin-bottom:7pt;}
-ul.feat li::before{content:"";position:absolute;left:0;top:5pt;width:6pt;height:6pt;border:1pt solid var(--accent);border-radius:50%;}
-ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;height:3pt;background:var(--accent);border-radius:50%;}
-.kicker-num{font-family:var(--mono);font-weight:600;color:var(--accent);line-height:1;letter-spacing:-.02em;}
-.divider{height:.7pt;background:var(--line);border:0;}
-.g{display:grid;gap:10pt;}.g2{grid-template-columns:1fr 1fr;}.g3{grid-template-columns:1fr 1fr 1fr;}.g4{grid-template-columns:repeat(4,1fr);}
-/* flex 填充 */
-.fill{display:flex;flex-direction:column;flex:1;min-height:0;}
-.fill-row{display:flex;flex:1;min-height:0;gap:14pt;}
-/* 能力页：左文右图，截图严格 16:9 */
-.cap-left{width:68mm;display:flex;flex-direction:column;flex-shrink:0;}
-.cap-right{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;}
-.cap-right .shot{width:100%;}
-.cap-points{display:flex;flex-direction:column;gap:8pt;margin-top:10pt;flex:1;}
-.cap-points .card{flex:1;display:flex;flex-direction:column;}
-.cap-foot{display:grid;grid-template-columns:repeat(4,1fr);gap:8pt;margin-top:10pt;flex:none;}
-.cap-foot .card{padding:9pt 11pt;}
-.cap-foot .card h4{font-size:9.5pt;margin-bottom:3pt;}
-.cap-foot .card p{font-size:7.5pt;line-height:1.45;}
-@media screen{.sheet{margin:18px auto;box-shadow:0 6px 30px rgba(0,0,0,.4);}body{padding:18px 0;}}
-</style>
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--dms-background);
+    --color-foreground: var(--dms-foreground);
+    --color-card: var(--dms-card);
+    --color-card-foreground: var(--dms-card-foreground);
+    --color-popover: var(--dms-popover);
+    --color-popover-foreground: var(--dms-popover-foreground);
+    --color-primary: var(--dms-primary);
+    --color-primary-foreground: var(--dms-primary-foreground);
+    --color-secondary: var(--dms-secondary);
+    --color-secondary-foreground: var(--dms-secondary-foreground);
+    --color-muted: var(--dms-muted);
+    --color-muted-foreground: var(--dms-muted-foreground);
+    --color-accent: var(--dms-accent);
+    --color-accent-foreground: var(--dms-accent-foreground);
+    --color-destructive: var(--dms-destructive);
+    --color-destructive-foreground: var(--dms-destructive-foreground);
+    --color-border: var(--dms-border);
+    --color-input: var(--dms-input);
+    --color-ring: var(--dms-ring);
+    --radius-sm: var(--dms-radius-sm);
+    --radius-md: var(--dms-radius-md);
+    --radius-lg: var(--dms-radius-lg);
+  }
+  @layer base {
+    body { background: var(--dms-background); color: var(--dms-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--dms-background); }
+      .text-background { color: var(--dms-background); }
+      .border-background { border-color: var(--dms-background); }
+      .ring-background { --tw-ring-color: var(--dms-background); }
+      .bg-foreground { background-color: var(--dms-foreground); }
+      .text-foreground { color: var(--dms-foreground); }
+      .border-foreground { border-color: var(--dms-foreground); }
+      .ring-foreground { --tw-ring-color: var(--dms-foreground); }
+      .bg-card { background-color: var(--dms-card); }
+      .text-card { color: var(--dms-card); }
+      .border-card { border-color: var(--dms-card); }
+      .ring-card { --tw-ring-color: var(--dms-card); }
+      .bg-card-foreground { background-color: var(--dms-card-foreground); }
+      .text-card-foreground { color: var(--dms-card-foreground); }
+      .border-card-foreground { border-color: var(--dms-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--dms-card-foreground); }
+      .bg-popover { background-color: var(--dms-popover); }
+      .text-popover { color: var(--dms-popover); }
+      .border-popover { border-color: var(--dms-popover); }
+      .ring-popover { --tw-ring-color: var(--dms-popover); }
+      .bg-popover-foreground { background-color: var(--dms-popover-foreground); }
+      .text-popover-foreground { color: var(--dms-popover-foreground); }
+      .border-popover-foreground { border-color: var(--dms-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--dms-popover-foreground); }
+      .bg-primary { background-color: var(--dms-primary); }
+      .text-primary { color: var(--dms-primary); }
+      .border-primary { border-color: var(--dms-primary); }
+      .ring-primary { --tw-ring-color: var(--dms-primary); }
+      .bg-primary-foreground { background-color: var(--dms-primary-foreground); }
+      .text-primary-foreground { color: var(--dms-primary-foreground); }
+      .border-primary-foreground { border-color: var(--dms-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--dms-primary-foreground); }
+      .bg-secondary { background-color: var(--dms-secondary); }
+      .text-secondary { color: var(--dms-secondary); }
+      .border-secondary { border-color: var(--dms-secondary); }
+      .ring-secondary { --tw-ring-color: var(--dms-secondary); }
+      .bg-secondary-foreground { background-color: var(--dms-secondary-foreground); }
+      .text-secondary-foreground { color: var(--dms-secondary-foreground); }
+      .border-secondary-foreground { border-color: var(--dms-secondary-foreground); }
+      .ring-secondary-foreground { --tw-ring-color: var(--dms-secondary-foreground); }
+      .bg-muted { background-color: var(--dms-muted); }
+      .text-muted { color: var(--dms-muted); }
+      .border-muted { border-color: var(--dms-muted); }
+      .ring-muted { --tw-ring-color: var(--dms-muted); }
+      .bg-muted-foreground { background-color: var(--dms-muted-foreground); }
+      .text-muted-foreground { color: var(--dms-muted-foreground); }
+      .border-muted-foreground { border-color: var(--dms-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--dms-muted-foreground); }
+      .bg-accent { background-color: var(--dms-accent); }
+      .text-accent { color: var(--dms-accent); }
+      .border-accent { border-color: var(--dms-accent); }
+      .ring-accent { --tw-ring-color: var(--dms-accent); }
+      .bg-accent-foreground { background-color: var(--dms-accent-foreground); }
+      .text-accent-foreground { color: var(--dms-accent-foreground); }
+      .border-accent-foreground { border-color: var(--dms-accent-foreground); }
+      .ring-accent-foreground { --tw-ring-color: var(--dms-accent-foreground); }
+      .bg-destructive { background-color: var(--dms-destructive); }
+      .text-destructive { color: var(--dms-destructive); }
+      .border-destructive { border-color: var(--dms-destructive); }
+      .ring-destructive { --tw-ring-color: var(--dms-destructive); }
+      .bg-destructive-foreground { background-color: var(--dms-destructive-foreground); }
+      .text-destructive-foreground { color: var(--dms-destructive-foreground); }
+      .border-destructive-foreground { border-color: var(--dms-destructive-foreground); }
+      .ring-destructive-foreground { --tw-ring-color: var(--dms-destructive-foreground); }
+      .bg-border { background-color: var(--dms-border); }
+      .text-border { color: var(--dms-border); }
+      .border-border { border-color: var(--dms-border); }
+      .ring-border { --tw-ring-color: var(--dms-border); }
+      .bg-input { background-color: var(--dms-input); }
+      .text-input { color: var(--dms-input); }
+      .border-input { border-color: var(--dms-input); }
+      .ring-input { --tw-ring-color: var(--dms-input); }
+      .bg-ring { background-color: var(--dms-ring); }
+      .text-ring { color: var(--dms-ring); }
+      .border-ring { border-color: var(--dms-ring); }
+      .ring-ring { --tw-ring-color: var(--dms-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
 </head>
 <body>
 
@@ -119,7 +223,7 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
         <div style="width:.7pt;height:26pt;background:rgba(255,255,255,.15);"></div>
         <div><div class="kicker-num" style="font-size:26pt;color:#fff;">6<span style="font-size:9pt;color:rgba(255,255,255,.5);"> 大</span></div><div style="font-size:7pt;color:rgba(255,255,255,.5);margin-top:3pt;font-family:var(--mono);letter-spacing:.1em;">核心业务域</div></div>
         <div style="width:.7pt;height:26pt;background:rgba(255,255,255,.15);"></div>
-        <div><div class="kicker-num" style="font-size:26pt;color:var(--gold);">38<span style="font-size:9pt;color:rgba(255,255,255,.5);">+</span></div><div style="font-size:7pt;color:rgba(255,255,255,.5);margin-top:3pt;font-family:var(--mono);letter-spacing:.1em;">关键业务界面</div></div>
+        <div><div class="kicker-num" style="font-size:26pt;color:var(--gold);">40<span style="font-size:9pt;color:rgba(255,255,255,.5);">+</span></div><div style="font-size:7pt;color:rgba(255,255,255,.5);margin-top:3pt;font-family:var(--mono);letter-spacing:.1em;">关键业务界面</div></div>
       </div>
     </div>
     <div style="position:relative;padding:18mm 14mm 14mm 4mm;display:flex;flex-direction:column;justify-content:center;">
@@ -147,11 +251,11 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
   <div class="page fill">
     <div style="display:grid;grid-template-columns:1fr auto;align-items:end;gap:20pt;margin-bottom:10pt;">
       <div><div class="sec-num" style="margin-bottom:6pt;"><span style="color:var(--accent);">CONTENTS</span></div><h1 class="h1" style="font-size:26pt;">目录</h1></div>
-      <div style="text-align:right;font-family:var(--mono);font-size:8pt;color:var(--muted);letter-spacing:.15em;">产品宣传手册 · 共 18 页</div>
+      <div style="text-align:right;font-family:var(--mono);font-size:8pt;color:var(--muted);letter-spacing:.15em;">产品宣传手册 · 共 19 页</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 28pt;flex:1;align-content:start;margin-top:6pt;">
       <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">01</span><span style="font-size:11pt;font-weight:600;flex:1;">产品总览</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P03</span></div>
-      <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">08</span><span style="font-size:11pt;font-weight:600;flex:1;">库存与仓储</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P10</span></div>
+      <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">08</span><span style="font-size:11pt;font-weight:600;flex:1;">订单与库存</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P10</span></div>
       <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">02</span><span style="font-size:11pt;font-weight:600;flex:1;">行业痛点</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P04</span></div>
       <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">09</span><span style="font-size:11pt;font-weight:600;flex:1;">手术报台与核销</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P11</span></div>
       <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">03</span><span style="font-size:11pt;font-weight:600;flex:1;">解决方案</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P05</span></div>
@@ -160,14 +264,14 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
       <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">11</span><span style="font-size:11pt;font-weight:600;flex:1;">移动办公</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P13</span></div>
       <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">05</span><span style="font-size:11pt;font-weight:600;flex:1;">渠道与客户管理</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P07</span></div>
       <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">12</span><span style="font-size:11pt;font-weight:600;flex:1;">核心价值</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P14</span></div>
-      <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">06</span><span style="font-size:11pt;font-weight:600;flex:1;">合同与授权</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P08</span></div>
-      <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">13</span><span style="font-size:11pt;font-weight:600;flex:1;">界面图鉴</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P15–17</span></div>
-      <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">07</span><span style="font-size:11pt;font-weight:600;flex:1;">订单与库存</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P09</span></div>
-      <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">14</span><span style="font-size:11pt;font-weight:600;flex:1;">联系与预约</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P18</span></div>
+      <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">06</span><span style="font-size:11pt;font-weight:600;flex:1;">智能审批流</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P08</span></div>
+      <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">13</span><span style="font-size:11pt;font-weight:600;flex:1;">界面图鉴</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P16–18</span></div>
+      <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">07</span><span style="font-size:11pt;font-weight:600;flex:1;">合同模块</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P09</span></div>
+      <div style="display:flex;align-items:baseline;gap:10pt;padding:8pt 0;border-bottom:.7pt dotted var(--line);"><span style="font-family:var(--mono);font-size:9pt;color:var(--accent);font-weight:600;width:20pt;">14</span><span style="font-size:11pt;font-weight:600;flex:1;">联系与预约</span><span style="font-family:var(--mono);font-size:9pt;color:var(--muted-2);">P19</span></div>
     </div>
     <div style="background:var(--paper);border:.7pt solid var(--line);border-radius:4pt;padding:12pt 18pt;display:grid;grid-template-columns:repeat(3,1fr);gap:18pt;margin-top:12pt;">
-      <div><div style="font-family:var(--mono);font-size:8pt;letter-spacing:.15em;color:var(--accent);margin-bottom:4pt;">PC 业务端</div><div style="font-size:11pt;color:var(--ink-2);font-weight:600;">20 个核心界面</div></div>
-      <div style="border-left:.7pt solid var(--line);padding-left:18pt;"><div style="font-family:var(--mono);font-size:8pt;letter-spacing:.15em;color:var(--accent);margin-bottom:4pt;">管理后台</div><div style="font-size:11pt;color:var(--ink-2);font-weight:600;">12 个治理界面</div></div>
+      <div><div style="font-family:var(--mono);font-size:8pt;letter-spacing:.15em;color:var(--accent);margin-bottom:4pt;">PC 业务端</div><div style="font-size:11pt;color:var(--ink-2);font-weight:600;">22 个核心界面</div></div>
+      <div style="border-left:.7pt solid var(--line);padding-left:18pt;"><div style="font-family:var(--mono);font-size:8pt;letter-spacing:.15em;color:var(--accent);margin-bottom:4pt;">管理后台</div><div style="font-size:11pt;color:var(--ink-2);font-weight:600;">14 个治理界面</div></div>
       <div style="border-left:.7pt solid var(--line);padding-left:18pt;"><div style="font-family:var(--mono);font-size:8pt;letter-spacing:.15em;color:var(--accent);margin-bottom:4pt;">移动作业端</div><div style="font-size:11pt;color:var(--ink-2);font-weight:600;">6 个移动场景</div></div>
     </div>
   </div>
@@ -199,7 +303,7 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
           <div style="display:flex;gap:10pt;margin-bottom:10pt;"><span style="font-family:var(--mono);color:var(--accent);font-weight:700;font-size:13pt;">B.</span><div><h4 style="font-size:11pt;">流程线上化</h4><p style="font-size:9pt;color:var(--muted);line-height:1.6;">从准入、合同、订单到库存、手术、审计，全流程闭环。</p></div></div>
           <div style="display:flex;gap:10pt;"><span style="font-family:var(--mono);color:var(--accent);font-weight:700;font-size:13pt;">C.</span><div><h4 style="font-size:11pt;">三端实时协同</h4><p style="font-size:9pt;color:var(--muted);line-height:1.6;">PC、后台、移动端数据实时同步。</p></div></div>
         </div>
-        <div><hr class="divider" style="margin:10pt 0;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12pt;"><div><div class="kicker-num" style="font-size:28pt;">6<span style="font-size:11pt;color:var(--muted);"> 业务域</span></div><div style="font-size:8pt;color:var(--muted);margin-top:3pt;">端到端闭环</div></div><div><div class="kicker-num" style="font-size:28pt;">38<span style="font-size:11pt;color:var(--muted);">+ 界面</span></div><div style="font-size:8pt;color:var(--muted);margin-top:3pt;">三大终端覆盖</div></div></div></div>
+        <div><hr class="divider" style="margin:10pt 0;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12pt;"><div><div class="kicker-num" style="font-size:28pt;">6<span style="font-size:11pt;color:var(--muted);"> 业务域</span></div><div style="font-size:8pt;color:var(--muted);margin-top:3pt;">端到端闭环</div></div><div><div class="kicker-num" style="font-size:28pt;">40<span style="font-size:11pt;color:var(--muted);">+ 界面</span></div><div style="font-size:8pt;color:var(--muted);margin-top:3pt;">三大终端覆盖</div></div></div></div>
       </div>
     </div>
   </div>
@@ -247,7 +351,7 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
         </div>
         <div style="border:.7pt solid #c7d2fe;border-left:3pt solid #4f46e5;border-radius:4pt;padding:13pt 14pt;background:#fff;display:flex;flex-direction:column;justify-content:center;">
           <div style="display:flex;align-items:center;gap:8pt;margin-bottom:6pt;"><span style="font-family:var(--mono);font-size:9pt;font-weight:700;color:#4f46e5;background:#eef2ff;padding:2pt 7pt;border-radius:2pt;">04</span><h4 style="font-size:12pt;color:#3730a3;">审计无据可依</h4></div>
-          <p style="font-size:8.5pt;line-height:1.7;color:var(--ink-2);">手术耗材、销售出库、价格政策等关键节点缺乏留痕，难以追溯与复盘，合规检查时漏洞百出。</p>
+          <p style="font-size:8.5pt;line-height:1.7;color:var(--ink-2);">手术耗材、销售出库、价格政策等关键节点缺乏留痕；合同、订单审批分散在邮件与聊天工具中，节点难追踪、权责不清晰，合规检查时漏洞百出。</p>
         </div>
       </div>
     </div>
@@ -336,7 +440,7 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
           <div style="display:grid;grid-template-columns:repeat(4,1fr);flex:1;">
             <div style="padding:10pt 14pt;border-right:.7pt solid var(--line);display:flex;flex-direction:column;justify-content:center;"><b style="font-size:10pt;color:var(--ink-2);margin-bottom:2pt;">统一主数据</b><span style="font-size:7pt;color:var(--muted);">经销商/医院/产品</span></div>
             <div style="padding:10pt 14pt;border-right:.7pt solid var(--line);display:flex;flex-direction:column;justify-content:center;"><b style="font-size:10pt;color:var(--ink-2);margin-bottom:2pt;">权限与组织</b><span style="font-size:7pt;color:var(--muted);">多租户/角色/菜单</span></div>
-            <div style="padding:10pt 14pt;border-right:.7pt solid var(--line);display:flex;flex-direction:column;justify-content:center;"><b style="font-size:10pt;color:var(--ink-2);margin-bottom:2pt;">流程引擎</b><span style="font-size:7pt;color:var(--muted);">审批/工作流/规则</span></div>
+            <div style="padding:10pt 14pt;border-right:.7pt solid var(--line);display:flex;flex-direction:column;justify-content:center;"><b style="font-size:10pt;color:var(--ink-2);margin-bottom:2pt;">审批流引擎</b><span style="font-size:7pt;color:var(--muted);">可视化配置/多节点/会签</span></div>
             <div style="padding:10pt 14pt;display:flex;flex-direction:column;justify-content:center;"><b style="font-size:10pt;color:var(--ink-2);margin-bottom:2pt;">审计与日志</b><span style="font-size:7pt;color:var(--muted);">操作/API/登录留痕</span></div>
           </div>
         </div>
@@ -348,7 +452,7 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
           <h3 style="font-size:12pt;font-weight:700;margin-bottom:8pt;color:var(--accent);">平台价值主张</h3>
           <ul class="feat" style="columns:1;">
             <li style="font-size:8.5pt;margin-bottom:7pt;line-height:1.5;">统一数据口径，消除渠道信息孤岛</li>
-            <li style="font-size:8.5pt;margin-bottom:7pt;line-height:1.5;">流程线上化，减少人工对账与重复录入</li>
+            <li style="font-size:8.5pt;margin-bottom:7pt;line-height:1.5;">流程线上化，可视化审批流配置适配各类业务</li>
             <li style="font-size:8.5pt;margin-bottom:7pt;line-height:1.5;">全链路留痕，满足内外部审计合规</li>
             <li style="font-size:8.5pt;line-height:1.5;">数据驱动决策，库存与销售实时可视</li>
           </ul>
@@ -369,43 +473,49 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
     <div class="sec-num"><span>04</span> WORKFLOW</div>
     <h1 class="h1" style="font-size:22pt;margin-bottom:4pt;">从准入到核销，端到端流程线上化</h1>
     <p class="lead" style="margin-bottom:14pt;">DMS 将经销商管理拆分为可追踪、可复盘、可优化的六大业务环节，数据在流程中自动流转，形成完整业务闭环。</p>
-    <!-- 横向流程图：6个节点用箭头连接，自然高度 -->
-    <div style="display:flex;align-items:stretch;gap:0;margin-bottom:14pt;height:180pt;flex-shrink:0;">
+    <!-- 横向流程图：7个节点用箭头连接，自然高度 -->
+    <div style="display:flex;align-items:stretch;gap:0;margin-bottom:14pt;height:170pt;flex-shrink:0;">
       <!-- 节点1 -->
       <div style="flex:1;display:flex;flex-direction:column;background:#fff;border:.7pt solid var(--line);border-radius:5pt 0 0 5pt;overflow:hidden;">
         <div style="background:var(--accent);color:#fff;padding:7pt 10pt;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;"><span style="font-family:var(--mono);font-size:7pt;letter-spacing:.15em;">STEP 01</span><span style="font-size:11pt;font-weight:700;">01</span></div>
-        <div style="flex:1;position:relative;min-height:0;"><div style="position:absolute;top:50%;left:12pt;right:12pt;transform:translateY(-50%);"><h4 style="font-size:11pt;margin-bottom:5pt;">渠道准入</h4><p style="font-size:7.5pt;color:var(--muted);line-height:1.65;">经销商建档、资质审核、分级分类与渠道关系建立。</p></div></div>
+        <div style="flex:1;position:relative;min-height:0;"><div style="position:absolute;top:50%;left:10pt;right:10pt;transform:translateY(-50%);"><h4 style="font-size:10pt;margin-bottom:4pt;">渠道准入</h4><p style="font-size:7pt;color:var(--muted);line-height:1.6;">经销商建档、资质审核、分级分类与渠道关系建立。</p></div></div>
       </div>
       <!-- 箭头 -->
       <div style="width:16pt;display:flex;align-items:center;justify-content:center;align-self:stretch;background:var(--cream);"><div style="width:0;height:0;border-top:7pt solid transparent;border-bottom:7pt solid transparent;border-left:8pt solid var(--accent);"></div></div>
       <!-- 节点2 -->
       <div style="flex:1;display:flex;flex-direction:column;background:#fff;border:.7pt solid var(--line);border-left:none;overflow:hidden;">
         <div style="background:var(--gold);color:var(--ink);padding:7pt 10pt;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;"><span style="font-family:var(--mono);font-size:7pt;letter-spacing:.15em;">STEP 02</span><span style="font-size:11pt;font-weight:700;">02</span></div>
-        <div style="flex:1;position:relative;min-height:0;"><div style="position:absolute;top:50%;left:12pt;right:12pt;transform:translateY(-50%);"><h4 style="font-size:11pt;margin-bottom:5pt;">合同授权</h4><p style="font-size:7.5pt;color:var(--muted);line-height:1.65;">模板、申请、审批、签署与授权书全流程电子化。</p></div></div>
+        <div style="flex:1;position:relative;min-height:0;"><div style="position:absolute;top:50%;left:10pt;right:10pt;transform:translateY(-50%);"><h4 style="font-size:10pt;margin-bottom:4pt;">合同授权</h4><p style="font-size:7pt;color:var(--muted);line-height:1.6;">模板、申请、审批、签署与授权书全流程电子化。</p></div></div>
       </div>
-      <div style="width:16pt;display:flex;align-items:center;justify-content:center;align-self:stretch;background:var(--cream);"><div style="width:0;height:0;border-top:7pt solid transparent;border-bottom:7pt solid transparent;border-left:8pt solid var(--gold);"></div></div>
-      <!-- 节点3 -->
+      <div style="width:12pt;display:flex;align-items:center;justify-content:center;align-self:stretch;background:var(--cream);"><div style="width:0;height:0;border-top:6pt solid transparent;border-bottom:6pt solid transparent;border-left:7pt solid var(--gold);"></div></div>
+      <!-- 节点3 审批流 -->
       <div style="flex:1;display:flex;flex-direction:column;background:#fff;border:.7pt solid var(--line);border-left:none;overflow:hidden;">
         <div style="background:var(--accent);color:#fff;padding:7pt 10pt;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;"><span style="font-family:var(--mono);font-size:7pt;letter-spacing:.15em;">STEP 03</span><span style="font-size:11pt;font-weight:700;">03</span></div>
-        <div style="flex:1;position:relative;min-height:0;"><div style="position:absolute;top:50%;left:12pt;right:12pt;transform:translateY(-50%);"><h4 style="font-size:11pt;margin-bottom:5pt;">订单履约</h4><p style="font-size:7.5pt;color:var(--muted);line-height:1.65;">销售/采购订单、退货、发货跟踪与回款管理。</p></div></div>
+        <div style="flex:1;position:relative;min-height:0;"><div style="position:absolute;top:50%;left:10pt;right:10pt;transform:translateY(-50%);"><h4 style="font-size:10pt;margin-bottom:4pt;">智能审批</h4><p style="font-size:7pt;color:var(--muted);line-height:1.6;">合同、订单、退货等关键单据按配置自动流转。</p></div></div>
       </div>
-      <div style="width:16pt;display:flex;align-items:center;justify-content:center;align-self:stretch;background:var(--cream);"><div style="width:0;height:0;border-top:7pt solid transparent;border-bottom:7pt solid transparent;border-left:8pt solid var(--accent);"></div></div>
+      <div style="width:12pt;display:flex;align-items:center;justify-content:center;align-self:stretch;background:var(--cream);"><div style="width:0;height:0;border-top:6pt solid transparent;border-bottom:6pt solid transparent;border-left:7pt solid var(--accent);"></div></div>
       <!-- 节点4 -->
       <div style="flex:1;display:flex;flex-direction:column;background:#fff;border:.7pt solid var(--line);border-left:none;overflow:hidden;">
         <div style="background:var(--gold);color:var(--ink);padding:7pt 10pt;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;"><span style="font-family:var(--mono);font-size:7pt;letter-spacing:.15em;">STEP 04</span><span style="font-size:11pt;font-weight:700;">04</span></div>
-        <div style="flex:1;position:relative;min-height:0;"><div style="position:absolute;top:50%;left:12pt;right:12pt;transform:translateY(-50%);"><h4 style="font-size:11pt;margin-bottom:5pt;">库存仓储</h4><p style="font-size:7.5pt;color:var(--muted);line-height:1.65;">入库、出库、盘点、调拨与批次效期预警。</p></div></div>
+        <div style="flex:1;position:relative;min-height:0;"><div style="position:absolute;top:50%;left:10pt;right:10pt;transform:translateY(-50%);"><h4 style="font-size:10pt;margin-bottom:4pt;">订单履约</h4><p style="font-size:7pt;color:var(--muted);line-height:1.6;">销售/采购订单、退货、发货跟踪与回款管理。</p></div></div>
       </div>
-      <div style="width:16pt;display:flex;align-items:center;justify-content:center;align-self:stretch;background:var(--cream);"><div style="width:0;height:0;border-top:7pt solid transparent;border-bottom:7pt solid transparent;border-left:8pt solid var(--gold);"></div></div>
-      <!-- 节点5 -->
+      <div style="width:12pt;display:flex;align-items:center;justify-content:center;align-self:stretch;background:var(--cream);"><div style="width:0;height:0;border-top:6pt solid transparent;border-bottom:6pt solid transparent;border-left:7pt solid var(--accent);"></div></div>
+      <!-- 节点4 -->
       <div style="flex:1;display:flex;flex-direction:column;background:#fff;border:.7pt solid var(--line);border-left:none;overflow:hidden;">
         <div style="background:var(--accent);color:#fff;padding:7pt 10pt;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;"><span style="font-family:var(--mono);font-size:7pt;letter-spacing:.15em;">STEP 05</span><span style="font-size:11pt;font-weight:700;">05</span></div>
-        <div style="flex:1;position:relative;min-height:0;"><div style="position:absolute;top:50%;left:12pt;right:12pt;transform:translateY(-50%);"><h4 style="font-size:11pt;margin-bottom:5pt;">手术报台</h4><p style="font-size:7.5pt;color:var(--muted);line-height:1.65;">手术录入、耗材核销与移动收货跟台。</p></div></div>
+        <div style="flex:1;position:relative;min-height:0;"><div style="position:absolute;top:50%;left:10pt;right:10pt;transform:translateY(-50%);"><h4 style="font-size:10pt;margin-bottom:4pt;">库存仓储</h4><p style="font-size:7pt;color:var(--muted);line-height:1.6;">入库、出库、盘点、调拨与批次效期预警。</p></div></div>
       </div>
-      <div style="width:16pt;display:flex;align-items:center;justify-content:center;align-self:stretch;background:var(--cream);"><div style="width:0;height:0;border-top:7pt solid transparent;border-bottom:7pt solid transparent;border-left:8pt solid var(--accent);"></div></div>
+      <div style="width:12pt;display:flex;align-items:center;justify-content:center;align-self:stretch;background:var(--cream);"><div style="width:0;height:0;border-top:6pt solid transparent;border-bottom:6pt solid transparent;border-left:7pt solid var(--gold);"></div></div>
+      <!-- 节点5 -->
+      <div style="flex:1;display:flex;flex-direction:column;background:#fff;border:.7pt solid var(--line);border-left:none;overflow:hidden;">
+        <div style="background:var(--gold);color:var(--ink);padding:7pt 10pt;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;"><span style="font-family:var(--mono);font-size:7pt;letter-spacing:.15em;">STEP 06</span><span style="font-size:11pt;font-weight:700;">06</span></div>
+        <div style="flex:1;position:relative;min-height:0;"><div style="position:absolute;top:50%;left:10pt;right:10pt;transform:translateY(-50%);"><h4 style="font-size:10pt;margin-bottom:4pt;">手术报台</h4><p style="font-size:7pt;color:var(--muted);line-height:1.6;">手术录入、耗材核销与移动收货跟台。</p></div></div>
+      </div>
+      <div style="width:12pt;display:flex;align-items:center;justify-content:center;align-self:stretch;background:var(--cream);"><div style="width:0;height:0;border-top:6pt solid transparent;border-bottom:6pt solid transparent;border-left:7pt solid var(--accent);"></div></div>
       <!-- 节点6 -->
       <div style="flex:1;display:flex;flex-direction:column;background:var(--ink);color:#fff;border-radius:0 5pt 5pt 0;overflow:hidden;">
-        <div style="background:rgba(193,154,91,.9);color:var(--ink);padding:7pt 10pt;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;"><span style="font-family:var(--mono);font-size:7pt;letter-spacing:.15em;">STEP 06</span><span style="font-size:11pt;font-weight:700;">06</span></div>
-        <div style="flex:1;position:relative;min-height:0;"><div style="position:absolute;top:50%;left:12pt;right:12pt;transform:translateY(-50%);"><h4 style="font-size:11pt;margin-bottom:5pt;color:#fff;">审计追溯</h4><p style="font-size:7.5pt;color:rgba(255,255,255,.65);line-height:1.65;">操作、API、登录日志全量留痕，合规可查。</p></div></div>
+        <div style="background:rgba(193,154,91,.9);color:var(--ink);padding:7pt 10pt;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;"><span style="font-family:var(--mono);font-size:7pt;letter-spacing:.15em;">STEP 07</span><span style="font-size:11pt;font-weight:700;">07</span></div>
+        <div style="flex:1;position:relative;min-height:0;"><div style="position:absolute;top:50%;left:10pt;right:10pt;transform:translateY(-50%);"><h4 style="font-size:10pt;margin-bottom:4pt;color:#fff;">审计追溯</h4><p style="font-size:7pt;color:rgba(255,255,255,.65);line-height:1.6;">操作、API、登录、邮件日志全量留痕，合规可查。</p></div></div>
       </div>
     </div>
     <!-- 底部：三个核心能力带 -->
@@ -457,43 +567,72 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
   <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">07</span></div>
 </section>
 
-<!-- 页08 合同与授权 -->
+<!-- ===== 页08 智能审批流与配置（新增） ===== -->
 <section class="sheet">
-  <div class="bleed-bg" style="background:var(--paper);"></div>
+  <div class="bleed-bg" style="background:linear-gradient(135deg,#f7f5f0 0%,#eef2ff 100%);"></div>
   <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
   <span class="crop v tl-v"></span><span class="crop v tr-v"></span><span class="crop v bl-v"></span><span class="crop v br-v"></span>
-  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>06 · 合同与授权</span></div>
+  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>06 · 智能审批流</span></div>
   <div class="page fill">
-    <div class="sec-num"><span>06</span> CAPABILITY</div>
-    <div style="display:flex;gap:18pt;align-items:end;margin-bottom:8pt;"><h1 class="h1" style="font-size:22pt;">合同与授权</h1><p style="font-size:9pt;color:var(--muted);line-height:1.6;flex:1;padding-bottom:3pt;">从合同模板、在线申请、审批签署到授权书发放，形成合规闭环，到期与超范围销售自动预警。</p></div>
+    <div class="sec-num"><span>06</span> APPROVAL</div>
+    <div style="display:flex;gap:18pt;align-items:end;margin-bottom:8pt;"><h1 class="h1" style="font-size:22pt;">智能审批流</h1><p style="font-size:9pt;color:var(--muted);line-height:1.6;flex:1;padding-bottom:3pt;">合同、订单、退货、调拨等关键业务节点全面线上化审批，支持可视化流程配置、多级会签、条件分支与抄送提醒。</p></div>
     <div class="fill-row">
       <div class="cap-left">
         <div class="cap-points fill">
-          <div class="card"><div class="ico">01</div><h4>模板与版本</h4><p>标准合同模板集中维护，支持版本迭代与条款库，历史版本可比对可追溯，确保用印合规。</p></div>
-          <div class="card cream"><div class="ico" style="background:#eef0f4;color:var(--ink-2);">02</div><h4>在线审批签署</h4><p>合同申请、多级审批、电子签全流程线上化，审批状态实时可视，缩短签约周期。</p></div>
-          <div class="card accent"><div class="ico">03</div><h4 style="color:#fff;">合规预警</h4><p>授权范围、有效期、到期续签自动校验与提醒，超范围销售实时拦截，审计证据链一键导出。</p></div>
+          <div class="card"><div class="ico">01</div><h4>可视化流程设计器</h4><p>拖拽式节点编排，支持顺序审批、并行会签、条件分支、或签/会签、转办与退回，业务人员无需开发即可上线新流程。</p></div>
+          <div class="card cream"><div class="ico" style="background:#eef0f4;color:var(--ink-2);">02</div><h4>多维度审批配置</h4><p>按单据类型、金额区间、组织层级、角色岗位设置审批规则，条件命中自动路由，复杂组织也能灵活适配。</p></div>
+          <div class="card accent"><div class="ico">03</div><h4 style="color:#fff;">审批轨迹与催办</h4><p>每个节点状态、审批人、意见、时间戳完整记录，支持一键催办、批量审批与移动端处理，审批进度透明可控。</p></div>
         </div>
       </div>
-      <div class="cap-right"><div class="shot" style="flex:1;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">dms.example.com / 合同管理</span></div><div class="shot-img-wrap"><img src="../assets/07-pc-contracts.png"></div></div><div class="shot-cap"><b>合同管理</b> · 台账、状态跟踪与到期自动预警</div></div>
+      <div class="cap-right"><div class="shot" style="flex:1;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">dms.example.com / 审批流配置</span></div><div class="shot-img-wrap"><img src="../assets/39-pc-approval-workflow.jpg"></div></div><div class="shot-cap"><b>审批流设计器</b> · 可视化节点编排与条件分支设置</div></div>
     </div>
     <div class="cap-foot">
-      <div class="card"><h4>合同模板</h4><p>标准条款与版本管理</p></div>
-      <div class="card"><h4>在线审批</h4><p>多级审批与电子签</p></div>
-      <div class="card"><h4>授权书</h4><p>范围、有效期可追溯</p></div>
-      <div class="card accent"><h4 style="color:#fff;">合规闭环</h4><p style="color:rgba(255,255,255,.8);">审计一键导出证据链</p></div>
+      <div class="card"><h4>流程设计器</h4><p>拖拽节点零代码配置</p></div>
+      <div class="card"><h4>条件分支</h4><p>金额/组织/角色智能路由</p></div>
+      <div class="card"><h4>会签/或签</h4><p>多人审批灵活组合</p></div>
+      <div class="card accent"><h4 style="color:#fff;">全链路留痕</h4><p style="color:rgba(255,255,255,.8);">审批轨迹可追溯导出</p></div>
     </div>
   </div>
   <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">08</span></div>
 </section>
 
-<!-- 页09 订单与库存 -->
+<!-- 页09 合同模块 -->
 <section class="sheet">
   <div class="bleed-bg" style="background:var(--paper);"></div>
   <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
   <span class="crop v tl-v"></span><span class="crop v tr-v"></span><span class="crop v bl-v"></span><span class="crop v br-v"></span>
-  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>07 · 订单与库存</span></div>
+  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>07 · 合同模块</span></div>
   <div class="page fill">
     <div class="sec-num"><span>07</span> CAPABILITY</div>
+    <div style="display:flex;gap:18pt;align-items:end;margin-bottom:8pt;"><h1 class="h1" style="font-size:22pt;">合同模块</h1><p style="font-size:9pt;color:var(--muted);line-height:1.6;flex:1;padding-bottom:3pt;">合同中心经过全面重构：新增合同模板库、灵活的价格政策、变更与补充协议、履约跟踪与到期预警，全面支撑经销商协议全生命周期。</p></div>
+    <div class="fill-row">
+      <div class="cap-left">
+        <div class="cap-points fill">
+          <div class="card"><div class="ico">01</div><h4>合同模板库</h4><p>标准合同模板、条款库与价格政策集中维护，支持多版本管理与变更记录，确保用印合规、内容一致。</p></div>
+          <div class="card cream"><div class="ico" style="background:#eef0f4;color:var(--ink-2);">02</div><h4>协议全周期</h4><p>主合同、补充协议、变更、续签、终止一站式管理，履约节点、收付款计划与到期预警自动联动。</p></div>
+          <div class="card accent"><div class="ico">03</div><h4 style="color:#fff;">审批与授权</h4><p>合同申请接入智能审批流，审批轨迹与电子签全程留痕；授权书范围、有效期自动校验，超范围销售实时拦截。</p></div>
+        </div>
+      </div>
+      <div class="cap-right"><div class="shot" style="flex:1;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">dms.example.com / 合同管理</span></div><div class="shot-img-wrap"><img src="../assets/07-pc-contracts.png"></div></div><div class="shot-cap"><b>合同中心</b> · 模板、协议、审批、授权一站式管理</div></div>
+    </div>
+    <div class="cap-foot">
+      <div class="card"><h4>模板条款库</h4><p>标准合同快速套用</p></div>
+      <div class="card"><h4>协议生命周期</h4><p>主/补/变/续/终</p></div>
+      <div class="card"><h4>价格政策</h4><p>折扣、返点、账期</p></div>
+      <div class="card accent"><h4 style="color:#fff;">到期预警</h4><p style="color:rgba(255,255,255,.8);">自动提醒与续签</p></div>
+    </div>
+  </div>
+  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">09</span></div>
+</section>
+
+<!-- 页10 订单与库存 -->
+<section class="sheet">
+  <div class="bleed-bg" style="background:var(--paper);"></div>
+  <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
+  <span class="crop v tl-v"></span><span class="crop v tr-v"></span><span class="crop v bl-v"></span><span class="crop v br-v"></span>
+  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>08 · 订单与库存</span></div>
+  <div class="page fill">
+    <div class="sec-num"><span>08</span> CAPABILITY</div>
     <div style="display:flex;gap:18pt;align-items:end;margin-bottom:8pt;"><h1 class="h1" style="font-size:22pt;">订单与库存</h1><p style="font-size:9pt;color:var(--muted);line-height:1.6;flex:1;padding-bottom:3pt;">覆盖销售、采购、退货全链路，库存与财务实时联动，多仓库统一管理，批次效期预警。</p></div>
     <div class="fill-row">
       <div class="cap-left">
@@ -512,17 +651,17 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
       <div class="card cream"><h4>采购退货</h4><p>退回供应商管理</p></div>
     </div>
   </div>
-  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">09</span></div>
+  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">10</span></div>
 </section>
 
-<!-- 页10 库存与仓储 -->
+<!-- 页11 库存与仓储 -->
 <section class="sheet">
   <div class="bleed-bg" style="background:var(--paper);"></div>
   <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
   <span class="crop v tl-v"></span><span class="crop v tr-v"></span><span class="crop v bl-v"></span><span class="crop v br-v"></span>
-  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>08 · 库存与仓储</span></div>
+  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>09 · 库存与仓储</span></div>
   <div class="page fill">
-    <div class="sec-num"><span>08</span> CAPABILITY</div>
+    <div class="sec-num"><span>09</span> CAPABILITY</div>
     <div style="display:flex;gap:18pt;align-items:end;margin-bottom:8pt;"><h1 class="h1" style="font-size:22pt;">库存与仓储</h1><p style="font-size:9pt;color:var(--muted);line-height:1.6;flex:1;padding-bottom:3pt;">多仓库统一管理，入库、出库、盘点、调拨全流程覆盖，批次效期与库存下限多维预警。</p></div>
     <div class="fill-row">
       <div class="cap-left">
@@ -541,17 +680,17 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
       <div class="card dark"><h4 style="color:#fff;">调拨</h4><p style="color:rgba(255,255,255,.75);">多仓实时联动</p></div>
     </div>
   </div>
-  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">10</span></div>
+  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">11</span></div>
 </section>
 
-<!-- 页11 手术报台 -->
+<!-- 页12 手术报台 -->
 <section class="sheet">
   <div class="bleed-bg" style="background:var(--paper);"></div>
   <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
   <span class="crop v tl-v"></span><span class="crop v tr-v"></span><span class="crop v bl-v"></span><span class="crop v br-v"></span>
-  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>09 · 手术报台与核销</span></div>
+  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>10 · 手术报台与核销</span></div>
   <div class="page fill">
-    <div class="sec-num"><span>09</span> CAPABILITY</div>
+    <div class="sec-num"><span>10</span> CAPABILITY</div>
     <div style="display:flex;gap:18pt;align-items:end;margin-bottom:8pt;"><h1 class="h1" style="font-size:21pt;">手术报台与耗材核销</h1><p style="font-size:9pt;color:var(--muted);line-height:1.6;flex:1;padding-bottom:3pt;">针对医疗器械手术跟台场景，提供手术录入、耗材核销与移动端收货，全链路追踪。</p></div>
     <div class="fill-row">
       <div class="cap-left">
@@ -570,24 +709,24 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
       <div class="card accent"><h4 style="color:#fff;">全程追溯</h4><p style="color:rgba(255,255,255,.8);">高值耗材去向可查</p></div>
     </div>
   </div>
-  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">11</span></div>
+  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">12</span></div>
 </section>
 
-<!-- 页12 平台治理 -->
+<!-- 页13 平台治理 -->
 <section class="sheet">
   <div class="bleed-bg" style="background:var(--paper);"></div>
   <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
   <span class="crop v tl-v"></span><span class="crop v tr-v"></span><span class="crop v bl-v"></span><span class="crop v br-v"></span>
-  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>10 · 平台治理</span></div>
+  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>11 · 平台治理</span></div>
   <div class="page fill">
-    <div class="sec-num"><span>10</span> CAPABILITY</div>
-    <div style="display:flex;gap:18pt;align-items:end;margin-bottom:8pt;"><h1 class="h1" style="font-size:22pt;">平台治理</h1><p style="font-size:9pt;color:var(--muted);line-height:1.6;flex:1;padding-bottom:3pt;">管理后台为集团运营与 IT 治理提供多租户、组织、权限、字典与全链路审计。</p></div>
+    <div class="sec-num"><span>11</span> CAPABILITY</div>
+    <div style="display:flex;gap:18pt;align-items:end;margin-bottom:8pt;"><h1 class="h1" style="font-size:22pt;">平台治理</h1><p style="font-size:9pt;color:var(--muted);line-height:1.6;flex:1;padding-bottom:3pt;">管理后台为集团运营与 IT 治理提供多租户、组织、权限、字典、全链路审计与邮件日志追踪，所有关键操作可检索、可导出、可追责。</p></div>
     <div class="fill-row">
       <div class="cap-left">
         <div class="cap-points fill">
           <div class="card"><div class="ico">01</div><h4>多租户隔离</h4><p>集团多租户开通、配置与数据隔离，独立组织架构与权限策略，资源用量与运行状态全局可视。</p></div>
           <div class="card cream"><div class="ico" style="background:#eef0f4;color:var(--ink-2);">02</div><h4>组织与权限</h4><p>部门、岗位、用户、角色四位一体，菜单、按钮、数据三级权限控制，灵活适配各类组织。</p></div>
-          <div class="card dark"><div class="ico">03</div><h4 style="color:#fff;">全链路审计</h4><p>API 调用、业务操作、登录登出日志全量留痕，支持按时间、用户、模块检索导出，合规可查。</p></div>
+          <div class="card dark"><div class="ico">03</div><h4 style="color:#fff;">全链路审计</h4><p>API 调用、业务操作、登录登出、邮件发送日志全量留痕，支持按时间、用户、模块、收件人检索导出，合规可查。</p></div>
         </div>
       </div>
       <div class="cap-right"><div class="shot" style="flex:1;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">admin.example.com / 管理后台总览</span></div><div class="shot-img-wrap"><img src="../assets/24-admin-overview.png"></div></div><div class="shot-cap"><b>管理后台总览</b> · 租户、资源与运行状态全局视图</div></div>
@@ -596,22 +735,22 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
       <div class="card"><h4>租户管理</h4><p>开通配置与数据隔离</p></div>
       <div class="card"><h4>角色权限</h4><p>菜单/按钮/数据级控制</p></div>
       <div class="card"><h4>数据字典</h4><p>枚举与参数统一维护</p></div>
-      <div class="card dark"><h4 style="color:#fff;">全量日志</h4><p style="color:rgba(255,255,255,.75);">API/操作/登录留痕</p></div>
+      <div class="card dark"><h4 style="color:#fff;">全量日志</h4><p style="color:rgba(255,255,255,.75);">API/操作/登录/邮件留痕</p></div>
     </div>
   </div>
-  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">12</span></div>
+  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">13</span></div>
 </section>
 
-<!-- 页13 移动端（合并：左文案 + 右5个真实移动端截图+说明） -->
+<!-- 页14 移动端（合并：左文案 + 右5个真实移动端截图+说明） -->
 <section class="sheet" style="background:var(--ink);">
   <div class="bleed-bg" style="background:radial-gradient(100% 130% at 85% 15%,#0e2557 0%,#071126 60%,#050b18 100%);"></div>
   <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
   <span class="crop v tl-v"></span><span class="crop v tr-v"></span><span class="crop v bl-v"></span><span class="crop v br-v"></span>
-  <div class="runninghead" style="color:rgba(255,255,255,.45);"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>11 · 移动作业端</span></div>
+  <div class="runninghead" style="color:rgba(255,255,255,.45);"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>12 · 移动作业端</span></div>
   <div class="page" style="color:#fff;display:grid;grid-template-columns:62mm 1fr;gap:14mm;align-items:stretch;">
     <!-- 左侧文案 -->
     <div style="display:flex;flex-direction:column;justify-content:center;">
-      <div class="sec-num" style="color:var(--gold);margin-bottom:10pt;"><span style="color:var(--gold);">11</span><div style="flex:1;height:.8pt;background:rgba(255,255,255,.18);"></div></div>
+      <div class="sec-num" style="color:var(--gold);margin-bottom:10pt;"><span style="color:var(--gold);">12</span><div style="flex:1;height:.8pt;background:rgba(255,255,255,.18);"></div></div>
       <h1 style="font-size:22pt;font-weight:900;color:#fff;margin-bottom:9pt;line-height:1.25;">一线场景，一部手机就能完成</h1>
       <p style="font-size:8.5pt;color:rgba(255,255,255,.7);line-height:1.75;margin-bottom:12pt;">移动端覆盖登录、工作台、订单处理、手术报台与个人中心等核心场景，让跟台人员与仓库作业人员摆脱场地与设备限制，数据实时同步回 PC 端与后台。</p>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6pt;margin-bottom:12pt;">
@@ -635,17 +774,17 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
       <div style="display:flex;flex-direction:column;align-items:center;"><div class="phone" style="width:100%;"><div class="phone-notch"></div><div class="phone-screen"><img src="../assets/38-mobile-receipt.png"></div></div><div style="text-align:center;margin-top:7pt;"><div style="font-size:8.5pt;font-weight:600;color:#fff;">个人中心</div><div style="font-size:6.5pt;color:rgba(255,255,255,.55);margin-top:1pt;line-height:1.4;">账号与设置管理</div></div></div>
     </div>
   </div>
-  <div class="runningfoot" style="color:rgba(255,255,255,.4);"><span>DMS · 通用经销商管理系统</span><span class="pn" style="color:#fff;">13</span></div>
+  <div class="runningfoot" style="color:rgba(255,255,255,.4);"><span>DMS · 通用经销商管理系统</span><span class="pn" style="color:#fff;">14</span></div>
 </section>
 
-<!-- 页14 核心价值 -->
+<!-- 页15 核心价值 -->
 <section class="sheet">
   <div class="bleed-bg" style="background:var(--paper);"></div>
   <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
   <span class="crop v tl-v"></span><span class="crop v tr-v"></span><span class="crop v bl-v"></span><span class="crop v br-v"></span>
-  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>12 · 核心价值</span></div>
+  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>13 · 核心价值</span></div>
   <div class="page fill">
-    <div class="sec-num"><span>12</span> VALUE</div>
+    <div class="sec-num"><span>13</span> VALUE</div>
     <h1 class="h1" style="font-size:26pt;margin-bottom:6pt;">为何选择 DMS</h1>
     <p class="lead" style="margin-bottom:10pt;">从效率、合规、协同到决策，DMS 帮助品牌商与经销商构建可沉淀、可审计、可增长的渠道运营体系。</p>
     <div class="g g2" style="gap:12pt;flex:1;grid-template-rows:1fr 1fr;">
@@ -657,43 +796,43 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
     <div style="background:var(--cream);border:.7pt solid var(--line);border-radius:4pt;padding:14pt 24pt;display:grid;grid-template-columns:repeat(4,1fr);gap:14pt;margin-top:10pt;">
       <div style="text-align:center;border-right:.7pt solid var(--line);padding-right:10pt;"><div class="kicker-num" style="font-size:36pt;">3</div><div style="font-size:9pt;color:var(--muted);margin-top:4pt;">终端协同</div></div>
       <div style="text-align:center;border-right:.7pt solid var(--line);padding-right:10pt;"><div class="kicker-num" style="font-size:36pt;">6</div><div style="font-size:9pt;color:var(--muted);margin-top:4pt;">业务域闭环</div></div>
-      <div style="text-align:center;border-right:.7pt solid var(--line);padding-right:10pt;"><div class="kicker-num" style="font-size:36pt;">38+</div><div style="font-size:9pt;color:var(--muted);margin-top:4pt;">业务界面</div></div>
+      <div style="text-align:center;border-right:.7pt solid var(--line);padding-right:10pt;"><div class="kicker-num" style="font-size:36pt;">40+</div><div style="font-size:9pt;color:var(--muted);margin-top:4pt;">业务界面</div></div>
       <div style="text-align:center;"><div class="kicker-num" style="font-size:36pt;">100%</div><div style="font-size:9pt;color:var(--muted);margin-top:4pt;">操作留痕</div></div>
-    </div>
-  </div>
-  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">14</span></div>
-</section>
-
-<!-- 图鉴页网格：每张截图配标题+说明，整页占满 -->
-<!-- 页15 PC图鉴1 -->
-<section class="sheet">
-  <div class="bleed-bg" style="background:var(--cream);"></div>
-  <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
-  <span class="crop v tl-v"></span><span class="crop v tr-v"></span><span class="crop v bl-v"></span><span class="crop v br-v"></span>
-  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>13 · 界面图鉴 / PC 业务端</span></div>
-  <div class="page fill">
-    <div class="sec-num"><span>13</span> GALLERY · PC</div>
-    <div style="display:flex;align-items:end;gap:20pt;margin-bottom:10pt;"><h1 class="h1" style="font-size:20pt;">核心界面速览 · PC 业务端</h1><p style="font-size:9pt;color:var(--muted);padding-bottom:3pt;">覆盖经销商日常运营的全部核心场景，共 20 个关键界面。</p></div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:11pt 12pt;flex:1;min-height:0;">
-      <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 首页工作台</span></div><div class="shot-img-wrap"><img src="../assets/02-pc-home.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">首页工作台</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">待办事项、数据概览与快捷入口，一屏掌握全局。</p></div></div>
-      <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 产品管理</span></div><div class="shot-img-wrap"><img src="../assets/03-pc-products.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">产品管理</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">规格、资质、注册证与价格体系统一维护。</p></div></div>
-      <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 经销商档案</span></div><div class="shot-img-wrap"><img src="../assets/20b-pc-dealer-profile.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">经销商档案</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">分级分类、资质证照与渠道关系图谱全景画像。</p></div></div>
-      <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 医院终端</span></div><div class="shot-img-wrap"><img src="../assets/05-pc-hospitals.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">医院终端</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">科室、医生、合作记录全量沉淀，终端可追溯。</p></div></div>
-      <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 合同管理</span></div><div class="shot-img-wrap"><img src="../assets/07-pc-contracts.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">合同管理</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">台账、状态跟踪与到期自动预警，签约全周期可控。</p></div></div>
-      <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 合同申请</span></div><div class="shot-img-wrap"><img src="../assets/08-pc-contract-apply.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">合同申请</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">在线发起、多级审批与电子签署，缩短签约周期。</p></div></div>
     </div>
   </div>
   <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">15</span></div>
 </section>
 
-<!-- 页16 PC图鉴2（6张大图横排两行） -->
+<!-- 图鉴页网格：每张截图配标题+说明，整页占满 -->
+<!-- 页16 PC图鉴1 -->
 <section class="sheet">
   <div class="bleed-bg" style="background:var(--cream);"></div>
   <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
   <span class="crop v tl-v"></span><span class="crop v tr-v"></span><span class="crop v bl-v"></span><span class="crop v br-v"></span>
-  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>13 · 界面图鉴 / PC 业务端</span></div>
+  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>14 · 界面图鉴 / PC 业务端</span></div>
   <div class="page fill">
-    <div class="sec-num"><span>13</span> GALLERY · PC</div>
+    <div class="sec-num"><span>14</span> GALLERY · PC</div>
+    <div style="display:flex;align-items:end;gap:20pt;margin-bottom:10pt;"><h1 class="h1" style="font-size:20pt;">核心界面速览 · PC 业务端</h1><p style="font-size:9pt;color:var(--muted);padding-bottom:3pt;">覆盖经销商日常运营的全部核心场景，共 22 个关键界面。</p></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:11pt 12pt;flex:1;min-height:0;">
+      <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 首页工作台</span></div><div class="shot-img-wrap"><img src="../assets/02-pc-home.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">首页工作台</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">待办事项、数据概览与快捷入口，一屏掌握全局。</p></div></div>
+      <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 产品管理</span></div><div class="shot-img-wrap"><img src="../assets/03-pc-products.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">产品管理</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">规格、资质、注册证与价格体系统一维护。</p></div></div>
+      <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 经销商档案</span></div><div class="shot-img-wrap"><img src="../assets/20b-pc-dealer-profile.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">经销商档案</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">分级分类、资质证照与渠道关系图谱全景画像。</p></div></div>
+      <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 医院终端</span></div><div class="shot-img-wrap"><img src="../assets/05-pc-hospitals.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">医院终端</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">科室、医生、合作记录全量沉淀，终端可追溯。</p></div></div>
+      <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 邮件日志</span></div><div class="shot-img-wrap"><img src="../assets/40-pc-email-logs.jpg"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">邮件日志</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">关键节点邮件通知的发送记录、状态与内容全链路追溯。</p></div></div>
+      <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 仓库管理</span></div><div class="shot-img-wrap"><img src="../assets/06-pc-warehouses.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">仓库管理</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">多仓库档案、库存分布与仓库权限统一管理。</p></div></div>
+    </div>
+  </div>
+  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">16</span></div>
+</section>
+
+<!-- 页17 PC图鉴2（6张大图横排两行） -->
+<section class="sheet">
+  <div class="bleed-bg" style="background:var(--cream);"></div>
+  <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
+  <span class="crop v tl-v"></span><span class="crop v tr-v"></span><span class="crop v bl-v"></span><span class="crop v br-v"></span>
+  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>14 · 界面图鉴 / PC 业务端</span></div>
+  <div class="page fill">
+    <div class="sec-num"><span>14</span> GALLERY · PC</div>
     <div style="display:flex;align-items:end;gap:20pt;margin-bottom:10pt;"><h1 class="h1" style="font-size:20pt;">核心界面速览 · PC 业务端（续）</h1><p style="font-size:9pt;color:var(--muted);padding-bottom:3pt;">订单、库存、手术与仪表盘，构成完整业务闭环。</p></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:11pt 12pt;flex:1;min-height:0;">
       <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 授权管理</span></div><div class="shot-img-wrap"><img src="../assets/09-pc-authorizations.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">授权管理</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">授权范围、有效期与销售区域自动校验，超范围实时拦截。</p></div></div>
@@ -704,18 +843,18 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
       <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">/ 数据仪表盘</span></div><div class="shot-img-wrap"><img src="../assets/20-pc-dashboard.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">数据仪表盘</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">销售、库存、手术、客户数据聚合，辅助决策。</p></div></div>
     </div>
   </div>
-  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">16</span></div>
+  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">17</span></div>
 </section>
 
-<!-- 页17 管理后台图鉴 -->
+<!-- 页18 管理后台图鉴 -->
 <section class="sheet">
   <div class="bleed-bg" style="background:var(--cream);"></div>
   <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
   <span class="crop v tl-v"></span><span class="crop v tr-v"></span><span class="crop v bl-v"></span><span class="crop v br-v"></span>
-  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>13 · 界面图鉴 / 管理后台</span></div>
+  <div class="runninghead"><span class="rh-mark"><span class="sq"></span>DMS BROCHURE</span><span>14 · 界面图鉴 / 管理后台</span></div>
   <div class="page fill">
-    <div class="sec-num"><span>13</span> GALLERY · ADMIN</div>
-    <div style="display:flex;align-items:end;gap:20pt;margin-bottom:10pt;"><h1 class="h1" style="font-size:20pt;">核心界面速览 · 管理后台</h1><p style="font-size:9pt;color:var(--muted);padding-bottom:3pt;">多租户、权限、字典与全链路审计，支撑平台级治理。</p></div>
+    <div class="sec-num"><span>14</span> GALLERY · ADMIN</div>
+    <div style="display:flex;align-items:end;gap:20pt;margin-bottom:10pt;"><h1 class="h1" style="font-size:20pt;">核心界面速览 · 管理后台</h1><p style="font-size:9pt;color:var(--muted);padding-bottom:3pt;">多租户、权限、字典、全链路审计与邮件日志追踪，支撑平台级治理。</p></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:11pt 12pt;flex:1;min-height:0;">
       <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">admin / 平台总览</span></div><div class="shot-img-wrap"><img src="../assets/24-admin-overview.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">平台总览</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">租户数量、资源用量与运行状态全局视图。</p></div></div>
       <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">admin / 工作台</span></div><div class="shot-img-wrap"><img src="../assets/24-admin-workspace.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">管理员工作台</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">待办审批、系统通知与快捷操作集中处理。</p></div></div>
@@ -725,10 +864,10 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
       <div style="display:flex;flex-direction:column;"><div class="shot" style="flex:1;display:flex;flex-direction:column;"><div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">admin / API 日志</span></div><div class="shot-img-wrap"><img src="../assets/30-admin-api-logs.png"></div></div><div style="padding:5pt 2pt 0;"><h4 style="font-size:9pt;font-weight:700;margin-bottom:2pt;">API 日志</h4><p style="font-size:7pt;color:var(--muted);line-height:1.5;">接口调用全量留痕，支持检索导出与审计。</p></div></div>
     </div>
   </div>
-  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">17</span></div>
+  <div class="runningfoot"><span>DMS · 通用经销商管理系统</span><span class="pn">18</span></div>
 </section>
 
-<!-- 页18 联系封底 -->
+<!-- 页19 联系封底 -->
 <section class="sheet" style="background:var(--ink);">
   <div class="bleed-bg" style="background:radial-gradient(120% 140% at 25% 80%,#0e2557 0%,#071126 55%,#050b18 100%);"></div>
   <span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span>
@@ -754,14 +893,104 @@ ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;he
         <div style="margin-top:24pt;display:flex;justify-content:center;gap:24pt;">
           <div style="text-align:center;"><div class="kicker-num" style="font-size:24pt;color:#fff;">3</div><div style="font-size:7.5pt;color:rgba(255,255,255,.5);margin-top:3pt;font-family:var(--mono);">端协同</div></div>
           <div style="text-align:center;"><div class="kicker-num" style="font-size:24pt;color:#fff;">6</div><div style="font-size:7.5pt;color:rgba(255,255,255,.5);margin-top:3pt;font-family:var(--mono);">大业务域</div></div>
-          <div style="text-align:center;"><div class="kicker-num" style="font-size:24pt;color:var(--gold);">38+</div><div style="font-size:7.5pt;color:rgba(255,255,255,.5);margin-top:3pt;font-family:var(--mono);">业务界面</div></div>
+          <div style="text-align:center;"><div class="kicker-num" style="font-size:24pt;color:var(--gold);">40+</div><div style="font-size:7.5pt;color:rgba(255,255,255,.5);margin-top:3pt;font-family:var(--mono);">业务界面</div></div>
         </div>
       </div>
     </div>
   </div>
-  <div class="runningfoot" style="color:rgba(255,255,255,.35);"><span>DMS BROCHURE · 2026 EDITION · A4 LANDSCAPE</span><span class="pn" style="color:rgba(255,255,255,.6);">18</span></div>
+  <div class="runningfoot" style="color:rgba(255,255,255,.35);"><span>DMS BROCHURE · 2026 EDITION · A4 LANDSCAPE</span><span class="pn" style="color:rgba(255,255,255,.6);">19</span></div>
 </section>
 
+
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
+:root{
+  --ink:#071126;--ink-2:#233044;--muted:#5d6c7f;--muted-2:#94a3b8;
+  --line:#dfe2e8;--line-soft:#eceef2;--paper:#ffffff;--cream:#f7f5f0;--cream-2:#f2efe8;
+  --accent:#002fa7;--accent-2:#0a3fbf;--accent-light:#e8eefc;--gold:#d4a843;
+  --sans:"Noto Sans SC","IBM Plex Sans","Avenir Next","Segoe UI",Arial,"Microsoft YaHei UI",sans-serif;
+  --mono:"IBM Plex Mono",Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{background:#5a5a5a;}
+body{font-family:var(--sans);color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased;font-size:10pt;}
+img{max-width:100%;display:block;}
+/* 横版 A4 + 3mm 出血 = 303mm × 216mm */
+@page{size:303mm 216mm;margin:0;}
+.sheet{position:relative;width:303mm;height:216mm;margin:0 auto;background:var(--paper);overflow:hidden;page-break-after:always;break-after:page;}
+.sheet:last-child{page-break-after:auto;break-after:auto;}
+.sheet::before{content:"";position:absolute;top:3mm;left:3mm;width:297mm;height:210mm;border:0.5pt dashed rgba(0,47,167,.2);pointer-events:none;z-index:90;}
+@media print{.sheet::before{display:none;}html,body{background:#fff;}}
+.crop{position:absolute;width:3mm;height:0.5pt;background:#000;z-index:95;}
+.crop.v{width:0.5pt;height:3mm;}
+.crop.tl{top:2.75mm;left:0;}.crop.tr{top:2.75mm;right:0;}
+.crop.bl{bottom:2.75mm;left:0;}.crop.br{bottom:2.75mm;right:0;}
+.crop.tl-v{left:2.75mm;top:0;}.crop.tr-v{right:2.75mm;top:0;}
+.crop.bl-v{left:2.75mm;bottom:0;}.crop.br-v{right:2.75mm;bottom:0;}
+/* 内容安全区：距裁切线约 10mm */
+.page{position:absolute;top:14mm;left:15mm;width:273mm;height:188mm;z-index:2;display:flex;flex-direction:column;}
+.bleed-bg{position:absolute;inset:0;z-index:1;}
+.runninghead{position:absolute;top:7mm;left:15mm;right:15mm;display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:7pt;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);z-index:20;}
+.runninghead .rh-mark{display:flex;align-items:center;gap:7pt;}
+.runninghead .rh-mark .sq{width:7pt;height:7pt;background:var(--accent);}
+.runningfoot{position:absolute;bottom:7mm;left:15mm;right:15mm;display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:7pt;letter-spacing:.16em;color:var(--muted-2);z-index:20;}
+.runningfoot .pn{font-size:9pt;color:var(--ink);font-weight:600;letter-spacing:.05em;}
+.sec-num{font-family:var(--mono);font-size:9pt;font-weight:600;color:var(--accent);letter-spacing:.12em;display:flex;align-items:center;gap:12pt;margin-bottom:8pt;}
+.sec-num::after{content:"";flex:1;height:.8pt;background:var(--line);}
+h1,h2,h3,h4{font-family:var(--sans);line-height:1.18;letter-spacing:-.01em;color:var(--ink);}
+h1.h1{font-size:24pt;font-weight:900;line-height:1.2;}
+.lead{font-size:10pt;color:var(--muted);line-height:1.7;}
+.card{border:.7pt solid var(--line);background:var(--paper);padding:12pt 14pt;border-radius:4pt;}
+.card.cream{background:var(--cream);border-color:var(--line-soft);}
+.card.dark{background:var(--ink);border-color:var(--ink);color:#fff;}
+.card.accent{background:var(--accent);border-color:var(--accent);color:#fff;}
+.card h4{font-size:11pt;font-weight:700;margin-bottom:5pt;}
+.card p{font-size:8.5pt;color:var(--muted);line-height:1.6;}
+.card.dark p,.card.accent p{color:rgba(255,255,255,.78);}
+.card .ico{width:24pt;height:24pt;border-radius:4pt;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:8pt;font-size:9.5pt;font-weight:700;font-family:var(--mono);}
+.card.dark .ico{background:rgba(255,255,255,.12);color:var(--gold);}
+/* 截图框：图片区严格 16:9，与 PC 截图真实比例一致，无灰边无变形 */
+.shot{border:.7pt solid var(--line);border-radius:4pt;overflow:hidden;background:#fff;display:flex;flex-direction:column;}
+.shot-bar{height:15pt;display:flex;align-items:center;gap:5pt;padding:0 9pt;border-bottom:.7pt solid var(--line);background:linear-gradient(180deg,#fff,#f6f5f1);flex-shrink:0;}
+.shot-dot{width:5.5pt;height:5.5pt;border-radius:50%;flex:none;}
+.shot-dot.r{background:#ef4444;}.shot-dot.y{background:#f59e0b;}.shot-dot.g{background:#22c55e;}
+.shot-url{margin-left:6pt;font-family:var(--mono);font-size:6.5pt;color:var(--muted);line-height:11pt;padding:0 7pt;border-radius:2pt;background:#eef0f4;flex:1;overflow:hidden;white-space:nowrap;}
+.shot-img-wrap{position:relative;width:100%;aspect-ratio:16/9;background:#fff;overflow:hidden;flex-shrink:0;}
+.shot-img-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:block;}
+.shot-cap{text-align:center;font-size:7.5pt;color:var(--muted);margin-top:5pt;flex:none;}
+.shot-cap b{color:var(--ink);font-weight:600;}
+/* 手机模型：外框与屏幕区同比例，用 box-shadow 描边避免挤压内容，禁止任何拉伸 */
+.phone{position:relative;width:100%;aspect-ratio:1179/1980;border-radius:7pt;overflow:hidden;background:#0a0f18;flex:none;box-shadow:0 0 0 1.3pt #161f2e, inset 0 0 0 1.3pt #161f2e;}
+.phone-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:26%;height:5pt;border-radius:0 0 5pt 5pt;background:#0a0f18;z-index:3;}
+.phone-screen{position:absolute;inset:0;border-radius:6pt;overflow:hidden;background:#f1f3f7;}
+.phone-screen img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:block;}
+/* 手机网格容器 */
+.phone-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12pt 14pt;align-items:end;justify-items:center;}
+.phone-grid .phone-item{display:flex;flex-direction:column;align-items:center;width:100%;max-width:34mm;}
+.phone-grid .phone-label{font-size:8pt;color:var(--muted);margin-top:5pt;text-align:center;}
+.phone-grid.dark .phone-label{color:rgba(255,255,255,.6);}
+ul.feat{list-style:none;}
+ul.feat li{position:relative;padding-left:14pt;font-size:9.5pt;color:var(--ink-2);line-height:1.55;margin-bottom:7pt;}
+ul.feat li::before{content:"";position:absolute;left:0;top:5pt;width:6pt;height:6pt;border:1pt solid var(--accent);border-radius:50%;}
+ul.feat li::after{content:"";position:absolute;left:1.5pt;top:6.5pt;width:3pt;height:3pt;background:var(--accent);border-radius:50%;}
+.kicker-num{font-family:var(--mono);font-weight:600;color:var(--accent);line-height:1;letter-spacing:-.02em;}
+.divider{height:.7pt;background:var(--line);border:0;}
+.g{display:grid;gap:10pt;}.g2{grid-template-columns:1fr 1fr;}.g3{grid-template-columns:1fr 1fr 1fr;}.g4{grid-template-columns:repeat(4,1fr);}
+/* flex 填充 */
+.fill{display:flex;flex-direction:column;flex:1;min-height:0;}
+.fill-row{display:flex;flex:1;min-height:0;gap:14pt;}
+/* 能力页：左文右图，截图严格 16:9 */
+.cap-left{width:68mm;display:flex;flex-direction:column;flex-shrink:0;}
+.cap-right{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;}
+.cap-right .shot{width:100%;}
+.cap-points{display:flex;flex-direction:column;gap:8pt;margin-top:10pt;flex:1;}
+.cap-points .card{flex:1;display:flex;flex-direction:column;}
+.cap-foot{display:grid;grid-template-columns:repeat(4,1fr);gap:8pt;margin-top:10pt;flex:none;}
+.cap-foot .card{padding:9pt 11pt;}
+.cap-foot .card h4{font-size:9.5pt;margin-bottom:3pt;}
+.cap-foot .card p{font-size:7.5pt;line-height:1.45;}
+@media screen{.sheet{margin:18px auto;box-shadow:0 6px 30px rgba(0,0,0,.4);}body{padding:18px 0;}}
+</style>
 </body>
 </html>
 

@@ -8,6 +8,9 @@ import com.dms.authz.dto.AuthorizationCheckRequest;
 import com.dms.authz.dto.AuthorizationCheckResult;
 import com.dms.authz.entity.Authorization;
 import com.dms.authz.entity.TempAuthorization;
+import com.dms.approval.dto.StartApprovalRequest;
+import com.dms.approval.entity.ApprovalInstance;
+import com.dms.approval.service.ApprovalService;
 import com.dms.authz.repository.AuthorizationRepository;
 import com.dms.authz.repository.TempAuthorizationRepository;
 import com.dms.common.BusinessException;
@@ -29,6 +32,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -39,6 +44,7 @@ public class AuthorizationService {
 
     private final AuthorizationRepository authorizationRepository;
     private final TempAuthorizationRepository tempAuthorizationRepository;
+    private final ApprovalService approvalService;
 
     @PersistenceContext
     private EntityManager em;
@@ -126,11 +132,37 @@ public class AuthorizationService {
         }
         req.setId(null);
         req.setTenantId(tenantId);
-        if (req.getStatus() == null) req.setStatus("active");
+        if (req.getStatus() == null) req.setStatus("pending_approval");
         if (req.getSource() == null) req.setSource("contract");
         if (req.getAuthType() == null) req.setAuthType("ORDER");
         req.setUpdatedAt(OffsetDateTime.now());
-        return authorizationRepository.save(req);
+        Authorization saved = authorizationRepository.save(req);
+        try {
+            StartApprovalRequest request = new StartApprovalRequest();
+            request.setBusinessType("AUTHORIZATION");
+            request.setBusinessId(saved.getId());
+            request.setBusinessCode("AUTH-" + saved.getId());
+            request.setTitle("授权审批: AUTH-" + saved.getId());
+            Map<String, Object> snapshot = new HashMap<>();
+            snapshot.put("dealerId", saved.getDealerId());
+            snapshot.put("authType", saved.getAuthType());
+            snapshot.put("productLineId", saved.getProductLineId());
+            snapshot.put("terminalId", saved.getTerminalId());
+            snapshot.put("validFrom", saved.getValidFrom());
+            snapshot.put("validTo", saved.getValidTo());
+            request.setBusinessSnapshot(snapshot);
+            ApprovalInstance instance = approvalService.start(request);
+            if ("APPROVED".equals(instance.getStatus().name()) || "AUTO_APPROVED".equals(instance.getStatus().name())) {
+                saved.setStatus("active");
+                saved.setUpdatedAt(OffsetDateTime.now());
+                saved = authorizationRepository.save(saved);
+            }
+        } catch (Exception e) {
+            saved.setStatus("draft");
+            authorizationRepository.save(saved);
+            throw e;
+        }
+        return saved;
     }
 
     /**

@@ -1,7 +1,18 @@
-# DMS 后端默认配置（profile: docker）
+# DMS 鍚庣榛樿閰嶇疆锛坧rofile: docker锛?
 server:
   port: 8080
 spring:
+  mail:
+    host: ${MAIL_HOST:smtp.163.com}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME:vinkinyu@163.com}
+    password: ${MAIL_PASSWORD:BU2qCuGPnLV6Afe9}
+    protocol: smtps
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: false
   application:
     name: dms-backend
   profiles:
@@ -38,6 +49,11 @@ spring:
     time-zone: Asia/Shanghai
 
 dms:
+  app:
+    base-url: ${APP_BASE_URL:http://8.133.193.238:8083}
+  mail:
+    from: ${MAIL_FROM:${MAIL_USERNAME:vinkinyu@163.com}}
+    enabled: ${MAIL_ENABLED:true}
   jwt:
     secret: ${JWT_SECRET:dms-super-secret-key-please-change-in-prod-1234567890abcdef}
     access-token-ttl: 28800000
@@ -71,3 +87,6 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+
+

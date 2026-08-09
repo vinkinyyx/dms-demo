@@ -1,4 +1,4 @@
-﻿import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import { getToken } from '@/utils/auth'
 
 const routes = [
@@ -14,6 +14,13 @@ const routes = [
       { path: 'orders/:id', name: 'OrderDetail', component: () => import('@/views/order/OrderDetail.vue'), meta: { title: '订单详情' } },
       { path: 'hospitals/:id', name: 'HospitalDetail', component: () => import('@/views/hospital/HospitalDetail.vue'), meta: { title: '医院详情' } },
       { path: 'reports', name: 'Reports', component: () => import('@/views/Reports.vue'), meta: { title: '报表中心' } },
+      { path: 'contracts', name: 'ContractWorkspace', component: () => import('@/views/contract/ContractWorkspace.vue'), meta: { title: '合同工作台' } },
+      { path: 'contracts/new', name: 'ContractCreate', component: () => import('@/views/contract/ContractEdit.vue'), meta: { title: '新建合同' } },
+      { path: 'contracts/templates', name: 'ContractTemplates', component: () => import('@/views/contract/ContractTemplateList.vue'), meta: { title: '合同模板' } },
+      { path: 'contracts/templates/new', name: 'ContractTemplateCreate', component: () => import('@/views/contract/ContractTemplateEdit.vue'), meta: { title: '新建合同模板' } },
+      { path: 'contracts/templates/:id', name: 'ContractTemplateEdit', component: () => import('@/views/contract/ContractTemplateEdit.vue'), meta: { title: '编辑合同模板' } },
+      { path: 'contracts/:id', name: 'ContractDetail', component: () => import('@/views/contract/ContractDetail.vue'), meta: { title: '合同详情' } },
+      { path: 'contracts/:id/edit', name: 'ContractEdit', component: () => import('@/views/contract/ContractEdit.vue'), meta: { title: '编辑合同' } },
       { path: 'dealers/profile', name: 'DealerProfileList', component: () => import('@/views/DealerProfileList.vue'), meta: { title: '经销商画像' } },
       { path: 'dealers/:id/profile', name: 'DealerProfile', component: () => import('@/views/DealerProfile.vue'), meta: { title: '经销商 360 画像' } },
       { path: 'order-create/sales', name: 'SalesOrderCreate', component: () => import('@/views/OrderCreate.vue'), meta: { title: '新建销售订单' } },
@@ -28,7 +35,12 @@ const routes = [
       { path: 'purchase-return-edit/:id', name: 'PurchaseReturnEdit', component: () => import('@/views/PurchaseReturnEdit.vue'), meta: { title: '采退订单' } },
       { path: 'm/:key', name: 'Module', component: () => import('@/views/ModuleView.vue'), meta: { title: '业务模块' } },
       { path: 'api-call-logs', name: 'ApiCallLog', component: () => import('@/views/ApiCallLog.vue'), meta: { title: '接口调用日志' } },
-      { path: 'product-mappings', name: 'ProductMappings', component: () => import('@/views/ProductMappings.vue'), meta: { title: '产品对码' } }
+      { path: 'product-mappings', name: 'ProductMappings', component: () => import('@/views/ProductMappings.vue'), meta: { title: '产品对码' } },
+      { path: 'approval/todo', name: 'ApprovalTodo', component: () => import('@/views/approval/TodoCenter.vue'), meta: { title: '审批中心' } },
+      { path: 'approval/templates', name: 'ApprovalTemplates', component: () => import('@/views/approval/ApprovalTemplates.vue'), meta: { title: '审批流配置' } },
+      { path: 'approval/delegations', name: 'ApprovalDelegations', component: () => import('@/views/approval/Delegations.vue'), meta: { title: '审批委托' } },
+      { path: 'approval/admin', name: 'ApprovalAdmin', component: () => import('@/views/approval/ApprovalAdmin.vue'), meta: { title: '审批监控' } },
+      { path: 'email-logs', name: 'EmailLogs', component: () => import('@/views/EmailLogs.vue'), meta: { title: '邮件发送日志' } }
     ]
   },
   { path: '/mobile/login', name: 'MLogin', component: () => import('@/views/mobile/MLogin.vue'), meta: { public: true, mobile: true } },

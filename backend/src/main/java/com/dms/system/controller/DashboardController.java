@@ -121,12 +121,12 @@ public class DashboardController {
                 "ORDER BY created_at DESC LIMIT 10",
                 "/workspace.html?menu=orders");
 
-        // 待审批合同申请
+        // 待审批合同（审批中的合同由审批中心统一处理，这里仅作统计提醒）
         addTodos(items, tenantId,
-                "SELECT id, code, 'CONTRACT_APP' AS type, '合同申请待审批' AS title, status, created_at " +
-                "FROM contract_applications WHERE tenant_id = ?1 AND status = 'SUBMITTED' " +
+                "SELECT id, code, 'CONTRACT' AS type, '合同待审批' AS title, status, created_at " +
+                "FROM contracts WHERE tenant_id = ?1 AND status = 'pending' " +
                 "ORDER BY created_at DESC LIMIT 10",
-                "/workspace.html?menu=contract-apps");
+                "/contracts");
 
         // 临期库存告警
         try {

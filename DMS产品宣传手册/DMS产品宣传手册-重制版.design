@@ -4,8 +4,8 @@
       "id": "page-index",
       "title": "DMS 通用经销商管理系统",
       "type": "page",
-      "version": 1,
-      "createdAt": 1786120378567,
+      "version": 2,
+      "createdAt": 1786377600000,
       "canvasData": {
         "x": 0,
         "y": 0,
@@ -15,7 +15,7 @@
           "contentHeight": 10605,
           "viewportWidth": 1440,
           "sourceHash": "fnv1a-de54f7a8",
-          "measuredAt": 1786124200095
+          "measuredAt": 1786377600000
         }
       },
       "devMetadata": {
@@ -27,18 +27,18 @@
       "id": "page-print",
       "title": "DMS 产品宣传手册 · 印刷版",
       "type": "page",
-      "version": 1,
-      "createdAt": 1786120378567,
+      "version": 2,
+      "createdAt": 1786377600000,
       "canvasData": {
         "x": 320,
         "y": 0,
         "group": 0,
         "layoutSnapshot": {
           "version": 1,
-          "contentHeight": 10605,
+          "contentHeight": 15073,
           "viewportWidth": 1440,
-          "sourceHash": "fnv1a-ad54ce5e",
-          "measuredAt": 1786124200095
+          "sourceHash": "fnv1a-b6224528",
+          "measuredAt": 1786377600000
         }
       },
       "devMetadata": {
@@ -182,8 +182,8 @@
         "x": 0,
         "y": 0,
         "naturalSize": {
-          "width": 1920,
-          "height": 1080
+          "width": 1896,
+          "height": 973
         }
       },
       "devMetadata": {
@@ -746,6 +746,42 @@
       },
       "devMetadata": {
         "imageSrc": "assets/38-mobile-receipt.png"
+      }
+    },
+    {
+      "id": "image-040",
+      "title": "39 Pc Approval Workflow",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 2560,
+          "height": 1440
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/39-pc-approval-workflow.jpg"
+      }
+    },
+    {
+      "id": "image-041",
+      "title": "40 Pc Email Logs",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1786120378567,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 2560,
+          "height": 1440
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/40-pc-email-logs.jpg"
       }
     }
   ],

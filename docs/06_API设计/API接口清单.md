@@ -1,18 +1,42 @@
 # DMS API 接口清单（合并版）
 
-**当前版本**: v3.9.2
-**最后更新**: 2026-08-06
+**当前版本**: v3.11.1
+**最后更新**: 2026-08-09
 
 ---
 
 ## 变更日志
 > 对外开放接口（HMAC 鉴权）见独立文档：`docs/06_API设计/DMS对外开放接口文档.md`，含 POST /open/api/sales-orders、POST /open/api/purchase-orders。
 
+### v3.11.1 (2026-08-09) — 合同工作台导出接口补全
+
+- 新增 GET /api/contracts/actions/export：按当前筛选（status/keyword/dealerId/category，最多 10000 条）导出 xlsx，16 列（ID/合同编号/合同名称/分类/申请类型/经销商ID/甲方/乙方/签约金额/有效期起/有效期止/状态/提交时间/生效时间/创建时间/更新时间）。
+- 复用 ExcelExportUtils.exportMapToExcel；返回 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet，文件名 contracts_yyyy-MM-dd.xlsx。
+- 前端 ContractWorkspace 工具栏新增「导出」按钮（blob 下载）。
+- 价格/商务政策字段通过合同模板 form_data 承载，不在 contracts 表加硬字段。
+
+### v3.11.0 (2026-08-09) — 合同模块重构（方案 A：合并申请/合同为单一实体 + 模板驱动）
+
+#### 一、合同接口
+详见下文「合同模块接口（v3.11.0 重构）」章节。
+
+#### 二、移除/变更
+- v3.11.0 曾移除 `GET /api/contracts/actions/export`；已于 v3.11.1 恢复为合同工作台工具栏导出（xlsx，16 列）。
+- 废弃全部 `/api/contract-applications/**`：合同申请与合同合并为 `/api/contracts`，单实体贯穿全生命周期。
+- 合同导入模板接口不再提供：合同通过模板驱动的成稿生成，无需 Excel 导入。
+
+#### 三、新增接口摘要
+- 合同模板：`GET/POST/PUT /api/contract-templates`、`POST /api/contract-templates/{id}/publish`、`POST /api/contract-templates/{id}/new-version`、`POST /api/contract-templates/parse-docx`。
+- 合同：`GET/POST/PUT/DELETE /api/contracts`、`POST /api/contracts/{id}/submit`、`POST /api/contracts/{id}/withdraw`、`GET /api/contracts/{id}/preview-docx`、`GET /api/contracts/match-template`、`POST /api/contracts/{id}/attachments`、`DELETE /api/contracts/{id}/attachments/{attId}`。
+- 审批回调（合同业务类型 `CONTRACT`）：复用 v3.10.0 审批中心接口，业务实例由 `ContractApprovalCallback` 驱动合同状态流转。
+
 ### v3.9.2 (2026-08-06) — 列表页布局 / 按钮配置 / 权限下发 (D13)
 ### v3.9.3 (2026-08-06 晚) — button 资源对账 + pageKey 全量灌种 + 老页面迁移
 
 新增迁移：
-- V61 bac_button_resources：6 个非系统租户各补 128 条 	ype=button 的 bac_resources。
+- V61 
+bac_button_resources：6 个非系统租户各补 128 条 	ype=button 的 
+bac_resources。
 - V62 platform_button_configs_seed：16 个 pageKey 共 120 条平台默认按钮 seed。
 - V63 utton_resource_auto_link：trigger，新增 button 资源自动挂到 strategy 1（“全部权限”）。
 
@@ -38,7 +62,6 @@
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/contracts/actions/export` | 合同列表导出（ID/合同编号/分类/经销商ID/经销商/生效/截止/状态/创建时间/更新时间） |
 | GET | `/api/authorizations/actions/export` | 授权列表导出（含经销商、授权产品分类、授权医院/终端名称） |
 
 #### 2. 新增导入模板接口（模板总数 8 → 14）
@@ -505,4 +528,86 @@ curl -X POST http://host:8080/api/orders/transfer   -H "Authorization: Bearer ${
 - `idx_api_call_log_path_time (path, started_at DESC)`（按路径 + 时间倒序）
 
 **后台查询**（仅 admin）：`GET /api/admin/api-call-logs?bizKey=SO-20260806-00001` 或 `?bizAction=order.transfer.sales&startTime=2026-08-06`
+
+
+---
+
+## v3.10.0 (2026-08-09) 审批流接口
+
+所有接口前缀 `/api/approval`，均需登录态。分页参数统一 `page`、`size`，返回 `{ code, data:{ total, page, size, list } }`。
+
+### 模板配置
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | /api/approval/templates | 模板列表，可按 businessType/status/keyword 过滤 |
+| GET | /api/approval/templates/{id} | 模板详情（含节点、审批人、抄送） |
+| POST | /api/approval/templates | 新建草稿 |
+| PUT | /api/approval/templates/{id} | 更新草稿 |
+| POST | /api/approval/templates/{id}/publish | 发布 |
+| POST | /api/approval/templates/{id}/disable | 停用 |
+| POST | /api/approval/templates/{id}/new-version | 基于该版本创建新版本草稿 |
+
+模板保存体 TemplateSaveRequest：`businessType, code, name, priority, rejectPolicy, conditionConfig{logic,rules[]}, timeoutHours, remindIntervalHours, maxRemindCount, description, nodes[{nodeOrder,name,approveMode,allowTransfer,allowAddSign,timeoutHours,assignees[{assigneeType,refId,displayName}],ccs[]}], finishCcs[]`。
+
+### 审批操作
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | /api/approval/instances/start | 发起审批（内部/业务调用，传 businessType/businessId/businessCode/title/businessSnapshot） |
+| GET | /api/approval/tasks/my-todo | 我的待办 |
+| GET | /api/approval/tasks/my-done | 我已处理 |
+| GET | /api/approval/instances/my-submitted | 我发起的 |
+| GET | /api/approval/cc/my | 抄送我的 |
+| GET | /api/approval/instances/{id} | 实例详情（instance + tasks + records） |
+| GET | /api/approval/instances/by-business | 按 businessType+businessId 查最新实例 |
+| POST | /api/approval/instances/{id}/withdraw | 发起人撤回（body: {comment}） |
+| POST | /api/approval/tasks/{id}/approve | 同意（body: {comment}） |
+| POST | /api/approval/tasks/{id}/reject | 驳回（body: {comment}） |
+| POST | /api/approval/tasks/{id}/transfer | 转办（body: {targetUserId, comment}） |
+| POST | /api/approval/tasks/{id}/add-sign | 加签（body: {targetUserId, signType: BEFORE/AFTER, comment}） |
+
+### 管理员（需 approval:admin）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | /api/approval/admin/instances?status= | 全部实例 |
+| POST | /api/approval/admin/tasks/{id}/reassign | 改派（body: {targetUserId, reason}） |
+| POST | /api/approval/admin/instances/{id}/terminate | 终止（body: {reason}） |
+
+### 委托
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | /api/approval/delegations | 委托列表 |
+| POST | /api/approval/delegations | 新建委托（delegatorId, delegateeId, startsAt, endsAt, reason） |
+| POST | /api/approval/delegations/{id}/disable | 停用委托 |
+
+### 业务接入约定
+业务单据提交时调用 `/instances/start`，传入 `businessSnapshot`（至少含 `finalAmount/orderType` 等条件字段）。审批结果通过 `ApprovalBusinessCallback` 回调：`supports(businessType)` 判定，`onApproved/onReturned/onRejected/onWithdrawn/onTerminated` 回写业务状态。无匹配模板或命中 AUTO_APPROVE 模板时自动通过并触发 onApproved。
+## 合同模块接口（v3.11.0 重构）
+
+> 原 `/api/contract-applications` 已移除（合并为 `/api/contracts`）；`/api/contracts/actions/export` 于 v3.11.1 恢复为合同工作台导出（xlsx，16 列）。
+
+### 合同
+- `GET /api/contracts` 列表（参数 page/size/status/keyword/dealerId/category）
+- `GET /api/contracts/actions/export` 导出当前筛选结果为 xlsx（16 列，v3.11.1）
+- `POST /api/contracts` 新建草稿（body: name/category/applicationType/dealerId/vendorParty/dealerParty/validFrom/validTo/targetAmount/signedAmount/templateId/formData...）
+- `GET /api/contracts/{id}` 详情（含模板字段定义、附件、审批轮次）
+- `PUT /api/contracts/{id}` 更新（仅 draft/rejected）
+- `DELETE /api/contracts/{id}` 删除（仅 draft）
+- `POST /api/contracts/{id}/submit` 提交审批（挂模板则回填 Word 生成成稿，启动审批流）
+- `POST /api/contracts/{id}/withdraw` 撤回审批
+- `POST /api/contracts/{id}/attachments?fileId=&fileName=&sizeBytes=&category=` 上传附件记录
+- `DELETE /api/contracts/{id}/attachments/{attachmentId}` 删除附件
+- 成稿/附件下载：`GET /api/files/{fileId}/download`
+
+### 合同模板
+- `GET /api/contract-templates` 列表（page/size/category/status/keyword）
+- `POST /api/contract-templates` 新建草稿
+- `GET /api/contract-templates/{id}` 详情
+- `PUT /api/contract-templates/{id}` 更新（仅 draft）
+- `POST /api/contract-templates/{id}/publish` 发布
+- `POST /api/contract-templates/{id}/new-version` 基于已有版本创建新版本草稿
+- `POST /api/contract-templates/{id}/disable` 停用
+- `DELETE /api/contract-templates/{id}` 删除（非 published）
+- `GET /api/contract-templates/match?category=` 按分类匹配当前已发布模板
+- `POST /api/contract-templates/upload-and-parse`（multipart file）上传 Word 并识别字段，返回 `{fileId, originalName, fields[]}`
+- `POST /api/contract-templates/parse-docx`（multipart file）仅解析字段，不落库
 

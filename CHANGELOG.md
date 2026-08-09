@@ -1,3 +1,99 @@
+## v3.12.0 (2026-08-09) - 审批邮件通知修复 + 6 类单据审批流打通
+
+### 修复
+- **审批邮件发不出去的根因修复**：`ApprovalService.activateNode()` 创建审批任务后从未调用 `ApprovalNotifier`，导致待办/抄送/结果邮件全部不发送。现已在任务创建、节点完成、抄送记录、驳回四个节点接入 `notifier.notifyTaskCreated/notifyCc/notifyFinished`。
+- **审批邮件中文乱码修复**：`ApprovalMailNotifier.java`、`ApprovalNotifier.java`、`EmailLogController.java` 三个文件原以 GBK 字节写入，导致邮件标题/正文在 163 邮箱中显示为乱码。已用纯 ASCII + `\uXXXX` 转义重写，彻底绕开文件编码问题。
+- 驳回时补充 `invokeRejected/invokeReturned` 回调调用（原来定义了但从未被调用，业务单据状态不会更新）。
+- 合同审批补齐 `/api/contracts/{id}/approve` 和 `/api/contracts/{id}/reject` 端点（原只有 submit/withdraw，审批人无法操作），新增 `ContractService.markApproved/markRejected`。
+
+### 新增
+- 为采购订单、销售退货、采购退货、合同、授权 5 类业务补齐默认审批模板（Flyway V78）：单节点 SYS_ADMIN 审批，ANY 模式，48 小时超时，每 24 小时提醒一次，最多提醒 3 次，驳回策略为退回发起人。销售订单保留原有金额条件模板。
+- 邮件发送日志页面（/email-logs）与「发送测试邮件」功能验证通过；测试邮件和真实审批邮件均成功投递至 vinkinyu@163.com。
+- 超时提醒定时任务 `ApprovalTimeoutReminderTask`（每日 09:00 执行，`@EnableScheduling` 已开启），按节点配置的 `timeoutHours/remindIntervalHours/maxRemindCount` 发送提醒邮件。
+
+### 验证（测试环境）
+- 提交销售订单 SO-20260809-00003（金额 2000，命中金额≥1000 审批模板）→ 生成 14 条审批任务（角色展开）→ 14 封待办邮件全部发送成功并写入 `email_logs`（status=SUCCESS）。
+- 测试邮件接口 `POST /api/email-logs/test` 发送至 vinkinyu@163.com，status=SUCCESS。
+- 后端健康检查 UP，6 类业务审批模板全部 ENABLED。
+- 163 SMTP：smtp.163.com:465 SSL，发件人 vinkinyu@163.com。
+
+## v3.11.0 (2026-08-09) - 合同模块重构（模板驱动 + 统一工作台）
+
+### 重构
+- 合同模块由原来的「合同申请 + 合同」两个割裂页面合并为统一的合同工作台（/contracts），一条合同记录贯穿草稿/审批中/已生效/已驳回/已终止/已到期全生命周期；废弃 contract_applications 实体，审批直接挂在合同上。
+- 新增合同模板菜单（/contracts/templates，权限 contract_template:manage），法务可上传 Word(.docx)，后端自动识别内容控件与占位符生成可填字段，配置字段标签/类型/必填/审批可见/分组/排序，绑定业务分类后发布；发布锁定，修改走新建版本。
+- 后端重建合同表（方案 A）：contracts 新增 template_id/template_version/application_type/form_data(jsonb)/source_file_id 等字段；新增 contract_templates、contract_revisions 表；删除 contract_applications/contract_diff/contract_signatures。老测试数据不保留。Flyway V77 重建并补发 contract:view、contract_template:manage 权限。
+
+### 新增
+- 合同新建/编辑页支持基础信息 + 按所选分类自动匹配已发布模板动态渲染字段 + 附件上传；提交后用 Apache POI 将字段回填模板 Word 生成成稿供下载。
+- 审批中心接入合同业务快照：审批详情对 CONTRACT 类型按业务信息 + 审批可见字段展示。
+- 合同审批回调驱动合同状态流转（通过生效/驳回回草稿/撤回），写入 contract_revisions 留痕。
+- 合同到期定时任务，每日将过有效期且生效中合同置为 expired。
+- 后端接口：/api/contracts（CRUD + submit/withdraw + 附件）、/api/contract-templates（CRUD + publish/new-version/disable + upload-and-parse）。
+
+### 暂不实现（二期，详见 docs/合同模块改造设计_V1.0.md 第 9 节）
+- 浏览器内直接编辑 Word 原文 + 段落级 diff 留痕、表格实时编辑/合计、长文本自动序号、复杂控件识别、第三方系统办结同步、电子签章、对外嵌入式集成、宿主项目数据自动回填。
+
+### 验证
+- 后端 mvn -o package -DskipTests 通过；前端 npm run build 通过。
+- E2E（测试环境）：上传含 8 个占位符的 Word → 识别字段 → 建模板发布 → 建合同提交 → 自动审批生效 → 生成成稿 Word，下载校验占位符全部正确替换；状态守卫（生效合同不可编辑返回 40006）验证通过。
+- 回归：合同/经销商/产品/订单/医院/授权/审批待办等核心接口全部 200，数据计数正常（订单 832、产品 208、经销商 51、授权 502）。
+- 测试环境已部署：前端 http://8.133.193.238:8083/ ，后端 http://8.133.193.238:8082/ 健康检查 UP，Flyway V77 已执行。
+
+
+### 详情页字段名与角色显示修复（2026-08-09）
+- 账号管理查看抽屉：`roleId` 改为「角色」并隐藏原始 ID，只显示角色名；`userType=vendor/dealer` 翻译为「厂商/经销商」；补充「登录失败次数」「最近登录IP」等中文标签。
+- 列表 / 编辑 / 查看三处角色字段已统一为单值；重新构建并部署前端到测试环境。
+
+## v3.10.0 (2026-08-09) - 审批流引擎与审批中心
+
+### 账号管理补充（2026-08-09）
+- 账号改为**单角色**：用户创建/编辑表单的「角色」为单选必填，后端 `UserCreateRequest/UserUpdateRequest` 新增 `roleId`，`UserDTO` 返回 `roleId/roleName`；底层仍用 `user_roles` 表（兼容多对多，但业务上一个账号一个角色）。
+- 账号列表新增「角色」列（显示 `roleName`），详情抽屉也会展示角色；新建账号时校验密码至少 8 位。
+- 修复下拉操作（编辑/重置密码/解锁/删除）点不动：`el-dropdown` 由无效的 item `@click` 改为 `@command`；补齐 `CrudView` 中 `PICKER_NAME_MAP` 未定义导致编辑抽屉打不开的问题；抽屉标题乱码 `??` 修复为「编辑/新增」。
+- 新增账号内置「重置密码」「解锁」处理：重置弹窗输入新密码（8–64 位），调用 `/api/users/{id}/reset-password`；解锁调用 `/api/users/{id}/unlock`。
+- 修复 `ApprovalService ↔ ContractApprovalCallback ↔ ContractService` 的循环依赖（`@Lazy` 注入 `ApprovalService`）。
+- 重新生成测试账号：删除旧的 `test_*` 账号，新增 `sys_admin/sales_mgr/sales/cs/biz/fin/contract/dealer_admin` 共 8 个，统一密码 `Dms@123456`，各自绑定一个角色，资料齐全可直接登录。
+- 更新 `docs/DMS登录信息手册.md`：汇总三种登录方式（业务前台/平台后台/移动端）、环境地址、全部测试账号与密码、SMTP/排障说明。
+
+
+### 新增
+- 后端新增独立审批模块 `com.dms.approval`：审批模板（版本/草稿/发布/停用/新版本）、顺序审批节点、账号/角色审批人、ANY/ALL 多人规则、前/后加签、转办、全局委托、抄送、管理员改派与终止、待办/已办/我发起的/抄送查询、完整审批记录。
+- 条件匹配：模板按业务类型 + 优先级匹配，支持 `AND/OR` 与 `EQ/NE/IN/GT/GTE/LT/LTE`，可用单据金额、单据类型、经销商/供应商等字段；空条件匹配全部单据。
+- 版本与快照：实例创建时固化模板快照，修改模板不影响进行中的实例，未提交/重新提交的单据使用最新已发布版本；驳回后重新提交生成新实例。
+- 驳回策略可配：退回发起人修改（RETURN_TO_SUBMITTER）或作废（CANCEL）；发起人可撤回回到草稿。
+- 无匹配模板或命中自动审批模板时，单据自动审批通过并正确回调业务，不阻断提交。
+- 接入销售订单、采购订单：提交进入 PENDING_APPROVAL，通过后自动生成销售出库/收货入库草稿；驳回/撤回按策略回写状态。
+- 通知：站内信 + 邮件（163 SMTP），授权码写入 application.yml 默认值。
+- 邮件发送日志：新增 `email_logs` 表与 `EmailLog/EmailLogService/EmailLogController`，审批邮件（待办/抄送/结果/超时提醒）及测试邮件发送成功或失败均落库；独立事务保证失败不丢日志；前端“用户与权限 → 邮件发送日志”支持状态筛选与分页；`POST /api/email-logs/test` 可发送测试邮件并返回日志状态。Flyway V74 建表、V75 注入 `email_log:view` 权限。
+- Flyway V72 建审批相关表；V73 注入 approval:todo/manage/admin/template:edit/approve 权限资源并授权租户管理员。
+- 前端新增“审批中心”菜单：我的审批（待办/已办/我发起的/抄送，抽屉内同意/驳回/转办/加签/撤回 + 审批记录时间线）、审批流配置（列表式配置条件/节点/审批人/抄送/驳回策略/超时/优先级）、审批委托、审批监控（管理员改派/终止）。
+- 账号创建强制手机号 + 邮箱（手机号用于飞书对接，邮箱用于审批通知）。
+
+### 修复
+- 修复 AUTO_APPROVE 模板未执行业务回调导致单据不回写状态的问题。
+- 修复无匹配审批流时后端报错（现改为默认自动通过）。
+
+### 验证
+- 后端 `mvn -q -DskipTests package`、前端 `npm run build` 均通过。
+- 测试环境已部署：前端 `http://8.133.193.238:8083/`，后端 `http://8.133.193.238:8082/`，健康检查 UP，Flyway V72/V73/V74/V75 已执行；已通过 `POST /api/email-logs/test` 向 `vinkinyu@163.com` 实测发送成功（`email_logs.status=SUCCESS`）。
+
+### 扩展
+- 销售退货、采购退货提交接入审批流；审批通过后分别自动生成销退入库草稿、采退出库草稿，驳回/撤回/终止按策略回写状态。
+- 合同申请提交接入审批流；审批通过后合同申请生效并自动生成合同。
+- 授权创建接入审批流；审批通过后授权变为 active，驳回/撤回回到 draft。
+- 新增超时提醒定时任务：每天 09:00 扫描到期 PENDING 任务，按默认 24 小时间隔、最多 3 次发送审批超时提醒邮件；仅提醒，不自动处理。
+
+### 测试账号
+- 测试租户 `11111111-1111-1111-1111-111111111111`，除 admin 外每个业务角色各一个账号，统一密码 `Dms@123456`，首次登录无需改密：
+  - `test_sales_mgr`(SALES_MGR)、`test_sales`(SALES)、`test_cs`(CS)、`test_biz`(BIZ)、`test_fin`(FIN)、`test_contract`(CONTRACT_SPEC)、`test_dealer_admin`(DEALER_ADMIN)。
+  - 各账号已绑定对应角色，邮箱/手机号为必填占位数据（`@163.com` 与 138 开头手机号）；验证真实收件请发往 `vinkinyu@163.com`。
+
+### 待办
+- 飞书卡片审批；审批记录时间线在订单/合同/授权详情页的内嵌展示。
+- 邮件授权码目前硬编码在 application.yml，建议改用环境变量。
+
+---
 ## v3.8.11 (2026-08-08) - 全站日期格式、日志复制与中文标签修复
 
 ### 修复

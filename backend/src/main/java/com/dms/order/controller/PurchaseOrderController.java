@@ -16,6 +16,9 @@ import com.dms.common.util.ContentDispositionUtils;
 import com.dms.common.util.ExcelImportUtils;
 import org.springframework.web.multipart.MultipartFile;
 import com.dms.common.util.TenantContext;
+import com.dms.approval.dto.StartApprovalRequest;
+import com.dms.approval.entity.ApprovalInstance;
+import com.dms.approval.service.ApprovalService;
 import com.dms.execution.service.AutoDocGenerator;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
@@ -40,6 +43,7 @@ public class PurchaseOrderController {
     private final EntityManager em;
     private final AutoDocGenerator autoDocGenerator;
     private final com.dms.common.util.DocNoGenerator docNoGenerator;
+    private final ApprovalService approvalService;
 
     /** 分页列表 */
     @GetMapping
@@ -302,35 +306,47 @@ public class PurchaseOrderController {
     @OperationLog(businessType = "purchaseOrder", action = OperationAction.UPDATE, remark = "采购订单-提交审批")
     @Transactional
     public ApiResponse<Map<String, Object>> submit(@PathVariable Long id) {
-        return doTransition(id, "DRAFT", "SUBMITTED", "PO_SUBMIT");
+        UUID tid = TenantContext.getTenantId();
+        int n = em.createNativeQuery("UPDATE purchase_orders SET status='PENDING_APPROVAL', submitted_at=now(), updated_at=now() WHERE id=?1 AND tenant_id=?2 AND status='DRAFT'")
+                .setParameter(1, id).setParameter(2, tid).executeUpdate();
+        if (n == 0) return ApiResponse.fail(40009, "Only draft purchase order can be submitted");
+        try {
+            StartApprovalRequest request = new StartApprovalRequest();
+            request.setBusinessType("PURCHASE_ORDER");
+            request.setBusinessId(id);
+            Object code = em.createNativeQuery("SELECT code FROM purchase_orders WHERE id=?1").setParameter(1, id).getSingleResult();
+            request.setBusinessCode(String.valueOf(code));
+            request.setTitle("Purchase order approval: " + request.getBusinessCode());
+            request.setBusinessSnapshot(buildApprovalSnapshot(id));
+            ApprovalInstance instance = approvalService.start(request);
+            boolean approved = "APPROVED".equals(instance.getStatus().name()) || "AUTO_APPROVED".equals(instance.getStatus().name());
+            return ApiResponse.ok(Map.of("id", id, "newStatus", approved ? "APPROVED" : "PENDING_APPROVAL", "approvalInstanceId", instance.getId(), "autoApproved", approved));
+        } catch (Exception e) {
+            em.createNativeQuery("UPDATE purchase_orders SET status='DRAFT', updated_at=now() WHERE id=?1 AND tenant_id=?2")
+                    .setParameter(1, id).setParameter(2, tid).executeUpdate();
+            throw e;
+        }
     }
 
     /** 审批通过 - v3.4 增强：自动生成采购入库草稿 */
     @PostMapping("/{id}/approve")
     @OperationLog(businessType = "purchaseOrder", action = OperationAction.APPROVE, remark = "采购订单-审批通过")
     @Transactional
-    public ApiResponse<Map<String, Object>> approve(@PathVariable Long id) {
-        ApiResponse<Map<String, Object>> res = doTransition(id, "SUBMITTED", "APPROVED", "PO_APPROVE");
-        if (res.getCode() == 0) {
-            em.createNativeQuery("UPDATE purchase_orders SET approved_at = now(), approved_by = ?1 WHERE id = ?2")
-              .setParameter(1, TenantContext.getUserId()).setParameter(2, id).executeUpdate();
-            try {
-                Long rcId = autoDocGenerator.createReceiptForPurchaseOrder(id);
-                log.info("采购单 {} 审批通过，自动生成入库草稿单 {}", id, rcId);
-                if (res.getData() != null) res.getData().put("autoCreatedReceiptId", rcId);
-            } catch (Exception e) {
-                log.warn("采购单 {} 自动建单失败: {}", id, e.getMessage());
-            }
-        }
-        return res;
+    public ApiResponse<Map<String, Object>> approve(@PathVariable Long id,
+                                                     @RequestBody(required = false) Map<String, Object> body) {
+        ApprovalInstance instance = approvalService.approveBusiness("PURCHASE_ORDER", id, body == null ? null : String.valueOf(body.getOrDefault("comment", "")));
+        em.createNativeQuery("UPDATE purchase_orders SET approved_by=?1 WHERE id=?2").setParameter(1, TenantContext.getUserId()).setParameter(2, id).executeUpdate();
+        return ApiResponse.ok(Map.of("id", id, "newStatus", "APPROVED".equals(instance.getStatus().name()) ? "APPROVED" : "PENDING_APPROVAL", "approvalInstanceId", instance.getId()));
     }
 
     /** 驳回 */
     @PostMapping("/{id}/reject")
     @OperationLog(businessType = "purchaseOrder", action = OperationAction.REJECT, remark = "采购订单-驳回")
     @Transactional
-    public ApiResponse<Map<String, Object>> reject(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
-        return doTransition(id, "SUBMITTED", "REJECTED", "PO_REJECT");
+    public ApiResponse<Map<String, Object>> reject(@PathVariable Long id,
+                                                    @RequestBody(required = false) Map<String, Object> body) {
+        ApprovalInstance instance = approvalService.rejectBusiness("PURCHASE_ORDER", id, body == null ? null : String.valueOf(body.getOrDefault("comment", "")));
+        return ApiResponse.ok(Map.of("id", id, "newStatus", instance.getStatus().name(), "approvalInstanceId", instance.getId()));
     }
 
     /** 取消（草稿或已提交可取消） */
@@ -505,6 +521,23 @@ public class PurchaseOrderController {
             .setParameter(4, txnType).setParameter(5, delta).setParameter(6, poId).executeUpdate();
     }
 
+
+    private Map<String, Object> buildApprovalSnapshot(Long id) {
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = em.createNativeQuery("SELECT code, order_type, supplier_id, warehouse_id, final_amount, amount_incl_tax, expected_date FROM purchase_orders WHERE id=?1", Tuple.class)
+                .setParameter(1, id).getResultList();
+        Map<String, Object> snapshot = new HashMap<>();
+        if (rows.isEmpty()) return snapshot;
+        Tuple row = rows.get(0);
+        snapshot.put("code", row.get("code"));
+        snapshot.put("orderType", row.get("order_type"));
+        snapshot.put("supplierId", row.get("supplier_id"));
+        snapshot.put("warehouseId", row.get("warehouse_id"));
+        snapshot.put("finalAmount", row.get("final_amount"));
+        snapshot.put("amountInclTax", row.get("amount_incl_tax"));
+        snapshot.put("expectedDate", row.get("expected_date"));
+        return snapshot;
+    }
     private ApiResponse<Map<String, Object>> doTransition(Long id, String fromStatus, String toStatus, String action) {
         UUID tid = TenantContext.getTenantId();
         int n = em.createNativeQuery(
