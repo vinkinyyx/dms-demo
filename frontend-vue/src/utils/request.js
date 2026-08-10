@@ -34,6 +34,25 @@ function flushQueue(error, token = null) {
   pendingQueue.length = 0
 }
 
+async function resolveErrorBody(error) {
+  const data = error.response && error.response.data
+  if (!data) return null
+  if (typeof data === 'string') {
+    try { return JSON.parse(data) } catch (e) { return { message: data } }
+  }
+  return data
+}
+
+function rejectBusinessError(error, res) {
+  const message = (res && res.message) || error.message || '请求失败'
+  ElMessage.error(message)
+  const wrapped = new Error(message)
+  wrapped.code = res && res.code
+  wrapped.response = error.response
+  wrapped.data = res
+  return Promise.reject(wrapped)
+}
+
 function doRefresh() {
   const refreshToken = getRefreshToken()
   if (!refreshToken) {

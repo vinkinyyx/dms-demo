@@ -22,6 +22,20 @@ public class DashboardController {
 
     private final EntityManager em;
 
+    @GetMapping("/summary")
+    public ApiResponse<Map<String, Object>> dashboardSummary(
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) Long dealerId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String orderType) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("kpi", kpi(period, dealerId, status, orderType).getData());
+        summary.put("inventoryPie", inventoryPie(period, dealerId, status, orderType).getData());
+        summary.put("salesTrend", salesTrend(period, dealerId, status, orderType).getData());
+        summary.put("orderFunnel", orderFunnel(period, dealerId, status, orderType).getData());
+        return ApiResponse.ok(summary);
+    }
+
     /**
      * v3.4.7: 根据 period 生成 orders 表的时间过滤 SQL 片段（如 " AND created_at >= ..."）
      */

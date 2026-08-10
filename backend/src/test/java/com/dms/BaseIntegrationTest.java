@@ -1,27 +1,33 @@
-/*
- * DMS 集成测试基类：启动 Spring 上下文（MOCK 环境） + MockMvc + 事务回滚。
- * 提供 createTestTenant / createTestUser / loginAndGetToken 等 helper。
- *
- * 通过 @MockBean 打桩 RedissonClient，避免依赖真实 Redis。
- * 通过覆盖 SecurityConfig 使得测试不强制 JWT（子类通过 loginAndGetToken 获取 token 后自行携带）。
- */
 package com.dms;
 
-import com.dms.tenant.entity.Tenant;
-import com.dms.tenant.repository.TenantRepository;
-import com.dms.user.entity.User;
-import com.dms.user.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.dms.config.MinioStorageService;
 import com.dms.masterdata.entity.Dealer;
 import com.dms.masterdata.entity.Product;
 import com.dms.masterdata.repository.DealerRepository;
 import com.dms.masterdata.repository.ProductRepository;
-import java.math.BigDecimal;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.dms.rbac.entity.Resource;
+import com.dms.rbac.entity.Role;
+import com.dms.rbac.entity.RoleStrategy;
+import com.dms.rbac.entity.Strategy;
+import com.dms.rbac.entity.StrategyResource;
+import com.dms.rbac.entity.UserRole;
+import com.dms.rbac.repository.ResourceRepository;
+import com.dms.rbac.repository.RoleRepository;
+import com.dms.rbac.repository.RoleStrategyRepository;
+import com.dms.rbac.repository.StrategyRepository;
+import com.dms.rbac.repository.StrategyResourceRepository;
+import com.dms.rbac.repository.UserRoleRepository;
+import com.dms.tenant.entity.Tenant;
+import com.dms.tenant.repository.TenantRepository;
+import com.dms.user.entity.User;
+import com.dms.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -30,8 +36,11 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayInputStream;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @ActiveProfiles("test")
@@ -59,57 +68,74 @@ public abstract class BaseIntegrationTest {
     protected ProductRepository productRepository;
 
     @Autowired
+    protected RoleRepository roleRepository;
+
+    @Autowired
+    protected StrategyRepository strategyRepository;
+
+    @Autowired
+    protected ResourceRepository resourceRepository;
+
+    @Autowired
+    protected RoleStrategyRepository roleStrategyRepository;
+
+    @Autowired
+    protected StrategyResourceRepository strategyResourceRepository;
+
+    @Autowired
+    protected UserRoleRepository userRoleRepository;
+
+    @Autowired
     protected PasswordEncoder passwordEncoder;
 
-    /**
-     * 使用 @MockBean 打桩 RedissonClient，避免测试依赖 Redis。
-     */
+    @Autowired
+    protected ApplicationContext applicationContext;
+
     @MockBean
     protected RedissonClient redissonClient;
 
+    @MockBean
+    protected MinioStorageService minioStorageService;
+
     @BeforeEach
     void baseSetup() {
-        // 每个测试前提供一个宽松的 RBucket mock，避免 NPE
-        @SuppressWarnings("unchecked")
         RBucket<String> bucket = Mockito.mock(RBucket.class);
         Mockito.doReturn(bucket).when(redissonClient).getBucket(Mockito.anyString());
         Mockito.when(bucket.get()).thenReturn(null);
         Mockito.when(bucket.isExists()).thenReturn(false);
+        Mockito.when(minioStorageService.bucket()).thenReturn("dms-test");
+        Mockito.doReturn(new ByteArrayInputStream(new byte[0])).when(minioStorageService).get(Mockito.anyString());
     }
 
-    /**
-     * 创建一个测试租户并入库。
-     */
     protected Tenant createTestTenant(String code) {
-        Tenant t = Tenant.builder()
+        Tenant tenant = Tenant.builder()
                 .id(UUID.randomUUID())
                 .code(code)
-                .name("测试租户-" + code)
+                .name("Test Tenant " + code)
                 .industry("medical")
                 .timezone("Asia/Shanghai")
                 .status("active")
+                .deploymentMode("SAAS")
                 .modulesEnabled(new HashMap<>())
                 .quota(new HashMap<>())
                 .attrs(new HashMap<>())
+                .tenantType("manufacturer")
                 .updatedAt(OffsetDateTime.now())
                 .build();
-        t.ensureJsonFields();
-        return tenantRepository.saveAndFlush(t);
+        tenant.ensureJsonFields();
+        return tenantRepository.saveAndFlush(tenant);
     }
 
-    /**
-     * 在指定租户下创建一个测试用户（密码用 passwordEncoder 加密）。
-     */
     protected User createTestUser(UUID tenantId, String username, String rawPassword) {
         return createTestUser(tenantId, username, rawPassword, "active");
     }
 
     protected User createTestUser(UUID tenantId, String username, String rawPassword, String status) {
-        User u = User.builder()
+        User user = User.builder()
                 .tenantId(tenantId)
                 .username(username)
                 .name(username)
-                .userType("dealer_user")
+                .userType("vendor")
                 .passwordHash(passwordEncoder.encode(rawPassword))
                 .mustChangePassword(false)
                 .passwordUpdatedAt(OffsetDateTime.now())
@@ -119,15 +145,12 @@ public abstract class BaseIntegrationTest {
                 .attrs(new HashMap<>())
                 .updatedAt(OffsetDateTime.now())
                 .build();
-        u.ensureAttrs();
-        return userRepository.saveAndFlush(u);
+        user.ensureAttrs();
+        return userRepository.saveAndFlush(user);
     }
 
-    /**
-     * 在指定租户下创建一个测试经销商。
-     */
     protected Dealer createTestDealer(UUID tenantId, String code, String name) {
-        Dealer d = Dealer.builder()
+        Dealer dealer = Dealer.builder()
                 .tenantId(tenantId)
                 .code(code)
                 .name(name)
@@ -135,40 +158,82 @@ public abstract class BaseIntegrationTest {
                 .status("active")
                 .updatedAt(OffsetDateTime.now())
                 .build();
-        return dealerRepository.saveAndFlush(d);
+        return dealerRepository.saveAndFlush(dealer);
     }
 
-    /**
-     * 在指定租户下创建一个测试产品。
-     */
     protected Product createTestProduct(UUID tenantId, String code, String name) {
-        Product p = Product.builder()
+        Product product = Product.builder()
                 .tenantId(tenantId)
                 .code(code)
                 .nameCn(name)
                 .spec("TEST-SPEC")
-                .unit("个")
+                .unit("box")
                 .currentPrice(new BigDecimal("100"))
                 .taxRate(new BigDecimal("0.13"))
                 .isSerialManaged(false)
                 .status("active")
                 .updatedAt(OffsetDateTime.now())
                 .build();
-        return productRepository.saveAndFlush(p);
+        return productRepository.saveAndFlush(product);
     }
 
-    /**
-     * 使用测试账号密码登录并返回 accessToken（供子类透传到 Authorization 头）。
-     */
+    protected Role grantPermissions(User user, String... permissionCodes) {
+        UUID tenantId = user.getTenantId();
+        Role role = roleRepository.saveAndFlush(Role.builder()
+                .tenantId(tenantId)
+                .code("test-role-" + user.getId() + "-" + UUID.randomUUID())
+                .name("Test Role")
+                .type("custom")
+                .status("active")
+                .updatedAt(OffsetDateTime.now())
+                .build());
+        Strategy strategy = strategyRepository.saveAndFlush(Strategy.builder()
+                .tenantId(tenantId)
+                .name("Test Strategy")
+                .status("active")
+                .updatedAt(OffsetDateTime.now())
+                .build());
+        roleStrategyRepository.saveAndFlush(RoleStrategy.builder()
+                .roleId(role.getId())
+                .strategyId(strategy.getId())
+                .build());
+        for (String permissionCode : permissionCodes) {
+            Resource resource = resourceRepository.saveAndFlush(Resource.builder()
+                    .tenantId(tenantId)
+                    .code(permissionCode)
+                    .name(permissionCode)
+                    .type("api")
+                    .status("active")
+                    .updatedAt(OffsetDateTime.now())
+                    .build());
+            strategyResourceRepository.saveAndFlush(StrategyResource.builder()
+                    .strategyId(strategy.getId())
+                    .resourceId(resource.getId())
+                    .operations(new String[]{"*"})
+                    .build());
+        }
+        userRoleRepository.saveAndFlush(UserRole.builder()
+                .userId(user.getId())
+                .roleId(role.getId())
+                .build());
+        entityManager().flush();
+        entityManager().clear();
+        return role;
+    }
+
     protected String loginAndGetToken(String tenantCode, String username, String password) throws Exception {
         String body = objectMapper.writeValueAsString(
-                java.util.Map.of("tenantCode", tenantCode, "username", username, "password", password));
-        String resp = mockMvc.perform(
+                Map.of("tenantCode", tenantCode, "username", username, "password", password));
+        String response = mockMvc.perform(
                         org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                                 .post("/api/auth/login")
                                 .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                                 .content(body))
                 .andReturn().getResponse().getContentAsString();
-        return objectMapper.readTree(resp).path("data").path("accessToken").asText();
+        return objectMapper.readTree(response).path("data").path("accessToken").asText();
+    }
+
+    private jakarta.persistence.EntityManager entityManager() {
+        return applicationContext.getBean(jakarta.persistence.EntityManager.class);
     }
 }

@@ -1,9 +1,8 @@
 /*
- * 测试目标：验证 /auth 相关接口 —— 登录成功/失败/账号锁定；忘记密码；微信 qrcode / callback / bind 全流程。
- * 覆盖用户故事：US-2.1（用户名密码登录）、US-2.2（登录失败次数与锁定）、US-2.4（微信扫码登录）、US-2.7（忘记密码）。
- */
+ * 濠电偞娼欓鍫ユ儊椤栫偞鍎庢い鏃傛櫕閸ㄥジ鏌ㄥ☉娆忓摵闁绘稒鐟ч幏?/auth 闂佺儵鏅濋…鍫ュ矗瑜旈獮鎺楀Ψ閵夈儳绋?闂佺偨鍎查弻锟犲焵?闂佽皫鍡╁殭缂傚秴绉归獮瀣箛椤掆偓椤?婵犮垺鍎肩划鍓ф喆?闁荤姵鍔х粻鎴ｃ亹閸ф鐓ュù锝呮憸閺嗕即鏌ㄥ☉娆戔槈缂佺粯娲滈幏瀣级鐠恒劍顫氶梺娲诲枙缁躲倗妲愰崡鐑嗗殫妞ゆ棁顔婄换?qrcode / callback / bind 闂佺绻堥崝宥囩矈閿斿墽鐭欓悗锝冨妷閸? * 闁荤喐娲栧Λ娑樏烘繝鍥ㄥ仺闁靛绠戦悡鏇㈡煛娴ｅ憡鍣哥紒銊ｅ姂閺佸秴顫㈠?2.1闂佹寧绋戦悧蹇涘极閵堝绠ｇ€瑰嫮澧楅崐鎶芥倵闂堟稒顥犻柣鏍ㄧ矒閹倻鎷犻懠顒傂梺鎸庣☉椤︻參鍩€椤戣法鐣砈-2.2闂佹寧绋戦悧蹇撯枍閵夈劊浜归柡鍥╁亼娴滃ジ鎮归幇鈺佸姕妞ゆ劕銈稿顐ｏ紣娴ｈ櫣鎲块梻浣搞仒缁€渚€鎮炬ィ鍐╂櫖濠㈣泛鐗冮崑鎾寸▕娑?2.4闂佹寧绋戦悧鍡樼閺囩喓鈹嶉柍鈺佸暙椤ュ洭鏌ｉ鏄忓厡婵炲懌鍎撮妵鎰板即椤忓棛顦梺闈涙缁犳壌-2.7闂佹寧绋戦悧鍡欐崲閺囩姵濯奸柡澶庢硶濡叉洟鏌ｉ鑽ょ瓘缂佽鲸宀告俊? */
 package com.dms.auth.controller;
 
+import com.dms.BaseIntegrationTest;
 import com.dms.BaseIntegrationTest;
 import com.dms.tenant.entity.Tenant;
 import com.dms.user.entity.User;
@@ -24,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
-    @DisplayName("正常流程：正确账号密码登录返回 accessToken/refreshToken")
+    @DisplayName("auth test")
     void should_returnTokens_when_correctCredentials() throws Exception {
         Tenant t = createTestTenant("T-LOGIN-OK");
         createTestUser(t.getId(), "alice", "Pass1234");
@@ -41,7 +40,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("异常分支：密码错误返回 40101 未授权")
+    @DisplayName("auth test")
     void should_returnUnauthorized_when_wrongPassword() throws Exception {
         Tenant t = createTestTenant("T-LOGIN-BAD");
         createTestUser(t.getId(), "bob", "RightPwd123");
@@ -50,12 +49,12 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 Map.of("tenantCode", "T-LOGIN-BAD", "username", "bob", "password", "WrongPwd"));
 
         mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value(40101));
     }
 
     @Test
-    @DisplayName("异常分支：账号被锁定时登录返回 40301 禁止访问")
+    @DisplayName("auth test")
     void should_returnForbidden_when_accountLocked() throws Exception {
         Tenant t = createTestTenant("T-LOCKED");
         User u = createTestUser(t.getId(), "carol", "Pass1234");
@@ -66,12 +65,12 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 Map.of("tenantCode", "T-LOCKED", "username", "carol", "password", "Pass1234"));
 
         mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isOk())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(40301));
     }
 
     @Test
-    @DisplayName("异常分支：账号被停用时登录返回 40301")
+    @DisplayName("auth test")
     void should_returnForbidden_when_userStatusInactive() throws Exception {
         Tenant t = createTestTenant("T-INACT");
         createTestUser(t.getId(), "dave", "Pass1234", "inactive");
@@ -80,11 +79,12 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 Map.of("tenantCode", "T-INACT", "username", "dave", "password", "Pass1234"));
 
         mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(40301));
     }
 
     @Test
-    @DisplayName("正常流程：忘记密码请求直接返回 200 成功（V1 占位实现）")
+    @DisplayName("auth test")
     void should_returnOk_when_forgotPasswordCalled() throws Exception {
         String body = objectMapper.writeValueAsString(Map.of("email", "someone@test.local"));
 
@@ -94,7 +94,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("正常流程：wechat/qrcode 返回 scene 与 qrUrl")
+    @DisplayName("auth test")
     void should_returnQrScene_when_requestQrcode() throws Exception {
         mockMvc.perform(post("/api/auth/wechat/qrcode").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isOk())
@@ -104,15 +104,16 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("异常分支：wechat/callback 非法 code 返回 40001")
+    @DisplayName("auth test")
     void should_returnBadRequest_when_wechatCodeInvalid() throws Exception {
         String body = objectMapper.writeValueAsString(Map.of("code", "BAD_CODE", "state", "x"));
         mockMvc.perform(post("/api/auth/wechat/callback").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(40001));
     }
 
     @Test
-    @DisplayName("正常流程：wechat/callback 未绑定用户返回 needBind=true + bindToken")
+    @DisplayName("auth test")
     void should_returnBindToken_when_openidNotBound() throws Exception {
         String body = objectMapper.writeValueAsString(
                 Map.of("code", "MOCK_OPENID_test001", "state", "s"));
@@ -125,12 +126,12 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("正常流程：wechat/bind 使用有效 bindToken 与账号密码完成绑定并返回 token")
+    @DisplayName("auth test")
     void should_bindAndLogin_when_wechatBindWithValidToken() throws Exception {
         Tenant t = createTestTenant("T-WX-BIND");
         createTestUser(t.getId(), "eric", "Pass1234");
 
-        // 单独 mock 一个 bindToken 对应的 bucket
+        // 闂佸憡顨嗗ú婊呪偓?mock 婵炴垶鎸撮崑鎾斥槈?bindToken 闁诲海鏁搁幊鎾惰姳閺屻儲鍎?bucket
         @SuppressWarnings("unchecked")
         RBucket<String> bucket = Mockito.mock(RBucket.class);
         Mockito.when(bucket.get()).thenReturn("MOCK_OPENID_eric001");
@@ -153,9 +154,8 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("异常分支：wechat/bind 使用过期/不存在的 bindToken 返回 40006")
+    @DisplayName("auth test")
     void should_returnBusinessRuleError_when_bindTokenExpired() throws Exception {
-        // 默认 mock bucket.get()=null 即代表 token 过期
         String body = objectMapper.writeValueAsString(Map.of(
                 "bindToken", "EXPIRED_TOKEN",
                 "username", "x",
@@ -164,6 +164,7 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
         ));
 
         mockMvc.perform(post("/api/auth/wechat/bind").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(40006));
     }
 }

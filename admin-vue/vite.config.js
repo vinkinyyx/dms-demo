@@ -15,6 +15,17 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) }
   },
+  build: {
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vue: ['vue', 'vue-router', 'pinia'],
+          element: ['element-plus']
+        }
+      }
+    }
+  },
   server: {
     host: '0.0.0.0',
     port: 5174,

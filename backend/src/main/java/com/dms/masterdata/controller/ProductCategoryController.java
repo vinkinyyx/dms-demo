@@ -5,6 +5,8 @@ package com.dms.masterdata.controller;
 
 import com.dms.annotation.OperationLog;
 import com.dms.common.ApiResponse;
+import com.dms.common.BusinessException;
+import com.dms.common.ErrorCode;
 import com.dms.common.PageQuery;
 import com.dms.common.PageResult;
 import com.dms.common.enums.OperationAction;
@@ -48,8 +50,27 @@ public class ProductCategoryController {
 
     @PostMapping
     @OperationLog(businessType = "productCategory", action = OperationAction.CREATE, remark = "产品分类-创建")
-    public ApiResponse<ProductCategory> create(@RequestBody ProductCategory request) {
+    public ApiResponse<ProductCategory> create(@RequestBody(required = false) ProductCategory request) {
+        validateCreate(request);
         return ApiResponse.ok(service.create(request));
+    }
+
+    private void validateCreate(ProductCategory request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "request body must not be empty");
+        }
+        for (String fieldName : java.util.List.of("code", "name", "level")) {
+            try {
+                java.lang.reflect.Field field = ProductCategory.class.getDeclaredField(fieldName);
+                field.setAccessible(true);
+                Object value = field.get(request);
+                if (value == null || (value instanceof String text && text.isBlank())) {
+                    throw new BusinessException(ErrorCode.PARAM_MISSING, fieldName + " must not be empty");
+                }
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                throw new IllegalStateException(e);
+            }
+        }
     }
 
     @PutMapping("/{id}")

@@ -1,6 +1,5 @@
 /*
- * RBAC 控制器：暴露角色管理与用户角色分配接口。
- */
+ * RBAC 鎺у埗鍣細鏆撮湶瑙掕壊绠＄悊涓庣敤鎴疯鑹插垎閰嶆帴鍙ｃ€? */
 package com.dms.rbac.controller;
 
 import com.dms.common.ApiResponse;
@@ -17,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,10 +25,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 角色与用户-角色接口。
- */
+ * 瑙掕壊涓庣敤鎴?瑙掕壊鎺ュ彛銆? */
 @RestController
 @RequestMapping("/api")
+@PreAuthorize("@perm.canManageRoles()")
 @RequiredArgsConstructor
 public class RbacController {
 

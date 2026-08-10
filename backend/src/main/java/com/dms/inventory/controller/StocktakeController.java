@@ -4,6 +4,8 @@
 package com.dms.inventory.controller;
 
 import com.dms.common.ApiResponse;
+import com.dms.common.BusinessException;
+import com.dms.common.ErrorCode;
 import com.dms.common.PageQuery;
 import com.dms.common.PageResult;
 import com.dms.inventory.dto.StocktakeUploadRequest;
@@ -26,7 +28,10 @@ public class StocktakeController {
     }
 
     @PostMapping
-    public ApiResponse<Stocktake> upload(@RequestBody StocktakeUploadRequest request) {
+    public ApiResponse<Stocktake> upload(@RequestBody(required = false) StocktakeUploadRequest request) {
+        if (request == null || request.getStocktake() == null) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "stocktake must not be empty");
+        }
         return ApiResponse.ok(service.upload(request.getStocktake(), request.getLines()));
     }
 }

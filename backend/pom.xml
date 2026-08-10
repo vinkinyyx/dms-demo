@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- DMS 鍚庣妯″潡 Maven 鏍规瀯寤烘弿杩版枃浠讹紝缁熶竴绠＄悊 Spring Boot 3.2 + JDK 17 渚濊禆涓庢彃浠?-->
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!-- DMS 閸氬海顏Ο鈥虫健 Maven 閺嶈鐎鐑樺伎鏉╃増鏋冩禒璁圭礉缂佺喍绔寸粻锛勬倞 Spring Boot 3.2 + JDK 17 娓氭繆绂嗘稉搴㈠絻娴?-->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -61,14 +61,14 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- 鏁版嵁搴?-->
+        <!-- 閺佺増宓佹惔?-->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Flyway 杩佺Щ -->
+        <!-- Flyway 鏉╀胶些 -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
@@ -79,7 +79,7 @@
             <version>10.11.0</version>
         </dependency>
 
-        <!-- Flyway core 鏄惧紡澹版槑涓?database-postgresql 淇濇寔涓€鑷?-->
+        <!-- Flyway core 閺勬儳绱℃竟鐗堟娑?database-postgresql 娣囨繃瀵旀稉鈧懛?-->
 
         <!-- Redis (Redisson) -->
         <dependency>
@@ -107,7 +107,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- 瀵硅薄瀛樺偍 MinIO -->
+        <!-- 鐎电钖勭€涙ê鍋?MinIO -->
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
@@ -145,7 +145,7 @@
             <artifactId>mybatis-plus-generator</artifactId>
             <version>3.5.5</version>
         </dependency>
-        <!-- API 鏂囨。 -->
+        <!-- API 閺傚洦銆?-->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -159,7 +159,7 @@
             <version>5.2.5</version>
         </dependency>
 
-        <!-- ================= 娴嬭瘯渚濊禆 ================= -->
+        <!-- ================= 濞村鐦笟婵婄 ================= -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -173,6 +173,18 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>1.19.8</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>1.19.8</version>
             <scope>test</scope>
         </dependency>
 
@@ -195,7 +207,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Spring Boot 鎵撳寘鎻掍欢 -->
+            <!-- Spring Boot 閹垫挸瀵橀幓鎺嶆 -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

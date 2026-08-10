@@ -1,6 +1,5 @@
 /*
- * 产品对码接口（厂家租户前台）。
- */
+ * 浜у搧瀵圭爜鎺ュ彛锛堝巶瀹剁鎴峰墠鍙帮級銆? */
 package com.dms.platform.mapping.controller;
 
 import com.dms.common.ApiResponse;
@@ -14,6 +13,7 @@ import com.dms.platform.mapping.dto.ProductMappingUpdateRequest;
 import com.dms.platform.mapping.service.ProductMappingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +33,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/product-mappings")
+@PreAuthorize("@perm.canViewProductMappings()")
 @RequiredArgsConstructor
 public class ProductMappingController {
 

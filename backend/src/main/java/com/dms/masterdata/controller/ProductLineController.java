@@ -2,6 +2,8 @@ package com.dms.masterdata.controller;
 
 import com.dms.annotation.OperationLog;
 import com.dms.common.ApiResponse;
+import com.dms.common.BusinessException;
+import com.dms.common.ErrorCode;
 import com.dms.common.PageQuery;
 import com.dms.common.PageResult;
 import com.dms.common.enums.OperationAction;
@@ -46,8 +48,27 @@ public class ProductLineController {
 
     @PostMapping
     @OperationLog(businessType = "productLine", action = OperationAction.CREATE, remark = "产品线-创建")
-    public ApiResponse<ProductLine> create(@RequestBody ProductLine request) {
+    public ApiResponse<ProductLine> create(@RequestBody(required = false) ProductLine request) {
+        validateCreate(request);
         return ApiResponse.ok(service.create(request));
+    }
+
+    private void validateCreate(ProductLine request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "request body must not be empty");
+        }
+        for (String fieldName : java.util.List.of("code", "name", "level")) {
+            try {
+                java.lang.reflect.Field field = ProductLine.class.getDeclaredField(fieldName);
+                field.setAccessible(true);
+                Object value = field.get(request);
+                if (value == null || (value instanceof String text && text.isBlank())) {
+                    throw new BusinessException(ErrorCode.PARAM_MISSING, fieldName + " must not be empty");
+                }
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                throw new IllegalStateException(e);
+            }
+        }
     }
 
     @PutMapping("/{id}")

@@ -5,6 +5,8 @@ package com.dms.masterdata.controller;
 
 import com.dms.annotation.OperationLog;
 import com.dms.common.ApiResponse;
+import com.dms.common.BusinessException;
+import com.dms.common.ErrorCode;
 import com.dms.common.PageQuery;
 import com.dms.common.PageResult;
 import com.dms.common.enums.OperationAction;
@@ -43,8 +45,27 @@ public class HospitalController {
 
     @PostMapping
     @OperationLog(businessType = "hospital", action = OperationAction.CREATE, remark = "医院-创建")
-    public ApiResponse<Hospital> create(@RequestBody Hospital request) {
+    public ApiResponse<Hospital> create(@RequestBody(required = false) Hospital request) {
+        validateCreate(request);
         return ApiResponse.ok(service.create(request));
+    }
+
+    private void validateCreate(Hospital request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "request body must not be empty");
+        }
+        for (String fieldName : java.util.List.of("code", "name")) {
+            try {
+                java.lang.reflect.Field field = Hospital.class.getDeclaredField(fieldName);
+                field.setAccessible(true);
+                Object value = field.get(request);
+                if (value == null || (value instanceof String text && text.isBlank())) {
+                    throw new BusinessException(ErrorCode.PARAM_MISSING, fieldName + " must not be empty");
+                }
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                throw new IllegalStateException(e);
+            }
+        }
     }
 
     @PutMapping("/{id}")

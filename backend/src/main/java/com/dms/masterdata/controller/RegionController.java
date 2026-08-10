@@ -4,6 +4,8 @@
 package com.dms.masterdata.controller;
 
 import com.dms.common.ApiResponse;
+import com.dms.common.BusinessException;
+import com.dms.common.ErrorCode;
 import com.dms.common.PageQuery;
 import com.dms.common.PageResult;
 import com.dms.common.util.ExcelExportUtils;
@@ -44,8 +46,27 @@ public class RegionController {
     }
 
     @PostMapping
-    public ApiResponse<Region> create(@RequestBody Region request) {
+    public ApiResponse<Region> create(@RequestBody(required = false) Region request) {
+        validateCreate(request);
         return ApiResponse.ok(service.create(request));
+    }
+
+    private void validateCreate(Region request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "request body must not be empty");
+        }
+        for (String fieldName : java.util.List.of("code", "name", "level")) {
+            try {
+                java.lang.reflect.Field field = Region.class.getDeclaredField(fieldName);
+                field.setAccessible(true);
+                Object value = field.get(request);
+                if (value == null || (value instanceof String text && text.isBlank())) {
+                    throw new BusinessException(ErrorCode.PARAM_MISSING, fieldName + " must not be empty");
+                }
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                throw new IllegalStateException(e);
+            }
+        }
     }
 
     @PutMapping("/{id}")

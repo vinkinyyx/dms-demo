@@ -10,6 +10,7 @@ import com.dms.platform.config.dto.FilterConfigDTO;
 import com.dms.platform.config.service.PlatformButtonConfigService;
 import com.dms.platform.config.service.UiConfigService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,6 +24,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/tenant-ui")
+@PreAuthorize("@perm.canManageTenantUi()")
 @RequiredArgsConstructor
 public class TenantUiConfigController {
 
@@ -59,7 +61,7 @@ public class TenantUiConfigController {
     private UUID currentTenantId() {
         UUID tenantId = TenantContext.getTenantId();
         if (tenantId == null) {
-            throw new BusinessException(ErrorCode.FORBIDDEN, "无法识别租户");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "鏃犳硶璇嗗埆绉熸埛");
         }
         return tenantId;
     }
@@ -67,7 +69,7 @@ public class TenantUiConfigController {
     private String currentTenantType() {
         String tenantType = TenantContext.getTenantType();
         if (tenantType == null || tenantType.isBlank()) {
-            throw new BusinessException(ErrorCode.FORBIDDEN, "无法识别租户类型");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "鏃犳硶璇嗗埆绉熸埛绫诲瀷");
         }
         return tenantType;
     }

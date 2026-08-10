@@ -11,6 +11,8 @@ package com.dms.system.controller;
 
 import com.dms.annotation.OperationLog;
 import com.dms.common.ApiResponse;
+import com.dms.common.BusinessException;
+import com.dms.common.ErrorCode;
 import com.dms.common.enums.OperationAction;
 import com.dms.common.util.TenantContext;
 import jakarta.persistence.EntityManager;
@@ -51,7 +53,11 @@ public class DictCrudController {
     @PostMapping("/types")
     @Transactional
     @OperationLog(businessType = "dict", action = OperationAction.CREATE, remark = "字典类型-新增")
-    public ApiResponse<Map<String, Object>> createType(@RequestBody Map<String, Object> body) {
+    public ApiResponse<Map<String, Object>> createType(@RequestBody(required = false) Map<String, Object> body) {
+        if (body == null || String.valueOf(body.getOrDefault("code", "")).isBlank()
+                || String.valueOf(body.getOrDefault("name", "")).isBlank()) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "code, name must not be empty");
+        }
         em.createNativeQuery(
                 "INSERT INTO dict_types (tenant_id, code, name) VALUES (?1, ?2, ?3)")
             .setParameter(1, TenantContext.getTenantId())
