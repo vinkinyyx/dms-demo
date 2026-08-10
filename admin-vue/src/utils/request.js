@@ -4,6 +4,18 @@ import router from '@/router'
 
 const service = axios.create({ baseURL: '/', timeout: 30000 })
 
+async function parseError(error) {
+  const data = error.response && error.response.data
+  if (!data) return { message: error.message || '网络错误' }
+  if (typeof data === 'string') {
+    try { return JSON.parse(data) } catch (e) {
+      if (data.trim().startsWith('<')) return { message: '服务暂不可用，请稍后重试' }
+      return { message: data }
+    }
+  }
+  return data
+}
+
 service.interceptors.request.use((config) => {
   const token = localStorage.getItem('admin_access_token')
   if (token) config.headers.Authorization = 'Bearer ' + token
@@ -11,26 +23,35 @@ service.interceptors.request.use((config) => {
 })
 
 service.interceptors.response.use(
-  (response) => {
+  async (response) => {
     const res = response.data
-    if (res.code !== undefined && res.code !== 0) {
-      ElMessage.error(res.message || '请求失败')
-      if (res.code === 40101 || res.code === 40104) {
-        localStorage.removeItem('admin_access_token')
-        router.push('/login')
-      }
-      return Promise.reject(new Error(res.message || 'Error'))
+    if (response.status >= 200 && response.status < 300 && (res.code === undefined || res.code === 0)) {
+      return res
     }
-    return res
-  },
-  (error) => {
-    const status = error.response && error.response.status
-    if (status === 401) {
+    const body = res && typeof res === 'object' ? res : await parseError({ response })
+    const message = body.message || '请求失败'
+    ElMessage.error(message)
+    if (response.status === 401 || body.code === 40101 || body.code === 40104) {
       localStorage.removeItem('admin_access_token')
       router.push('/login')
     }
-    ElMessage.error(error.message || '网络错误')
-    return Promise.reject(error)
+    const err = new Error(message)
+    err.response = response
+    err.data = body
+    return Promise.reject(err)
+  },
+  async (error) => {
+    const status = error.response && error.response.status
+    const body = await parseError(error)
+    if (status === 401 || body.code === 40101 || body.code === 40104) {
+      localStorage.removeItem('admin_access_token')
+      router.push('/login')
+    }
+    ElMessage.error(body.message || error.message || '网络错误')
+    const wrapped = new Error(body.message || error.message || '网络错误')
+    wrapped.response = error.response
+    wrapped.data = body
+    return Promise.reject(wrapped)
   }
 )
 
