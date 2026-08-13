@@ -2,6 +2,11 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getToken } from '@/utils/auth'
 
 const routes = [
+  { path: '/error/:code', name: 'ErrorPage', component: () => import('@/views/ErrorPage.vue'), meta: { public: true } },
+  { path: '/403', redirect: '/error/403' },
+  { path: '/404', redirect: '/error/404' },
+  { path: '/500', redirect: '/error/500' },
+  { path: '/print/:type/:id', name: 'PrintView', component: () => import('@/views/PrintView.vue'), meta: { title: '单据打印' } },
   { path: '/login', name: 'Login', component: () => import('@/views/Login.vue'), meta: { public: true } },
   {
     path: '/',
@@ -42,6 +47,10 @@ const routes = [
       { path: 'approval/admin', name: 'ApprovalAdmin', component: () => import('@/views/approval/ApprovalAdmin.vue'), meta: { title: '审批监控' } },
       { path: 'email-logs', name: 'EmailLogs', component: () => import('@/views/EmailLogs.vue'), meta: { title: '邮件发送日志' } },
       { path: 'notifications', name: 'Notifications', component: () => import('@/views/Notifications.vue'), meta: { title: '消息中心' } },
+      { path: 'expiry-alerts', name: 'ExpiryAlerts', component: () => import('@/views/ExpiryAlerts.vue'), meta: { title: '效期预警' } },
+      { path: 'async-tasks', name: 'AsyncTasks', component: () => import('@/views/AsyncTasks.vue'), meta: { title: '导入导出任务' } },
+      { path: 'traceability', name: 'Traceability', component: () => import('@/views/Traceability.vue'), meta: { title: '序列号追溯' } },
+      { path: 'log-center', name: 'LogCenter', component: () => import('@/views/LogCenter.vue'), meta: { title: '日志中心' } },
       { path: 'login-logs', name: 'LoginLogs', component: () => import('@/views/LoginLogs.vue'), meta: { title: '登录日志' } },
       { path: 'approvals/mine', name: 'MyApprovals', component: () => import('@/views/approval/TodoCenter.vue'), meta: { title: '我的审批' } }
     ]
@@ -67,7 +76,7 @@ const routes = [
       { path: 'profile', name: 'MProfile', component: () => import('@/views/mobile/MProfile.vue'), meta: { mobile: true, title: '我的' } }
     ]
   },
-  { path: '/:pathMatch(.*)*', redirect: '/home' }
+  { path: '/:pathMatch(.*)*', redirect: '/error/404' }
 ]
 
 const router = createRouter({

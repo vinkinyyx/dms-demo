@@ -27,8 +27,10 @@ ENVIRONMENTS = {
 
 # ====== 当前环境 ======
 ENV = ENVIRONMENTS[DMS_ENV]
-BASE_URL = ENV["base_url"]
-API_BASE = ENV["api_base"]
+# 允许通过 DMS_BASE_URL 覆盖（例如临时指向不同端口/实例）
+_override = os.getenv("DMS_BASE_URL", "").rstrip("/")
+BASE_URL = _override or ENV["base_url"]
+API_BASE = _override or ENV["api_base"]
 
 # ====== 默认账号 ======
 ACCOUNTS = {

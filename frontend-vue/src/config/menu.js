@@ -1,4 +1,4 @@
-﻿export const MENU_GROUPS = [
+export const MENU_GROUPS = [
   {
     group: '基础数据',
     items: [
@@ -40,6 +40,8 @@
       { key: 'receipts', icon: 'TakeawayBox', label: '收货入库', permissionCode: 'receipt:view' },
       { key: 'stock-moves', icon: 'Switch', label: '库存移动', permissionCode: 'stock_move:view' },
       { key: 'inventory-adjustments', icon: 'ScaleToOriginal', label: '库存调整', permissionCode: 'inventory_adjustment:view' }
+      ,{ key: 'expiry-alerts', icon: 'AlarmClock', label: '效期预警', route: '/expiry-alerts', permissionCode: 'inventory:view' }
+      ,{ key: 'traceability', icon: 'Search', label: '序列号追溯', route: '/traceability', permissionCode: 'inventory:view' }
     ]
   },
   {
@@ -91,8 +93,8 @@
       { key: 'users', icon: 'User', label: '账号管理', permissionCode: 'user:view' },
       { key: 'roles-manage', route: '/roles-manage', icon: 'Avatar', label: '角色权限', permissionCode: 'role:view' },
       { key: 'tenant-page-configs', route: '/tenant-page-configs', icon: 'Setting', label: '列表页配置', permissionCode: 'tenant_ui_config:view' },
-      { key: 'api-call-logs', icon: 'Connection', label: '接口调用日志', route: '/api-call-logs', permissionCode: 'api_log:view' }
-      ,{ key: 'email-logs', icon: 'Message', label: '邮件发送日志', route: '/email-logs', permissionCode: 'email_log:view' }
+      { key: 'log-center', icon: 'Notebook', label: '日志中心', route: '/log-center', permissionCode: 'api_log:view' }
+      ,{ key: 'async-tasks', icon: 'Files', label: '导入导出任务', route: '/async-tasks' }
     ]
   }
 ]

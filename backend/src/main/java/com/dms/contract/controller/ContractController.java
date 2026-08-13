@@ -3,6 +3,8 @@ package com.dms.contract.controller;
 import com.dms.annotation.OperationLog;
 import com.dms.approval.entity.ApprovalInstance;
 import com.dms.approval.service.ApprovalService;
+import com.dms.asynctask.entity.AsyncTask;
+import com.dms.asynctask.service.AsyncTaskService;
 import com.dms.common.ApiResponse;
 import com.dms.common.enums.OperationAction;
 import com.dms.contract.dto.ContractRequest;
@@ -24,6 +26,29 @@ public class ContractController {
 
     private final ContractService service;
     private final ApprovalService approvalService;
+    private final AsyncTaskService asyncTaskService;
+
+    @PostMapping("/actions/export-async")
+    public ApiResponse<AsyncTask> exportAsync(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long dealerId,
+            @RequestParam(required = false) String category) {
+        AsyncTask task = asyncTaskService.submit("EXPORT", "contracts",
+                java.util.Map.of("status", status == null ? "" : status,
+                        "keyword", keyword == null ? "" : keyword,
+                        "dealerId", dealerId == null ? "" : dealerId,
+                        "category", category == null ? "" : category));
+        String fileName = "contracts_" + java.time.LocalDate.now() + ".xlsx";
+        asyncTaskService.runExport(task, fileName, () -> {
+            try {
+                return service.export(status, keyword, dealerId, category);
+            } catch (java.io.IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        return ApiResponse.ok(task);
+    }
 
     @GetMapping("/actions/export")
     public org.springframework.http.ResponseEntity<byte[]> export(

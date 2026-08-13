@@ -140,6 +140,16 @@ service.interceptors.response.use(
       return Promise.reject(error)
     }
 
+    if (status === 404) {
+      router.push('/404')
+      return Promise.reject(error)
+    }
+
+    if (status && status >= 500) {
+      ElMessage.error((error.response && error.response.data && error.response.data.message) || '服务器开小差了，请稍后重试')
+      return Promise.reject(error)
+    }
+
     ElMessage.error((error.response && error.response.data && error.response.data.message) || error.message || '网络错误')
     return Promise.reject(error)
   }

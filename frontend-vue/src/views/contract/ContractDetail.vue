@@ -47,11 +47,13 @@
         </el-table-column>
         <el-table-column label="操作" width="160">
           <template #default="{ row }">
+            <el-button link type="primary" @click="previewAtt(row)" style="margin-right:8px">预览</el-button>
             <el-link type="primary" :href="row.fileUrl" target="_blank">下载</el-link>
             <el-button v-if="canEdit" link type="danger" @click="removeAtt(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
+      <FilePreview v-model="previewVisible" :file-id="previewId" :file-name="previewName" />
       <div style="margin-top: 12px" v-if="detail.sourceFileId">
         <el-link type="success" :href="'/api/files/' + detail.sourceFileId + '/download'" target="_blank">
           下载合同成稿（Word）
@@ -77,8 +79,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import FilePreview from '@/components/FilePreview.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getToken } from '@/utils/auth'
 import { getContract, submitContract, withdrawContract, addContractAttachment, deleteContractAttachment } from './api'
@@ -87,6 +90,11 @@ import { formatDate } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
+const previewVisible = ref(false)
+const previewId = ref(null)
+const previewName = ref('')
+function previewAtt(row){ previewId.value = row.fileId; previewName.value = row.fileName; previewVisible.value = true }
+function printContract(){ window.open('/print/contract/'+route.params.id, '_blank') }
 const loading = ref(false)
 const detail = ref(null)
 const headers = { Authorization: 'Bearer ' + (getToken() || '') }

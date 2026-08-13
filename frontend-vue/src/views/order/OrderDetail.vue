@@ -2,6 +2,7 @@
   <div>
     <el-card shadow="never" class="od-head">
       <el-button :icon="ArrowLeft" link @click="$router.back()">返回</el-button>
+      <el-button style="float:right" @click="printOrder">打印</el-button>
       <span v-if="info" class="od-title">订单 {{ info.code }} 详情</span>
       <span v-else class="od-title">订单详情</span>
     </el-card>
@@ -58,6 +59,7 @@ import { formatDateTime } from '@/utils/format'
 
 const route = useRoute()
 const orderId = () => route.params.id
+function printOrder(){ window.open('/print/salesOrder/'+route.params.id, '_blank') }
 const info = ref(null)
 const tab = ref('lines')
 const lineRows = ref([])

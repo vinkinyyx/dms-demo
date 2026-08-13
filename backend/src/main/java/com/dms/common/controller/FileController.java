@@ -82,6 +82,39 @@ public class FileController {
         return ApiResponse.ok(res);
     }
 
+    @GetMapping("/{fileId}/preview")
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> preview(@PathVariable Long fileId) throws IOException {
+        UUID tid = TenantContext.getTenantId();
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = em.createNativeQuery(
+                "SELECT original_name, rel_path, content_type FROM files WHERE id = ?1 AND tenant_id = ?2")
+                .setParameter(1, fileId).setParameter(2, tid).getResultList();
+        if (rows.isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND, "文件不存在");
+        Object[] r = rows.get(0);
+        String name = String.valueOf(r[0]);
+        String rel = String.valueOf(r[1]);
+        String ct = r[2] == null ? guessContentType(name) : String.valueOf(r[2]);
+        Path pth = Paths.get(storageRoot, rel);
+        if (!Files.exists(pth)) throw new BusinessException(ErrorCode.NOT_FOUND, "文件不存在");
+        byte[] data = Files.readAllBytes(pth);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + name + "\"")
+                .contentType(MediaType.parseMediaType(ct))
+                .body(data);
+    }
+
+    private String guessContentType(String name) {
+        String lower = name.toLowerCase();
+        if (lower.endsWith(".pdf")) return "application/pdf";
+        if (lower.endsWith(".png")) return "image/png";
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+        if (lower.endsWith(".gif")) return "image/gif";
+        if (lower.endsWith(".webp")) return "image/webp";
+        if (lower.endsWith(".txt")) return "text/plain";
+        return "application/octet-stream";
+    }
+
     @GetMapping("/{fileId}/download")
     @Transactional(readOnly = true)
     public ResponseEntity<byte[]> download(@PathVariable Long fileId) throws IOException {

@@ -104,3 +104,6 @@ backend/src/main/resources/application-local.yml
 /_headings.txt
 /release-p0/
 
+
+# pytest html reports
+automation_test/reports/

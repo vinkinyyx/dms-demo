@@ -2,6 +2,7 @@
   <div class="sales-out-edit">
     <div class="page-toolbar">
       <el-button @click="$router.back()"><el-icon><ArrowLeft /></el-icon>返回</el-button>
+<el-button @click="printSalesOut">打印</el-button>
       <div class="spacer" />
       <el-button v-if="canCreateBatch" type="primary" @click="handleCreateBatch" :loading="createLoading">
         <el-icon><Plus /></el-icon>创建发货单
@@ -225,6 +226,7 @@ import { statusText, statusTagType } from '@/utils/dict'
 import { formatDateTime, formatDate } from '@/utils/format'
 
 const route = useRoute()
+function printSalesOut(){ window.open('/print/salesOut/'+route.params.id, '_blank') }
 const salesOutId = computed(() => route.params.id)
 
 const salesOut = reactive({ batches: [] })

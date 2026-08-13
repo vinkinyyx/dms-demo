@@ -49,6 +49,18 @@
       </el-col>
     </el-row>
 
+    <el-alert
+      v-if="expirySummary.expired || expirySummary.within30"
+      class="expiry-banner"
+      :type="expirySummary.expired ? 'error' : 'warning'"
+      :closable="false"
+      show-icon>
+      <template #title>
+        <span>库存效期预警：已过期 {{ expirySummary.expired }} 批次，30天内到期 {{ expirySummary.within30 }} 批次</span>
+        <el-button link type="primary" @click="$router.push('/expiry-alerts')">查看详情</el-button>
+      </template>
+    </el-alert>
+
     <!-- 可拖拽的图表区 -->
     <draggable
       v-model="orderedBlocks"
@@ -120,6 +132,10 @@ const statusOpts = [
   { value: 'COMPLETED', label: '已完成' }
 ]
 
+const expirySummary = reactive({ expired: 0, within30: 0, within90: 0, within180: 0 })
+async function loadExpirySummary() {
+  try { const { data } = await request({ url: '/api/inventory/expiry-summary', method: 'get' })
+    Object.assign(expirySummary, data || {}) } catch(e) {} }
 const kpi = reactive({})
 const kpiCards = ref([])
 
@@ -305,7 +321,9 @@ function loadLayout() {
 
 watch(orderedBlocks, () => saveLayout(), { deep: true })
 
-onMounted(() => { loadLayout(); loadAll(); window.addEventListener('resize', onResize) })
+onMounted(() => {
+  loadExpirySummary()
+  loadLayout(); loadAll(); window.addEventListener('resize', onResize) })
 onBeforeUnmount(() => { window.removeEventListener('resize', onResize); Object.values(charts).forEach(c => c.dispose()) })
 </script>
 
@@ -330,4 +348,5 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); Object.v
 .block-title { font-size: 14px; font-weight: 600; }
 .block-chart { width: 100%; height: 300px; }
 .restore-card { margin-top: 12px; }
+.expiry-banner{margin-bottom:12px}
 </style>

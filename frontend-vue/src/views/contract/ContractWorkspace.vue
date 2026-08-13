@@ -20,6 +20,7 @@
           <el-button @click="reset">重置</el-button>
           <el-button type="success" @click="goCreate"><el-icon><Plus /></el-icon>新建合同</el-button>
           <el-button @click="doExport"><el-icon><Download /></el-icon>导出</el-button>
+          <el-button @click="doExportAsync" :loading="exportingAsync">异步导出</el-button>
         </div>
       </div>
 
@@ -78,6 +79,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { listContracts, submitContract, withdrawContract, deleteContract, exportContracts } from './api'
 import { CATEGORY_OPTIONS, APP_TYPE_OPTIONS, categoryLabel, appTypeLabel, statusMeta } from './dict'
+import request from '@/utils/request'
 import { formatDate } from '@/utils/format'
 
 const router = useRouter()
@@ -116,6 +118,16 @@ async function doWithdraw(id) {
   load()
 }
 
+const exportingAsync = ref(false)
+async function doExportAsync() {
+  exportingAsync.value = true
+  try {
+    await request({ url: '/api/contracts/actions/export-async', method: 'post', params: query })
+    ElMessage.success('导出任务已提交，请在"导入导出任务"中查看并下载')
+  } catch (e) {
+    ElMessage.error('提交失败: ' + (e?.message || e))
+  } finally { exportingAsync.value = false }
+}
 async function doExport() {
   loading.value = true
   try {
