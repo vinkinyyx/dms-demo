@@ -172,7 +172,7 @@
           <template #default="{ row }">
             <el-tag v-if="row.occupiedByOther" type="warning" size="small">{{ row.boundPositionName }}</el-tag>
             <el-tag v-else-if="row.boundPositionId" type="success" size="small">本岗位</el-tag>
-            <span v-else style="color:#909399">未分配</span>
+            <span v-else style="color:var(--dms-text-4)">未分配</span>
           </template>
         </el-table-column>
         <el-table-column label="业绩占比" width="200">
@@ -204,7 +204,7 @@
           <template #default="{ row }">
             <el-tag v-if="row.occupiedByOther" type="warning" size="small">{{ row.boundPositionName }}</el-tag>
             <el-tag v-else-if="row.boundPositionId" type="success" size="small">本岗位</el-tag>
-            <span v-else style="color:#909399">未分配</span>
+            <span v-else style="color:var(--dms-text-4)">未分配</span>
           </template>
         </el-table-column>
       </el-table>
@@ -431,14 +431,14 @@ loadTree()
 .info-desc { margin-bottom: 16px; }
 .bind-tabs { margin-top: 8px; }
 .tab-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.tip { color: #909399; font-size: 13px; }
+.tip { color: var(--dms-text-4); font-size: 13px; }
 .bind-alert { margin-bottom: 12px; }
-.sum-bar { margin-top: 12px; font-size: 14px; color: #606266; }
-.sum-bar b { color: #409eff; }
-.sum-bar b.over { color: #f56c6c; }
+.sum-bar { margin-top: 12px; font-size: 14px; color: var(--dms-text-3); }
+.sum-bar b { color: var(--dms-color-primary); }
+.sum-bar b.over { color: var(--dms-color-danger); }
 .pos-form { padding-right: 12px; }
 :deep(.el-tree) { font-size: 14px; }
 :deep(.el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content) {
-  background-color: #409eff20; color: #409eff; font-weight: 500; border-radius: 6px;
+  background-color: var(--dms-color-primary)20; color: var(--dms-color-primary); font-weight: 500; border-radius: 6px;
 }
 </style>

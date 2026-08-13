@@ -80,7 +80,7 @@
         <template #header>
           <span>{{ c.l }}</span>
           <el-icon v-if="c.filter" class="filter-icon" @click.stop="openFilter(c, $event)">
-            <Filter :color="colFilters[c.k] != null && colFilters[c.k] !== '' ? '#409EFF' : '#C0C4CC'" />
+            <Filter :color="colFilters[c.k] != null && colFilters[c.k] !== '' ? '#1677ff' : '#c0c4cc'" />
           </el-icon>
         </template>
         <template #default="{ row }">
@@ -140,7 +140,7 @@
       popper-class="crud-filter-popover"
     >
       <div v-if="currentFilterCol">
-        <div style="margin-bottom: 8px; color: #303133; font-weight: 600;">{{ currentFilterCol.l }} 过滤</div>
+        <div style="margin-bottom: 8px; color: var(--dms-text-2); font-weight: 600;">{{ currentFilterCol.l }} 过滤</div>
         <el-select v-if="currentFilterCol.filter?.type === 'select'" v-model="colFilters[currentFilterCol.k]"
           style="width:100%" clearable size="small" @click.stop>
           <el-option v-for="o in currentFilterCol.filter.options" :key="o.value" :label="o.label" :value="o.value" />
@@ -234,7 +234,7 @@
         :before-upload="beforeImport">
         <el-button type="primary">选择Excel文件</el-button>
       </el-upload>
-      <p style="margin-top:12px;color:#909399">支持 .xlsx 和 .xls 格式，请按模板填写数据。导入按“编码”判断：编码已存在则更新该行（留空的列保留原值），不存在则新增。</p>
+      <p style="margin-top:12px;color:var(--dms-text-4)">支持 .xlsx 和 .xls 格式，请按模板填写数据。导入按“编码”判断：编码已存在则更新该行（留空的列保留原值），不存在则新增。</p>
       <el-button v-if="canDownloadTemplate" size="small" type="text" :loading="tplDownloading" @click="downloadTemplate">下载导入模板</el-button>
       <template #footer>
         <el-button @click="importVisible = false">取消</el-button>
@@ -425,7 +425,9 @@ function stripEmoji(s) { return String(s || '').replace(/[\u{1F000}-\u{1FFFF}\u2
 // 必含按钮：search/reset；其余为业务按钮（按 sortOrder 排）
 const mustButtonKeys = ['search', 'reset']
 const extraToolbarButtons = computed(() => visibleToolbar()
-  .filter((b) => !mustButtonKeys.includes(b.buttonKey)))
+  .filter((b) => !mustButtonKeys.includes(b.buttonKey))
+  // 业务模块显式标记 noCreate 时，隐藏后端布局下发的“新增/新建”按钮，避免打开空白表单
+  .filter((b) => !(props.config.noCreate && b.buttonKey === 'create')))
 
 function onResetForm() {
   keyword.value = ''
@@ -1054,7 +1056,7 @@ function onImportError(err, file) {
 
 <style scoped>
 .crud-container {
-  background: #fff;
+  background: var(--dms-bg-container);
   border-radius: 4px;
   padding: 16px;
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / .1), 0 1px 2px -1px rgb(0 0 0 / .1);
@@ -1062,10 +1064,10 @@ function onImportError(err, file) {
 .panel-title {
   margin-bottom: 16px;
   margin-top: 0;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid var(--dms-border-1);
   padding-bottom: 8px;
   font-size: 1rem;
-  color: #6379bb;
+  color: var(--dms-color-primary);
   font-weight: 500;
 }
 .pager { margin-top: 14px; display: flex; justify-content: flex-end; }

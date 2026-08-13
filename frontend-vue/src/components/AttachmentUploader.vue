@@ -45,5 +45,5 @@ function clear() { emit('update:modelValue', null) }
 <style scoped>
 .att-uploader { display: flex; flex-direction: column; gap: 8px; }
 .att-info { display: flex; align-items: center; gap: 8px; }
-.att-tip { color: #909399; font-size: 12px; }
+.att-tip { color: var(--dms-text-4); font-size: 12px; }
 </style>

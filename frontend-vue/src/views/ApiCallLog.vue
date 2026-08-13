@@ -112,6 +112,6 @@ async function copyPayload(value) {
 .log-section { margin-top: 12px; }
 .log-section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .log-section-head h4 { margin: 0; font-size: 14px; }
-.code { background: #f5f7fa; padding: 10px; border-radius: 4px; max-height: 260px; overflow: auto; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
-.error .code { background: #fef0f0; color: #c45656; }
+.code { background: var(--dms-bg-page); padding: 10px; border-radius: 4px; max-height: 260px; overflow: auto; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+.error .code { background: var(--dms-color-danger-bg); color: var(--dms-color-danger); }
 </style>

@@ -76,4 +76,11 @@ public class AuthorizationController {
     public ApiResponse<TempAuthorization> createTemp(@RequestBody TempAuthorization request) {
         return ApiResponse.ok(service.createTemp(request));
     }
+
+    @DeleteMapping("/api/authorizations/{id}")
+    @OperationLog(businessType = "authorization", action = OperationAction.DELETE, remark = "授权-删除")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ApiResponse.ok();
+    }
 }

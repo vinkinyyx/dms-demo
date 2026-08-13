@@ -14,6 +14,7 @@ import com.dms.user.entity.User;
 import com.dms.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -269,14 +270,38 @@ public class ApprovalService {
     public PageResult<ApprovalTask> myTodo(PageQuery pageQuery) {
         UUID tenantId = requireTenantId();
         Long userId = requireUserId();
-        return PageResult.of(taskRepository.findByTenantIdAndAssigneeIdAndStatusOrderByCreatedAtDesc(tenantId, userId, ApprovalTaskStatus.PENDING, PageRequest.of(pageQuery.getPage() - 1, pageQuery.getSize(), Sort.by(Sort.Direction.DESC, "createdAt"))));
+        Page<ApprovalTask> page = taskRepository.findByTenantIdAndAssigneeIdAndStatusOrderByCreatedAtDesc(tenantId, userId, ApprovalTaskStatus.PENDING, PageRequest.of(pageQuery.getPage() - 1, pageQuery.getSize(), Sort.by(Sort.Direction.DESC, "createdAt")));
+        enrichTaskInstances(page.getContent());
+        return PageResult.of(page);
     }
 
     @Transactional(readOnly = true)
     public PageResult<ApprovalTask> myDone(PageQuery pageQuery) {
         UUID tenantId = requireTenantId();
         Long userId = requireUserId();
-        return PageResult.of(taskRepository.findByTenantIdAndAssigneeIdAndStatusNotOrderByHandledAtDesc(tenantId, userId, ApprovalTaskStatus.PENDING, PageRequest.of(pageQuery.getPage() - 1, pageQuery.getSize(), Sort.by(Sort.Direction.DESC, "handledAt"))));
+        Page<ApprovalTask> page = taskRepository.findByTenantIdAndAssigneeIdAndStatusNotOrderByHandledAtDesc(tenantId, userId, ApprovalTaskStatus.PENDING, PageRequest.of(pageQuery.getPage() - 1, pageQuery.getSize(), Sort.by(Sort.Direction.DESC, "handledAt")));
+        enrichTaskInstances(page.getContent());
+        return PageResult.of(page);
+    }
+
+    private void enrichTaskInstances(List<ApprovalTask> tasks) {
+        if (tasks == null || tasks.isEmpty()) return;
+        List<Long> instanceIds = tasks.stream().map(ApprovalTask::getInstanceId).filter(Objects::nonNull).distinct().toList();
+        if (instanceIds.isEmpty()) return;
+        Map<Long, ApprovalInstance> instanceMap = new HashMap<>();
+        for (ApprovalInstance inst : instanceRepository.findAllById(instanceIds)) {
+            instanceMap.put(inst.getId(), inst);
+        }
+        for (ApprovalTask task : tasks) {
+            ApprovalInstance inst = instanceMap.get(task.getInstanceId());
+            if (inst != null) {
+                task.setTitle(inst.getTitle());
+                task.setBusinessType(inst.getBusinessType());
+                task.setBusinessCode(inst.getBusinessCode());
+                task.setSubmitterName(inst.getSubmitterName());
+                task.setInstanceStatus(inst.getStatus() == null ? null : inst.getStatus().name());
+            }
+        }
     }
 
     @Transactional(readOnly = true)
@@ -293,9 +318,19 @@ public class ApprovalService {
     public PageResult<ApprovalInstance> adminInstances(PageQuery pageQuery, String status) {
         UUID tenantId = requireTenantId();
         if (status != null && !status.isBlank()) {
-            return PageResult.of(instanceRepository.findByTenantIdAndStatusOrderByIdDesc(tenantId, ApprovalInstanceStatus.valueOf(status), pageQuery.toPageable()));
+            return PageResult.of(instanceRepository.findByTenantIdAndStatusOrderByIdDesc(tenantId, ApprovalInstanceStatus.valueOf(normalizeInstanceStatus(status)), pageQuery.toPageable()));
         }
         return PageResult.of(instanceRepository.findByTenantIdOrderByIdDesc(tenantId, pageQuery.toPageable()));
+    }
+
+    private String normalizeInstanceStatus(String status) {
+        return switch (status.trim().toUpperCase()) {
+            case "PENDING", "IN_PROGRESS" -> "RUNNING";
+            case "PASSED" -> "APPROVED";
+            case "REFUSED" -> "REJECTED";
+            case "CANCELED" -> "WITHDRAWN";
+            default -> status.trim().toUpperCase();
+        };
     }
 
     @Transactional(readOnly = true)

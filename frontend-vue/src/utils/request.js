@@ -11,7 +11,7 @@ const service = axios.create({
 service.interceptors.request.use(
   (config) => {
     const token = getToken()
-    if (token) {
+    if (token && !(config.headers && config.headers.Authorization === '')) {
       config.headers['Authorization'] = 'Bearer ' + token
     }
     return config
@@ -90,6 +90,13 @@ service.interceptors.response.use(
     const originalConfig = error.config || {}
 
     if (status === 401) {
+      // 登录请求本身的 401 表示账号/密码/租户错误，应透传后端消息，不能提示“登录已过期”
+      const isLoginReq = originalConfig.url && (originalConfig.url.indexOf('/auth/login') >= 0 || originalConfig.url.indexOf('/auth/admin-login') >= 0)
+      if (isLoginReq) {
+        const lm = error.response && error.response.data && error.response.data.message
+        ElMessage.error(lm || '账号、密码或租户代码错误')
+        return Promise.reject(error)
+      }
       if (originalConfig.url && originalConfig.url.indexOf('/auth/refresh') >= 0) {
         ElMessage.error('登录已过期，请重新登录')
         clearAuth()

@@ -1,8 +1,8 @@
-<template>
+﻿<template>
   <el-container class="layout">
     <el-aside width="220px" class="aside">
-      <div class="logo">DMS 平台后台</div>
-      <el-menu :default-active="route.path" router background-color="#001529" text-color="#cfd8dc" active-text-color="#409eff">
+      <div class="logo"><DmsLogo :size="30" class="logo-mark" inverse /><span class="logo-sub">平台后台</span></div>
+      <el-menu :default-active="route.path" router background-color="var(--dms-sider-bg)" text-color="var(--dms-sider-text)" active-text-color="#ffffff">
         <el-sub-menu index="tenant">
           <template #title><el-icon><OfficeBuilding /></el-icon><span>租户管理</span></template>
           <el-menu-item index="/tenants/manufacturers">厂家租户</el-menu-item>
@@ -25,7 +25,17 @@
     </el-aside>
     <el-container>
       <el-header class="header">
-        <span class="title">{{ route.meta.title || '' }}</span>
+        <div class="title-wrap">
+          <span class="title">{{ route.meta.title || '' }}</span>
+          <div class="theme-tools">
+            <button v-for="item in themePresets" :key="item.key" type="button" class="theme-chip"
+              :class="{ active: currentPreset.key === item.key }" :title="item.name"
+              :style="{ '--chip': item.color }" @click="setThemePreset(item.key)" />
+            <el-button text circle :title="themeMode === 'dark' ? '切换浅色' : '切换深色'" @click="toggleThemeMode">
+              <el-icon><Moon v-if="themeMode === 'light'" /><Sunny v-else /></el-icon>
+            </el-button>
+          </div>
+        </div>
         <el-dropdown @command="onCommand">
           <span class="user"><el-icon><UserFilled /></el-icon> {{ auth.user?.name || auth.user?.username || '管理员' }}</span>
           <template #dropdown>
@@ -36,7 +46,7 @@
           </template>
         </el-dropdown>
       </el-header>
-      <el-main><router-view /></el-main>
+      <el-main class="main"><router-view /></el-main>
     </el-container>
   </el-container>
   <el-dialog v-model="pwdVisible" title="修改密码" width="420px">
@@ -57,14 +67,19 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/store/auth'
 import { logout as logoutApi, changePassword } from '@/api/auth'
+import { Moon, Sunny } from '@element-plus/icons-vue'
+import { THEME_PRESETS as themePresets, currentThemePreset as currentPreset, setPreset as setThemePreset, toggleMode as applyThemeMode, initTheme } from '../config/theme-runtime'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const pwdVisible = ref(false)
+initTheme()
 const pwdForm = reactive({ oldPassword: '', newPassword: '' })
+const themeMode = ref(document.documentElement.dataset.mode || 'light')
+function toggleThemeMode(){ applyThemeMode(); themeMode.value = document.documentElement.dataset.mode || 'light' }
 
-onMounted(() => { if (!auth.user) auth.fetchMe() })
+onMounted(() => { if (!auth.user && auth.hasValidToken && auth.hasValidToken()) auth.fetchMe() })
 
 function onCommand(cmd) {
   if (cmd === 'logout') {
@@ -84,11 +99,58 @@ async function submitPwd() {
 </script>
 
 <style scoped>
-.layout { height: 100vh; }
-.aside { background: #001529; overflow-y: auto; }
-.logo { color: #fff; font-size: 18px; font-weight: 600; line-height: 60px; text-align: center; }
-.aside :deep(.el-menu) { border-right: none; }
-.header { display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #eee; }
-.title { font-size: 16px; font-weight: 600; }
-.user { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.layout { height: 100vh; background: var(--dms-bg-page); }
+.aside {
+  background: linear-gradient(180deg,#243447 0%,#1f2d3d 100%);
+  border-right: 1px solid #1a2533;
+  overflow-y: auto;
+  box-shadow: none;
+}
+.logo {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #fff;
+  background: #1b2736;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  font-weight: 700;
+}
+.logo-mark {
+  min-width: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.logo-sub { font-size: 15px; color: #e5eaf1; }
+.aside :deep(.el-menu) { border-right: none; background: transparent; padding: 8px 6px; }
+.aside :deep(.el-menu-item), .aside :deep(.el-sub-menu__title) {
+  height: 42px;
+  margin: 2px 0;
+  border-radius: 3px;
+  color: #b8c4d3;
+  font-weight: 500;
+}
+.aside :deep(.el-menu-item:hover), .aside :deep(.el-sub-menu__title:hover) { background: rgba(255,255,255,.08); color: #fff; }
+.aside :deep(.el-menu-item.is-active) { color: #fff; background: var(--dms-color-primary); box-shadow: none; }
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid var(--dms-border-2);
+  box-shadow: none;
+  z-index: var(--dms-z-index-sticky);
+}
+.title-wrap { display: flex; align-items: center; gap: 16px; }
+.title { font-size: 16px; font-weight: 600; color: #1f2d3d; }
+.theme-tools { display: flex; align-items: center; gap: 5px; padding: 3px; border: 1px solid #dcdfe6; border-radius: 3px; background: #f5f7fa; }
+.theme-chip { width: 18px; height: 18px; border: 1px solid rgba(31,45,61,.15); border-radius: 2px; background: var(--chip); cursor: pointer; }
+.theme-chip.active { box-shadow: 0 0 0 1px #fff, 0 0 0 2px var(--chip); }
+.user { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; color: #606266; }
+.user:hover { color: var(--dms-color-primary); }
+.main { background: var(--dms-bg-page); padding: var(--dms-spacing-4); }
+:global(html[data-mode='dark']) .header { background: #111827; border-color: #243044; }
+:global(html[data-mode='dark']) .title { color: #f8fafc; }
 </style>

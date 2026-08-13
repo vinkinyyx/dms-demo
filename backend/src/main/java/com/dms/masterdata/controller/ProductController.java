@@ -67,6 +67,22 @@ public class ProductController {
                 throw new IllegalStateException(e);
             }
         }
+        if (request.getTaxRate() != null) {
+            java.math.BigDecimal tr = request.getTaxRate();
+            if (tr.signum() < 0 || tr.compareTo(java.math.BigDecimal.ONE) > 0) {
+                throw new BusinessException(ErrorCode.PARAM_INVALID, "taxRate must be between 0 and 1 (e.g. 0.13)");
+            }
+        }
+        if (request.getStatus() != null) {
+            String s = request.getStatus().toLowerCase();
+            if (!java.util.List.of("active", "disabled", "draft").contains(s)) {
+                throw new BusinessException(ErrorCode.PARAM_INVALID, "status must be one of: active, disabled, draft");
+            }
+            request.setStatus(s);
+        }
+        if (request.getProductType() != null && !request.getProductType().isBlank()) {
+            service.validateProductType(request.getProductType());
+        }
     }
 
     @PutMapping("/{id}")

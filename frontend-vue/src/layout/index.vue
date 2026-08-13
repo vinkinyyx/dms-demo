@@ -1,13 +1,13 @@
-<template>
+﻿<template>
   <el-container class="layout">
     <el-aside :width="collapsed ? '64px' : '230px'" class="sidebar">
       <div class="logo" @click="$router.push('/home')">
-        <span class="logo-icon">DMS</span>
+        <DmsLogo :size="30" class="logo-icon" inverse />
         <span v-show="!collapsed" class="logo-text">经销商管理</span>
       </div>
       <el-scrollbar class="menu-scroll">
         <el-menu :default-active="activeKey" :collapse="collapsed" router unique-opened
-          background-color="#001529" text-color="#c8d3e0" active-text-color="#fff">
+          background-color="var(--dms-sider-bg)" text-color="var(--dms-sider-text)" active-text-color="var(--dms-sider-text-active)">
           <el-menu-item index="/home">
             <el-icon><HomeFilled /></el-icon>
             <template #title>工作台首页</template>
@@ -32,6 +32,17 @@
         </el-icon>
         <span class="page-title">{{ currentTitle }}</span>
         <div class="spacer" />
+        <div class="theme-tools">
+          <button v-for="item in themePresets" :key="item.key" type="button" class="theme-chip"
+            :class="{ active: currentPreset.key === item.key }" :title="item.name"
+            :style="{ '--chip': item.color }" @click="setThemePreset(item.key)" />
+          <el-button text circle :title="themeMode === 'dark' ? '切换浅色' : '切换深色'" @click="toggleThemeMode">
+            <el-icon><Moon v-if="themeMode === 'light'" /><Sunny v-else /></el-icon>
+          </el-button>
+        </div>
+        <el-badge :value="unread" :hidden="!unread" class="bell-badge" @click="goNotifications">
+          <el-icon class="bell-icon"><Bell /></el-icon>
+        </el-badge>
         <el-dropdown @command="onCommand">
           <span class="user-info">
             <el-icon><UserFilled /></el-icon>
@@ -41,6 +52,8 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item disabled>{{ userTypeLabel }}</el-dropdown-item>
+              <el-dropdown-item command="profile">个人设置</el-dropdown-item>
+              <el-dropdown-item command="notifications">消息中心</el-dropdown-item>
               <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -60,23 +73,33 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import { MENU_GROUPS } from '@/config/menu'
+import { unreadCount } from '@/api/notification'
+import { Bell, Moon, Sunny } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { ensurePermissions } from '@/directives/has'
+import { THEME_PRESETS as themePresets, currentThemePreset as currentPreset, setPreset as setThemePreset, toggleMode as applyThemeMode, initTheme } from '@/config/theme-runtime'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const collapsed = ref(false)
+initTheme()
+const unread = ref(0)
+const themeMode = ref(document.documentElement.dataset.mode || 'light')
+function toggleThemeMode(){ applyThemeMode(); themeMode.value = document.documentElement.dataset.mode || 'light' }
+async function loadUnread(){ try { const r=await unreadCount(); unread.value=Number(r.data?.count||0) } catch(e){ unread.value=0 } }
+function goNotifications(){ router.push('/notifications') }
+setInterval(loadUnread, 60000)
 const permissionsLoaded = ref(false)
 
 onMounted(async () => {
   await ensurePermissions()
+  await loadUnread()
   permissionsLoaded.value = true
 })
 
-// === D13: 按用户权限过滤菜单（菜单本身的 permissionCode 控制可见性） ===
 import { getPermissions } from '@/utils/auth'
 function permSet() {
   const out = new Set()
@@ -90,7 +113,7 @@ function permSet() {
   return out
 }
 function menuVisible(item) {
-  if (!item.permissionCode) return true // 未配 permissionCode 的菜单默认可见（向后兼容）
+  if (!item.permissionCode) return true
   return permSet().has(item.permissionCode)
 }
 
@@ -117,6 +140,8 @@ const currentTitle = computed(() => {
 })
 
 function onCommand(cmd) {
+  if (cmd === 'notifications') { router.push('/notifications'); return }
+  if (cmd === 'profile') { ElMessage.info('个人设置将在后续版本开放'); return }
   if (cmd === 'logout') {
     ElMessageBox.confirm('确认退出登录？', '提示', { type: 'warning' })
       .then(async () => {
@@ -129,24 +154,95 @@ function onCommand(cmd) {
 </script>
 
 <style scoped lang="scss">
-.layout { height: 100vh; }
-.sidebar { background: #001529; transition: width .2s; overflow: hidden; }
+.layout { height: 100vh; background: var(--dms-bg-page); }
+.sidebar {
+  background: linear-gradient(180deg,#243447 0%,#1f2d3d 100%);
+  border-right: 1px solid #1a2533;
+  transition: width var(--dms-motion-duration-medium) var(--dms-motion-ease-out);
+  overflow: hidden;
+  box-shadow: none;
+}
 .logo {
-  height: 50px; display: flex; align-items: center; gap: 10px; padding: 0 18px;
-  color: #fff; cursor: pointer; background: #000c1c;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: var(--dms-spacing-2);
+  padding: 0 var(--dms-spacing-5);
+  color: #fff;
+  cursor: pointer;
+  background: #1b2736;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  font-family: var(--dms-font-family-number);
 }
-.logo-icon { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
-.logo-text { font-size: 15px; white-space: nowrap; font-weight: 600; }
-.menu-scroll { height: calc(100vh - 50px); }
-.el-menu { border-right: none; }
+.logo-icon {
+  min-width: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.logo-text { font-size: var(--dms-font-size-sm); white-space: nowrap; font-weight: var(--dms-font-weight-semibold); color: #e5eaf1; }
+.menu-scroll { height: calc(100vh - 56px); }
+:deep(.el-menu) {
+  border-right: none;
+  background: transparent;
+  padding: 8px 6px;
+}
+:deep(.el-menu-item), :deep(.el-sub-menu__title) {
+  height: 42px;
+  margin: 2px 0;
+  border-radius: 3px;
+  color: #b8c4d3;
+  font-weight: 500;
+}
+:deep(.el-menu-item:hover), :deep(.el-sub-menu__title:hover) {
+  background: rgba(255,255,255,.08);
+  color: #fff;
+}
+:deep(.el-menu-item.is-active) {
+  color: #fff;
+  background: var(--dms-color-primary);
+  box-shadow: none;
+}
+:deep(.el-menu-item.is-active .el-icon), :deep(.el-menu-item.is-active) { color: #fff; }
+:deep(.el-sub-menu .el-menu) { background: rgba(0,0,0,.12); padding: 4px; }
+:deep(.el-sub-menu .el-menu-item) { min-width: auto; height: 38px; }
 .topbar {
-  display: flex; align-items: center; gap: 14px; background: #fff;
-  border-bottom: 1px solid #e4e7ed; padding: 0 20px; height: 56px;
+  display: flex;
+  align-items: center;
+  gap: var(--dms-spacing-3);
+  background: #fff;
+  border-bottom: 1px solid var(--dms-border-2);
+  padding: 0 var(--dms-spacing-5);
+  height: 56px;
+  box-shadow: none;
+  z-index: var(--dms-z-index-sticky);
 }
-.collapse-btn { font-size: 20px; cursor: pointer; color: #666; }
-.page-title { font-size: 16px; font-weight: 600; }
+.collapse-btn { font-size: 20px; cursor: pointer; color: #606266; transition: color var(--dms-motion-duration-fast) var(--dms-motion-ease-out); }
+.collapse-btn:hover { color: var(--dms-color-primary); }
+.page-title { font-size: var(--dms-font-size-md); font-weight: var(--dms-font-weight-semibold); color: #1f2d3d; }
 .spacer { flex: 1; }
-.user-info { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #333; outline: none; }
-.main { background: #f5f7fa; padding: 16px; }
+.theme-tools {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px;
+  border: 1px solid #dcdfe6;
+  border-radius: 3px;
+  background: #f5f7fa;
+}
+.theme-chip {
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(31,45,61,.15);
+  border-radius: 2px;
+  background: var(--chip);
+  cursor: pointer;
+}
+.theme-chip:hover { filter: brightness(.96); }
+.theme-chip.active { box-shadow: 0 0 0 1px #fff, 0 0 0 2px var(--chip); }
+.bell-badge{cursor:pointer;margin-right:12px}.bell-icon{font-size:20px;color:#606266}.bell-icon:hover{color:var(--dms-color-primary)}.user-info { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #606266; outline: none; }
+.user-info:hover { color: var(--dms-color-primary); }
+.main { background: var(--dms-bg-page); padding: var(--dms-padding-page); }
+:global(html[data-mode='dark']) .topbar { background: #111827; border-color: #243044; }
+:global(html[data-mode='dark']) .page-title { color: #f8fafc; }
 </style>
-

@@ -131,8 +131,8 @@ onMounted(loadPage)
 </script>
 
 <style scoped>
-.tenant-config-page { background: #fff; border-radius: 4px; padding: 16px; box-shadow: 0 1px 3px rgb(0 0 0 / .1); }
-.panel-title { margin-bottom: 16px; border-bottom: 1px solid #e4e7ed; padding-bottom: 8px; font-size: 1rem; color: #6379bb; font-weight: 500; }
+.tenant-config-page { background: var(--dms-bg-container); border-radius: 4px; padding: 16px; box-shadow: 0 1px 3px rgb(0 0 0 / .1); }
+.panel-title { margin-bottom: 16px; border-bottom: 1px solid var(--dms-border-1); padding-bottom: 8px; font-size: 1rem; color: var(--dms-color-primary); font-weight: 500; }
 .page-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
 .fixed-tip { margin-bottom: 12px; }
 .spacer { flex: 1; }

@@ -76,21 +76,21 @@ onMounted(async () => {
 <style scoped>
 .loading, .empty { padding: 40px 16px; text-align: center; }
 .detail-body { padding-bottom: 20px; }
-.status-bar { padding: 16px 20px; color: #fff; }
+.status-bar { padding: 16px 20px; color: var(--dms-text-inverse); }
 .status-bar .st-text { font-size: 18px; font-weight: 600; }
 .status-bar .st-code { font-size: 13px; opacity: .9; margin-top: 4px; }
-.st-draft     { background: #909399; }
-.st-submitted { background: #E6A23C; }
+.st-draft     { background: var(--dms-text-4); }
+.st-submitted { background: var(--dms-color-warning); }
 .st-approved,
 .st-completed,
-.st-active    { background: #67C23A; }
+.st-active    { background: var(--dms-color-success); }
 .st-rejected,
-.st-cancelled { background: #F56C6C; }
+.st-cancelled { background: var(--dms-color-danger); }
 .st-shipping,
 .st-receiving,
 .st-partial_received,
 .st-partial_shipped,
-.st-partial_cancelled { background: #1989fa; }
+.st-partial_cancelled { background: var(--dms-color-primary); }
 .total-title { font-weight: 600; }
-.total-value { color: #ee0a24; font-weight: 700; }
+.total-value { color: var(--dms-color-danger); font-weight: 700; }
 </style>

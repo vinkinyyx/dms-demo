@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="sales-out-edit">
     <div class="page-toolbar">
       <el-button @click="$router.back()"><el-icon><ArrowLeft /></el-icon>返回</el-button>
@@ -19,9 +19,9 @@
         <el-descriptions-item label="发货仓库">{{ salesOut.warehouseName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="来源订单">{{ salesOut.sourceOrderCode || (salesOut.sourceOrder?.code) || '-' }}</el-descriptions-item>
         <el-descriptions-item label="状态"><el-tag :type="statusTagType(salesOut.status)" size="small">{{ statusText(salesOut.status) }}</el-tag></el-descriptions-item>
-        <el-descriptions-item label="????">{{ formatDateTime(salesOut.shippedAt) }}</el-descriptions-item>
-        <el-descriptions-item label="????">{{ formatDateTime(salesOut.createdAt) }}</el-descriptions-item>
-        <el-descriptions-item label="????">{{ formatDateTime(salesOut.updatedAt) }}</el-descriptions-item>
+        <el-descriptions-item label="发货时间">{{ formatDateTime(salesOut.shippedAt) }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ formatDateTime(salesOut.createdAt) }}</el-descriptions-item>
+        <el-descriptions-item label="更新时间">{{ formatDateTime(salesOut.updatedAt) }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="3">{{ salesOut.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
@@ -29,7 +29,7 @@
     <el-card v-if="salesOut.sourceOrder" shadow="never" style="margin-top:14px">
       <template #header>
         <el-icon><Tickets /></el-icon>关联销售订单
-        <span style="margin-left:12px;color:#909399;font-weight:normal">来源单据（不可编辑）</span>
+        <span style="margin-left:12px;color:var(--dms-text-4);font-weight:normal">来源单据（不可编辑）</span>
       </template>
       <el-descriptions :column="3" border size="small">
         <el-descriptions-item label="销售单号">{{ salesOut.sourceOrder.code || '-' }}</el-descriptions-item>
@@ -37,14 +37,14 @@
         <el-descriptions-item label="订单状态"><el-tag :type="statusTagType(salesOut.sourceOrder.status)" size="small">{{ statusText(salesOut.sourceOrder.status) }}</el-tag></el-descriptions-item>
         <el-descriptions-item label="经销商">{{ salesOut.sourceOrder.dealerName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="发货仓库">{{ salesOut.sourceOrder.warehouseName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="????">{{ formatDate(salesOut.sourceOrder.expectedDate) }}</el-descriptions-item>
+        <el-descriptions-item label="期望发货日期">{{ formatDate(salesOut.sourceOrder.expectedDate) }}</el-descriptions-item>
         <el-descriptions-item label="含税金额">{{ salesOut.sourceOrder.amountInclTax != null ? salesOut.sourceOrder.amountInclTax : '-' }}</el-descriptions-item>
         <el-descriptions-item label="税额">{{ salesOut.sourceOrder.taxAmount != null ? salesOut.sourceOrder.taxAmount : '-' }}</el-descriptions-item>
         <el-descriptions-item label="实付金额">{{ salesOut.sourceOrder.finalAmount != null ? salesOut.sourceOrder.finalAmount : '-' }}</el-descriptions-item>
         <el-descriptions-item label="下单人">{{ salesOut.sourceOrder.createdByName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="????">{{ formatDateTime(salesOut.sourceOrder.createdAt) }}</el-descriptions-item>
+        <el-descriptions-item label="下单时间">{{ formatDateTime(salesOut.sourceOrder.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="审批人">{{ salesOut.sourceOrder.approvedByName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="????" :span="2">{{ formatDateTime(salesOut.sourceOrder.approvedAt) }}</el-descriptions-item>
+        <el-descriptions-item label="审批时间" :span="2">{{ formatDateTime(salesOut.sourceOrder.approvedAt) }}</el-descriptions-item>
         <el-descriptions-item label="销售备注" :span="3">{{ salesOut.sourceOrder.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
@@ -52,7 +52,7 @@
     <el-card v-if="soLines.length > 0" shadow="never" style="margin-top:14px">
       <template #header>
         <el-icon><Goods /></el-icon>销售订单产品明细
-        <span style="margin-left:12px;color:#909399;font-weight:normal">订单原始数量与待发参考</span>
+        <span style="margin-left:12px;color:var(--dms-text-4);font-weight:normal">订单原始数量与待发参考</span>
       </template>
       <el-table :data="soLinesView" border size="small" style="width:100%">
         <el-table-column type="index" label="#" width="50" />
@@ -69,7 +69,7 @@
     <el-card shadow="never" style="margin-top:14px">
       <template #header>
         <el-icon><Box /></el-icon>发货子单列表
-        <span style="margin-left:12px;color:#909399;font-weight:normal">每次发货一张子单，独立保存/确认/取消；批次与序列号必须选择在库合格库存</span>
+        <span style="margin-left:12px;color:var(--dms-text-4);font-weight:normal">每次发货一张子单，独立保存/确认/取消；批次与序列号必须选择在库合格库存</span>
       </template>
       <el-empty v-if="!salesOut.batches || salesOut.batches.length === 0" description="暂无发货子单，请点击顶部 [创建发货单] 开始" />
 
@@ -77,9 +77,9 @@
         <div class="batch-head">
           <span class="batch-code">{{ batch.code }}</span>
           <el-tag :type="batchTagType(batch.status)" size="small" style="margin-left:8px">{{ batchStatusText(batch.status) }}</el-tag>
-          <span class="batch-meta">?? {{ formatDateTime(batch.createdAt) }}</span>
-          <span v-if="batch.confirmedAt" class="batch-meta">?? {{ formatDateTime(batch.confirmedAt) }} {{ batch.confirmedByName ? '('+batch.confirmedByName+')' : '' }}</span>
-          <span v-if="batch.cancelledAt" class="batch-meta">?? {{ formatDateTime(batch.cancelledAt) }} {{ batch.cancelReason ? '('+batch.cancelReason+')' : '' }}</span>
+          <span class="batch-meta">创建：{{ formatDateTime(batch.createdAt) }}</span>
+          <span v-if="batch.confirmedAt" class="batch-meta">确认：{{ formatDateTime(batch.confirmedAt) }} {{ batch.confirmedByName ? '('+batch.confirmedByName+')' : '' }}</span>
+          <span v-if="batch.cancelledAt" class="batch-meta">取消：{{ formatDateTime(batch.cancelledAt) }} {{ batch.cancelReason ? '('+batch.cancelReason+')' : '' }}</span>
         </div>
 
         <el-table :data="batch.lines || []" border size="small" style="width:100%">
@@ -116,10 +116,10 @@
             <template #default="{ row }">
               <template v-if="batch.status === 'DRAFT' && row.isSerialManaged">
                 <el-button v-if="row.stockBatchId" link type="primary" size="small" @click="openSerialDialog(row)">{{ row.serialNo ? '已选: ' + row.serialNo : '选择序列号' }}</el-button>
-                <span v-else style="color:#c0c4cc">请先选批次</span>
+                <span v-else style="color:var(--dms-text-placeholder)">请先选批次</span>
               </template>
               <span v-else-if="row.isSerialManaged" class="serial-preview">{{ row.serialNo || '-' }}</span>
-              <span v-else style="color:#c0c4cc">—</span>
+              <span v-else style="color:var(--dms-text-placeholder)">—</span>
             </template>
           </el-table-column>
           <el-table-column v-if="batch.status === 'DRAFT'" label="操作" width="80" fixed="right">
@@ -168,7 +168,7 @@
       <el-empty v-if="!availableSerials.length" description="该批次下无在库序列号" :image-size="60" />
       <el-radio-group v-else v-model="selectedSerialNo" style="width:100%">
         <div v-for="s in availableSerials" :key="s.id" style="margin-bottom:6px">
-          <el-radio :value="s.serialNo">{{ s.serialNo }} <span style="color:#909399;font-size:12px">{{ formatTime(s.receivedAt) }}</span></el-radio>
+          <el-radio :value="s.serialNo">{{ s.serialNo }} <span style="color:var(--dms-text-4);font-size:12px">{{ formatTime(s.receivedAt) }}</span></el-radio>
         </div>
       </el-radio-group>
       <template #footer>
@@ -196,7 +196,7 @@
         <el-table-column label="批次号" width="140" prop="batchNo" />
         <el-table-column label="序列号" width="180" prop="serialNo" />
         <el-table-column label="发货数量" width="100" prop="qty" />
-        <el-table-column label="????" width="160"><template #default="{ row }">{{ formatDateTime(row.confirmedAt) }}</template></el-table-column>
+        <el-table-column label="发货时间" width="160"><template #default="{ row }">{{ formatDateTime(row.confirmedAt) }}</template></el-table-column>
         <el-table-column label="发货人" width="120" prop="confirmedByName" />
       </el-table>
       <el-empty v-if="!confirmedBatchLines.length" description="暂无发货记录" :image-size="60" />
@@ -205,7 +205,7 @@
     <el-card shadow="never" style="margin-top:14px">
       <template #header><el-icon><Tickets /></el-icon>操作记录</template>
       <el-table :data="opLogs" border size="small" style="width:100%">
-        <el-table-column label="??" width="170"><template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template></el-table-column>
+        <el-table-column label="操作时间" width="170"><template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template></el-table-column>
         <el-table-column label="操作人" width="120" prop="operatorName" />
         <el-table-column label="操作" width="120" prop="action" />
         <el-table-column label="备注" prop="remark" />
@@ -538,10 +538,10 @@ async function submitCancelRemaining() {
 <style scoped>
 .page-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
 .page-toolbar .spacer { flex: 1; }
-.batch-card { border: 1px solid #ebeef5; border-radius: 6px; padding: 10px; margin-top: 12px; }
+.batch-card { border: 1px solid var(--dms-border-2); border-radius: 6px; padding: 10px; margin-top: 12px; }
 .batch-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-.batch-code { font-weight: 600; font-size: 15px; color: #303133; }
-.batch-meta { color: #909399; font-size: 12px; }
+.batch-code { font-weight: 600; font-size: 15px; color: var(--dms-text-2); }
+.batch-meta { color: var(--dms-text-4); font-size: 12px; }
 .batch-actions { margin-top: 10px; display: flex; gap: 8px; }
-.serial-preview { font-size: 12px; color: #606266; white-space: pre-wrap; line-height: 1.4; }
+.serial-preview { font-size: 12px; color: var(--dms-text-3); white-space: pre-wrap; line-height: 1.4; }
 </style>

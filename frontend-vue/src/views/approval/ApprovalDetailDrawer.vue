@@ -14,6 +14,23 @@
           <el-descriptions-item label="发起时间">{{ formatTime(instance.startedAt) }}</el-descriptions-item>
           <el-descriptions-item label="完成时间">{{ formatTime(instance.finishedAt) }}</el-descriptions-item>
         </el-descriptions>
+        <div class="block" v-if="summary.header && Object.keys(summary.header).length">
+          <div class="section-title">单据摘要</div>
+          <el-descriptions :column="2" border size="small">
+            <el-descriptions-item v-for="(v,k) in summary.header" :key="k" :label="k">{{ formatVal(v) }}</el-descriptions-item>
+          </el-descriptions>
+        </div>
+        <div class="block" v-if="summary.items && summary.items.length">
+          <div class="section-title">产品明细</div>
+          <el-table :data="summary.items" size="small" border>
+            <el-table-column prop="productCode" label="编码" width="120" />
+            <el-table-column prop="productName" label="产品" min-width="160" />
+            <el-table-column prop="batchNo" label="批号/序列号" width="140" />
+            <el-table-column prop="qty" label="数量" width="80" />
+            <el-table-column prop="unitPrice" label="单价" width="100" />
+            <el-table-column prop="subtotal" label="小计" width="100" />
+          </el-table>
+        </div>
         <div class="block" v-if="isContract && contractBusiness">
           <div class="section-title">业务信息</div>
           <el-descriptions :column="2" border size="small">
@@ -137,6 +154,7 @@ const records = computed(() => detail.value ? detail.value.records || [] : [])
 const isContract = computed(() => instance.value && instance.value.businessType === 'CONTRACT')
 const contractBusiness = computed(() => instance.value ? instance.value.businessSnapshot || {} : {})
 const contractVisibleFields = ref([])
+const summary = ref({})
 async function loadContractFields() {
   contractVisibleFields.value = []
   if (isContract.value && instance.value.businessId) {
@@ -170,7 +188,9 @@ async function load() {
   try {
     const res = await getInstance(props.instanceId)
     detail.value = res.data
-      await loadContractFields()
+    summary.value = {}
+    try { const sm = await request({ url: '/api/approval/instances/' + props.instanceId + '/summary' }); summary.value = sm.data || {} } catch (e) {}
+    await loadContractFields()
   } finally {
     loading.value = false
   }
@@ -179,6 +199,7 @@ async function load() {
 watch(() => [props.modelValue, props.instanceId], ([v]) => { if (v) load() }, { immediate: true })
 
 function businessLabel(t) { return BUSINESS_LABELS[t] || t || '-' }
+function formatVal(v){ return [null,undefined,''].includes(v) ? '-' : String(v) }
 
 const ACTION_LABELS = {
   START: '发起申请', SUBMIT: '提交', APPROVE: '同意', REJECT: '驳回',
@@ -284,6 +305,6 @@ function onTerminate() {
 .section-title { font-weight: 600; margin-bottom: 8px; }
 .task-alert { margin-bottom: 8px; }
 .task-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.muted { color: #909399; font-size: 12px; margin-top: 2px; }
+.muted { color: var(--dms-text-4); font-size: 12px; margin-top: 2px; }
 .record-title { display: flex; align-items: center; gap: 8px; }
 </style>

@@ -1,0 +1,72 @@
+/* ===== Vant 4 主题变量覆盖（CSS 变量，运行期） ===== */
+/* 移动端 H5 100% 复用 DMS 语义令牌；颜色/圆角/字体与 PC 保持一致 */
+
+html:root {
+  --van-primary-color: var(--dms-color-primary);
+  --van-primary-color-opacity: rgba(22, 119, 255, 0.1);
+  --van-success-color: var(--dms-color-success);
+  --van-success-color-opacity: rgba(82, 196, 26, 0.1);
+  --van-warning-color: var(--dms-color-warning);
+  --van-warning-color-opacity: rgba(250, 173, 20, 0.1);
+  --van-danger-color: var(--dms-color-danger);
+  --van-danger-color-opacity: rgba(255, 77, 79, 0.1);
+
+  --van-text-color: var(--dms-text-2);
+  --van-text-color-2: var(--dms-text-3);
+  --van-text-color-3: var(--dms-text-4);
+  --van-text-link-color: var(--dms-link-color);
+
+  --van-background: var(--dms-bg-page);
+  --van-background-2: var(--dms-bg-container);
+  --van-background-3: var(--dms-gray-50);
+  --van-cell-background: var(--dms-bg-container);
+  --van-active-color: var(--dms-bg-hover);
+
+  --van-border-color: var(--dms-border-1);
+  --van-border-color-light: var(--dms-border-2);
+  --van-border-radius-sm: var(--dms-radius-sm);
+  --van-border-radius-md: var(--dms-radius-base);
+  --van-border-radius-lg: var(--dms-radius-lg);
+  --van-border-radius-max: var(--dms-radius-pill);
+
+  --van-font-family: var(--dms-font-family);
+  --van-font-size-xs: var(--dms-font-size-xs);
+  --van-font-size-sm: var(--dms-font-size-sm);
+  --van-font-size-md: var(--dms-mobile-font-size-base);
+  --van-font-size-lg: var(--dms-font-size-md);
+
+  --van-button-primary-background: var(--dms-color-primary);
+  --van-button-primary-border-color: var(--dms-color-primary);
+  --van-button-default-border-color: var(--dms-border-1);
+  --van-button-border-radius: var(--dms-radius-base);
+  --van-button-default-height: var(--dms-mobile-button-height);
+  --van-button-small-height: var(--dms-mobile-button-height-sm);
+
+  --van-nav-bar-background: var(--dms-bg-container);
+  --van-nav-bar-arrow-color: var(--dms-color-primary);
+  --van-nav-bar-text-color: var(--dms-color-primary);
+  --van-nav-bar-title-text-color: var(--dms-text-1);
+  --van-nav-bar-height: var(--dms-mobile-navbar-height-safe);
+
+  --van-tabbar-background: var(--dms-bg-container);
+  --van-tabbar-item-active-color: var(--dms-color-primary);
+  --van-tabbar-item-text-color: var(--dms-text-4);
+  --van-tabbar-height: var(--dms-mobile-tabbar-height-safe);
+  --van-tab-active-text-color: var(--dms-color-primary);
+  --van-tab-active-line-color: var(--dms-color-primary);
+
+  --van-cell-vertical-padding: var(--dms-spacing-3);
+  --van-cell-horizontal-padding: var(--dms-spacing-4);
+  --van-card-padding: var(--dms-spacing-3);
+  --van-popup-background: var(--dms-bg-elevated);
+  --van-popup-border-radius: var(--dms-radius-lg);
+  --van-dialog-border-radius: var(--dms-radius-lg);
+  --van-toast-background: rgba(31, 35, 41, 0.9);
+  --van-overflow-shadow: var(--dms-shadow-sm);
+}
+
+/* 移动端触摸反馈：移除 iOS 默认灰色高亮 */
+.van-button,
+.van-cell,
+.van-tabbar-item,
+.van-tabs__nav { -webkit-tap-highlight-color: transparent; }

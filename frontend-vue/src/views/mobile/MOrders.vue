@@ -78,6 +78,6 @@ function onSearch() {
 </script>
 
 <style scoped>
-.amt { color: #ee0a24; font-weight: 600; }
+.amt { color: var(--dms-color-danger); font-weight: 600; }
 .fab-wrap { position: fixed; right: 16px; bottom: 80px; z-index: 10; }
 </style>

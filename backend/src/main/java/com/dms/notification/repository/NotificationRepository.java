@@ -19,6 +19,21 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     Page<Notification> findByUserIdAndIsRead(Long userId, Boolean isRead, Pageable pageable);
 
+    Page<Notification> findByUserIdAndRefType(Long userId, String refType, Pageable pageable);
+
+    Page<Notification> findByUserIdAndIsReadAndRefType(Long userId, Boolean isRead, String refType, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("select count(n) from Notification n where n.userId = :userId and n.isRead = false")
+    long countUnread(@org.springframework.data.repository.query.Param("userId") Long userId);
+
+    @Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Notification n SET n.isRead = true, n.updatedAt = CURRENT_TIMESTAMP WHERE n.userId = :userId AND n.refType = :refType AND n.isRead = false")
+    int markAllReadByType(@org.springframework.data.repository.query.Param("userId") Long userId, @org.springframework.data.repository.query.Param("refType") String refType);
+
+    @Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM Notification n WHERE n.updatedAt < :before")
+    int deleteOldNotifications(@org.springframework.data.repository.query.Param("before") java.time.OffsetDateTime before);
+
     @Modifying
     @Query("UPDATE Notification n SET n.isRead = true, n.updatedAt = CURRENT_TIMESTAMP WHERE n.userId = :userId AND n.isRead = false")
     int markAllRead(@Param("userId") Long userId);

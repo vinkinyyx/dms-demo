@@ -112,6 +112,6 @@ onMounted(async () => { await loadTenants(); await loadList() })
 
 <style scoped>
 .tenant-admins { display: flex; flex-direction: column; gap: 12px; }
-.muted { color: #909399; font-size: 12px; }
+.muted { color: var(--dms-text-4); font-size: 12px; }
 .pager { margin-top: 16px; justify-content: flex-end; }
 </style>

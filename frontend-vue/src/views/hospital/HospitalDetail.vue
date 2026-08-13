@@ -95,5 +95,5 @@ onMounted(() => { loadInfo(); loadSurgery() })
 .hd-head { margin-bottom: 12px; }
 .hd-title { font-size: 18px; font-weight: 600; margin-left: 8px; }
 .hd-side .side-row { display: flex; padding: 6px 0; font-size: 14px; }
-.hd-side .lbl { width: 100px; color: #909399; }
+.hd-side .lbl { width: 100px; color: var(--dms-text-4); }
 </style>

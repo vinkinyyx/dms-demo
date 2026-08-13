@@ -9,6 +9,7 @@ package com.dms.inventory.controller;
 
 import com.dms.common.ApiResponse;
 import com.dms.common.util.TenantContext;
+import com.dms.common.util.PagingUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
@@ -60,7 +61,7 @@ public class InventoryListController {
     private ApiResponse<Map<String, Object>> listGeneric(String table, int page, int size,
                                                            String columns, List<String> jsonKeys, List<String> sqlColumns) {
         UUID tid = TenantContext.getTenantId();
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
         try {
             var qCnt = em.createNativeQuery("SELECT COUNT(*) FROM " + table + " WHERE tenant_id = ?1");
             qCnt.setParameter(1, tid);
@@ -70,7 +71,7 @@ public class InventoryListController {
                     "SELECT " + columns + " FROM " + table +
                     " WHERE tenant_id = ?1 " +
                     " ORDER BY updated_at DESC NULLS LAST, id DESC LIMIT ?2 OFFSET ?3", Tuple.class);
-            q.setParameter(1, tid).setParameter(2, size).setParameter(3, offset);
+            q.setParameter(1, tid).setParameter(2, safeSize).setParameter(3, offset);
             @SuppressWarnings("unchecked")
             List<Tuple> rows = q.getResultList();
 
@@ -94,14 +95,14 @@ public class InventoryListController {
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("total", total);
             data.put("page", page);
-            data.put("size", size);
+            data.put("size", safeSize);
             data.put("list", list);
             return ApiResponse.ok(data);
         } catch (Exception e) {
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("total", 0L);
             data.put("page", page);
-            data.put("size", size);
+            data.put("size", safeSize);
             data.put("list", Collections.emptyList());
             data.put("note", table + " 加载失败：" + e.getMessage());
             return ApiResponse.ok(data);

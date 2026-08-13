@@ -9,6 +9,7 @@ package com.dms.execution.controller;
 
 import com.dms.common.ApiResponse;
 import com.dms.common.util.TenantContext;
+import com.dms.common.util.PagingUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +40,7 @@ public class BizDocListController {
             @RequestParam(required = false) Long sourceOrderId,
             @RequestParam(required = false) String status) {
         UUID tid = TenantContext.getTenantId();
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
 
         StringBuilder where = new StringBuilder("WHERE so.tenant_id = ?1");
         List<Object> params = new ArrayList<>();
@@ -68,7 +69,7 @@ public class BizDocListController {
                 " ORDER BY so.updated_at DESC NULLS LAST, so.id DESC LIMIT ?" + idx + " OFFSET ?" + (idx + 1);
         var q = em.createNativeQuery(sql, Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
-        q.setParameter(idx, size);
+        q.setParameter(idx, safeSize);
         q.setParameter(idx + 1, offset);
 
         @SuppressWarnings("unchecked")
@@ -99,7 +100,7 @@ public class BizDocListController {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("total", total);
         data.put("page", page);
-        data.put("size", size);
+        data.put("size", safeSize);
         data.put("list", list);
         return ApiResponse.ok(data);
     }
@@ -117,7 +118,7 @@ public class BizDocListController {
             @RequestParam(required = false) Long sourcePoId,
             @RequestParam(required = false) String status) {
         UUID tid = TenantContext.getTenantId();
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
 
         StringBuilder where = new StringBuilder("WHERE r.tenant_id = ?1");
         List<Object> params = new ArrayList<>();
@@ -143,7 +144,7 @@ public class BizDocListController {
                 " ORDER BY r.updated_at DESC NULLS LAST, r.id DESC LIMIT ?" + idx + " OFFSET ?" + (idx + 1);
         var q = em.createNativeQuery(sql, Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
-        q.setParameter(idx, size);
+        q.setParameter(idx, safeSize);
         q.setParameter(idx + 1, offset);
 
         @SuppressWarnings("unchecked")
@@ -171,7 +172,7 @@ public class BizDocListController {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("total", total);
         data.put("page", page);
-        data.put("size", size);
+        data.put("size", safeSize);
         data.put("list", list);
         return ApiResponse.ok(data);
     }

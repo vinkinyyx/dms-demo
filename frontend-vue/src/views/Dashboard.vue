@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="dash">
     <!-- 筛选条 -->
     <el-card shadow="never" class="dash-filters">
@@ -172,14 +172,14 @@ function ensureChart(key) {
 function buildKpi() {
   const totalSales = Number(kpi.totalSales || 0)
   kpiCards.value = [
-    { key: 'totalSales', label: '总销售额', display: '¥ ' + totalSales.toLocaleString('zh-CN', { maximumFractionDigits: 0 }), color: '#409EFF' },
-    { key: 'totalOrders', label: '订单数', display: kpi.totalOrders || 0, color: '#67C23A' },
-    { key: 'activeDealers', label: '活跃经销商', display: kpi.activeDealers || 0, color: '#E6A23C' },
+    { key: 'totalSales', label: '总销售额', display: '¥ ' + totalSales.toLocaleString('zh-CN', { maximumFractionDigits: 0 }), color: '#1677ff' },
+    { key: 'totalOrders', label: '订单数', display: kpi.totalOrders || 0, color: '#52c41a' },
+    { key: 'activeDealers', label: '活跃经销商', display: kpi.activeDealers || 0, color: '#faad14' },
     { key: 'totalProducts', label: '产品数', display: kpi.totalProducts || 0, color: '#909399' },
-    { key: 'qualifiedStock', label: '合格库存', display: kpi.qualifiedStock || 0, color: '#67C23A' },
-    { key: 'pendingStock', label: '待检库存', display: kpi.pendingStock || 0, color: '#E6A23C' },
-    { key: 'defectiveStock', label: '不合格库存', display: kpi.defectiveStock || 0, color: '#F56C6C' },
-    { key: 'totalSurgeries', label: '报台数', display: kpi.totalSurgeries || 0, color: '#409EFF' }
+    { key: 'qualifiedStock', label: '合格库存', display: kpi.qualifiedStock || 0, color: '#52c41a' },
+    { key: 'pendingStock', label: '待检库存', display: kpi.pendingStock || 0, color: '#faad14' },
+    { key: 'defectiveStock', label: '不合格库存', display: kpi.defectiveStock || 0, color: '#ff4d4f' },
+    { key: 'totalSurgeries', label: '报台数', display: kpi.totalSurgeries || 0, color: '#1677ff' }
   ]
 }
 
@@ -214,12 +214,12 @@ function renderTrend(data) {
     grid: { left: 60, right: 20, top: 20, bottom: 40 },
     xAxis: { type: 'category', data: data.map(d => d.month) },
     yAxis: { type: 'value' },
-    series: [{ name: '销售额', type: 'line', smooth: true, areaStyle: {}, data: data.map(d => Number(d.amount || 0)), itemStyle: { color: '#409EFF' } }]
+    series: [{ name: '销售额', type: 'line', smooth: true, areaStyle: {}, data: data.map(d => Number(d.amount || 0)), itemStyle: { color: '#1677ff' } }]
   }, true)
 }
 function renderPie(data) {
   const c = ensureChart('pie'); if (!c) return
-  const COLORS = { QUALIFIED: '#67C23A', PENDING: '#E6A23C', DEFECTIVE: '#F56C6C' }
+  const COLORS = { QUALIFIED: '#52c41a', PENDING: '#faad14', DEFECTIVE: '#ff4d4f' }
   c.setOption({
     tooltip: { trigger: 'item' },
     legend: { bottom: 0 },
@@ -233,7 +233,7 @@ function renderTopDealers(data) {
     grid: { left: 100, right: 20, top: 10, bottom: 20 },
     xAxis: { type: 'value' },
     yAxis: { type: 'category', data: data.map(d => d.name).reverse() },
-    series: [{ type: 'bar', data: data.map(d => Number(d.value || 0)).reverse(), itemStyle: { color: '#409EFF' } }]
+    series: [{ type: 'bar', data: data.map(d => Number(d.value || 0)).reverse(), itemStyle: { color: '#1677ff' } }]
   }, true)
 }
 function renderFunnel(data) {
@@ -250,7 +250,7 @@ function renderTopHospitals(data) {
     grid: { left: 100, right: 20, top: 10, bottom: 20 },
     xAxis: { type: 'value' },
     yAxis: { type: 'category', data: data.map(d => d.name).reverse() },
-    series: [{ type: 'bar', data: data.map(d => Number(d.value || 0)).reverse(), itemStyle: { color: '#67C23A' } }]
+    series: [{ type: 'bar', data: data.map(d => Number(d.value || 0)).reverse(), itemStyle: { color: '#52c41a' } }]
   }, true)
 }
 function renderActivity(data) {
@@ -264,9 +264,9 @@ function renderActivity(data) {
     xAxis: { type: 'category', data: days },
     yAxis: { type: 'value' },
     series: [
-      { name: '订单', type: 'bar', data: mapBy(data.orders), itemStyle: { color: '#409EFF' } },
-      { name: '手术', type: 'bar', data: mapBy(data.surgeries), itemStyle: { color: '#67C23A' } },
-      { name: '入库', type: 'bar', data: mapBy(data.receipts), itemStyle: { color: '#E6A23C' } }
+      { name: '订单', type: 'bar', data: mapBy(data.orders), itemStyle: { color: '#1677ff' } },
+      { name: '手术', type: 'bar', data: mapBy(data.surgeries), itemStyle: { color: '#52c41a' } },
+      { name: '入库', type: 'bar', data: mapBy(data.receipts), itemStyle: { color: '#faad14' } }
     ]
   }, true)
 }
@@ -313,20 +313,20 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); Object.v
 .dash { padding: 0; }
 .dash-filters { margin-bottom: 12px; }
 .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.filter-label { color: #909399; font-size: 13px; }
+.filter-label { color: var(--dms-text-4); font-size: 13px; }
 .spacer { flex: 1; }
 .kpi-row { margin-bottom: 12px; }
 .kpi-card { text-align: center; }
 .kpi-v { font-size: 24px; font-weight: 700; }
-.kpi-l { font-size: 13px; color: #909399; margin-top: 6px; }
+.kpi-l { font-size: 13px; color: var(--dms-text-4); margin-top: 6px; }
 .kpi-d { font-size: 12px; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 2px; }
-.kpi-d.up { color: #67C23A; }
-.kpi-d.down { color: #F56C6C; }
+.kpi-d.up { color: var(--dms-color-success); }
+.kpi-d.down { color: var(--dms-color-danger); }
 .block-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-.block-wrap.is-edit .block-card { border: 2px dashed #409EFF; }
+.block-wrap.is-edit .block-card { border: 2px dashed var(--dms-color-primary); }
 .block-card { margin-bottom: 0; }
 .block-header { display: flex; align-items: center; gap: 8px; }
-.block-handle { cursor: move; color: #909399; }
+.block-handle { cursor: move; color: var(--dms-text-4); }
 .block-title { font-size: 14px; font-weight: 600; }
 .block-chart { width: 100%; height: 300px; }
 .restore-card { margin-top: 12px; }

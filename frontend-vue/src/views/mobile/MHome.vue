@@ -1,8 +1,11 @@
-<template>
+﻿<template>
   <div class="m-home">
     <div class="m-header">
-      <div class="hi">你好，{{ userStore.username }}</div>
-      <div class="date">{{ today }}</div>
+      <div class="m-header-row">
+        <DmsLogo :size="30" class="m-header-logo" inverse />
+        <div class="hi">你好，{{ userStore.username }}</div>
+        <div class="date">{{ today }}</div>
+      </div>
     </div>
 
     <div class="kpi-block">
@@ -86,10 +89,10 @@ const recentOrders = ref([])
 const loadingRecent = ref(false)
 
 const quicks = [
-  { key: 'order-create', label: '下销售订单', icon: 'orders-o', color: '#1989fa', to: '/mobile/orders/create' },
-  { key: 'surgery',      label: '填手术报台', icon: 'edit-o',    color: '#07c160', to: '/mobile/surgery-reports/create' },
-  { key: 'orders',       label: '我的订单',   icon: 'list-switching', color: '#ff976a', to: '/mobile/orders' },
-  { key: 'dashboard',    label: '我的业绩',   icon: 'chart-trending-o', color: '#2C4B8E', to: '/mobile/dashboard' }
+  { key: 'order-create', label: '下销售订单', icon: 'orders-o', color: '#1677ff', to: '/mobile/orders/create' },
+  { key: 'surgery',      label: '填手术报台', icon: 'edit-o',    color: '#52c41a', to: '/mobile/surgery-reports/create' },
+  { key: 'orders',       label: '我的订单',   icon: 'list-switching', color: '#fa8c16', to: '/mobile/orders' },
+  { key: 'dashboard',    label: '我的业绩',   icon: 'chart-trending-o', color: '#1677ff', to: '/mobile/dashboard' }
 ]
 
 function fmtAmount(v) {
@@ -114,16 +117,19 @@ load()
 </script>
 
 <style scoped>
-.m-header { background: linear-gradient(135deg, #2C4B8E, #1E3A5F); color: #fff; padding: 24px 20px 32px; }
+.m-header { background: linear-gradient(135deg, var(--dms-color-primary), var(--dms-blue-700)); color: var(--dms-text-inverse); padding: 24px 20px 32px; }
+.m-header-row { display: flex; align-items: center; gap: 12px; }
+.m-header-logo { filter: drop-shadow(0 2px 6px rgba(0,0,0,.22)); flex: 0 0 auto; }
+.m-header .hi { flex: 1; font-size: 20px; font-weight: 600; }
 .hi { font-size: 20px; font-weight: 600; }
 .date { opacity: .85; margin-top: 6px; font-size: 13px; }
-.kpi-block { background: #fff; margin: -16px 12px 12px; border-radius: 12px; padding: 14px 8px 6px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-.kpi-title { font-size: 14px; font-weight: 600; color: #323233; margin: 0 6px 8px; }
-.kpi-v { font-size: 22px; font-weight: 700; color: #2C4B8E; }
-.kpi-v.more { color: #1989fa; font-size: 14px; font-weight: 500; }
-.kpi-l { font-size: 12px; color: #969799; margin-top: 4px; }
-.quick-grid { margin: 0 8px; background: #fff; border-radius: 12px; }
-.quick-l { font-size: 12px; color: #646566; margin-top: 6px; }
-.sec-title { font-size: 15px; font-weight: 600; margin: 16px 16px 8px; color: #323233; }
-.amt { color: #ee0a24; font-weight: 600; font-size: 13px; }
+.kpi-block { background: var(--dms-bg-container); margin: -16px 12px 12px; border-radius: 12px; padding: 14px 8px 6px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.kpi-title { font-size: 14px; font-weight: 600; color: var(--dms-text-2); margin: 0 6px 8px; }
+.kpi-v { font-size: 22px; font-weight: 700; color: var(--dms-color-primary); }
+.kpi-v.more { color: var(--dms-color-primary); font-size: 14px; font-weight: 500; }
+.kpi-l { font-size: 12px; color: var(--dms-text-4); margin-top: 4px; }
+.quick-grid { margin: 0 8px; background: var(--dms-bg-container); border-radius: 12px; }
+.quick-l { font-size: 12px; color: var(--dms-text-3); margin-top: 6px; }
+.sec-title { font-size: 15px; font-weight: 600; margin: 16px 16px 8px; color: var(--dms-text-2); }
+.amt { color: var(--dms-color-danger); font-weight: 600; font-size: 13px; }
 </style>

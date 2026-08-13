@@ -1,15 +1,34 @@
-import { createApp } from 'vue'
+﻿import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import Vant from 'vant'
-import 'vant/lib/index.css'
+
 import App from './App.vue'
 import router from './router'
-import '@/styles/global.scss'
+
+/* DMS Design Token：Layer 1/2 必须在组件库 CSS 之前定义 */
+import '@/styles/tokens/base-light.scss'
+import '@/styles/tokens/semantic.scss'
+import '@/styles/tokens/base-dark.scss'
+import '@/styles/element/index.scss'
+
+/* 组件库原生样式 */
+import 'element-plus/dist/index.css'
+import 'vant/lib/index.css'
+
+/* 运行期 CSS 变量覆盖（必须在组件库 CSS 之后） */
+import '@/styles/element/runtime.scss'
+import '@/styles/vant/index.scss'
+
+/* 全局重置与业务样式 */
+import '@/styles/reset.scss'
+import '@/styles/app.scss'
+import '@/styles/enterprise.scss'
+
 import hasDirective from '@/directives/has'
+import { initTheme } from '@/config/theme-runtime'
 
 const app = createApp(App)
 
@@ -22,4 +41,5 @@ app.use(router)
 app.use(ElementPlus, { locale: zhCn })
 app.use(Vant)
 app.use(hasDirective)
+initTheme()
 app.mount('#app')

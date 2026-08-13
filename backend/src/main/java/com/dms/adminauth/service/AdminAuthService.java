@@ -12,6 +12,7 @@ import com.dms.adminauth.repository.PlatformAdminUserRepository;
 import com.dms.common.BusinessException;
 import com.dms.common.ErrorCode;
 import com.dms.common.util.TenantContext;
+import jakarta.persistence.EntityManager;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
@@ -38,31 +39,33 @@ public class AdminAuthService {
     private final AdminJwtService adminJwtService;
     private final PasswordEncoder passwordEncoder;
     private final RedissonClient redissonClient;
+    private final EntityManager em;
 
-    @Transactional
+    @org.springframework.transaction.annotation.Transactional
     public AdminLoginResponse login(AdminLoginRequest request, String clientIp) {
         PlatformAdminUser admin = adminUserRepository.findByUsername(request.getUsername()).orElse(null);
         if (admin == null) {
+            writePlatformLoginLog(null, clientIp, false, "用户名不存在");
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
         if (admin.getLockedUntil() != null && admin.getLockedUntil().isAfter(OffsetDateTime.now())) {
+            writePlatformLoginLog(admin, clientIp, false, "账号已锁定");
             throw new BusinessException(ErrorCode.FORBIDDEN, "账号已被锁定，请稍后再试");
         }
         if (!"active".equalsIgnoreCase(admin.getStatus())) {
+            writePlatformLoginLog(admin, clientIp, false, "账号已停用");
             throw new BusinessException(ErrorCode.FORBIDDEN, "账号已被停用");
         }
         if (!passwordEncoder.matches(request.getPassword(), admin.getPasswordHash())) {
             incrementFailCount(admin);
+            writePlatformLoginLog(admin, clientIp, false, "密码错误");
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
 
-        admin.setLoginFailCount(0);
-        admin.setLockedUntil(null);
-        admin.setLastLoginAt(OffsetDateTime.now());
-        admin.setLastLoginIp(clientIp);
-        admin.setUpdatedAt(OffsetDateTime.now());
-        adminUserRepository.save(admin);
+        OffsetDateTime now = OffsetDateTime.now();
+        adminUserRepository.resetLoginState(admin.getId(), clientIp, now);
 
+        writePlatformLoginLog(admin, clientIp, true, null);
         String access = adminJwtService.generateAccessToken(admin.getId(), admin.getUsername());
         String refresh = adminJwtService.generateRefreshToken(admin.getId(), admin.getUsername());
         log.info("平台后台管理员登录成功: username={}, ip={}", admin.getUsername(), clientIp);
@@ -74,6 +77,20 @@ public class AdminAuthService {
                 .mustChangePassword(Boolean.TRUE.equals(admin.getMustChangePassword()))
                 .user(toDTO(admin))
                 .build();
+    }
+
+
+    private void writePlatformLoginLog(PlatformAdminUser admin, String ip, boolean success, String reason) {
+        try {
+            var q = em.createNativeQuery("INSERT INTO user_login_logs (tenant_id, user_id, login_type, ip, user_agent, success, fail_reason, at_time) VALUES (NULL, ?1, 'PLATFORM', ?2, NULL, ?3, ?4, now())");
+            q.setParameter(1, admin == null ? null : admin.getId());
+            q.setParameter(2, ip);
+            q.setParameter(3, success);
+            q.setParameter(4, reason);
+            q.executeUpdate();
+        } catch (Exception ex) {
+            log.warn("平台登录日志写入失败: {}", ex.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)
@@ -156,14 +173,17 @@ public class AdminAuthService {
     }
 
     private void incrementFailCount(PlatformAdminUser admin) {
-        int next = (admin.getLoginFailCount() == null ? 0 : admin.getLoginFailCount()) + 1;
-        admin.setLoginFailCount(next);
-        if (next >= MAX_FAIL_COUNT) {
-            admin.setLockedUntil(OffsetDateTime.now().plusMinutes(LOCK_MINUTES));
-            log.warn("平台管理员 {} 连续登录失败 {} 次，锁定至 {}", admin.getUsername(), next, admin.getLockedUntil());
+        OffsetDateTime now = OffsetDateTime.now();
+        int updated = adminUserRepository.incrementLoginFailCount(
+                admin.getId(), MAX_FAIL_COUNT, now.plusMinutes(LOCK_MINUTES), now);
+        if (updated > 0) {
+            adminUserRepository.findById(admin.getId()).ifPresent(refreshed -> {
+                Integer failCount = refreshed.getLoginFailCount();
+                if (failCount != null && failCount >= MAX_FAIL_COUNT) {
+                    log.warn("Platform admin {} failed login {} times, locked until {}", refreshed.getUsername(), failCount, refreshed.getLockedUntil());
+                }
+            });
         }
-        admin.setUpdatedAt(OffsetDateTime.now());
-        adminUserRepository.save(admin);
     }
 
     private AdminUserDTO toDTO(PlatformAdminUser admin) {
@@ -175,3 +195,4 @@ public class AdminAuthService {
                 .build();
     }
 }
+

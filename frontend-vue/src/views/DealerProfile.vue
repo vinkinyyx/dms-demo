@@ -112,21 +112,21 @@ const signedPct = v => (Number(v || 0) >= 0 ? '+' : '') + fmtPct(v)
 const fmtPeriod = v => v ? String(v).slice(0, 4) + '-' + String(v).slice(4, 6) : '-'
 const fmtDate = v => v ? String(v).slice(0, 10) : '-'
 const clampPct = v => Math.min(100, Math.max(0, Math.round(Number(v || 0) * 100)))
-const rateColor = v => Number(v || 0) >= 1 ? '#67C23A' : Number(v || 0) >= 0.8 ? '#E6A23C' : '#F56C6C'
+const rateColor = v => Number(v || 0) >= 1 ? '#52c41a' : Number(v || 0) >= 0.8 ? '#faad14' : '#ff4d4f'
 const mom = (prev, actual) => prev ? (Number(actual || 0) - Number(prev || 0)) / Number(prev) : 0
 
 const summaryCards = computed(() => [
   { key: 'month', title: '本月销售目标达成', value: '¥ ' + fmtNum(kpi.monthActual, 2), sub: '目标 ¥' + fmtNum(kpi.monthTarget, 2) + ' / 差额 ¥' + fmtNum(kpi.monthGap, 2), percent: clampPct(kpi.monthAchievement), color: rateColor(kpi.monthAchievement) },
   { key: 'ytd', title: '年累计目标达成', value: '¥ ' + fmtNum(kpi.ytdActual, 2), sub: '年目标 ¥' + fmtNum(kpi.ytdTarget, 2) + ' / 剩余 ¥' + fmtNum(kpi.ytdGap, 2), percent: clampPct(kpi.ytdAchievement), color: rateColor(kpi.ytdAchievement) },
-  { key: 'mom', title: '环比上月', value: signedPct(kpi.momRate), sub: '上月 ¥' + fmtNum(kpi.prevActual, 2) + ' / 本月 ¥' + fmtNum(kpi.monthActual, 2), percent: Math.min(100, Math.abs(Number(kpi.momRate || 0) * 100)), color: Number(kpi.momRate || 0) >= 0 ? '#67C23A' : '#F56C6C' }
+  { key: 'mom', title: '环比上月', value: signedPct(kpi.momRate), sub: '上月 ¥' + fmtNum(kpi.prevActual, 2) + ' / 本月 ¥' + fmtNum(kpi.monthActual, 2), percent: Math.min(100, Math.abs(Number(kpi.momRate || 0) * 100)), color: Number(kpi.momRate || 0) >= 0 ? '#52c41a' : '#ff4d4f' }
 ])
 const miniCards = computed(() => [
-  { key: 'orders', value: kpi.monthOrders ?? 0, label: '本月订单数', sub: 'YTD ' + (kpi.ytdOrders ?? 0) + ' 单', color: '#409EFF' },
-  { key: 'rebate', value: '¥' + fmtNum(kpi.ytdRebate, 0), label: 'YTD净返利', sub: '按当前达成预提', color: '#67C23A' },
-  { key: 'return', value: '¥' + fmtNum(kpi.returnAmount, 0), label: 'YTD退货', sub: '退货率 ' + fmtPct(kpi.returnRate), color: '#E6A23C' },
-  { key: 'stock', value: fmtNum(kpi.inventoryQty, 0), label: '库存数量', sub: '库存金额 ¥' + fmtNum(kpi.inventoryAmount, 0), color: '#9b59b6' },
-  { key: 'sku', value: kpi.inventorySku ?? 0, label: '库存SKU', sub: '合格率 ' + fmtPct(kpi.qualifiedRate), color: '#16a085' },
-  { key: 'contracts', value: kpi.activeContracts ?? 0, label: '有效合同', sub: '90天到期 ' + (kpi.expiringContracts ?? 0), color: '#F56C6C' }
+  { key: 'orders', value: kpi.monthOrders ?? 0, label: '本月订单数', sub: 'YTD ' + (kpi.ytdOrders ?? 0) + ' 单', color: '#1677ff' },
+  { key: 'rebate', value: '¥' + fmtNum(kpi.ytdRebate, 0), label: 'YTD净返利', sub: '按当前达成预提', color: '#52c41a' },
+  { key: 'return', value: '¥' + fmtNum(kpi.returnAmount, 0), label: 'YTD退货', sub: '退货率 ' + fmtPct(kpi.returnRate), color: '#faad14' },
+  { key: 'stock', value: fmtNum(kpi.inventoryQty, 0), label: '库存数量', sub: '库存金额 ¥' + fmtNum(kpi.inventoryAmount, 0), color: '#722ed1' },
+  { key: 'sku', value: kpi.inventorySku ?? 0, label: '库存SKU', sub: '合格率 ' + fmtPct(kpi.qualifiedRate), color: '#13c2c2' },
+  { key: 'contracts', value: kpi.activeContracts ?? 0, label: '有效合同', sub: '90天到期 ' + (kpi.expiringContracts ?? 0), color: '#ff4d4f' }
 ])
 
 const tabCols = computed(() => {
@@ -224,8 +224,8 @@ function renderAch() {
     yAxis: [{ type: 'value', name: '金额' }, { type: 'value', name: '达成率', axisLabel: { formatter: '{value}%' }, max: 150 }],
     series: [
       { name: '目标', type: 'line', data: rows.map(x => Number(x.targetAmount || 0)), lineStyle: { type: 'dashed' } },
-      { name: '实际', type: 'bar', data: rows.map(x => Number(x.actualAmount || 0)), itemStyle: { color: '#409EFF' } },
-      { name: '达成率', type: 'line', yAxisIndex: 1, smooth: true, data: rows.map(x => Math.round(Number(x.achievementRate || 0) * 100)), itemStyle: { color: '#67C23A' } }
+      { name: '实际', type: 'bar', data: rows.map(x => Number(x.actualAmount || 0)), itemStyle: { color: '#1677ff' } },
+      { name: '达成率', type: 'line', yAxisIndex: 1, smooth: true, data: rows.map(x => Math.round(Number(x.achievementRate || 0) * 100)), itemStyle: { color: '#52c41a' } }
     ]
   })
   achChart.resize()
@@ -265,22 +265,22 @@ onBeforeUnmount(() => {
 .dp-title { font-size: 16px; font-weight: 600; }
 .spacer { flex: 1; }
 .dp-side { min-height: 420px; }
-.side-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; border-bottom: 1px dashed #ebeef5; gap: 10px; }
-.side-row .lbl { color: #909399; flex-shrink: 0; }
+.side-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; border-bottom: 1px dashed var(--dms-border-2); gap: 10px; }
+.side-row .lbl { color: var(--dms-text-4); flex-shrink: 0; }
 .side-row span:last-child { text-align: right; word-break: break-all; }
 .tab-pane { padding: 12px 0; }
 .kpi-big { padding: 14px 18px; }
-.kpi-b-title { font-size: 13px; color: #909399; margin-bottom: 6px; }
+.kpi-b-title { font-size: 13px; color: var(--dms-text-4); margin-bottom: 6px; }
 .kpi-b-v { font-size: 25px; font-weight: 700; line-height: 1.3; }
-.kpi-b-sub { font-size: 12px; color: #909399; margin: 6px 0 8px; }
-.kpi-card-sm { background: #fff; border: 1px solid #ebeef5; border-top: 3px solid; border-radius: 4px; padding: 12px 10px; text-align: center; min-height: 104px; }
+.kpi-b-sub { font-size: 12px; color: var(--dms-text-4); margin: 6px 0 8px; }
+.kpi-card-sm { background: var(--dms-bg-container); border: 1px solid var(--dms-border-2); border-top: 3px solid; border-radius: 4px; padding: 12px 10px; text-align: center; min-height: 104px; }
 .kpi-card-sm .kpi-v { font-size: 21px; font-weight: 700; }
-.kpi-card-sm .kpi-l { font-size: 12px; color: #909399; margin-top: 4px; }
-.kpi-card-sm .kpi-sub { font-size: 11px; color: #c0c4cc; margin-top: 3px; }
+.kpi-card-sm .kpi-l { font-size: 12px; color: var(--dms-text-4); margin-top: 4px; }
+.kpi-card-sm .kpi-sub { font-size: 11px; color: var(--dms-text-placeholder); margin-top: 3px; }
 .ach-chart { width: 100%; height: 300px; }
 .card-h { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.dp-tabs { background: #fff; padding: 0 12px; border-radius: 4px; margin-bottom: 10px; }
+.dp-tabs { background: var(--dms-bg-container); padding: 0 12px; border-radius: 4px; margin-bottom: 10px; }
 .dp-tabs :deep(.el-tabs__nav-wrap::after) { background: transparent; }
-.neg { color: #f56c6c !important; }
-.pos { color: #67c23a !important; }
+.neg { color: var(--dms-color-danger) !important; }
+.pos { color: var(--dms-color-success) !important; }
 </style>

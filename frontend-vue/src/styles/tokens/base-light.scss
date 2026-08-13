@@ -1,0 +1,69 @@
+/* ===== DMS Design Token - Layer 1: Base Palette (Light) ===== */
+/* 唯一色值来源，暗色模式/租户品牌仅覆盖本层 */
+
+html:root {
+  /* ---------- 主色（蓝色系） ---------- */
+  --dms-blue-50:  #e6f4ff;
+  --dms-blue-100: #bae0ff;
+  --dms-blue-200: #91caff;
+  --dms-blue-300: #69b1ff;
+  --dms-blue-400: #4096ff;
+  --dms-blue-500: #1677ff;
+  --dms-blue-600: #0958d9;
+  --dms-blue-700: #003eb3;
+  --dms-blue-800: #002c8c;
+  --dms-blue-900: #001d66;
+
+  /* ---------- 语义色 ---------- */
+  --dms-green-50:  #f6ffed;
+  --dms-green-100: #d9f7be;
+  --dms-green-500: #52c41a;
+  --dms-green-600: #389e0d;
+  --dms-green-700: #237804;
+
+  --dms-gold-50:  #fffbe6;
+  --dms-gold-100: #fff1b8;
+  --dms-gold-500: #faad14;
+  --dms-gold-600: #d48806;
+  --dms-gold-700: #ad6800;
+
+  --dms-red-50:  #fff2f0;
+  --dms-red-100: #ffccc7;
+  --dms-red-500: #ff4d4f;
+  --dms-red-600: #cf1322;
+  --dms-red-700: #a8071a;
+
+  /* ---------- 中性色 13 阶 ---------- */
+  --dms-gray-50:  #fafafa;
+  --dms-gray-100: #f5f7fa;
+  --dms-gray-200: #ebeef5;
+  --dms-gray-300: #e4e7ed;
+  --dms-gray-400: #c0c4cc;
+  --dms-gray-500: #909399;
+  --dms-gray-600: #606266;
+  --dms-gray-700: #303133;
+  --dms-gray-800: #1f2329;
+  --dms-gray-900: #0d0e10;
+
+  /* ---------- 辅助色 ---------- */
+  --dms-purple-50:  #f9f0ff;
+  --dms-purple-500: #722ed1;
+  --dms-cyan-50:    #e6fffb;
+  --dms-cyan-500:   #13c2c2;
+  --dms-magenta-50:  #fff0f6;
+  --dms-magenta-500: #eb2f96;
+  --dms-orange-50:   #fff7e6;
+  --dms-orange-500:  #fa8c16;
+
+  /* ---------- 图表色板（色盲友好） ---------- */
+  --dms-chart-1: #1677ff;
+  --dms-chart-2: #52c41a;
+  --dms-chart-3: #faad14;
+  --dms-chart-4: #ff4d4f;
+  --dms-chart-5: #722ed1;
+  --dms-chart-6: #13c2c2;
+  --dms-chart-7: #eb2f96;
+  --dms-chart-8: #fa8c16;
+  --dms-chart-up: #52c41a;
+  --dms-chart-down: #ff4d4f;
+}

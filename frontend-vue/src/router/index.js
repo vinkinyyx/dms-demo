@@ -40,7 +40,10 @@ const routes = [
       { path: 'approval/templates', name: 'ApprovalTemplates', component: () => import('@/views/approval/ApprovalTemplates.vue'), meta: { title: '审批流配置' } },
       { path: 'approval/delegations', name: 'ApprovalDelegations', component: () => import('@/views/approval/Delegations.vue'), meta: { title: '审批委托' } },
       { path: 'approval/admin', name: 'ApprovalAdmin', component: () => import('@/views/approval/ApprovalAdmin.vue'), meta: { title: '审批监控' } },
-      { path: 'email-logs', name: 'EmailLogs', component: () => import('@/views/EmailLogs.vue'), meta: { title: '邮件发送日志' } }
+      { path: 'email-logs', name: 'EmailLogs', component: () => import('@/views/EmailLogs.vue'), meta: { title: '邮件发送日志' } },
+      { path: 'notifications', name: 'Notifications', component: () => import('@/views/Notifications.vue'), meta: { title: '消息中心' } },
+      { path: 'login-logs', name: 'LoginLogs', component: () => import('@/views/LoginLogs.vue'), meta: { title: '登录日志' } },
+      { path: 'approvals/mine', name: 'MyApprovals', component: () => import('@/views/approval/TodoCenter.vue'), meta: { title: '我的审批' } }
     ]
   },
   { path: '/mobile/login', name: 'MLogin', component: () => import('@/views/mobile/MLogin.vue'), meta: { public: true, mobile: true } },
@@ -58,6 +61,9 @@ const routes = [
       { path: 'surgery-reports/:id', name: 'MSurgeryReportDetail', component: () => import('@/views/mobile/MSurgeryReportDetail.vue'), meta: { mobile: true, title: '报台详情' } },
       { path: 'surgery-reports/create', name: 'MSurgeryReportCreate', component: () => import('@/views/mobile/MSurgeryReportCreate.vue'), meta: { mobile: true, title: '手术植入报台' } },
       { path: 'dashboard', name: 'MDashboard', component: () => import('@/views/mobile/MDashboard.vue'), meta: { mobile: true, title: '我的业绩' } },
+      { path: 'approvals', name: 'MApprovals', component: () => import('@/views/mobile/MApprovals.vue'), meta: { mobile: true, title: '移动审批' } },
+      { path: 'approvals/:id', name: 'MApprovalDetail', component: () => import('@/views/mobile/MApprovalDetail.vue'), meta: { mobile: true, title: '审批详情' } },
+      { path: 'messages', name: 'MMessages', component: () => import('@/views/mobile/MMessages.vue'), meta: { mobile: true, title: '消息中心' } },
       { path: 'profile', name: 'MProfile', component: () => import('@/views/mobile/MProfile.vue'), meta: { mobile: true, title: '我的' } }
     ]
   },

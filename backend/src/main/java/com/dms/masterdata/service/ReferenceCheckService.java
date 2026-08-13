@@ -85,8 +85,8 @@ public class ReferenceCheckService {
         refs.put("库存",       countByCol("inventory", "warehouse_id", warehouseId, tid));
         refs.put("收货入库",   countByCol("receipts", "warehouse_id", warehouseId, tid));
         refs.put("销售出库",   countByCol("sales_outs", "warehouse_id", warehouseId, tid));
-        refs.put("调拨(源)",   countByCol("stock_moves", "from_warehouse_id", warehouseId, tid));
-        refs.put("调拨(目)",   countByCol("stock_moves", "to_warehouse_id", warehouseId, tid));
+        refs.put("调拨(源)",   countByCol("stock_moves", "src_warehouse_id", warehouseId, tid));
+        refs.put("调拨(目)",   countByCol("stock_moves", "dst_warehouse_id", warehouseId, tid));
         return refs;
     }
 

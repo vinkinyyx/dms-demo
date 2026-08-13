@@ -44,6 +44,11 @@
         v-model="form.remark" label="备注" type="textarea" rows="2" autosize
         placeholder="选填"
       />
+      <van-field label="现场照片" readonly>
+        <template #input>
+          <van-uploader v-model="attachments" :after-read="afterRead" :before-delete="beforeDelete" multiple accept="image/*" capture="camera" max-count="9" />
+        </template>
+      </van-field>
     </van-cell-group>
 
     <van-cell-group inset title="产品明细" style="margin-top:10px">
@@ -64,9 +69,13 @@
           v-if="line.productId"
           v-model="line.batchNo"
           :label="line.isSerialManaged ? '序列号' : '批号'"
-          :placeholder="line.isSerialManaged ? '请输入序列号' : '请输入批号'"
+          :placeholder="line.isSerialManaged ? '请输入或扫码序列号' : '请输入或扫码批号'"
           required
-        />
+        >
+          <template #button v-if="line.isSerialManaged">
+            <van-button size="small" type="primary" plain icon="scan" @click="scanLine(idx)">扫码</van-button>
+          </template>
+        </van-field>
         <van-field
           v-if="line.productId"
           v-model.number="line.qty" type="digit" label="数量"
@@ -131,6 +140,7 @@ import { useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
 import { lookup } from '@/api/crud'
 import request from '@/utils/request'
+import { getToken } from '@/utils/auth'
 
 const router = useRouter()
 
@@ -141,8 +151,12 @@ const form = reactive({
   surgeryDate: new Date().toISOString().split('T')[0],
   patientInfo: '',
   doctorName: '',
-  remark: ''
+  remark: '',
+  attachmentFileId: null,
+  attachmentName: '',
+  attachmentUrl: ''
 })
+const attachments = ref([])
 const lines = ref([{ productId: '', productName: '', spec: '', batchNo: '', qty: 1, isSerialManaged: false }])
 
 const dealerOptions = ref([])
@@ -179,6 +193,43 @@ const showHospitalPicker = ref(false)
 const showWarehousePicker = ref(false)
 const openDatePicker = ref(false)
 const datePickerValue = ref(form.surgeryDate.split('-'))
+
+async function afterRead(file) {
+  const files = Array.isArray(file) ? file : [file]
+  for (const f of files) {
+    f.status = 'uploading'; f.message = '上传中'
+    try {
+      const fd = new FormData()
+      fd.append('file', f.file)
+      const res = await request.post('/api/files/upload?bizType=surgeryReport', fd, { headers: { 'Content-Type': 'multipart/form-data', Authorization: 'Bearer ' + getToken() } })
+      const data = res.data || {}
+      f.url = data.url
+      f.fileId = data.fileId
+      f.name = data.originalName
+      f.status = 'done'
+      form.attachmentFileId = data.fileId
+      form.attachmentName = data.originalName
+      form.attachmentUrl = data.url
+    } catch (e) {
+      f.status = 'failed'; f.message = '上传失败'
+      showToast('图片上传失败')
+    }
+  }
+}
+function beforeDelete(){ attachments.value = attachments.value.filter(x=>x.status!=='done'); form.attachmentFileId=null; form.attachmentUrl=''; form.attachmentName=''; return true }
+async function scanLine(idx) {
+  const line = lines.value[idx]
+  if ('BarcodeDetector' in window) {
+    try {
+      const detector = new window.BarcodeDetector({ formats: ['qr_code','ean_13','code_128','data_matrix'] })
+      showToast('请将摄像头对准条码/UDI')
+      // H5 无持续视频流时，提示使用设备扫码或手输；后续可接入视频扫描组件。
+      line.batchNo = line.batchNo || ''
+      return
+    } catch (e) {}
+  }
+  showToast('当前浏览器不支持网页扫码，请手动输入或使用微信/浏览器扫码')
+}
 
 const submitting = ref(false)
 
@@ -302,6 +353,9 @@ async function submit() {
       patientInfo: form.patientInfo,
       doctorName: form.doctorName,
       remark: form.remark,
+      attachmentFileId: form.attachmentFileId,
+      attachmentName: form.attachmentName,
+      attachmentUrl: form.attachmentUrl,
       lines: validLines.map(l => {
         const out = { productId: l.productId, qty: l.qty }
         if (l.isSerialManaged) out.serialNo = l.batchNo
@@ -329,9 +383,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.line-card { padding: 10px 16px; border-bottom: 1px solid #f2f3f5; }
+.line-card { padding: 10px 16px; border-bottom: 1px solid var(--dms-gray-100); }
 .line-card:last-child { border-bottom: 0; }
 .line-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.line-no { font-size: 13px; color: #969799; }
-.submit-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 10px 16px; background: #fff; box-shadow: 0 -2px 8px rgba(0,0,0,.05); z-index: 10; }
+.line-no { font-size: 13px; color: var(--dms-text-4); }
+.submit-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 10px 16px; background: var(--dms-bg-container); box-shadow: 0 -2px 8px rgba(0,0,0,.05); z-index: 10; }
 </style>

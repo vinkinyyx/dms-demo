@@ -10,6 +10,7 @@ import com.dms.annotation.OperationLog;
 import com.dms.common.ApiResponse;
 import com.dms.common.enums.OperationAction;
 import com.dms.common.util.TenantContext;
+import com.dms.common.util.PagingUtil;
 import com.dms.approval.dto.StartApprovalRequest;
 import com.dms.approval.entity.ApprovalInstance;
 import com.dms.approval.service.ApprovalService;
@@ -44,7 +45,7 @@ public class SalesReturnController {
             @RequestParam(required = false) Long dealerId,
             @RequestParam(required = false) Long warehouseId) {
         UUID tid = TenantContext.getTenantId();
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
         StringBuilder where = new StringBuilder(" WHERE o.tenant_id = ?1 AND o.deleted_at IS NULL AND COALESCE(o.is_red,false) = true");
         List<Object> params = new ArrayList<>();
         params.add(tid);
@@ -68,7 +69,7 @@ public class SalesReturnController {
                 "LEFT JOIN warehouses w ON w.id=o.warehouse_id LEFT JOIN users u ON u.id=o.approved_by " +
                 where + " ORDER BY o.created_at DESC LIMIT " + limitParam + " OFFSET " + offsetParam, Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
-        q.setParameter(params.size() + 1, size);
+        q.setParameter(params.size() + 1, safeSize);
         q.setParameter(params.size() + 2, offset);
 
         @SuppressWarnings("unchecked")
@@ -76,7 +77,7 @@ public class SalesReturnController {
         List<Map<String, Object>> list = new ArrayList<>();
         for (Tuple t : rows) list.add(toBrief(t));
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("total", total); data.put("page", page); data.put("size", size); data.put("list", list);
+        data.put("total", total); data.put("page", safePage); data.put("size", safeSize); data.put("list", list);
         return ApiResponse.ok(data);
     }
 

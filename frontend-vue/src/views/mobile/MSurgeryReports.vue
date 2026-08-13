@@ -64,6 +64,6 @@ async function onLoad() {
 </script>
 
 <style scoped>
-.date { color: #969799; font-size: 12px; }
+.date { color: var(--dms-text-4); font-size: 12px; }
 .fab-wrap { position: fixed; right: 16px; bottom: 80px; z-index: 10; }
 </style>

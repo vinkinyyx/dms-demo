@@ -98,3 +98,9 @@ tools/_dockerps.py
 tools/_e2e_*.py
 # Local developer profile
 backend/src/main/resources/application-local.yml
+
+# local logo/shot scratch scripts
+/_*.py
+/_headings.txt
+/release-p0/
+

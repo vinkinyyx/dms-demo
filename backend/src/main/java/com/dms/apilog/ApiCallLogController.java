@@ -2,6 +2,7 @@ package com.dms.apilog;
 
 import com.dms.common.ApiResponse;
 import com.dms.common.util.TenantContext;
+import com.dms.common.util.PagingUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
@@ -65,7 +66,7 @@ public class ApiCallLogController {
         for (int i = 0; i < params.size(); i++) cnt.setParameter(i + 1, params.get(i));
         long total = ((Number) cnt.getSingleResult()).longValue();
 
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
         String limitParam = "?" + (idx++), offsetParam = "?" + (idx++);
         var q = em.createNativeQuery(
                 "SELECT id, direction, system, endpoint, http_method, path, url, status_code, biz_code, success, " +
@@ -73,7 +74,7 @@ public class ApiCallLogController {
                 "FROM api_call_log" + where +
                 " ORDER BY id DESC LIMIT " + limitParam + " OFFSET " + offsetParam, Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
-        q.setParameter(params.size() + 1, size);
+        q.setParameter(params.size() + 1, safeSize);
         q.setParameter(params.size() + 2, offset);
         @SuppressWarnings("unchecked")
         List<Tuple> rows = q.getResultList();
@@ -82,7 +83,7 @@ public class ApiCallLogController {
         for (Tuple t : rows) list.add(toBrief(t));
 
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("total", total); data.put("page", page); data.put("size", size); data.put("list", list);
+        data.put("total", total); data.put("page", safePage); data.put("size", safeSize); data.put("list", list);
         return ApiResponse.ok(data);
     }
 

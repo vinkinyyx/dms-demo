@@ -1,0 +1,317 @@
+[
+  {
+    "scope": "HOME",
+    "id": "/home",
+    "title": "工作台首页",
+    "status": "WARN",
+    "detail": "HTTP 200 2950ms body=378 tbl=0 btn=2 inp=4 card=10 form=0 empty=0 | SPARSE CONTENT"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/m/products",
+    "title": "产品管理",
+    "status": "PASS",
+    "detail": "HTTP 200 3621ms body=3060 tbl=3 btn=65 inp=6 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/m/categories",
+    "title": "产品分类",
+    "status": "PASS",
+    "detail": "HTTP 200 3195ms body=1054 tbl=3 btn=36 inp=3 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/m/product-lines",
+    "title": "产品线管理",
+    "status": "PASS",
+    "detail": "HTTP 200 3007ms body=244 tbl=3 btn=18 inp=3 card=0 form=0 empty=1"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/m/product-package-levels",
+    "title": "产品包装层级",
+    "status": "PASS",
+    "detail": "HTTP 200 3194ms body=262 tbl=3 btn=21 inp=3 card=0 form=0 empty=1"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/m/product-bundles",
+    "title": "产品组合",
+    "status": "PASS",
+    "detail": "HTTP 200 3874ms body=263 tbl=3 btn=21 inp=3 card=0 form=0 empty=1"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/m/dealers",
+    "title": "经销商管理",
+    "status": "PASS",
+    "detail": "HTTP 200 4086ms body=2545 tbl=3 btn=61 inp=5 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/m/hospitals",
+    "title": "医院终端",
+    "status": "PASS",
+    "detail": "HTTP 200 3697ms body=2277 tbl=3 btn=59 inp=5 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/m/warehouses",
+    "title": "仓库管理",
+    "status": "PASS",
+    "detail": "HTTP 200 3514ms body=868 tbl=3 btn=30 inp=4 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/m/regions",
+    "title": "区域管理",
+    "status": "PASS",
+    "detail": "HTTP 200 3506ms body=1853 tbl=3 btn=56 inp=4 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/m/suppliers",
+    "title": "供应商",
+    "status": "PASS",
+    "detail": "HTTP 200 6050ms body=2812 tbl=3 btn=59 inp=4 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/m/product-prices",
+    "title": "产品价格",
+    "status": "PASS",
+    "detail": "HTTP 200 5298ms body=248 tbl=3 btn=20 inp=3 card=0 form=0 empty=1"
+  },
+  {
+    "scope": "CONTRACT",
+    "id": "/contracts",
+    "title": "合同工作台",
+    "status": "PASS",
+    "detail": "HTTP 200 2914ms body=929 tbl=3 btn=37 inp=11 card=1 form=0 empty=0"
+  },
+  {
+    "scope": "CONTRACT",
+    "id": "/contracts/templates",
+    "title": "合同模板",
+    "status": "PASS",
+    "detail": "HTTP 200 2755ms body=252 tbl=3 btn=8 inp=3 card=1 form=0 empty=0"
+  },
+  {
+    "scope": "CONTRACT",
+    "id": "/m/authorizations",
+    "title": "授权管理",
+    "status": "PASS",
+    "detail": "HTTP 200 3597ms body=2284 tbl=3 btn=57 inp=4 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "ORDER",
+    "id": "/m/orders",
+    "title": "销售订单",
+    "status": "PASS",
+    "detail": "HTTP 200 4234ms body=2691 tbl=5 btn=70 inp=7 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "ORDER",
+    "id": "/m/sales-returns",
+    "title": "销退订单",
+    "status": "PASS",
+    "detail": "HTTP 200 3598ms body=380 tbl=5 btn=28 inp=6 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "ORDER",
+    "id": "/m/purchase-orders",
+    "title": "采购订单",
+    "status": "PASS",
+    "detail": "HTTP 200 3646ms body=2510 tbl=5 btn=70 inp=7 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "ORDER",
+    "id": "/m/purchase-returns",
+    "title": "采退订单",
+    "status": "PASS",
+    "detail": "HTTP 200 3401ms body=373 tbl=5 btn=28 inp=6 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "INV",
+    "id": "/m/inventory",
+    "title": "库存查询",
+    "status": "FAIL",
+    "detail": "HTTP 200 3326ms body=2392 tbl=3 btn=41 inp=4 card=0 form=0 empty=0 | 404 NOT FOUND"
+  },
+  {
+    "scope": "INV",
+    "id": "/m/sales-outs",
+    "title": "销售出库",
+    "status": "PASS",
+    "detail": "HTTP 200 3350ms body=2783 tbl=5 btn=67 inp=6 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "INV",
+    "id": "/m/receipts",
+    "title": "收货入库",
+    "status": "PASS",
+    "detail": "HTTP 200 3396ms body=2299 tbl=5 btn=65 inp=6 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "INV",
+    "id": "/m/stock-moves",
+    "title": "库存移动",
+    "status": "PASS",
+    "detail": "HTTP 200 3529ms body=2698 tbl=5 btn=67 inp=6 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "INV",
+    "id": "/m/inventory-adjustments",
+    "title": "库存调整",
+    "status": "PASS",
+    "detail": "HTTP 200 3329ms body=891 tbl=3 btn=30 inp=4 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "SURG",
+    "id": "/m/surgery-reports",
+    "title": "手术植入报台",
+    "status": "PASS",
+    "detail": "HTTP 200 3328ms body=204 tbl=5 btn=27 inp=6 card=0 form=0 empty=1"
+  },
+  {
+    "scope": "PROMO",
+    "id": "/m/promotions",
+    "title": "促销规则",
+    "status": "PASS",
+    "detail": "HTTP 200 3267ms body=1824 tbl=3 btn=39 inp=4 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "DASH",
+    "id": "/dashboard",
+    "title": "数据驾驶舱",
+    "status": "PASS",
+    "detail": "HTTP 200 3208ms body=292 tbl=2 btn=6 inp=11 card=15 form=0 empty=0"
+  },
+  {
+    "scope": "RPT",
+    "id": "/reports?key=sales-ranking",
+    "title": "销售业绩排行",
+    "status": "WARN",
+    "detail": "HTTP 200 2943ms body=3163 tbl=3 btn=6 inp=10 card=2 form=0 empty=0 | consoleErr=1200: TypeError: t.formatAuto is not a function\n    at http://8.133.193.238:8083/assets/Reports-DBNQiJQD.js:1:11746\n    at Object.s [as default] (http://8.133.193.238:8083/assets/vue-bU3KORpR.js:13:3972)\n  "
+  },
+  {
+    "scope": "RPT",
+    "id": "/reports?key=product-top10",
+    "title": "产品TOP10",
+    "status": "FAIL",
+    "detail": "HTTP 200 2941ms body=3158 tbl=3 btn=6 inp=7 card=2 form=0 empty=0 | ERROR TEXT ON PAGE | consoleErr=1050: TypeError: t.formatAuto is not a function\n    at http://8.133.193.238:8083/assets/Reports-DBNQiJQD.js:1:11746\n    at Object.s [as default] (http://8.133.193.238:8083/assets/vue-bU3KORpR.js:13:3972)\n  "
+  },
+  {
+    "scope": "RPT",
+    "id": "/reports?key=inventory-turnover",
+    "title": "库存周转",
+    "status": "WARN",
+    "detail": "HTTP 200 3155ms body=828 tbl=3 btn=6 inp=5 card=2 form=0 empty=0 | consoleErr=3300: TypeError: t.formatAuto is not a function\n    at http://8.133.193.238:8083/assets/Reports-DBNQiJQD.js:1:11746\n    at Object.s [as default] (http://8.133.193.238:8083/assets/vue-bU3KORpR.js:13:3972)\n  "
+  },
+  {
+    "scope": "RPT",
+    "id": "/reports?key=surgery-stats",
+    "title": "手术统计",
+    "status": "WARN",
+    "detail": "HTTP 200 2928ms body=482 tbl=3 btn=6 inp=6 card=2 form=0 empty=0 | consoleErr=1155: TypeError: t.formatAuto is not a function\n    at http://8.133.193.238:8083/assets/Reports-DBNQiJQD.js:1:11746\n    at Object.s [as default] (http://8.133.193.238:8083/assets/vue-bU3KORpR.js:13:3972)\n  "
+  },
+  {
+    "scope": "RPT",
+    "id": "/reports?key=receivables",
+    "title": "应收款项",
+    "status": "FAIL",
+    "detail": "HTTP 200 2889ms body=4974 tbl=3 btn=6 inp=8 card=2 form=0 empty=0 | ERROR TEXT ON PAGE | consoleErr=600: TypeError: t.formatAuto is not a function\n    at http://8.133.193.238:8083/assets/Reports-DBNQiJQD.js:1:11746\n    at Object.s [as default] (http://8.133.193.238:8083/assets/vue-bU3KORpR.js:13:3972)\n  "
+  },
+  {
+    "scope": "RPT",
+    "id": "/reports?key=order-trace",
+    "title": "订单追溯",
+    "status": "FAIL",
+    "detail": "HTTP 200 3288ms body=4164 tbl=3 btn=6 inp=8 card=2 form=0 empty=0 | ERROR TEXT ON PAGE | consoleErr=2700: TypeError: t.formatAuto is not a function\n    at http://8.133.193.238:8083/assets/Reports-DBNQiJQD.js:1:11746\n    at Object.s [as default] (http://8.133.193.238:8083/assets/vue-bU3KORpR.js:13:3972)\n  "
+  },
+  {
+    "scope": "DEALER",
+    "id": "/dealers/profile",
+    "title": "经销商画像",
+    "status": "PASS",
+    "detail": "HTTP 200 3190ms body=1577 tbl=3 btn=24 inp=4 card=2 form=0 empty=0"
+  },
+  {
+    "scope": "APPR",
+    "id": "/approval/todo",
+    "title": "我的审批",
+    "status": "PASS",
+    "detail": "HTTP 200 2814ms body=304 tbl=3 btn=9 inp=0 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "APPR",
+    "id": "/approval/templates",
+    "title": "审批流配置",
+    "status": "PASS",
+    "detail": "HTTP 200 3394ms body=675 tbl=3 btn=25 inp=3 card=1 form=0 empty=0"
+  },
+  {
+    "scope": "APPR",
+    "id": "/approval/delegations",
+    "title": "审批委托",
+    "status": "PASS",
+    "detail": "HTTP 200 2858ms body=202 tbl=3 btn=1 inp=0 card=1 form=0 empty=1"
+  },
+  {
+    "scope": "APPR",
+    "id": "/approval/admin",
+    "title": "审批监控",
+    "status": "PASS",
+    "detail": "HTTP 200 2805ms body=720 tbl=3 btn=10 inp=1 card=1 form=0 empty=0"
+  },
+  {
+    "scope": "USER",
+    "id": "/positions",
+    "title": "销售岗位",
+    "status": "WARN",
+    "detail": "HTTP 200 2960ms body=396 tbl=0 btn=4 inp=0 card=1 form=0 empty=1 | SPARSE CONTENT"
+  },
+  {
+    "scope": "USER",
+    "id": "/m/users",
+    "title": "账号管理",
+    "status": "PASS",
+    "detail": "HTTP 200 3602ms body=2521 tbl=3 btn=59 inp=4 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "USER",
+    "id": "/roles-manage",
+    "title": "角色权限",
+    "status": "PASS",
+    "detail": "HTTP 200 2751ms body=600 tbl=3 btn=19 inp=1 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "CFG",
+    "id": "/tenant-page-configs",
+    "title": "列表页配置",
+    "status": "PASS",
+    "detail": "HTTP 200 2788ms body=321 tbl=9 btn=3 inp=35 card=0 form=0 empty=0"
+  },
+  {
+    "scope": "LOG",
+    "id": "/api-call-logs",
+    "title": "接口调用日志",
+    "status": "PASS",
+    "detail": "HTTP 200 3443ms body=2149 tbl=5 btn=33 inp=5 card=2 form=0 empty=0"
+  },
+  {
+    "scope": "LOG",
+    "id": "/email-logs",
+    "title": "邮件日志",
+    "status": "PASS",
+    "detail": "HTTP 200 2773ms body=1904 tbl=3 btn=4 inp=1 card=1 form=0 empty=0"
+  },
+  {
+    "scope": "MAP",
+    "id": "/product-mappings",
+    "title": "产品对码",
+    "status": "PASS",
+    "detail": "HTTP 200 3055ms body=194 tbl=3 btn=7 inp=4 card=3 form=0 empty=2"
+  }
+]

@@ -60,6 +60,10 @@ public class WarehouseService {
         if (repository.existsByTenantIdAndDealerIdAndCode(tenantId, entity.getDealerId(), entity.getCode())) {
             throw new BusinessException(ErrorCode.RESOURCE_CONFLICT, "仓库编码在该经销商下已存在");
         }
+        String whType = entity.getType() == null ? "main" : entity.getType();
+        if ("main".equals(whType) && repository.existsByTenantIdAndDealerIdAndType(tenantId, entity.getDealerId(), "main")) {
+            throw new BusinessException(ErrorCode.RESOURCE_CONFLICT, "该经销商下已存在主仓，不能重复创建");
+        }
         entity.setId(null);
         entity.setTenantId(tenantId);
         if (entity.getStatus() == null) entity.setStatus("active");
@@ -132,12 +136,16 @@ public class WarehouseService {
                 "无法删除仓库：存在 " + total + " 条引用记录 (" + desc + ")");
         }
         try {
-            repository.deleteById(id);
+            repository.delete(entity);
             opLog.log("warehouse", id, "DELETE", "删除仓库 " + entity.getCode());
-        } catch (DataIntegrityViolationException e) {
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
             log.warn("删除仓库失败，存在数据库外键约束: id={}", id, e);
             throw new BusinessException(ErrorCode.HAS_REFERENCES,
                 "无法删除仓库：该数据被其他业务数据引用，请先删除关联数据");
+        } catch (Exception e) {
+            log.warn("删除仓库发生未预期异常: id={}", id, e);
+            throw new BusinessException(ErrorCode.HAS_REFERENCES,
+                "无法删除仓库：存在关联数据或系统约束，请先解除引用后再删除");
         }
     }
 

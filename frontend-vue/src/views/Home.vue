@@ -1,14 +1,17 @@
-<template>
+﻿<template>
   <div class="home">
     <!-- 欢迎区 -->
     <el-card shadow="never" class="welcome">
       <div class="welcome-row">
-        <div>
+        <div class="welcome-brand">
+          <DmsLogo :size="40" class="welcome-logo" />
+          <div>
           <h2>欢迎使用 DMS 通用经销商管理系统</h2>
           <p>
             当前登录：<b>{{ userStore.username }}</b>（{{ userTypeLabel }}），
             租户 {{ userStore.user?.tenantId || '-' }}
           </p>
+          </div>
         </div>
         <div class="welcome-tip">
           <el-tag type="success" effect="plain">Vue3 + Element Plus 栈</el-tag>
@@ -21,7 +24,7 @@
     <el-row :gutter="16" class="cards">
       <el-col :span="6" v-for="s in shortcuts" :key="s.key">
         <el-card shadow="hover" class="shortcut" @click="navigate(s)">
-          <el-icon :size="30" color="#2C4B8E"><component :is="s.icon" /></el-icon>
+          <el-icon :size="30" color="var(--dms-color-primary)"><component :is="s.icon" /></el-icon>
           <div class="sc-label">{{ s.label }}</div>
         </el-card>
       </el-col>
@@ -33,7 +36,7 @@
         <div class="dash-header">
           <span><b>仪表盘速览</b>（默认本年）</span>
           <div class="spacer" />
-          <el-radio-group v-model="rangeKey" size="small" @change="loadAll">
+          <el-radio-group v-model="rangeKey" size="small" @change="onRangeChange">
             <el-radio-button label="today">当日</el-radio-button>
             <el-radio-button label="month">本月</el-radio-button>
             <el-radio-button label="quarter">本季</el-radio-button>
@@ -132,24 +135,25 @@ function navigate(s) {
 }
 
 const RANGE_LABELS = { today: '当日', month: '本月', quarter: '本季', year: '本年' }
-const rangeKey = ref('year')
+const rangeKey = ref(localStorage.getItem('dms:home:range') || 'year')
 const rangeLabel = computed(() => RANGE_LABELS[rangeKey.value] || '本年')
+function onRangeChange(v) { localStorage.setItem('dms:home:range', v); loadAll() }
 
 // KPI
 const kpiLoading = ref(false)
 const kpiData = reactive({})
 const kpiCards = computed(() => ([
-  { key: 'totalSales', label: '销售总额', display: fmtMoney(kpiData.totalSales), color: '#409EFF' },
-  { key: 'totalOrders', label: '订单数', display: fmtNum(kpiData.totalOrders), color: '#67C23A' },
-  { key: 'activeDealers', label: '活跃经销商', display: fmtNum(kpiData.activeDealers), color: '#E6A23C' },
-  { key: 'totalSurgeries', label: '手术台数', display: fmtNum(kpiData.totalSurgeries), color: '#F56C6C' }
+  { key: 'totalSales', label: '销售总额', display: fmtMoney(kpiData.totalSales), color: '#1677ff' },
+  { key: 'totalOrders', label: '订单数', display: fmtNum(kpiData.totalOrders), color: '#52c41a' },
+  { key: 'activeDealers', label: '活跃经销商', display: fmtNum(kpiData.activeDealers), color: '#faad14' },
+  { key: 'totalSurgeries', label: '手术台数', display: fmtNum(kpiData.totalSurgeries), color: '#ff4d4f' }
 ]))
 
 const quickStats = computed(() => ([
-  { k: 'qualified', l: '合格库存', v: fmtNum(kpiData.qualifiedStock), color: '#67C23A' },
-  { k: 'pending', l: '待验库存', v: fmtNum(kpiData.pendingStock), color: '#E6A23C' },
-  { k: 'defective', l: '不合格库存', v: fmtNum(kpiData.defectiveStock), color: '#F56C6C' },
-  { k: 'products', l: '产品总数', v: fmtNum(kpiData.totalProducts), color: '#409EFF' }
+  { k: 'qualified', l: '合格库存', v: fmtNum(kpiData.qualifiedStock), color: '#52c41a' },
+  { k: 'pending', l: '待验库存', v: fmtNum(kpiData.pendingStock), color: '#faad14' },
+  { k: 'defective', l: '不合格库存', v: fmtNum(kpiData.defectiveStock), color: '#ff4d4f' },
+  { k: 'products', l: '产品总数', v: fmtNum(kpiData.totalProducts), color: '#1677ff' }
 ]))
 
 function fmtMoney(v) {
@@ -198,7 +202,7 @@ async function loadTrend() {
       series: [{
         name: '销售额', type: 'line', smooth: true, areaStyle: { opacity: 0.2 },
         data: list.map(x => Number(x.amount || x.value || 0)),
-        itemStyle: { color: '#409EFF' }
+        itemStyle: { color: '#1677ff' }
       }]
     }, true)
   } catch (e) { /* ignore */ }
@@ -234,7 +238,7 @@ async function loadTop() {
       series: [{
         type: 'bar',
         data: list.map(d => Number(d.value || 0)).reverse(),
-        itemStyle: { color: '#67C23A' }
+        itemStyle: { color: '#52c41a' }
       }]
     }, true)
   } catch (e) { /* ignore */ }
@@ -290,15 +294,19 @@ onBeforeUnmount(() => {
 .dash-header { display: flex; align-items: center; gap: 8px; }
 .spacer { flex: 1; }
 .kpi-row { margin-bottom: 12px; }
-.kpi-card { background: #fff; border: 1px solid #ebeef5; border-top: 3px solid; border-radius: 4px; padding: 14px 16px; text-align: center; }
+.kpi-card { background: var(--dms-bg-container); border: 1px solid var(--dms-border-2); border-top: 3px solid; border-radius: 4px; padding: 14px 16px; text-align: center; }
 .kpi-v { font-size: 24px; font-weight: 700; }
-.kpi-l { font-size: 13px; color: #909399; margin-top: 6px; }
+.kpi-l { font-size: 13px; color: var(--dms-text-4); margin-top: 6px; }
 .chart-row { display: flex; }
 .chart-card { margin-bottom: 0; }
 .chart-title { font-size: 14px; font-weight: 600; }
 .chart-area { width: 100%; height: 280px; }
 .quick-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px 12px; }
-.qs { text-align: center; padding: 10px; border: 1px solid #ebeef5; border-radius: 4px; }
+.qs { text-align: center; padding: 10px; border: 1px solid var(--dms-border-2); border-radius: 4px; }
 .qs-v { font-size: 22px; font-weight: 700; }
-.qs-l { font-size: 13px; color: #909399; margin-top: 4px; }
+.qs-l { font-size: 13px; color: var(--dms-text-4); margin-top: 4px; }
+.welcome-brand { display: flex; align-items: center; gap: 12px; }
+.welcome-brand h2 { margin: 0; }
+.welcome-brand p { margin: 4px 0 0; color: var(--el-text-color-secondary); font-size: 13px; }
+.welcome-logo { filter: drop-shadow(0 2px 6px rgba(22,119,255,.25)); }
 </style>

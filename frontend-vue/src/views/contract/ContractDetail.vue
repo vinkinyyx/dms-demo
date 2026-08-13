@@ -63,7 +63,7 @@
         <el-timeline-item v-for="r in detail.revisions || []" :key="r.id" :timestamp="formatDate(r.createdAt)" placement="top">
           <el-tag size="small">{{ actionLabel(r.action) }}</el-tag>
           <span style="margin-left: 8px">{{ r.operatorName || '系统' }}</span>
-          <div v-if="r.comment" style="color: #606266; margin-top: 4px">{{ r.comment }}</div>
+          <div v-if="r.comment" style="color: var(--dms-text-3); margin-top: 4px">{{ r.comment }}</div>
         </el-timeline-item>
       </el-timeline>
     </el-card>

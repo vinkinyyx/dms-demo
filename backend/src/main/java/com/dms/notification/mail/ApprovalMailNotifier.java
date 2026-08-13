@@ -1,4 +1,4 @@
-package com.dms.notification.mail;
+﻿package com.dms.notification.mail;
 
 import com.dms.approval.entity.ApprovalInstance;
 import com.dms.approval.entity.ApprovalTask;
@@ -24,7 +24,7 @@ public class ApprovalMailNotifier {
     @Value("${dms.mail.from:${spring.mail.username:}}")
     private String from;
 
-    @Value("${dms.app.base-url:http://8.133.193.238:8083}")
+    @Value("${dms.app.base-url:http://43.128.145.141}")
     private String baseUrl;
 
     @Value("${dms.mail.enabled:true}")

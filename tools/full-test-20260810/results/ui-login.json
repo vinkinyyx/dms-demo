@@ -1,0 +1,86 @@
+[
+  {
+    "scope": "LOGIN-UI",
+    "id": "001-01",
+    "title": "登录页可访问",
+    "status": "PASS",
+    "detail": "title=DMS 通用经销商管理系统"
+  },
+  {
+    "scope": "LOGIN-UI",
+    "id": "001-02",
+    "title": "租户代码字段存在",
+    "status": "PASS",
+    "detail": "tenant field count=1"
+  },
+  {
+    "scope": "LOGIN-UI",
+    "id": "001-03",
+    "title": "admin登录成功跳转/home",
+    "status": "PASS",
+    "detail": "url=http://8.133.193.238:8083/home"
+  },
+  {
+    "scope": "HOME-UI",
+    "id": "001-01",
+    "title": "首页KPI卡片渲染",
+    "status": "PASS",
+    "detail": "kpi card count=14"
+  },
+  {
+    "scope": "HOME-UI",
+    "id": "001-02",
+    "title": "时间Tab存在",
+    "status": "WARN",
+    "detail": "tab count=0"
+  },
+  {
+    "scope": "HOME-UI",
+    "id": "001-03",
+    "title": "图表渲染",
+    "status": "PASS",
+    "detail": "chart/svg count=90"
+  },
+  {
+    "scope": "LOGIN-UI",
+    "id": "006-04",
+    "title": "登出按钮存在",
+    "status": "WARN",
+    "detail": "未找到退出按钮"
+  },
+  {
+    "scope": "LOGIN-UI",
+    "id": "002-01",
+    "title": "错误密码显示错误提示",
+    "status": "PASS",
+    "detail": "msg=登录已过期，请重新登录"
+  },
+  {
+    "scope": "LOGIN-UI",
+    "id": "002-02",
+    "title": "空表单前端校验",
+    "status": "FAIL",
+    "detail": "validation errors=0"
+  },
+  {
+    "scope": "MOB-UI",
+    "id": "001-01",
+    "title": "移动端登录页可访问",
+    "status": "PASS",
+    "detail": "title=DMS 通用经销商管理系统, url=http://8.133.193.238:8083/mobile/login"
+  },
+  {
+    "scope": "MOB-UI",
+    "id": "001-02",
+    "title": "移动端登录跳转",
+    "status": "FAIL",
+    "detail": "url=http://8.133.193.238:8083/login"
+  },
+  {
+    "scope": "ADM-UI",
+    "id": "001-01",
+    "title": "平台后台登录页可访问",
+    "status": "PASS",
+    "detail": "url=http://8.133.193.238:8083/admin/login"
+  }
+]

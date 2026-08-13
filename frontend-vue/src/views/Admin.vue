@@ -113,7 +113,7 @@
         <el-table :data="rbacRows" border size="small">
           <el-table-column prop="permission" label="权限" width="240" fixed />
           <el-table-column v-for="r in rbacRoles" :key="r" :label="r" width="120" align="center">
-            <template #default="{ row }"><el-icon v-if="row[r]" color="#67C23A"><Select /></el-icon><span v-else style="color:#ddd">—</span></template>
+            <template #default="{ row }"><el-icon v-if="row[r]" color="var(--dms-color-success)"><Select /></el-icon><span v-else style="color:var(--dms-border-2)">—</span></template>
           </el-table-column>
         </el-table>
       </el-card>
@@ -138,9 +138,9 @@
           <div>选择日期：
             <el-date-picker v-model="opLogDate" type="date" value-format="YYYY-MM-DD" :placeholder="opLogDefaultDate" style="width:180px" />
             <el-button size="small" type="primary" style="margin-left:12px" :loading="opLogDownloading" @click="doDownloadOpLog">下载日志</el-button>
-            <span style="color:#909399;margin-left:8px;font-size:12px">仅保留最近 7 天</span>
+            <span style="color:var(--dms-text-4);margin-left:8px;font-size:12px">仅保留最近 7 天</span>
           </div>
-          <div v-if="opLogTip" style="color:#67C23A">{{ opLogTip }}</div>
+          <div v-if="opLogTip" style="color:var(--dms-color-success)">{{ opLogTip }}</div>
         </el-space>
       </el-card>
 
@@ -400,8 +400,8 @@ loadOverview()
 
 <style scoped>
 .admin { height: calc(100vh - 92px); }
-.admin .el-aside { background: #fff; border-radius: 6px; }
+.admin .el-aside { background: var(--dms-bg-container); border-radius: 6px; }
 .stat { text-align: center; margin-bottom: 12px; }
-.sv { font-size: 24px; font-weight: 700; color: #409EFF; }
-.sl { font-size: 13px; color: #909399; margin-top: 6px; }
+.sv { font-size: 24px; font-weight: 700; color: var(--dms-color-primary); }
+.sl { font-size: 13px; color: var(--dms-text-4); margin-top: 6px; }
 </style>

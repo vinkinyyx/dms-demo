@@ -51,7 +51,7 @@ watch(() => props.modelValue, (val) => {
 
 .loader-content {
   text-align: center;
-  color: #303133;
+  color: var(--dms-text-2);
 }
 
 .spinner-container {
@@ -65,8 +65,8 @@ watch(() => props.modelValue, (val) => {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 3px solid #e4e7ed;
-  border-top-color: #409eff;
+  border: 3px solid var(--dms-border-1);
+  border-top-color: var(--dms-color-primary);
   animation: spin 0.8s linear infinite;
 }
 
@@ -77,7 +77,7 @@ watch(() => props.modelValue, (val) => {
 
 .loader-text {
   font-size: 14px;
-  color: #606266;
+  color: var(--dms-text-3);
 }
 
 .loader-fade-enter-active,

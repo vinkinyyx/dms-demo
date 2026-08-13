@@ -88,6 +88,12 @@ public class Promotion {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
+    @Transient
+    private java.util.List<java.util.Map<String, Object>> applicableProducts;
+
+    @Transient
+    private java.util.List<java.util.Map<String, Object>> applicableDealers;
+
     public void ensureMaps() {
         if (dealerScope == null) dealerScope = new HashMap<>();
         if (productScope == null) productScope = new HashMap<>();

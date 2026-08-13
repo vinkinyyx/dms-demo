@@ -548,8 +548,8 @@ const surgeryReports = {
     { key: 'lines', type: 'lines', importable: true, serialPasteSplit: true, label: '植入产品明细', required: true, group: '植入明细', cols: [
       { k: 'productId', l: '产品', type: 'picker', picker: 'products', format: 'productName' },
       { k: 'qty', l: '数量', type: 'number' },
-      { k: 'batchNo', l: '批次号' },
-      { k: 'serialNo', l: '序列号' },
+      { k: 'batchNo', l: '批次号', type: 'batch' },
+      { k: 'serialNo', l: '序列号', type: 'serial' },
       { k: 'unitPrice', l: '单价', type: 'number' }
     ] }
   ]

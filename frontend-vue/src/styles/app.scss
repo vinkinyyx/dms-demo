@@ -1,0 +1,134 @@
+﻿/* ===== DMS 全局业务样式 ===== */
+
+/* 页面通用容器 */
+.page { padding: var(--dms-padding-page); }
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--dms-spacing-4);
+  gap: var(--dms-spacing-3);
+  flex-wrap: wrap;
+}
+.page-title {
+  font: var(--dms-text-title-2);
+  color: var(--dms-text-1);
+}
+
+/* 工具栏（搜索+操作按钮区） */
+.page-toolbar,
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--dms-gap-toolbar);
+  margin-bottom: var(--dms-spacing-3);
+  flex-wrap: wrap;
+}
+.page-toolbar .spacer,
+.toolbar .spacer { flex: 1; }
+
+/* 统一卡片 */
+.dms-card {
+  background: var(--dms-bg-container);
+  border: 1px solid var(--dms-border-3);
+  border-radius: var(--dms-radius-lg);
+  box-shadow: var(--dms-shadow-sm);
+  padding: var(--dms-padding-card);
+  transition: box-shadow var(--dms-motion-duration-fast) var(--dms-motion-ease-out);
+}
+.dms-card:hover { box-shadow: var(--dms-shadow-md); }
+
+/* 通用区块标题 */
+.section-title {
+  font: var(--dms-text-title-3);
+  color: var(--dms-text-1);
+  margin-bottom: var(--dms-spacing-3);
+}
+
+/* 状态点/标签基础 */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--dms-radius-circle);
+  margin-right: var(--dms-spacing-1);
+  vertical-align: middle;
+}
+
+/* ===== 移动端 H5 通用类 ===== */
+.dms-mobile-page {
+  min-height: 100vh;
+  background: var(--dms-bg-page);
+  padding-bottom: var(--dms-mobile-safe-bottom);
+}
+
+.dms-mobile-card {
+  background: var(--dms-bg-container);
+  border-radius: var(--dms-mobile-card-radius);
+  padding: var(--dms-spacing-4);
+  margin: var(--dms-spacing-3);
+  box-shadow: var(--dms-shadow-sm);
+}
+
+.dms-mobile-section-title {
+  font: var(--dms-text-title-3);
+  color: var(--dms-text-1);
+  padding: var(--dms-spacing-3) var(--dms-spacing-4);
+}
+
+/* 移动端点击反馈 */
+.tap-feedback {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity var(--dms-motion-duration-fast) var(--dms-motion-ease-out),
+              transform var(--dms-motion-duration-fast) var(--dms-motion-ease-out);
+}
+.tap-feedback:active {
+  opacity: 0.7;
+  transform: scale(0.98);
+}
+.card-tap:active { background: var(--dms-bg-hover); }
+
+/* 移动端状态标签 */
+.dms-status-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--dms-spacing-2);
+  border-radius: var(--dms-radius-sm);
+  font-size: var(--dms-font-size-xs);
+  line-height: 18px;
+  font-weight: var(--dms-font-weight-medium);
+}
+.dms-status-tag--draft     { background: var(--dms-gray-100); color: var(--dms-gray-600); }
+.dms-status-tag--pending   { background: var(--dms-color-warning-bg); color: var(--dms-color-warning); }
+.dms-status-tag--approved  { background: var(--dms-color-success-bg); color: var(--dms-color-success); }
+.dms-status-tag--rejected  { background: var(--dms-color-danger-bg); color: var(--dms-color-danger); }
+.dms-status-tag--effective { background: var(--dms-blue-50); color: var(--dms-blue-600); }
+.dms-status-tag--terminated { background: var(--dms-gray-200); color: var(--dms-gray-700); }
+.dms-status-tag--expired   { background: var(--dms-gray-100); color: var(--dms-gray-400); }
+
+/* 渐变品牌色（登录/首页头部） */
+.dms-brand-gradient {
+  background: linear-gradient(135deg, var(--dms-blue-700), var(--dms-blue-500));
+}
+
+/* 路由切换过渡 */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity var(--dms-motion-duration-medium) var(--dms-motion-ease-out),
+              transform var(--dms-motion-duration-medium) var(--dms-motion-ease-out);
+}
+.fade-slide-enter-from { opacity: 0; transform: translateY(8px); }
+.fade-slide-leave-to { opacity: 0; transform: translateY(-8px); }
+
+/* 加载态占位 */
+.dms-skeleton {
+  background: linear-gradient(90deg, var(--dms-gray-100) 25%, var(--dms-gray-200) 37%, var(--dms-gray-100) 63%);
+  background-size: 400% 100%;
+  animation: dms-shimmer var(--dms-motion-duration-slowest) ease infinite;
+  border-radius: var(--dms-radius-base);
+}
+@keyframes dms-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}

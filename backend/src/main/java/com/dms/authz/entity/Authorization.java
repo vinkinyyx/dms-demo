@@ -95,6 +95,12 @@ public class Authorization {
     @Transient
     private String terminalNames;
 
+    @Transient
+    private java.util.List<java.util.Map<String, Object>> authorizedCategories;
+
+    @Transient
+    private java.util.List<java.util.Map<String, Object>> authorizedTerminals;
+
     @JsonSetter("categoryIds")
     public void setCategoryIdsRaw(Object value) { this.categoryIds = toCsv(value); }
 

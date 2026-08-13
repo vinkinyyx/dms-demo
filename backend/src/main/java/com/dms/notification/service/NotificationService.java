@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import org.springframework.scheduling.annotation.Scheduled;
 
 @Slf4j
 @Service
@@ -48,15 +49,51 @@ public class NotificationService {
     }
 
     @Transactional(readOnly = true)
-    public PageResult<Notification> list(Boolean isRead, PageQuery pageQuery) {
+    public PageResult<Notification> list(Boolean isRead, String refType, PageQuery pageQuery) {
         Long userId = TenantContext.getUserId();
         if (userId == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "未登录");
         }
-        Page<Notification> page = isRead == null
-                ? repository.findByUserId(userId, pageQuery.toPageable())
-                : repository.findByUserIdAndIsRead(userId, isRead, pageQuery.toPageable());
+        Page<Notification> page;
+        if (isRead != null && refType != null && !refType.isBlank()) {
+            page = repository.findByUserIdAndIsReadAndRefType(userId, isRead, refType, pageQuery.toPageable());
+        } else if (refType != null && !refType.isBlank()) {
+            page = repository.findByUserIdAndRefType(userId, refType, pageQuery.toPageable());
+        } else if (isRead != null) {
+            page = repository.findByUserIdAndIsRead(userId, isRead, pageQuery.toPageable());
+        } else {
+            page = repository.findByUserId(userId, pageQuery.toPageable());
+        }
         return PageResult.of(page);
+    }
+
+    @Transactional(readOnly = true)
+    public Notification get(Long id) {
+        Long userId = TenantContext.getUserId();
+        Notification n = repository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "通知不存在"));
+        if (userId != null && !userId.equals(n.getUserId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权查看该通知");
+        }
+        return n;
+    }
+
+    @Transactional(readOnly = true)
+    public long unreadCount() {
+        Long userId = TenantContext.getUserId();
+        if (userId == null) return 0L;
+        return repository.countUnread(userId);
+    }
+
+    @Transactional
+    public int cleanupOldNotifications() {
+        return repository.deleteOldNotifications(OffsetDateTime.now().minusDays(30));
+    }
+
+    @Scheduled(cron = "0 0 3 * * ?")
+    public void scheduledCleanup() {
+        int deleted = cleanupOldNotifications();
+        if (deleted > 0) log.info("清理30天前通知{}条", deleted);
     }
 
     @Transactional
@@ -69,11 +106,12 @@ public class NotificationService {
     }
 
     @Transactional
-    public int markAllRead() {
+    public int markAllRead(String refType) {
         Long userId = TenantContext.getUserId();
         if (userId == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "未登录");
         }
+        if (refType != null && !refType.isBlank()) return repository.markAllReadByType(userId, refType);
         return repository.markAllRead(userId);
     }
 }

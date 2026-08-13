@@ -37,7 +37,7 @@
       <el-card shadow="never" style="margin-top:14px">
         <template #header>
           <el-icon><Goods /></el-icon>移动明细
-          <span style="margin-left:12px;color:#909399;font-weight:normal">物料/批次/序列号均从库存中选择，不可手填</span>
+          <span style="margin-left:12px;color:var(--dms-text-4);font-weight:normal">物料/批次/序列号均从库存中选择，不可手填</span>
           <div style="float:right">
             <el-button type="primary" size="small" :disabled="!canAddLine" @click="openInventoryPicker">
               <el-icon><Plus /></el-icon>从库存选择

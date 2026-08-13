@@ -1,0 +1,226 @@
+[
+  {
+    "scope": "BASIC",
+    "id": "/home",
+    "title": "工作台首页",
+    "status": "PASS",
+    "detail": "HTTP 200 2563ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/module/products",
+    "title": "产品管理",
+    "status": "PASS",
+    "detail": "HTTP 200 2527ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/module/categories",
+    "title": "产品分类",
+    "status": "PASS",
+    "detail": "HTTP 200 2578ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/module/dealers",
+    "title": "经销商管理",
+    "status": "PASS",
+    "detail": "HTTP 200 2478ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/module/hospitals",
+    "title": "医院/终端",
+    "status": "PASS",
+    "detail": "HTTP 200 2484ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/module/warehouses",
+    "title": "仓库管理",
+    "status": "PASS",
+    "detail": "HTTP 200 2464ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "BASIC",
+    "id": "/module/suppliers",
+    "title": "供应商",
+    "status": "PASS",
+    "detail": "HTTP 200 2541ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "CONTRACT",
+    "id": "/module/contracts",
+    "title": "合同",
+    "status": "PASS",
+    "detail": "HTTP 200 2578ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "CONTRACT",
+    "id": "/module/authorizations",
+    "title": "授权管理",
+    "status": "PASS",
+    "detail": "HTTP 200 2548ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "ORDER",
+    "id": "/module/orders",
+    "title": "销售订单",
+    "status": "PASS",
+    "detail": "HTTP 200 2513ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "ORDER",
+    "id": "/module/sales-returns",
+    "title": "销退订单",
+    "status": "PASS",
+    "detail": "HTTP 200 2428ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "ORDER",
+    "id": "/module/purchase-orders",
+    "title": "采购订单",
+    "status": "PASS",
+    "detail": "HTTP 200 2430ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "ORDER",
+    "id": "/module/purchase-returns",
+    "title": "采退订单",
+    "status": "PASS",
+    "detail": "HTTP 200 2556ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "INV",
+    "id": "/module/inventory",
+    "title": "库存查询",
+    "status": "PASS",
+    "detail": "HTTP 200 2497ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "INV",
+    "id": "/module/sales-outs",
+    "title": "销售出库",
+    "status": "PASS",
+    "detail": "HTTP 200 2475ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "INV",
+    "id": "/module/receipts",
+    "title": "收货入库",
+    "status": "PASS",
+    "detail": "HTTP 200 2895ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "INV",
+    "id": "/module/stock-moves",
+    "title": "库存移动",
+    "status": "PASS",
+    "detail": "HTTP 200 2597ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "INV",
+    "id": "/module/inventory-adjustments",
+    "title": "库存调整",
+    "status": "PASS",
+    "detail": "HTTP 200 2478ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "SURG",
+    "id": "/module/surgery-reports",
+    "title": "手术植入报告",
+    "status": "PASS",
+    "detail": "HTTP 200 2497ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "PROMO",
+    "id": "/module/promotions",
+    "title": "促销规则",
+    "status": "PASS",
+    "detail": "HTTP 200 2458ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "DASH",
+    "id": "/dashboard",
+    "title": "数据看板",
+    "status": "PASS",
+    "detail": "HTTP 200 2727ms bodyLen=292 tables=2 btns=6 inputs=11 cards=15"
+  },
+  {
+    "scope": "RPT",
+    "id": "/module/report-order-trace",
+    "title": "订单追踪",
+    "status": "PASS",
+    "detail": "HTTP 200 2394ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "USER",
+    "id": "/positions",
+    "title": "销售岗位",
+    "status": "PASS",
+    "detail": "HTTP 200 2330ms bodyLen=396 tables=0 btns=4 inputs=0 cards=1"
+  },
+  {
+    "scope": "USER",
+    "id": "/module/users",
+    "title": "账号管理",
+    "status": "PASS",
+    "detail": "HTTP 200 2547ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "USER",
+    "id": "/module/roles",
+    "title": "角色管理",
+    "status": "PASS",
+    "detail": "HTTP 200 2420ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "MAP",
+    "id": "/product-mappings",
+    "title": "产品对码",
+    "status": "PASS",
+    "detail": "HTTP 200 3113ms bodyLen=194 tables=3 btns=7 inputs=4 cards=3"
+  },
+  {
+    "scope": "CTPL",
+    "id": "/contracts/templates",
+    "title": "合同模板",
+    "status": "PASS",
+    "detail": "HTTP 200 2301ms bodyLen=252 tables=3 btns=8 inputs=3 cards=1"
+  },
+  {
+    "scope": "APPR",
+    "id": "/approvals",
+    "title": "审批中心",
+    "status": "PASS",
+    "detail": "HTTP 200 2445ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  },
+  {
+    "scope": "CFG",
+    "id": "/tenant-page-configs",
+    "title": "列表页配置",
+    "status": "PASS",
+    "detail": "HTTP 200 2397ms bodyLen=321 tables=9 btns=3 inputs=35 cards=0"
+  },
+  {
+    "scope": "LOG",
+    "id": "/api-call-logs",
+    "title": "接口调用日志",
+    "status": "PASS",
+    "detail": "HTTP 200 2764ms bodyLen=2162 tables=5 btns=33 inputs=5 cards=2"
+  },
+  {
+    "scope": "LOG",
+    "id": "/email-logs",
+    "title": "邮件日志",
+    "status": "PASS",
+    "detail": "HTTP 200 2276ms bodyLen=1904 tables=3 btns=4 inputs=1 cards=1"
+  },
+  {
+    "scope": "SYS",
+    "id": "/system-settings",
+    "title": "系统设置",
+    "status": "PASS",
+    "detail": "HTTP 200 2591ms bodyLen=378 tables=0 btns=2 inputs=4 cards=10"
+  }
+]

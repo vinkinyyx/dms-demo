@@ -1,0 +1,65 @@
+﻿/* ===== 基础重置 ===== */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--dms-font-family);
+  font-size: var(--dms-font-size-base);
+  line-height: var(--dms-line-height-base);
+  color: var(--dms-text-2);
+  background: var(--dms-bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--dms-link-color);
+  text-decoration: none;
+  transition: color var(--dms-motion-duration-fast) var(--dms-motion-ease-out);
+}
+a:hover { color: var(--dms-link-hover); }
+a:active { color: var(--dms-link-active); }
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--dms-text-1);
+  font-weight: var(--dms-font-weight-semibold);
+  margin: 0;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+img { max-width: 100%; display: block; }
+
+:focus-visible { outline: 2px solid var(--dms-color-primary); outline-offset: 2px; }
+
+/* 数字字体（金额/数量） */
+.num, .is-number {
+  font-family: var(--dms-font-family-number);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 金额红涨（业务约定：红色 = 金额/突出数值） */
+.amount, .money {
+  color: var(--dms-color-danger);
+  font-family: var(--dms-font-family-number);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 滚动条 WebKit 统一 */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb {
+  background: var(--dms-gray-300);
+  border-radius: var(--dms-radius-pill);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--dms-gray-400); }
+::-webkit-scrollbar-track { background: transparent; }

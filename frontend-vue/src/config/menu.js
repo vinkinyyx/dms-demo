@@ -1,4 +1,4 @@
-export const MENU_GROUPS = [
+﻿export const MENU_GROUPS = [
   {
     group: '基础数据',
     items: [
@@ -43,7 +43,7 @@ export const MENU_GROUPS = [
     ]
   },
   {
-    group: '手术与营销售',
+    group: '手术与营销',
     items: [
       { key: 'surgery-reports', icon: 'FirstAidKit', label: '手术植入报台', permissionCode: 'surgery_report:view' },
       { key: 'promotions', icon: 'Present', label: '促销规则', permissionCode: 'promotion:view' }
@@ -96,6 +96,8 @@ export const MENU_GROUPS = [
     ]
   }
 ]
+
+
 
 
 

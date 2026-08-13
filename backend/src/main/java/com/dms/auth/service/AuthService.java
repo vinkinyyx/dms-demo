@@ -17,7 +17,6 @@ import com.dms.tenant.repository.TenantRepository;
 import com.dms.user.entity.User;
 import com.dms.user.repository.UserRepository;
 import com.dms.user.service.UserService;
-import com.dms.auth.service.LoginLogService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
@@ -49,9 +48,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final RedissonClient redissonClient;
-    private final LoginLogService loginLogService;
 
-    @Transactional
     public LoginResponse login(LoginRequest request, String clientIp) {
         User user = locateUser(request.getTenantCode(), request.getUsername());
         if (user == null) {
@@ -72,7 +69,6 @@ public class AuthService {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
         userService.resetFailCount(user.getId(), clientIp);
-        loginLogService.logSuccess(user, "PASSWORD", clientIp, null);
 
         String access = jwtUtil.generateAccessToken(user.getId(), user.getUsername(), user.getTenantId().toString());
         String refresh = jwtUtil.generateRefreshToken(user.getId(), user.getUsername(), user.getTenantId().toString());

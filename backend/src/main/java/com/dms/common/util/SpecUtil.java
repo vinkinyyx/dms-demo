@@ -29,6 +29,21 @@ public final class SpecUtil {
                 try { ps.add(cb.equal(root.get("tenantId"), tenantId)); } catch (Exception ignored) {}
             }
             if (params != null) {
+                String keyword = params.get("keyword");
+                if (keyword == null || keyword.isBlank()) keyword = params.get("kw");
+                if (keyword != null && !keyword.isBlank()) {
+                    String kw = "%" + keyword.trim().toLowerCase() + "%";
+                    List<Predicate> ors = new ArrayList<>();
+                    for (String fld : new String[]{"code", "name", "nameCn", "nameEn", "spec"}) {
+                        try {
+                            var p = root.get(fld);
+                            if (p.getJavaType() == String.class) {
+                                ors.add(cb.like(cb.lower(p.as(String.class)), kw));
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                    if (!ors.isEmpty()) ps.add(cb.or(ors.toArray(new Predicate[0])));
+                }
                 for (Map.Entry<String, String> e : params.entrySet()) {
                     String key = e.getKey();
                     String val = e.getValue();

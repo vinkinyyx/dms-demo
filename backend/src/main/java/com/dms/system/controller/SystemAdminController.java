@@ -6,6 +6,7 @@ package com.dms.system.controller;
 
 import com.dms.common.ApiResponse;
 import com.dms.common.util.TenantContext;
+import com.dms.common.util.PagingUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,7 @@ public class SystemAdminController {
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String entityType) {
         UUID tenantId = TenantContext.getTenantId();
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
 
         StringBuilder where = new StringBuilder(" WHERE tenant_id = :tid ");
         Map<String, Object> params = new HashMap<>();
@@ -46,7 +47,7 @@ public class SystemAdminController {
                 "FROM audit_logs " + where + " ORDER BY at_time DESC LIMIT :limit OFFSET :offset",
                 Tuple.class);
         params.forEach(listQ::setParameter);
-        listQ.setParameter("limit", size);
+        listQ.setParameter("limit", safeSize);
         listQ.setParameter("offset", offset);
         @SuppressWarnings("unchecked")
         List<Tuple> rows = listQ.getResultList();
@@ -72,22 +73,34 @@ public class SystemAdminController {
     public ApiResponse<Map<String, Object>> loginLogs(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String username) {
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) Boolean success,
+            @RequestParam(required = false) String loginType,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime) {
         UUID tenantId = TenantContext.getTenantId();
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
 
-        String where = " WHERE l.tenant_id = :tid ";
-        var countQ = em.createNativeQuery("SELECT COUNT(*) FROM user_login_logs l " + where);
-        countQ.setParameter("tid", tenantId);
+        Map<String, Object> params = new HashMap<>();
+        params.put("tid", tenantId);
+        StringBuilder where = new StringBuilder(" WHERE l.tenant_id = :tid ");
+        if (username != null && !username.isBlank()) { where.append(" AND u.username ILIKE :username "); params.put("username", "%"+username.trim()+"%"); }
+        if (success != null) { where.append(" AND l.success = :success "); params.put("success", success); }
+        if (loginType != null && !loginType.isBlank()) { where.append(" AND l.login_type = :loginType "); params.put("loginType", loginType); }
+        if (startTime != null && !startTime.isBlank()) { where.append(" AND l.at_time >= CAST(:startTime AS timestamptz) "); params.put("startTime", startTime); }
+        if (endTime != null && !endTime.isBlank()) { where.append(" AND l.at_time <= CAST(:endTime AS timestamptz) "); params.put("endTime", endTime); }
+
+        var countQ = em.createNativeQuery("SELECT COUNT(*) FROM user_login_logs l LEFT JOIN users u ON u.id=l.user_id " + where);
+        params.forEach(countQ::setParameter);
         long total = ((Number) countQ.getSingleResult()).longValue();
 
         var listQ = em.createNativeQuery(
-                "SELECT l.id, l.tenant_id, l.user_id, u.username, l.login_type, l.ip, l.user_agent, l.success, l.fail_reason, l.at_time " +
+                "SELECT l.id, l.tenant_id, l.user_id, COALESCE(u.username,'平台/未知') username, u.name display_name, l.login_type, l.ip, l.user_agent, l.success, l.fail_reason, l.at_time " +
                 "FROM user_login_logs l LEFT JOIN users u ON l.user_id = u.id " +
                 where + " ORDER BY l.at_time DESC LIMIT :limit OFFSET :offset",
                 Tuple.class);
-        listQ.setParameter("tid", tenantId);
-        listQ.setParameter("limit", size);
+        params.forEach(listQ::setParameter);
+        listQ.setParameter("limit", safeSize);
         listQ.setParameter("offset", offset);
         @SuppressWarnings("unchecked")
         List<Tuple> rows = listQ.getResultList();
@@ -97,10 +110,12 @@ public class SystemAdminController {
             m.put("id", r.get("id"));
             m.put("userId", r.get("user_id"));
             m.put("username", r.get("username"));
+            m.put("displayName", r.get("display_name"));
             m.put("loginType", r.get("login_type"));
             m.put("ipAddress", r.get("ip"));
             m.put("userAgent", r.get("user_agent"));
             m.put("success", r.get("success"));
+            m.put("successLabel", Boolean.TRUE.equals(r.get("success")) ? "成功" : "失败");
             m.put("failReason", r.get("fail_reason"));
             m.put("atTime", String.valueOf(r.get("at_time")));
             list.add(m);
@@ -115,7 +130,7 @@ public class SystemAdminController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         UUID tenantId = TenantContext.getTenantId();
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
 
         var countQ = em.createNativeQuery("SELECT COUNT(*) FROM notifications WHERE tenant_id = :tid");
         countQ.setParameter("tid", tenantId);
@@ -126,7 +141,7 @@ public class SystemAdminController {
                 "FROM notifications WHERE tenant_id = :tid ORDER BY created_at DESC LIMIT :limit OFFSET :offset",
                 Tuple.class);
         listQ.setParameter("tid", tenantId);
-        listQ.setParameter("limit", size);
+        listQ.setParameter("limit", safeSize);
         listQ.setParameter("offset", offset);
         @SuppressWarnings("unchecked")
         List<Tuple> rows = listQ.getResultList();

@@ -167,7 +167,7 @@ const partyName = ref('')
 
 const MODE_CFG = {
   sales: { partyLabel: '经销商', partyResource: 'dealers', orderTypes: [{ value: 'NORMAL', label: '常规订单' }, { value: 'SHORTAGE', label: '紧急补货' }, { value: 'CUSTOM', label: '定制订单' }, { value: 'EMERGENCY', label: '应急订单' }] },
-  purchase: { partyLabel: '供应商', partyResource: 'dealers', orderTypes: [{ value: 'NORMAL', label: '常规采购' }, { value: 'URGENT', label: '紧急采购' }] }
+  purchase: { partyLabel: '供应商', partyResource: 'suppliers', orderTypes: [{ value: 'NORMAL', label: '常规采购' }, { value: 'URGENT', label: '紧急采购' }] }
 }
 const cfg = computed(() => MODE_CFG[mode.value])
 const validLines = computed(() => lines.value.filter((l) => l.productId && l.qty > 0))
@@ -355,13 +355,13 @@ async function submit() {
 }
 
 .ov-label {
-  color: #909399;
+  color: var(--dms-text-4);
   width: 70px;
   flex-shrink: 0;
 }
 
 .ov-highlight {
-  color: #67C23A;
+  color: var(--dms-color-success);
   font-weight: 600;
 }
 
@@ -374,30 +374,30 @@ async function submit() {
 }
 
 .amount-preview b {
-  color: #606266;
+  color: var(--dms-text-3);
 }
 
 .amount-preview .amount-total {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px dashed #EBEEF5;
+  border-top: 1px dashed var(--dms-border-2);
   font-size: 16px;
 }
 
 .amount-preview .amount-total b {
-  color: #F56C6C;
+  color: var(--dms-color-danger);
 }
 
 .stock-warn {
-  color: #F56C6C;
+  color: var(--dms-color-danger);
   font-weight: 600;
 }
 
 .stock-exp {
-  color: #E6A23C;
+  color: var(--dms-color-warning);
 }
 
 .stock-none {
-  color: #C0C4CC;
+  color: var(--dms-text-placeholder);
 }
 </style>

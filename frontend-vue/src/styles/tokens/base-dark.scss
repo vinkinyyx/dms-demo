@@ -1,0 +1,24 @@
+﻿/* ===== DMS Design Token - Layer 1: Base Palette (Dark) 预留 ===== */
+/* 切换暗色模式时在 <html class="dark"> 上生效 */
+
+html.dark {
+  --dms-blue-400: #4096ff;
+  --dms-blue-500: #1677ff;
+  --dms-blue-600: #0958d9;
+
+  --dms-gray-50:  #1a1c1f;
+  --dms-gray-100: #1f2226;
+  --dms-gray-200: #2a2d32;
+  --dms-gray-300: #3a3d43;
+  --dms-gray-400: #6b7078;
+  --dms-gray-500: #90959d;
+  --dms-gray-600: #b8bcc3;
+  --dms-gray-700: #d7dae0;
+  --dms-gray-800: #e9ebef;
+  --dms-gray-900: #f5f6f8;
+
+  --dms-bg-page: #141619;
+  --dms-bg-container: #1f2226;
+  --dms-bg-elevated: #26292e;
+  --dms-bg-mask: rgba(0, 0, 0, 0.65);
+}
