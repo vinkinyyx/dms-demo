@@ -43,3 +43,17 @@
 
 ## 6. 结论
 v3.12.3 P2补强已构建、部署并通过自动化测试与浏览器深度E2E。本轮自动化共执行 564 条断言/用例级检查，0 个失败；skip/xfail 均为历史已知或前置数据不满足项，不影响本次P2交付结论。
+
+## 7. 定时任务与部署后清理
+
+### 7.1 定时任务
+- 应用内已启用 Spring 定时任务：审批超时提醒每日 09:00，通知每日 03:00 清理，API/业务/邮件/操作日志每日 03:15 清理，合同状态每日 00:05 检查，报表订阅每日 08:00 投递。
+- 服务器已配置数据库备份 cron：每日 02:30 执行 `/opt/dms/scripts/backup_db.sh`，输出写入 `/var/log/dms-backup.log`，默认保留 14 天。
+- 已验证：root crontab 包含备份任务，备份脚本具备执行权限，`bash -n` 语法检查通过，`cron.service` 为 active(running)。
+
+### 7.2 清理结果
+- `/opt/dms/backups` 已从约 1.1G 清理至约 130M，保留最新应用包、最新数据库备份和必要 compose 备份。
+- 已删除 DMS 临时部署包 `/home/ubuntu/dms-frontend-refresh.tar.gz`、`/home/ubuntu/dms-admin-refresh.tar.gz`。
+- 已执行 `apt-get clean`、`journalctl --vacuum-time=7d`，并清理超过 1 天的 `/tmp/dms-*` 临时文件。
+- Docker 无悬空镜像或构建缓存，`dms-test-nginx`、`dms-test-backend`、`dms-test-postgres`、`dms-test-redis`、`dms-test-minio` 均正常运行。
+- 本地已清理历史测试结果、截图和临时探针脚本；Playwright 运行时 `node_modules/` 保留用于后续自动化测试。
