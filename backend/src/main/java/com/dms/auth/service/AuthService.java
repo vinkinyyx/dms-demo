@@ -48,6 +48,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final RedissonClient redissonClient;
+    private final MfaService mfaService;
 
     public LoginResponse login(LoginRequest request, String clientIp) {
         User user = locateUser(request.getTenantCode(), request.getUsername());
@@ -69,6 +70,10 @@ public class AuthService {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
         userService.resetFailCount(user.getId(), clientIp);
+
+        if (mfaService.isEnabled(user)) {
+            return mfaService.buildPendingMfaResponse(user);
+        }
 
         String access = jwtUtil.generateAccessToken(user.getId(), user.getUsername(), user.getTenantId().toString());
         String refresh = jwtUtil.generateRefreshToken(user.getId(), user.getUsername(), user.getTenantId().toString());

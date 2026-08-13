@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <el-container class="layout">
     <el-aside :width="collapsed ? '64px' : '230px'" class="sidebar">
       <div class="logo" @click="$router.push('/home')">
@@ -27,11 +27,14 @@
     </el-aside>
     <el-container>
       <el-header class="topbar">
-        <el-icon class="collapse-btn" @click="collapsed = !collapsed">
+        <el-icon class="collapse-btn" @click="toggleSidebar">
           <Fold v-if="!collapsed" /><Expand v-else />
         </el-icon>
         <span class="page-title">{{ currentTitle }}</span>
         <div class="spacer" />
+        <el-button text circle title="命令面板 (Ctrl/Cmd+K)" @click="commandOpen = true">
+          <el-icon><Search /></el-icon>
+        </el-button>
         <div class="theme-tools">
           <button v-for="item in themePresets" :key="item.key" type="button" class="theme-chip"
             :class="{ active: currentPreset.key === item.key }" :title="item.name"
@@ -67,16 +70,27 @@
         </router-view>
       </el-main>
     </el-container>
+    <el-dialog v-model="commandOpen" title="快速跳转" width="520px" append-to-body>
+      <el-autocomplete
+        v-model="commandQuery"
+        :fetch-suggestions="queryCommands"
+        placeholder="搜索页面，例如：订单、库存、报表"
+        style="width: 100%"
+        @select="selectCommand"
+        @keyup.enter="selectFirstCommand"
+      />
+      <div class="command-hint">回车打开第一项；支持快速进入审批、库存、报表、个人资料。</div>
+    </el-dialog>
   </el-container>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { MENU_GROUPS } from '@/config/menu'
 import { unreadCount } from '@/api/notification'
-import { Bell, Moon, Sunny } from '@element-plus/icons-vue'
+import { Bell, Moon, Sunny, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { ensurePermissions } from '@/directives/has'
 import { THEME_PRESETS as themePresets, currentThemePreset as currentPreset, setPreset as setThemePreset, toggleMode as applyThemeMode, initTheme } from '@/config/theme-runtime'
@@ -84,17 +98,21 @@ import { THEME_PRESETS as themePresets, currentThemePreset as currentPreset, set
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-const collapsed = ref(false)
+const collapsed = ref(localStorage.getItem('dms:sidebar:collapsed') === '1')
+const commandOpen = ref(false)
+const commandQuery = ref('')
 initTheme()
 const unread = ref(0)
 const themeMode = ref(document.documentElement.dataset.mode || 'light')
 function toggleThemeMode(){ applyThemeMode(); themeMode.value = document.documentElement.dataset.mode || 'light' }
+function toggleSidebar(){ collapsed.value = !collapsed.value; persistSidebar() }
 async function loadUnread(){ try { const r=await unreadCount(); unread.value=Number(r.data?.count||0) } catch(e){ unread.value=0 } }
 function goNotifications(){ router.push('/notifications') }
 setInterval(loadUnread, 60000)
 const permissionsLoaded = ref(false)
 
 onMounted(async () => {
+  collapsed.value = localStorage.getItem('dms:sidebar:collapsed') === '1'
   await ensurePermissions()
   await loadUnread()
   permissionsLoaded.value = true
@@ -139,9 +157,55 @@ const currentTitle = computed(() => {
   return 'DMS'
 })
 
+const commandItems = computed(() => {
+  const items = [
+    { title: '工作台首页', path: '/home' },
+    { title: '消息中心', path: '/notifications' },
+    { title: '个人资料', path: '/profile' },
+    { title: '销售订单', path: '/m/orders' },
+    { title: '库存查询', path: '/m/inventory' },
+    { title: '收货入库', path: '/m/receipts' },
+    { title: '销售出库', path: '/m/sales-outs' },
+    { title: '库存移动', path: '/m/stock-moves' },
+    { title: '库存盘点', path: '/stocktakes' },
+    { title: '效期预警', path: '/expiry-alerts' },
+    { title: '序列号追溯', path: '/traceability' },
+    { title: '报表中心', path: '/reports' },
+    { title: '报表订阅', path: '/report-subscriptions' },
+    { title: '审批中心', path: '/approval/todo' },
+    { title: '审批监控', path: '/approval/admin' },
+    { title: '日志中心', path: '/log-center' },
+    { title: '导入导出任务', path: '/async-tasks' }
+  ]
+  for (const group of menuGroups.value) for (const item of group.items) items.push({ title: item.label, path: item.route || '/m/' + item.key })
+  return items
+})
+function queryCommands(query, cb) {
+  const q = String(query || '').trim().toLowerCase()
+  cb(commandItems.value.filter(item => !q || item.title.toLowerCase().includes(q)).slice(0, 12))
+}
+function selectCommand(item) {
+  if (!item || !item.path) return
+  commandOpen.value = false
+  commandQuery.value = ''
+  router.push(item.path)
+}
+function selectFirstCommand() {
+  const list = commandItems.value.filter(item => !commandQuery.value || item.title.includes(commandQuery.value))
+  if (list[0]) selectCommand(list[0])
+}
+function openCommandPalette(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    commandOpen.value = true
+  }
+}
+function persistSidebar() { localStorage.setItem('dms:sidebar:collapsed', collapsed.value ? '1' : '0') }
+onBeforeUnmount(() => window.removeEventListener('keydown', openCommandPalette))
+window.addEventListener('keydown', openCommandPalette)
 function onCommand(cmd) {
   if (cmd === 'notifications') { router.push('/notifications'); return }
-  if (cmd === 'profile') { ElMessage.info('个人设置将在后续版本开放'); return }
+  if (cmd === 'profile') { router.push('/profile'); return }
   if (cmd === 'logout') {
     ElMessageBox.confirm('确认退出登录？', '提示', { type: 'warning' })
       .then(async () => {
@@ -245,4 +309,5 @@ function onCommand(cmd) {
 .main { background: var(--dms-bg-page); padding: var(--dms-padding-page); }
 :global(html[data-mode='dark']) .topbar { background: #111827; border-color: #243044; }
 :global(html[data-mode='dark']) .page-title { color: #f8fafc; }
+.command-hint { margin-top: 10px; color: var(--dms-text-3); font-size: 12px; }
 </style>

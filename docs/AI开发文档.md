@@ -1,8 +1,8 @@
 # DMS经销商管理系统 - AI开发文档
 
-> **版本**: v1.3  
-> **创建时间**: 2026-08-11  
-> **最近更新**: 2026-08-13（五层自动化测试套件：350条用例，300 passed / 6 skipped / 25 xfailed / 19 xpassed / 0 failed）  
+> **版本**: v1.3
+> **创建时间**: 2026-08-11
+> **最近更新**: 2026-08-13（五层自动化测试套件：350条用例，300 passed / 6 skipped / 25 xfailed / 19 xpassed / 0 failed）
 > **用途**: 跨设备/跨会话上下文快照，AI辅助开发第一手参考资料
 
 ---
@@ -152,8 +152,8 @@ DMSdoc/
 | 2026-08-12 | **自动化测试框架搭建（首次）**：在 `automation_test/` 新建基于 Python 3.10+ / pytest / requests 的接口级自动化测试工程；完成**基础设施层**（config环境切换/ApiClient统一HTTP封装+断言方法/conftest多角色登录Fixture+基础数据ID+cleanup_registry清理注册器/helpers随机数据+build_product/build_dealer模板/pytest.ini/requirements.txt/README）；**15个测试模块共193条用例**覆盖附录D+附录E：登录认证18/产品14/基础数据15/合同14/销售订单13/采购订单11/库存10/手术报台10/促销10/报表12/审批12/权限15/平台后台18/安全16/集成E2E 5；**标记分布**：api×77 / crud×48 / negative×28 / smoke×25 / security×7 / integration×5 / e2e×5；**19/19文件py_compile语法100%通过**，AST统计确认193条；支持test/prod双环境切换、HTML/XML双报告、CI集成 | automation_test/ 下全部文件（tests/ + utils/ + config.py + conftest.py + pytest.ini + requirements.txt + README.md） |
 | 2026-08-12 | **自动化测试全量执行 + 后端字段对齐修复**：首次全量运行 pytest 发现后端实际响应结构与测试假设存在差异，系统性修复如下：①**ApiClient修复**：业务码兼容 code=0（成功）而非200；msg兼容 message 字段；②**config.py路径修正**：ACCOUNTS=/api/users（原/api/accounts 404）、UI_LAYOUT=/api/menus（原/api/ui/layout 404）、REPORT_SALES_RANK=/api/reports/sales-ranking（原sales-rank 404）；③**conftest.py登录取token修复**：新增 _extract_token() 双重兜底（body.accessToken / data.data.accessToken）；④**14个测试文件字段对齐**：产品 code/currentPrice/udiRequired/isSerialManaged/warnMonths/safetyQty/status:小写active（原productCode/refPrice/udiTrace/serialNoMgmt/expireWarnMonths/safetyStock/ACTIVE）；分类加level/sortOrder/status；仓库加dealerId；供应商contactPhone（原phone）；角色更新带code+name；⑤**断言策略放宽**：平台token访问业务接口一期未严格隔离（200兼容）、审批/字典/部分报表/部分平台后台接口一期未实现（404 skip）、销售订单更新返回500（已知后端bug，skip+记录）；⑥**pytest.ini markers补全**：新增 api/negative/e2e/export 标记定义 | automation_test/utils/api_client.py + config.py + conftest.py + pytest.ini + tests/ 下14个测试文件 |
 | 2026-08-12 | **全量测试结果**：194条用例（含新增1个安全用例）执行完毕 → **132 passed / 62 skipped / 0 failed**，耗时41秒；62个skip原因分布：审批模块12条（一期未实现）、平台后台15条（一期未实现）、集成场景5条（依赖前置数据创建失败）、报表3条（top-products/surgery-stat/accounts-receivable未实现）、其他27条（字段对齐容错/后端bug/无前置数据）；**发现后端bug 1个**：PUT /api/sales-orders/{id} 返回500系统内部错误（待后端修复）；**HTML报告**：reports/full_report.html；**JUnit XML**：reports/junit.xml | automation_test/reports/full_report.html + junit.xml |
-| 2026-08-13 | **新测试环境登录验证 + P0需求全量测试案例补充**：登录新服务器 http://43.128.145.141:8083（sys_admin/Dms@123456），浏览器自动化逐页遍历三端：业务前台PC 10大模块42子菜单全部页面正常显示（无"尚未迁移"提示，BIZ-11~18已实现）、移动端H5 4Tab（首页/订单/报台/我的）+拍照上传组件存在、平台后台3大模块12子菜单正常（接口日志/审计日志可访问）；**新发现Bug 1个**：平台后台接口日志中文字符显示??乱码；**输出新文件**：`10_测试用例/DMS完整测试场景与测试案例_v3.12.0.md`（1608行，约684+条新增子用例），含20章：第15章P0新功能专项（消息中心/登录日志/审批摘要可视化/移动审批闭环/移动消息中心/报台拍照上传）、第16-18章全模块细节增补（工作台主题切换/账号管理/订单/合同/库存/移动端/平台后台）、第19章安全与脱敏专项、第20章端到端链路增补 | 10_测试用例/DMS完整测试场景与测试案例_v3.12.0.md |
-| 2026-08-13 | **自动化测试脚本v3.12.0大版本升级**：新增 4 个测试文件 + 82条新用例，总用例数从193→275条；①config.py 更新：测试环境地址从 8.133.193.238 → 43.128.145.141:8083，新增 NOTIFICATIONS/LOGIN_LOGS/APPROVAL_DETAIL_SUMMARY 等P0 API路径；②新增 `test_p0_features.py`（消息中心10用例（消息列表/分页/字段/未读已读筛选/分类筛选/未读计数/全部已读/权限）+登录日志8用例+审批摘要4用例；③新增 `test_platform_logs.py` 接口日志8用例（列表/字段/中文乱码验证/分页/方法筛选/状态筛选/排序/权限）+审计日志7用例+登录日志2用例；④新增 `test_security_advanced.py` 数据脱敏3+SQL注入6+XSS防护4+密码安全3+横向越权2+纵向越权5=23用例；⑤新增 `test_mobile_h5.py` 移动端4Tab API兼容性测试（首页4+订单4+报台4+我的4+审批3=19用例）；**全量测试结果：275用例 → 188 passed / 84 skipped / 3 xfailed / 0 failed，耗时29秒；skipped主要为未实现接口（登录日志/审计日志/全部已读/部分报表等），xfailed为已知权限配置问题（销售角色可创建产品/用户） | automation_test/config.py + tests/test_p0_features.py + test_platform_logs.py + test_security_advanced.py + test_mobile_h5.py |
+| 2026-08-13 | **新测试环境登录验证 + P0需求全量测试案例补充**：登录新服务器 http://43.128.145.141（sys_admin/Dms@123456），浏览器自动化逐页遍历三端：业务前台PC 10大模块42子菜单全部页面正常显示（无"尚未迁移"提示，BIZ-11~18已实现）、移动端H5 4Tab（首页/订单/报台/我的）+拍照上传组件存在、平台后台3大模块12子菜单正常（接口日志/审计日志可访问）；**新发现Bug 1个**：平台后台接口日志中文字符显示??乱码；**输出新文件**：`10_测试用例/DMS完整测试场景与测试案例_v3.12.0.md`（1608行，约684+条新增子用例），含20章：第15章P0新功能专项（消息中心/登录日志/审批摘要可视化/移动审批闭环/移动消息中心/报台拍照上传）、第16-18章全模块细节增补（工作台主题切换/账号管理/订单/合同/库存/移动端/平台后台）、第19章安全与脱敏专项、第20章端到端链路增补 | 10_测试用例/DMS完整测试场景与测试案例_v3.12.0.md |
+| 2026-08-13 | **自动化测试脚本v3.12.0大版本升级**：新增 4 个测试文件 + 82条新用例，总用例数从193→275条；①config.py 更新：测试环境地址从 8.133.193.238 → 43.128.145.141，新增 NOTIFICATIONS/LOGIN_LOGS/APPROVAL_DETAIL_SUMMARY 等P0 API路径；②新增 `test_p0_features.py`（消息中心10用例（消息列表/分页/字段/未读已读筛选/分类筛选/未读计数/全部已读/权限）+登录日志8用例+审批摘要4用例；③新增 `test_platform_logs.py` 接口日志8用例（列表/字段/中文乱码验证/分页/方法筛选/状态筛选/排序/权限）+审计日志7用例+登录日志2用例；④新增 `test_security_advanced.py` 数据脱敏3+SQL注入6+XSS防护4+密码安全3+横向越权2+纵向越权5=23用例；⑤新增 `test_mobile_h5.py` 移动端4Tab API兼容性测试（首页4+订单4+报台4+我的4+审批3=19用例）；**全量测试结果：275用例 → 188 passed / 84 skipped / 3 xfailed / 0 failed，耗时29秒；skipped主要为未实现接口（登录日志/审计日志/全部已读/部分报表等），xfailed为已知权限配置问题（销售角色可创建产品/用户） | automation_test/config.py + tests/test_p0_features.py + test_platform_logs.py + test_security_advanced.py + test_mobile_h5.py |
 | 2026-08-13 | **待补测项全面补测 + 回归测试步骤文档输出**：通过浏览器自动化+API端到端测试，完成v3.12.0测试报告中17项"待补测"的全部验证：①UI层实测：消息中心（确认无跳转功能）、审批摘要可视化（采购订单+授权审批均正常，含基本信息/单据摘要/审批记录时间轴）、接口日志列表；②API层补测：采购闭环（创建→审批→入库，库存查询路径需确认）、销售闭环、消息通知链路（提交订单→生成审批待办消息，验证通过）、报表数据一致性（数据看板4个KPI接口正常）；③输出2个新工具脚本：`create_test_data.py`（批量创建采购/销售/合同/授权/手术报台测试数据）、`e2e_flow_test.py`（4条端到端链路API层验证）；④输出核心交付物 `10_测试用例/DMS回归测试步骤文档_v3.12.0.md`（约360行，6大阶段：API自动化/PC端UI/移动端H5/平台后台/端到端闭环/安全非功能，含17项待补测实测结论对照表和回归通过标准） | automation_test/create_test_data.py + e2e_flow_test.py + 10_测试用例/DMS回归测试步骤文档_v3.12.0.md |
 | 2026-08-13 | **文档整理与合并**：对`10_测试用例`和`15_补充需求`两个文件夹进行整理，同类文档合并为一份，测试报告统一命名并移出子文件夹；①10_测试用例：3份测试案例合并为`DMS完整测试场景与测试案例_v3.12.0.md`（7620行，v3.11.0基础+v3.11.1专项+v3.12.0增补）、4份测试报告统一命名为`DMS测试报告_版本_日期_类型.md`格式、回归步骤文档重命名为`DMS回归测试步骤文档_v3.12.0.md`、删除"测试报告"子文件夹；②15_补充需求：4份需求/交付文档合并为2份（`DMS需求评估与优先级排序_v3.12.3.md` + `P0交付报告_v3.12.3.md`）、保留4份UI设计文档（2份md规范+2份html demo）；③同步更新`doc/AI开发文档.md`和`doc/项目设计文档.md`中所有相关路径引用（共22处） | 10_测试用例/ + 15_补充需求/ + doc/AI开发文档.md + doc/项目设计文档.md |
 | 2026-08-13 | **中文乱码专项全面排查**：用户反馈收货入库详情页字段标签显示"????"乱码后，系统性遍历PC端10大模块所有列表页+详情页（共遍历42个子菜单页面，进入12个有数据的详情页/弹窗深度检查）；**新发现Bug 2个**：①BUG-007 收货入库详情页乱码（操作记录表头"时间"显示为??、收货子单行"创建人"显示为??）②BUG-008 销售出库详情页乱码（发货明细表头"发货时间"显示为????、操作记录表头"时间"显示为??）；**确认正常的页面**：采购订单/销售订单/合同/授权/经销商/医院/仓库/供应商/账号详情弹窗均正常、库存移动详情页正常、接口日志详情弹窗正常、数据看板/报表中心正常；**更新测试报告**：Bug从5个增至8个（3严重+5一般），整体通过率从92.5%降至91.1%；**更新回归文档**：新增"第六阶段：中文乱码专项检查"（约50行，含4个小节：检查范围与方法/库存业务重点/订单业务/其他模块/根因推测），库存业务模块增加3条乱码检查用例（P0级） | 10_测试用例/DMS测试报告_v3.12.0_20260813_全量回归.md + DMS回归测试步骤文档_v3.12.0.md |
@@ -168,7 +168,7 @@ DMSdoc/
 2. **密码输入**：浏览器自动化 `browser_type({ clear:true })` 有时对密码输入框不生效，建议先点击密码框聚焦后再输入
 3. **菜单展开**：CDP模式下 `states:[collapsed/expanded]` 可能暴露不完整子菜单，建议使用 `browser_evaluate + querySelectorAll('.el-menu-item, .el-sub-menu__title')` 完整提取
 4. **token隔离**：业务前台登录 `/api/auth/login` vs 平台后台 `/api/admin/auth/login` **绝对不要混用**；401时首先查是哪套token
-5. **测试环境URL**：`http://8.133.193.238:8083/` → 前端端口8083（Nginx），后端API端口实际由Nginx代理（可能8082），不要直接打8080或8081
+5. **测试环境URL**：`http://43.128.145.141/` → 前端端口8083（Nginx），后端API端口实际由Nginx代理（可能8082），不要直接打8080或8081
 6. **删除有引用数据**：产品/经销商被订单/库存引用后删除返回 **40904 Conflict**，不是500；测试案例要覆盖
 7. **操作日志接口**：`GET /api/operation-log/list/product/{id}` 不得返回500；空数组也必须200（防回归4号Bug）
 8. **产品表单16字段**：浏览器实际验证新增产品表单字段为——产品编码、中文名称、**英文名称**、产品类型、产品分类、规格型号、单位、参考单价、税率、**需要UDI追溯(布尔)**、**序列号管理(布尔)**、**临期预警(月)默认3**、**安全库存默认10**、**最小订购量默认1**、状态（启用/停用）；写测试和接口时字段名要与这16项严格对齐
@@ -210,7 +210,7 @@ cd frontend-vue
 npm install          # 或 pnpm i
 npm run dev          # 默认 http://localhost:5173
 ```
-- `.env.development` 中 `VITE_API_BASE_URL=http://8.133.193.238:8083`（指向测试环境Nginx，避免本地起后端）
+- `.env.development` 中 `VITE_API_BASE_URL=http://43.128.145.141`（指向测试环境Nginx，避免本地起后端）
 
 ### 后端（Spring Boot）
 ```bash

@@ -136,10 +136,12 @@ public class BizDocListController {
         String sql = "SELECT r.id, r.code, r.is_red, r.warehouse_id, r.ref_doc_type, r.ref_doc_id, " +
                 "r.status, r.auto_created, r.source_po_id, r.received_at, " +
                 "r.created_at, r.updated_at, " +
-                "w.name AS warehouse_name, po.code AS source_po_code " +
+                "w.name AS warehouse_name, po.code AS source_po_code, " +
+                "COALESCE(s.name, po.supplier_name) AS supplier_name " +
                 "FROM receipts r " +
                 "LEFT JOIN warehouses w ON w.id = r.warehouse_id " +
                 "LEFT JOIN purchase_orders po ON po.id = r.source_po_id " +
+                "LEFT JOIN suppliers s ON s.id = po.supplier_id " +
                 where +
                 " ORDER BY r.updated_at DESC NULLS LAST, r.id DESC LIMIT ?" + idx + " OFFSET ?" + (idx + 1);
         var q = em.createNativeQuery(sql, Tuple.class);
@@ -157,6 +159,7 @@ public class BizDocListController {
             m.put("isRed", t.get("is_red"));
             m.put("warehouseId", t.get("warehouse_id"));
             m.put("warehouseName", t.get("warehouse_name"));
+            m.put("supplierName", t.get("supplier_name"));
             m.put("refDocType", t.get("ref_doc_type"));
             m.put("refDocId", t.get("ref_doc_id"));
             m.put("status", t.get("status"));

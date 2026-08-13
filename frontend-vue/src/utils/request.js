@@ -8,25 +8,51 @@ const service = axios.create({
   timeout: 300000
 })
 
+const pendingQueue = []
+const inflightMutations = new Map()
+
+function mutationKey(config) {
+  if (!config || !config.method) return ''
+  const method = String(config.method).toLowerCase()
+  if (!['post', 'put', 'patch', 'delete'].includes(method)) return ''
+  if (config.skipDuplicate) return ''
+  return [method, config.url || '', JSON.stringify(config.params || {}), JSON.stringify(config.data || '')].join('|')
+}
+
+function removeInflight(config) {
+  const key = mutationKey(config)
+  if (key) inflightMutations.delete(key)
+}
+
+function isDuplicateError(error) {
+  return Boolean(error && (error.duplicate || error.code === 'DUPLICATE_REQUEST'))
+}
+
 service.interceptors.request.use(
   (config) => {
     const token = getToken()
     if (token && !(config.headers && config.headers.Authorization === '')) {
       config.headers['Authorization'] = 'Bearer ' + token
     }
+    const key = mutationKey(config)
+    if (key) {
+      if (inflightMutations.has(key)) {
+        const wrapped = new Error('请求正在处理中，请勿重复提交')
+        wrapped.code = 'DUPLICATE_REQUEST'
+        wrapped.duplicate = true
+        return Promise.reject(wrapped)
+      }
+      inflightMutations.set(key, true)
+    }
     return config
   },
   (error) => Promise.reject(error)
 )
 
-let isRefreshing = false
-const pendingQueue = []
-
 function flushQueue(error, token = null) {
   pendingQueue.forEach(({ resolve, reject, config }) => {
-    if (error) {
-      reject(error)
-    } else {
+    if (error) reject(error)
+    else {
       config.headers['Authorization'] = 'Bearer ' + token
       resolve(service(config))
     }
@@ -34,63 +60,43 @@ function flushQueue(error, token = null) {
   pendingQueue.length = 0
 }
 
-async function resolveErrorBody(error) {
-  const data = error.response && error.response.data
-  if (!data) return null
-  if (typeof data === 'string') {
-    try { return JSON.parse(data) } catch (e) { return { message: data } }
-  }
-  return data
-}
-
-function rejectBusinessError(error, res) {
-  const message = (res && res.message) || error.message || '请求失败'
-  ElMessage.error(message)
-  const wrapped = new Error(message)
-  wrapped.code = res && res.code
-  wrapped.response = error.response
-  wrapped.data = res
-  return Promise.reject(wrapped)
-}
+let isRefreshing = false
 
 function doRefresh() {
   const refreshToken = getRefreshToken()
-  if (!refreshToken) {
-    return Promise.reject(new Error('no refresh token'))
-  }
+  if (!refreshToken) return Promise.reject(new Error('no refresh token'))
   return axios
     .create({ baseURL: '', timeout: 300000 })
     .post('/auth/refresh', { refreshToken })
     .then((resp) => {
       const data = resp && resp.data ? resp.data.data || resp.data : null
-      if (!data || !data.accessToken) {
-        throw new Error('refresh response invalid')
-      }
+      if (!data || !data.accessToken) throw new Error('refresh response invalid')
       setToken(data.accessToken)
-      if (data.refreshToken) {
-        setRefreshToken(data.refreshToken)
-      }
+      if (data.refreshToken) setRefreshToken(data.refreshToken)
       return data.accessToken
     })
 }
 
 service.interceptors.response.use(
   (response) => {
+    removeInflight(response.config)
     const res = response.data
     if (res == null) return res
     if (res.code === undefined) return res
-    if (res.code === 0) {
-      return res
-    }
+    if (res.code === 0) return res
     ElMessage.error(res.message || '请求失败: ' + res.code)
     return Promise.reject(new Error(res.message || 'Error'))
   },
   (error) => {
-    const status = error.response && error.response.status
     const originalConfig = error.config || {}
+    removeInflight(originalConfig)
+    if (isDuplicateError(error)) {
+      ElMessage.warning(error.message)
+      return Promise.reject(error)
+    }
+    const status = error.response && error.response.status
 
     if (status === 401) {
-      // 登录请求本身的 401 表示账号/密码/租户错误，应透传后端消息，不能提示“登录已过期”
       const isLoginReq = originalConfig.url && (originalConfig.url.indexOf('/auth/login') >= 0 || originalConfig.url.indexOf('/auth/admin-login') >= 0)
       if (isLoginReq) {
         const lm = error.response && error.response.data && error.response.data.message
@@ -110,9 +116,7 @@ service.interceptors.response.use(
         return Promise.reject(error)
       }
       if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          pendingQueue.push({ resolve, reject, config: originalConfig })
-        })
+        return new Promise((resolve, reject) => pendingQueue.push({ resolve, reject, config: originalConfig }))
       }
       isRefreshing = true
       return doRefresh()
@@ -135,21 +139,17 @@ service.interceptors.response.use(
 
     if (status === 403) {
       const msg = error.response && error.response.data && error.response.data.message
-      if (msg && msg !== 'Forbidden') ElMessage.error(msg)
-      else ElMessage.error('没有权限访问该资源')
+      ElMessage.error((msg && msg !== 'Forbidden') ? msg : '没有权限访问该资源')
       return Promise.reject(error)
     }
-
     if (status === 404) {
       router.push('/404')
       return Promise.reject(error)
     }
-
     if (status && status >= 500) {
       ElMessage.error((error.response && error.response.data && error.response.data.message) || '服务器开小差了，请稍后重试')
       return Promise.reject(error)
     }
-
     ElMessage.error((error.response && error.response.data && error.response.data.message) || error.message || '网络错误')
     return Promise.reject(error)
   }

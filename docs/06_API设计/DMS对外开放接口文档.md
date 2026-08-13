@@ -21,7 +21,7 @@ DMS 对外开放一组 RESTful 接口，供外部系统以 **HMAC-SHA256 签名*
 
 | 环境 | Base URL |
 |------|----------|
-| 测试环境 | `http://8.133.193.238:8082` |
+| 测试环境 | `http://43.128.145.141` |
 | 生产环境 | 由实施方提供 |
 
 ### 1.2 数据格式
@@ -79,7 +79,7 @@ import hashlib, hmac, time, uuid, json, requests
 
 APP_KEY = "dms-demo-app"
 APP_SECRET = "8c39b1f7e2a44d6b9f0a1c2d3e4f5a6b"
-BASE = "http://8.133.193.238:8082"
+BASE = "http://43.128.145.141"
 
 def call(method, path, body_obj):
     body = json.dumps(body_obj, ensure_ascii=False)
@@ -255,7 +255,7 @@ HASH=$(printf '%s' "$BODY" | sha256sum | awk '{print $1}')
 SIGN_STR=$(printf 'POST\n/open/api/sales-orders\n%s\n%s\n%s' "$TS" "$NONCE" "$HASH")
 SIG=$(printf '%s' "$SIGN_STR" | openssl dgst -sha256 -hmac "8c39b1f7e2a44d6b9f0a1c2d3e4f5a6b" | awk '{print $2}')
 
-curl -X POST http://8.133.193.238:8082/open/api/sales-orders \
+curl -X POST http://43.128.145.141/open/api/sales-orders \
   -H "Content-Type: application/json" \
   -H "X-App-Key: dms-demo-app" \
   -H "X-Timestamp: $TS" \

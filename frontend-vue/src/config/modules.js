@@ -7,7 +7,7 @@ const CURRENCIES = [{ value: 'CNY', label: '人民币' }, { value: 'USD', label:
 import { getDictOptions } from '@/utils/dict'
 
 const products = {
-  key: 'products', title: '产品管理', api: '/api/products', detailable: true, importable: true, exportable: true,
+  key: 'products', title: '产品管理', api: '/api/products', detailable: true, importable: true, exportable: true, batchDelete: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '产品编码', w: 130, filter: { type: 'text' } }, 
@@ -44,7 +44,7 @@ const products = {
 }
 
 const categories = {
-  key: 'categories', title: '产品分类', api: '/api/product-categories', detailable: true, importable: true, exportable: true,
+  key: 'categories', title: '产品分类', api: '/api/product-categories', detailable: true, importable: true, exportable: true, batchDelete: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '分类编码', w: 140, filter: { type: 'text' } }, 
@@ -64,7 +64,7 @@ const categories = {
 }
 
 const dealers = {
-  key: 'dealers', title: '经销商管理', api: '/api/dealers', detailable: true, importable: true, exportable: true,
+  key: 'dealers', title: '经销商管理', api: '/api/dealers', detailable: true, importable: true, exportable: true, batchDelete: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '经销商编码', w: 130, filter: { type: 'text' } }, 
@@ -97,7 +97,7 @@ const dealers = {
 }
 
 const hospitals = {
-  key: 'hospitals', title: '医院/终端', api: '/api/hospitals', importable: true, exportable: true,
+  key: 'hospitals', title: '医院管理', api: '/api/hospitals', detailable: true, importable: true, exportable: true, batchDelete: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '医院编码', w: 130, filter: { type: 'text' } }, 
@@ -121,7 +121,7 @@ const hospitals = {
 }
 
 const warehouses = {
-  key: 'warehouses', title: '仓库管理', api: '/api/warehouses', importable: true, exportable: true,
+  key: 'warehouses', title: '仓库管理', api: '/api/warehouses', detailable: true, importable: true, exportable: true, batchDelete: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '仓库编码', w: 130, filter: { type: 'text' } }, 
@@ -142,7 +142,7 @@ const warehouses = {
 }
 
 const regions = {
-  key: 'regions', title: '区域管理', api: '/api/regions', importable: true, exportable: true,
+  key: 'regions', title: '区域管理', api: '/api/regions', detailable: true, importable: true, exportable: true, batchDelete: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '区域编码', w: 140, filter: { type: 'text' } }, 
@@ -162,7 +162,7 @@ const regions = {
 }
 
 const suppliers = {
-  key: 'suppliers', title: '供应商管理', api: '/api/suppliers', importable: true, exportable: true,
+  key: 'suppliers', title: '供应商管理', api: '/api/suppliers', detailable: true, importable: true, exportable: true, batchDelete: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '供应商编码', w: 130, filter: { type: 'text' } }, 

@@ -65,6 +65,7 @@
       <el-button @click="onResetForm"><el-icon><RefreshLeft /></el-icon>重置</el-button>
       <div class="spacer" />
       <slot name="extra-actions" />
+      <el-button v-if="canBatchDelete" type="danger" plain :disabled="!selectedRows.length" @click="onBatchDelete">批量删除{{ selectedRows.length ? `（${selectedRows.length}）` : '' }}</el-button>
       <template v-for="b in extraToolbarButtons" :key="b.buttonKey">
         <el-button
           :type="b.buttonType || 'default'"
@@ -317,6 +318,7 @@ const searchable = computed(() => props.config.searchable !== false)
 const canCreate = computed(() => !props.config.readonly && !props.config.noCreate)
 const canEdit = computed(() => !props.config.readonly)
 const canDelete = computed(() => !props.config.readonly && !props.config.noDelete)
+const canBatchDelete = computed(() => canDelete.value && props.config.batchDelete === true)
 const canImport = computed(() => !props.config.readonly && props.config.importable === true)
 const canExport = computed(() => props.config.exportable === true)
 const canDownloadTemplate = computed(() => canImport.value && props.config.templateable !== false)
@@ -776,6 +778,17 @@ async function onSubmit() {
 function onDelete(row) {
   ElMessageBox.confirm('确认删除该记录？', '提示', { type: 'warning' })
     .then(async () => { await deleteResource(props.config.api, row.id); ElMessage.success('删除成功'); fetchData() })
+    .catch(() => {})
+}
+function onBatchDelete() {
+  if (!selectedRows.value.length) return
+  ElMessageBox.confirm(`确认删除选中的 ${selectedRows.value.length} 条记录？`, '批量删除', { type: 'warning' })
+    .then(async () => {
+      await Promise.all(selectedRows.value.map(row => deleteResource(props.config.api, row.id)))
+      ElMessage.success('批量删除完成')
+      selectedRows.value = []
+      fetchData()
+    })
     .catch(() => {})
 }
 

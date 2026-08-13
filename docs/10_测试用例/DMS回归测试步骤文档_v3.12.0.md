@@ -1,6 +1,6 @@
 # DMS系统 v3.12.0 完整回归测试步骤文档
 
-> 版本：v3.12.0 | 日期：2026-08-13 | 测试环境：http://43.128.145.141:8083
+> 版本：v3.12.0 | 日期：2026-08-13 | 测试环境：http://43.128.145.141
 > 测试账号：sys_admin / Dms@123456（平台）、admin / Sh123456（业务前台厂商）
 
 ---
@@ -161,7 +161,7 @@ python -m pytest tests/test_l5_link.py -v    # L5 链路层：端到端一致性
 
 | 序号 | 测试步骤 | 预期结果 | 优先级 |
 |------|---------|---------|--------|
-| 2.1.1 | 访问 http://43.128.145.141:8083 | 显示登录页，有租户代码/账号/密码三个输入框 | P0 |
+| 2.1.1 | 访问 http://43.128.145.141 | 显示登录页，有租户代码/账号/密码三个输入框 | P0 |
 | 2.1.2 | 输入正确租户+账号+密码，点击登录 | 登录成功，跳转工作台首页 | P0 |
 | 2.1.3 | 输入错误密码，点击登录 | 提示"用户名或密码错误"，不跳转 | P0 |
 | 2.1.4 | 查看工作台首页 | 显示KPI卡片（销售总额/订单数/活跃经销商/手术台数）、4个图表 | P0 |
@@ -344,7 +344,7 @@ python -m pytest tests/test_l5_link.py -v    # L5 链路层：端到端一致性
 
 | 序号 | 测试步骤 | 预期结果 | 优先级 |
 |------|---------|---------|--------|
-| 3.1.1 | 手机浏览器访问 http://43.128.145.141:8083/m | 显示移动端登录页 | P0 |
+| 3.1.1 | 手机浏览器访问 http://43.128.145.141/m | 显示移动端登录页 | P0 |
 | 3.1.2 | 输入账号密码登录 | 登录成功，进入移动端首页 | P0 |
 | 3.1.3 | 底部4个Tab：首页/订单/报台/我的 | Tab切换正常 | P0 |
 
@@ -786,3 +786,32 @@ python -m pytest tests/test_l5_link.py -v    # L5 链路层：端到端一致性
 ---
 
 **文档结束**
+
+
+## 第四阶段：v3.12.3 P2补强自动化与深度E2E
+
+### 4.1 构建与部署
+1. 后端：`mvn -f backend/pom.xml -DskipTests clean package`
+2. 业务前台：`npm --prefix frontend-vue run build`
+3. 平台后台：`npm --prefix admin-vue run build`
+4. 部署：设置`DMS_DEPLOY_PASSWORD`后执行`python scripts/deploy_test.py`
+5. 验证：访问 http://43.128.145.141/actuator/health，确认`status=UP`
+
+### 4.2 API自动化
+在`automation_test`目录执行：
+- `python -m pytest tests/test_p2_features.py -q -ra -k "not burst_eventually_rate_limited"`：MFA、盘点、订阅、效期、追溯。
+- `python -m pytest tests/test_p2_features.py -q -ra -k "burst_eventually_rate_limited"`：限流单独最后执行。
+
+### 4.3 浏览器深度E2E
+执行：`$env:NODE_PATH="D:\Workspace\TRAE\DMS\tools\full-test-20260810\node_modules"; node tools/p2-e2e/p2-e2e.cjs`
+
+验收标准：
+- PC登录、报表订阅CRUD、库存盘点上传弹窗、MFA个人资料、效期预警、追溯页均通过。
+- 移动端独立登录后，扫码收货和库存扫码页显示中文，无控制台错误。
+- 修复历史问题：移动页????乱码、收货列表`Unknown alias [supplier_name]`。
+
+### 4.4 全量回归命令
+- `python -m pytest tests/test_p0_features.py tests/test_l1_entry.py tests/test_login.py -q -ra`
+- `python -m pytest tests/test_l2_list.py tests/test_l3_detail.py tests/test_l4_interaction.py tests/test_l5_link.py tests/test_mobile_h5.py tests/test_security.py tests/test_platform_logs.py -q -ra`
+- `python -m pytest tests/test_products.py tests/test_categories.py tests/test_sales_orders.py tests/test_purchase_orders.py tests/test_inventory.py tests/test_contracts.py tests/test_approvals.py tests/test_reports.py tests/test_promotions.py tests/test_surgery.py tests/test_permissions.py tests/test_platform.py -q -ra`
+- `python -m pytest tests/test_integration.py tests/test_security_advanced.py -q -ra`

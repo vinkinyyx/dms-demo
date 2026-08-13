@@ -50,6 +50,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private static final Set<String> IGNORED_PATHS = Set.of(
             "/api/auth/login",
+            "/api/auth/mfa/verify",
             "/api/auth/refresh",
             "/api/auth/forgot-password",
             "/api/auth/wechat/qrcode",

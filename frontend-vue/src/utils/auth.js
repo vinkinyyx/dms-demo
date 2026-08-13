@@ -48,3 +48,16 @@ export function setPermissions(perms) {
 export function clearPermissions() {
   localStorage.removeItem(PERMISSIONS_KEY)
 }
+
+const PREFS_KEY = 'dms:user:prefs'
+export function getPrefs() {
+  try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') } catch { return {} }
+}
+export function setPrefs(prefs) {
+  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs || {}))
+}
+export function updatePrefs(patch) {
+  const prefs = { ...getPrefs(), ...(patch || {}) }
+  setPrefs(prefs)
+  return prefs
+}

@@ -7,6 +7,10 @@ import com.dms.auth.dto.ChangePasswordRequest;
 import com.dms.auth.dto.ForgotPasswordRequest;
 import com.dms.auth.dto.LoginRequest;
 import com.dms.auth.dto.LoginResponse;
+import com.dms.auth.dto.MfaConfirmRequest;
+import com.dms.auth.dto.MfaDisableRequest;
+import com.dms.auth.dto.MfaSetupResponse;
+import com.dms.auth.dto.MfaVerifyRequest;
 import com.dms.auth.dto.RefreshTokenRequest;
 import com.dms.auth.dto.ResetPasswordRequest;
 import com.dms.auth.dto.WechatBindRequest;
@@ -15,6 +19,7 @@ import com.dms.auth.dto.WechatCallbackResponse;
 import com.dms.auth.dto.WechatQrRequest;
 import com.dms.auth.dto.WechatQrResponse;
 import com.dms.auth.service.AuthService;
+import com.dms.auth.service.MfaService;
 import com.dms.auth.service.LoginLogService;
 import com.dms.auth.service.WechatMockService;
 import com.dms.common.ApiResponse;
@@ -51,6 +56,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
     private final LoginLogService loginLogService;
+    private final MfaService mfaService;
 
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request,
@@ -71,6 +77,40 @@ public class AuthController {
             loginLogService.logFailure(tenantId, userId, "PASSWORD", clientIp, userAgent, e.getMessage());
             throw e;
         }
+    }
+
+    @PostMapping("/mfa/verify")
+    public ApiResponse<LoginResponse> verifyMfa(@Valid @RequestBody MfaVerifyRequest request) {
+        return ApiResponse.ok(mfaService.verifyAndLogin(request.getMfaToken(), request.getCode()));
+    }
+
+    @GetMapping("/mfa/setup")
+    public ApiResponse<MfaSetupResponse> mfaSetup() {
+        Long userId = TenantContext.getUserId();
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        return ApiResponse.ok(mfaService.setup(userId));
+    }
+
+    @PostMapping("/mfa/confirm")
+    public ApiResponse<Void> mfaConfirm(@Valid @RequestBody MfaConfirmRequest request) {
+        Long userId = TenantContext.getUserId();
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        mfaService.confirm(userId, request.getCode());
+        return ApiResponse.ok();
+    }
+
+    @PostMapping("/mfa/disable")
+    public ApiResponse<Void> mfaDisable(@Valid @RequestBody MfaDisableRequest request) {
+        Long userId = TenantContext.getUserId();
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        mfaService.disable(userId, request.getCode());
+        return ApiResponse.ok();
     }
 
     @PostMapping("/logout")

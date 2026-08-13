@@ -92,7 +92,11 @@ const quicks = [
   { key: 'order-create', label: '下销售订单', icon: 'orders-o', color: '#1677ff', to: '/mobile/orders/create' },
   { key: 'surgery',      label: '填手术报台', icon: 'edit-o',    color: '#52c41a', to: '/mobile/surgery-reports/create' },
   { key: 'orders',       label: '我的订单',   icon: 'list-switching', color: '#fa8c16', to: '/mobile/orders' },
-  { key: 'dashboard',    label: '我的业绩',   icon: 'chart-trending-o', color: '#1677ff', to: '/mobile/dashboard' }
+  { key: 'dashboard',    label: '我的业绩',   icon: 'chart-trending-o', color: '#1677ff', to: '/mobile/dashboard' },
+  { key: 'scan-receive', label: '扫码收货', icon: 'logistics', color: '#722ed1', to: '/mobile/scan-receive' },
+  { key: 'scan-inv', label: '库存扫码', icon: 'search', color: '#13c2c2', to: '/mobile/scan-inventory' },
+  { key: 'stocktake', label: '库存盘点', icon: 'todo-list-o', color: '#eb2f96', to: '/mobile/scan-inventory' },
+  { key: 'approvals', label: '移动审批', icon: 'balance-list-o', color: '#fa541c', to: '/mobile/approvals' }
 ]
 
 function fmtAmount(v) {

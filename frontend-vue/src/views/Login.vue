@@ -1,20 +1,20 @@
-﻿<template>
+<template>
   <div class="login-page">
     <div class="login-container">
       <div class="login-brand">
         <div class="brand-logo"><DmsLogo :size="48" inverse /></div>
-        <div class="brand-name">通用经销商管理系统</div>
-        <div class="brand-desc">医疗器械 / 快消 / 零售<br>经销商全生命周期管理平台</div>
+        <div class="brand-name">?????????</div>
+        <div class="brand-desc">???? / ?? / ??<br>????????????</div>
         <ul class="brand-features">
-          <li>合同管理与电子签章</li>
-          <li>订单/库存/销售一体化</li>
-          <li>促销引擎与返利自动化</li>
-          <li>多租户 SaaS 架构</li>
-          <li>后台审计与操作日志</li>
+          <li>?????????</li>
+          <li>??/??/?????</li>
+          <li>??????????</li>
+          <li>??? SaaS ??</li>
+          <li>?????????</li>
         </ul>
       </div>
       <div class="login-form">
-        <div class="theme-dock" aria-label="主题切换">
+        <div class="theme-dock" aria-label="????">
           <button v-for="item in themePresets" :key="item.key" type="button" class="theme-dot"
             :class="{ active: item.key === currentPreset.key }"
             :style="{ '--dot': item.color, background: item.gradients[0] }"
@@ -25,66 +25,98 @@
             <el-icon><Moon v-if="themeMode === 'light'" /><Sunny v-else /></el-icon>
           </button>
         </div>
-        <div class="form-title">欢迎回来</div>
-        <div class="form-subtitle">请登录您的账号</div>
+        <div class="form-title">????</div>
+        <div class="form-subtitle">???????</div>
         <el-alert type="warning" :closable="false" show-icon style="margin-bottom:16px;"
-          title="演示：sys_admin / Dms@123456 · 租户：default" />
+          title="???sys_admin / Dms@123456 ? ???default" />
         <el-form :model="form" :rules="rules" ref="formRef" label-position="top" @keyup.enter="onSubmit">
-          <el-form-item label="租户代码" prop="tenantCode">
-            <el-input v-model="form.tenantCode" placeholder="租户代码" />
+          <el-form-item label="????" prop="tenantCode">
+            <el-input v-model="form.tenantCode" placeholder="????" />
           </el-form-item>
-          <el-form-item label="账号" prop="username">
-            <el-input v-model="form.username" placeholder="账号" />
+          <el-form-item label="??" prop="username">
+            <el-input v-model="form.username" placeholder="??" />
           </el-form-item>
-          <el-form-item label="密码" prop="password">
-            <el-input v-model="form.password" type="password" show-password placeholder="密码" />
+          <el-form-item label="??" prop="password">
+            <el-input v-model="form.password" type="password" show-password placeholder="??" />
           </el-form-item>
-          <el-checkbox v-model="form.rememberMe">记住我 7 天</el-checkbox>
-          <el-button type="primary" :loading="loading" class="btn-login" @click="onSubmit">登 录</el-button>
+          <el-form-item v-if="mfa.required" label="MFA ???">
+            <el-input v-model="mfa.code" placeholder="??? 6 ????" maxlength="6" />
+          </el-form-item>
+          <el-checkbox v-if="!mfa.required" v-model="form.rememberMe">??? 7 ?</el-checkbox>
+          <el-button v-if="!mfa.required" type="primary" :loading="loading" class="btn-login" @click="onSubmit">? ?</el-button>
+          <template v-else>
+            <el-button type="primary" :loading="loading" class="btn-login" @click="onMfaSubmit">? ?</el-button>
+            <el-button text class="btn-back" @click="mfaCancel">??????</el-button>
+          </template>
         </el-form>
-        <div class="footer">© 2026 DMS · Vue 版</div>
+        <div class="footer">? 2026 DMS ? Vue ?</div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/user'
 import { Moon, Sunny } from '@element-plus/icons-vue'
 import { THEME_PRESETS as themePresets, currentThemePreset as currentPreset, setPreset as setThemePreset, toggleMode as applyThemeMode, initTheme } from '@/config/theme-runtime'
-initThemeModeRef()
-const themeMode = ref(document.documentElement.dataset.mode || 'light')
 
+initTheme()
+const themeMode = ref(document.documentElement.dataset.mode || 'light')
 const router = useRouter()
-function initThemeModeRef(){ initTheme() }
-function toggleThemeMode(){ applyThemeMode(); themeMode.value = document.documentElement.dataset.mode || 'light' }
 const userStore = useUserStore()
 const formRef = ref()
 const loading = ref(false)
 const form = reactive({ tenantCode: 'default', username: 'sys_admin', password: 'Dms@123456', rememberMe: false })
+const mfa = reactive({ required: false, token: '', code: '', username: '' })
 const rules = {
-  tenantCode: [{ required: true, message: '请输入租户代码', trigger: 'blur' }],
-  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  tenantCode: [{ required: true, message: '???????', trigger: 'blur' }],
+  username: [{ required: true, message: '?????', trigger: 'blur' }],
+  password: [{ required: true, message: '?????', trigger: 'blur' }]
 }
-
+function toggleThemeMode() {
+  applyThemeMode()
+  themeMode.value = document.documentElement.dataset.mode || 'light'
+}
+async function finishLogin() {
+  ElMessage.success('????')
+  await router.replace('/home')
+}
 function onSubmit() {
-  formRef.value.validate(async (valid) => {
+  formRef.value.validate(async valid => {
     if (!valid) return
     loading.value = true
     try {
-      await userStore.login({ ...form })
-      ElMessage.success('登录成功')
-      router.replace('/home')
-    } catch (e) {
-      // 错误提示已由拦截器处理
+      const data = await userStore.login({ ...form })
+      if (data && data.mfaRequired) {
+        mfa.required = true
+        mfa.token = data.mfaToken
+        mfa.code = ''
+        mfa.username = data.user?.username || form.username
+        return
+      }
+      await finishLogin()
     } finally {
       loading.value = false
     }
   })
+}
+function onMfaSubmit() {
+  if (!mfa.code) {
+    ElMessage.warning('??????')
+    return
+  }
+  loading.value = true
+  userStore.mfaVerify({ mfaToken: mfa.token, code: mfa.code.trim() })
+    .then(finishLogin)
+    .finally(() => { loading.value = false })
+}
+function mfaCancel() {
+  mfa.required = false
+  mfa.token = ''
+  mfa.code = ''
 }
 </script>
 

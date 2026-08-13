@@ -47,11 +47,14 @@ const routes = [
       { path: 'approval/admin', name: 'ApprovalAdmin', component: () => import('@/views/approval/ApprovalAdmin.vue'), meta: { title: '审批监控' } },
       { path: 'email-logs', name: 'EmailLogs', component: () => import('@/views/EmailLogs.vue'), meta: { title: '邮件发送日志' } },
       { path: 'notifications', name: 'Notifications', component: () => import('@/views/Notifications.vue'), meta: { title: '消息中心' } },
+      { path: 'report-subscriptions', name: 'ReportSubscriptions', component: () => import('@/views/ReportSubscriptions.vue'), meta: { title: '报表订阅' } },
+      { path: 'stocktakes', name: 'Stocktakes', component: () => import('@/views/Stocktakes.vue'), meta: { title: '库存盘点' } },
       { path: 'expiry-alerts', name: 'ExpiryAlerts', component: () => import('@/views/ExpiryAlerts.vue'), meta: { title: '效期预警' } },
       { path: 'async-tasks', name: 'AsyncTasks', component: () => import('@/views/AsyncTasks.vue'), meta: { title: '导入导出任务' } },
       { path: 'traceability', name: 'Traceability', component: () => import('@/views/Traceability.vue'), meta: { title: '序列号追溯' } },
       { path: 'log-center', name: 'LogCenter', component: () => import('@/views/LogCenter.vue'), meta: { title: '日志中心' } },
       { path: 'login-logs', name: 'LoginLogs', component: () => import('@/views/LoginLogs.vue'), meta: { title: '登录日志' } },
+      { path: 'profile', name: 'Profile', component: () => import('@/views/Profile.vue'), meta: { title: '个人资料' } },
       { path: 'approvals/mine', name: 'MyApprovals', component: () => import('@/views/approval/TodoCenter.vue'), meta: { title: '我的审批' } }
     ]
   },
@@ -73,6 +76,8 @@ const routes = [
       { path: 'approvals', name: 'MApprovals', component: () => import('@/views/mobile/MApprovals.vue'), meta: { mobile: true, title: '移动审批' } },
       { path: 'approvals/:id', name: 'MApprovalDetail', component: () => import('@/views/mobile/MApprovalDetail.vue'), meta: { mobile: true, title: '审批详情' } },
       { path: 'messages', name: 'MMessages', component: () => import('@/views/mobile/MMessages.vue'), meta: { mobile: true, title: '消息中心' } },
+      { path: 'scan-receive', name: 'MReceiveScan', component: () => import('@/views/mobile/MReceiveScan.vue'), meta: { mobile: true, title: '扫码收货' } },
+      { path: 'scan-inventory', name: 'MInventoryScan', component: () => import('@/views/mobile/MInventoryScan.vue'), meta: { mobile: true, title: '库存扫码查询' } },
       { path: 'profile', name: 'MProfile', component: () => import('@/views/mobile/MProfile.vue'), meta: { mobile: true, title: '我的' } }
     ]
   },

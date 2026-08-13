@@ -56,7 +56,7 @@ async function reload(p = page.value) {
   page.value = p; loading.value = true
   try {
     const { data } = await request({ url: '/api/inventory/expiry-alerts', method: 'get',
-      params: { withinDays: withinDays.value, page, size, keyword: keyword.value || undefined } })
+      params: { withinDays: withinDays.value, page: p, size: size.value, keyword: keyword.value || undefined } })
     rows.value = data?.list || []; total.value = data?.total || 0
   } finally { loading.value = false }
 }

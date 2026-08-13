@@ -1,0 +1,114 @@
+[
+  {
+    "scope": "AUTH",
+    "id": "login",
+    "title": "admin login succeeds",
+    "status": "PASS",
+    "detail": "http://43.128.145.141/home"
+  },
+  {
+    "scope": "RS",
+    "id": "page",
+    "title": "report subscription fields",
+    "status": "PASS",
+    "detail": "经销商管理 工作台首页 基础数据 合同管理 订单业务 库存业务 手术与营销 数据看板 业务报表 销售业绩排行 产品销售 TOP10 库存周转 报表订阅 手术报台统计 应收款项 订单追溯 产品对码 审批中心 用户与权限 DMS admin 报表订阅 新建订阅 ID 订阅名称 报表 频率 收件人 状态 上次运行 结果 操作 暂无订阅，点击右上角新建"
+  },
+  {
+    "scope": "RS",
+    "id": "create",
+    "title": "created row visible",
+    "status": "PASS",
+    "detail": "E2E_1786641282397"
+  },
+  {
+    "scope": "RS",
+    "id": "toggle",
+    "title": "row is active by default",
+    "status": "PASS",
+    "detail": "stop button visible"
+  },
+  {
+    "scope": "RS",
+    "id": "delete",
+    "title": "deleted row gone",
+    "status": "PASS",
+    "detail": "E2E_1786641282397"
+  },
+  {
+    "scope": "ST",
+    "id": "page",
+    "title": "stocktake fields",
+    "status": "PASS",
+    "detail": "经销商管理 工作台首页 基础数据 合同管理 订单业务 库存业务 库存查询 销售出库 收货入库 库存移动 库存调整 效期预警 库存盘点 序列号追溯 手术与营销 数据看板 业务报表 产品对码 审批中心 用户与权限 DMS admin 库存盘点 上传盘点单 ID 盘点期间 明细数 差异合计(绝对值) 迟交 上传时间 操作 暂无数据 暂无盘点单，点击右上角上传盘点单"
+  },
+  {
+    "scope": "ST",
+    "id": "dialog",
+    "title": "upload dialog form visible",
+    "status": "PASS",
+    "detail": "上传盘点单 盘点期间 导入明细 选择 Excel 文件 Excel 列: productId(必填)、batchNo、serialNo、bookQty、actualQty 提交盘点单 取消"
+  },
+  {
+    "scope": "ST",
+    "id": "file",
+    "title": "file input exists",
+    "status": "PASS",
+    "detail": "file input"
+  },
+  {
+    "scope": "PF",
+    "id": "page",
+    "title": "profile mfa visible",
+    "status": "PASS",
+    "detail": "经销商管理 工作台首页 基础数据 合同管理 订单业务 库存业务 手术与营销 数据看板 业务报表 产品对码 审批中心 用户与权限 DMS admin 个人资料与安全 用户名 admin 姓名 超级管理员 二次验证 (MFA) 未启用 启用 MFA 请使用 Google Authenticator、Microsoft Authenticator 或 1Password 扫描密钥，然后输入 6 位验证码。 密钥Y67VLYXUJABXICQJNUWJ2KQOMRK3QMOA otpauthotpauth://totp/DMS%3Aadmin?secret=Y67VLYXUJABXICQJNUWJ2"
+  },
+  {
+    "scope": "PF",
+    "id": "button",
+    "title": "enable mfa enabled",
+    "status": "PASS",
+    "detail": "enabled"
+  },
+  {
+    "scope": "EX",
+    "id": "page",
+    "title": "expiry page renders",
+    "status": "PASS",
+    "detail": "经销商管理 工作台首页 基础数据 合同管理 订单业务 库存业务 库存查询 销售出库 收货入库 库存移动 库存调整 效期预警 库存盘点 序列号追溯 手术与营销 数据看板 业务报表 产品对码 审批中心 用户与权限 DMS admin 批次效期预警 90 天内到期 查询 已过期 0 批次 30天内到期 0 批次 90天内到期 0 批次 180天内到期 596 批次 状态 产品编码 产品名称 规格 批号 序列号 库存数量 单位 仓库 到期日期 暂无数据 共 0 条 1"
+  },
+  {
+    "scope": "TR",
+    "id": "page",
+    "title": "traceability page renders",
+    "status": "PASS",
+    "detail": "经销商管理 工作台首页 基础数据 合同管理 订单业务 库存业务 库存查询 销售出库 收货入库 库存移动 库存调整 效期预警 库存盘点 序列号追溯 手术与营销 数据看板 业务报表 产品对码 审批中心 用户与权限 DMS admin 序列号追溯 批次追溯 查询 请输入序列号或批号进行追溯"
+  },
+  {
+    "scope": "MOB",
+    "id": "login",
+    "title": "mobile login succeeds",
+    "status": "PASS",
+    "detail": "http://43.128.145.141/mobile/home"
+  },
+  {
+    "scope": "MOB",
+    "id": "receive",
+    "title": "receive scan labels",
+    "status": "PASS",
+    "detail": "扫码收货 打开摄像头扫描 手动输入 待收货单 首页 订单 报台 5 审批 消息 我的"
+  },
+  {
+    "scope": "MOB",
+    "id": "inventory",
+    "title": "inventory scan labels",
+    "status": "PASS",
+    "detail": "库存扫码查询 扫码 库存结果 首页 订单 报台 5 审批 消息 我的"
+  },
+  {
+    "scope": "JS",
+    "id": "errors",
+    "title": "no browser errors",
+    "status": "PASS",
+    "detail": ""
+  }
+]

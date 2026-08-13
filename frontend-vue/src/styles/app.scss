@@ -132,3 +132,17 @@
   0% { background-position: 100% 50%; }
   100% { background-position: 0 50%; }
 }
+
+/* ===== ????1366 ??????? ===== */
+@media (max-width: 1440px) {
+  .page { padding: var(--dms-spacing-4); }
+  .page-header { margin-bottom: var(--dms-spacing-3); }
+  :deep(.el-table) { font-size: 13px; }
+}
+@media (max-width: 1366px) {
+  .page { padding: var(--dms-spacing-3); }
+  .page-toolbar, .toolbar { gap: var(--dms-spacing-2); }
+  :deep(.el-form--inline .el-form-item) { margin-right: var(--dms-spacing-3); margin-bottom: var(--dms-spacing-2); }
+  :deep(.el-table .cell) { padding-left: 6px; padding-right: 6px; }
+  :deep(.el-card__body) { padding: var(--dms-spacing-4); }
+}

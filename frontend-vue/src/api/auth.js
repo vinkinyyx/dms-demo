@@ -49,3 +49,25 @@ export function changePassword(data) {
     data
   })
 }
+
+export function mfaVerify(data) {
+  return request({
+    url: '/api/auth/mfa/verify',
+    method: 'post',
+    data,
+    headers: { Authorization: '' },
+    skipAuthRefresh: true
+  })
+}
+
+export function mfaSetup() {
+  return request({ url: '/api/auth/mfa/setup', method: 'get' })
+}
+
+export function mfaConfirm(data) {
+  return request({ url: '/api/auth/mfa/confirm', method: 'post', data })
+}
+
+export function mfaDisable(data) {
+  return request({ url: '/api/auth/mfa/disable', method: 'post', data })
+}
