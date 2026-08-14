@@ -1,8 +1,8 @@
-# DMS经销商管理系统 - AI开发文档
+﻿# DMS经销商管理系统 - AI开发文档
 
 > **版本**: v1.3
 > **创建时间**: 2026-08-11
-> **最近更新**: 2026-08-13（五层自动化测试套件：350条用例，300 passed / 6 skipped / 25 xfailed / 19 xpassed / 0 failed）
+> **最近更新**: 2026-08-14（技术栈口径核对修正：PostgreSQL + Spring Data JPA/Hibernate 为主，MyBatis-Plus 并存；Flyway 默认关闭）
 > **用途**: 跨设备/跨会话上下文快照，AI辅助开发第一手参考资料
 
 ---
@@ -16,15 +16,15 @@
 | 状态管理 | Pinia | - | 登录态、用户信息、权限码缓存 |
 | 路由 | Vue Router 4 | - | PC端 + 移动端H5 + 平台后台三套路由 |
 | 后端框架 | Spring Boot | 3.x | Java 17+ |
-| ORM | MyBatis-Plus | - | 代码生成器 |
-| 数据库 | MySQL | 8.0+ | 多租户共享库模式（tenant_code隔离） |
+| ORM | Spring Data JPA / Hibernate 为主，MyBatis-Plus 并存 | - | Hibernate（PostgreSQLDialect，ddl-auto=none）+ MyBatis-Plus（仅分页拦截器 POSTGRE_SQL） |
+| 数据库 | PostgreSQL | 测试环境 postgres:16-alpine，库 dms_test | 多租户共享库模式（tenant_code 隔离），驱动 org.postgresql.Driver |
 | 缓存 | Redis | 7.x | 字典缓存、权限码、token黑名单 |
 | 认证 | JWT (accessToken + refreshToken) | - | 业务前台与平台后台token严格隔离 |
-| 数据库迁移 | Flyway | - | 每个租户独立flyway_schema_history |
+| 数据库迁移 | Flyway | 10.x | V1~V95 共 89 个脚本；默认 docker profile spring.flyway.enabled=false，按需手动启用 |
 | 审批引擎 | 自研/Flowable | - | 审批流配置、驳回策略、委托代理 |
 | 报表 | ECharts 5.x | - | 驾驶舱、画像、TOP榜单 |
 | 文件存储 | MinIO / 本地磁盘 | - | 附件、合同、头像、Excel导入导出 |
-| 部署 | Docker Compose | - | 前端Nginx容器 + 后端Java容器 + MySQL + Redis |
+| 部署 | Docker Compose | - | 前端 Nginx 容器 + 后端 Java 容器 + PostgreSQL + Redis + MinIO（测试对外 80 端口，后端内网 8082） |
 
 ---
 
@@ -159,6 +159,8 @@ DMSdoc/
 | 2026-08-13 | **中文乱码专项全面排查**：用户反馈收货入库详情页字段标签显示"????"乱码后，系统性遍历PC端10大模块所有列表页+详情页（共遍历42个子菜单页面，进入12个有数据的详情页/弹窗深度检查）；**新发现Bug 2个**：①BUG-007 收货入库详情页乱码（操作记录表头"时间"显示为??、收货子单行"创建人"显示为??）②BUG-008 销售出库详情页乱码（发货明细表头"发货时间"显示为????、操作记录表头"时间"显示为??）；**确认正常的页面**：采购订单/销售订单/合同/授权/经销商/医院/仓库/供应商/账号详情弹窗均正常、库存移动详情页正常、接口日志详情弹窗正常、数据看板/报表中心正常；**更新测试报告**：Bug从5个增至8个（3严重+5一般），整体通过率从92.5%降至91.1%；**更新回归文档**：新增"第六阶段：中文乱码专项检查"（约50行，含4个小节：检查范围与方法/库存业务重点/订单业务/其他模块/根因推测），库存业务模块增加3条乱码检查用例（P0级） | 10_测试用例/DMS测试报告_v3.12.0_20260813_全量回归.md + DMS回归测试步骤文档_v3.12.0.md |
 | 2026-08-13 | **核心业务功能深度复核（第二轮）**：用户指出5个严重功能遗漏后逐一验证确认属实，Bug总数从8个增至14个（7严重+7一般），整体通过率从91.1%降至86.8%，综合评分从3.6降至3.1；**新发现严重Bug 4个**：①BUG-009 销售订单列表无新增按钮（核心入口缺失）②BUG-010 采购订单列表无新增按钮 ③BUG-011 销售订单详情弹窗无产品明细（只有操作记录）④BUG-012 采购订单详情弹窗无产品明细；**新发现一般Bug 2个**：①BUG-013 手术报台批次号/序列号为手填文本框（应从出库记录选择）②BUG-014 手术报台列表无查看按钮；**遗漏根因**：第一轮测试存在四大盲区——①只验证列表渲染和查看按钮，没检查新增/编辑等操作入口 ②详情弹窗只看能打开就过，没检查内部是否有核心业务内容（产品明细） ③表单字段只看有值就过，没验证输入方式（手填vs选择） ④无数据模块直接跳过详情验证；**文档更新**：①测试报告Bug列表从8→14，严重Bug从3→7，修复建议P0从5→8条；②回归文档：订单业务模块重写为2个小节（销售/采购各8步），增加已知Bug列，库存业务增加2条产品/批次选择方式检查，手术营销模块增加5步（查看按钮/产品选择/批次选择/序列号选择/详情查看）；③测试案例文档新增"附录F：遗漏测试场景专项补充"（约70行，5个小节：入口存在性9条+详情完整性7条+输入方式11条+API反向对比3条+遗漏根因总结） | 10_测试用例/DMS测试报告_v3.12.0_20260813_全量回归.md + DMS回归测试步骤文档_v3.12.0.md + DMS完整测试场景与测试案例_v3.12.0.md |
 | 2026-08-13 | **第三轮全模块五层深度重测 + 五层自动化测试套件**：按L1-L5五层验证模型，将自动化测试从298条（功能点测试）升级为350条（五层结构化测试），新建5个测试文件（删除1个旧文件）；①**L1入口层（test_l1_entry.py，69条）**：业务前台28模块+报表3+审批4+平台后台9+核心API 6=50个入口点API存在性+响应结构验证；②**L2列表层（test_l2_list.py，约80条）**：19个模块列表结构/字段数/分页/筛选/排序/total验证；③**L3详情层（test_l3_detail.py，约70条）**：18个模块详情三要素（基本信息+业务明细+操作记录）+列表-详情一致性+明细结构检查；④**L4交互层（test_l4_interaction.py，约15条）**：产品/经销商/仓库/促销/分类 CRUD + 必填/重复编码校验；⑤**L5链路层（test_l5_link.py，约12条）**：产品-库存/经销商-订单/收货-库存/用户-角色-权限/仪表盘数据/消息触发/报表数据源 7条端到端链路；**运行结果**：300 passed / 6 skipped / 25 xfailed / 19 xpassed / 0 failed；xfail分布：审批404(4)+平台后台未实现(7)+CRUD字段不匹配(6)+分页排序不稳定(4)+角色权限(1)+角色分页(1)+其他(2)；**技术要点**：分页参数后端约定为`size`而非`pageSize`、业务码code=0为成功、ApiResponse统一封装了code/msg/body/items/is_success等属性 | automation_test/tests/test_l1_entry.py + test_l2_list.py + test_l3_detail.py + test_l4_interaction.py + test_l5_link.py（删除 test_deep_verification.py） |
+| 2026-08-14 | **需求文档按模块重组重写**：将 `01_需求/DMS需求文档_汇总版.md` 由"按来源文档/时间顺序堆叠"改为"按业务模块组织"（v2.0，17篇+2附录）；融合 PRD/用户故事/需求总览v3.8.7/平台后台/移动端v3.9.0/报表v4.2/缺口评估/v3.12.3基线/P0报告，同一模块的已上线能力与缺口合并描述，每个需求点标注[已上线/部分实现/规划中/缺陷]与P0~P3优先级，充实字段、状态机、业务规则、接口与前端交互细节；附录A汇总需求编号矩阵，附录B保留交付记录 | docs/01_需求/DMS需求文档_汇总版.md |
+| 2026-08-14 | **新增生产环境服务器配置建议**：根据中小企业负载（日均100单、年销2–5亿、20–50用户）评估容量，在`02_设计/运维部署.md`新增第四章；推荐 8vCPU/16GB/数据盘200–500GB SSD 单机方案，含JVM/PG/容器内存参数、应用DB分离方案、备份容灾与安全清单 | docs/02_设计/运维部署.md |
 
 ---
 
@@ -179,7 +181,7 @@ DMSdoc/
 13. **导入导出安全边界**：导入Excel必须校验：①文件头列顺序匹配 ②必填列非空 ③编码唯一性 ④日期格式 ⑤数值>=0 ⑥超出行数上限(1000行)；导出必须：①按权限过滤租户 ②敏感字段(价格成本)按角色脱敏 ③Excel添加水印(导出人+时间) ④大文件异步下载(>1万行)
 14. **【平台6大红线】M-01~M-06绝对不能违反**：M01厂家绝不能查看经销商真实业务数据（SO/库存/采购/报表7类接口都返回空或403）；M02产品对码维护在厂家前台，平台后台只做只读报表，不存在"平台标准码"第三方码；M03平台后台只有固定唯一种子管理员账号（超级管理员），不做平台RBAC角色体系；M04第一期只做全局+租户类型配置，不做租户级页面/字段自定义，租户管理员找不到配置菜单；M05租户状态只有active/inactive，禁用三字段disabled_at/disabled_by/disable_reason；M06绑定后绝对不允许解绑，只能停错租户+重建
 15. **token双向隔离必须落地**：平台token `POST /api/admin/auth/login` vs 业务token `POST /api/auth/login` 两套完全独立；Redis key前缀 `dms:admin:auth:` vs `dms:auth:{tenantId}:` 绝不能混存；错用对方接口必须401，这是防止越权第一道防线
-16. **tenant_id MyBatis拦截器白名单**：平台级10张表（tenants/admin_users/global_dict_*/admin_*_configs/admin_*_logs/api_access_logs/tenant_dealer_bindings）必须加入白名单不被追加tenant_id条件；业务表products/sales_orders/stocks等必须被强制追加tenant_id；交叉时直接报500防脏读
+16. **tenant_id 租户过滤白名单（JPA/Hibernate + MyBatis 拦截器）**：平台级10张表（tenants/admin_users/global_dict_*/admin_*_configs/admin_*_logs/api_access_logs/tenant_dealer_bindings）必须加入白名单不被追加tenant_id条件；业务表products/sales_orders/stocks等必须被强制追加tenant_id；交叉时直接报500防脏读
 17. **12项第一期明确不做**（过度设计必删）：平台多角色RBAC、租户自定义布局、租户私有字典、用户个性化列配置、平台模拟登录业务租户、厂家看经销商数据、独立部署控制台、基础设施CPU/内存监控大盘、计费套餐扣费、租户有效期自动到期、平台维护对码、平台标准码三方模型；任何测试如果测到这12项必须反向验证（应该不存在/返回404）
 18. **停用租户三字段必须正确写入+清空**：停用写入disabled_at/disabled_by/disable_reason三字段（enabled_at也要），启用时三个disabled字段必须全清空为NULL；没有FROZEN冻结状态枚举，旧代码有FROZEN的全部替换为inactive
 19. **错误绑定处理流程唯一解**：dealer绑定错了→不调解绑接口（返回400"不允许解绑"）→正确路径：停用错误经销商租户(status=inactive+填停用原因)→重新创建一个新的正确绑定租户；旧绑定记录保留用于审计，不物理删
@@ -197,7 +199,7 @@ DMSdoc/
 31. **【v3.12.1新增】163 SMTP 授权码硬编码**：CHANGELOG 提到 163 SMTP 授权码硬编码在 `application.yml`，已暴露在代码仓库中（NF-08 P0级安全风险），需要立即外置到环境变量 + 轮换授权码
 32. **【v3.12.1新增】测试账号邮箱非真实**：登录手册中8个测试账号邮箱为 `*@dms-demo.com`（非真实收件），admin/平台账号无邮箱；OPS-01 建议统一为 `vinkinyu@163.com` 以便邮件功能验证
 33. **【v3.12.1新增】平台后台审计日志页空白**：`/admin/logs/audits` 菜单存在但页面空白；`platform_audit_logs` 表已建但无查询接口暴露
-34. **【v3.12.1新增】Flyway 已用到 V78+**：v3.11.x 修过若干越权问题，但 1127 条用例中 P2/P3 未全量回归；建议 CI 中自动跑越权测试（SEC-05 P0级）
+34. **【v3.12.3更新】Flyway 脚本已到 V95（共 89 个）**：默认 docker profile spring.flyway.enabled=false，手动启用时执行；v3.11.x 修过若干越权问题，建议 CI 中自动跑越权测试（SEC-05 P0级）
 35. **【v3.12.1新增】三端功能覆盖率统计**：业务前台 59.6%（47页中28完整/2缺陷/17未实现）、平台后台 25.0%（24项中6完整/1部分/17未实现）、移动端 62.5%（8页中5完整/3缺陷）；总体 49.4%；详细见 v3.12 评估文档第1章
 
 ---
@@ -219,12 +221,12 @@ mvn clean install -DskipTests
 java -jar target/dms-*.jar --spring.profiles.active=dev
 # 默认端口 8080（注意与Nginx区分）
 ```
-- `application-dev.yml` 需配置 MySQL(8.133.193.238:3306/dms) + Redis(6379)
+- `application-dev.yml` / `application-local.yml` 需配置 PostgreSQL（测试库 dms_test，默认 localhost:5432）+ Redis(6379)；驱动 org.postgresql.Driver
 - 启动前确保测试环境数据库端口开放（或用SSH隧道）
 
 ### Docker本地联调
 ```bash
-docker compose up -d mysql redis
+docker compose up -d postgres redis
 # 然后前后端分别本地跑，VITE_API_BASE_URL=http://localhost:8080
 ```
 

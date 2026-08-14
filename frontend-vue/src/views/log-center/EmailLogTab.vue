@@ -40,7 +40,7 @@ const page = ref(1), size = ref(20), status = ref(null)
 async function reload(p = page.value) {
   page.value = p; loading.value = true
   try {
-    const params = { page: page.value, size, status: status.value || undefined }
+    const params = { page: page.value, size: size.value, status: status.value || undefined }
     const { data } = await request({ url: '/api/email-logs', method: 'get', params })
     rows.value = data?.list || []; total.value = data?.total || 0
   } finally { loading.value = false }
