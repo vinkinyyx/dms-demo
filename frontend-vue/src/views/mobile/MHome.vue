@@ -47,7 +47,8 @@
     <div class="sec-title">快捷入口</div>
     <van-grid :column-num="4" :border="false" class="quick-grid">
       <van-grid-item v-for="q in quicks" :key="q.key" :to="q.to" clickable>
-        <van-icon :name="q.icon" :color="q.color" size="28" />
+        <SurgeryIcon v-if="q.key === 'surgery'" :size="30" bg="#52c41a" />
+        <van-icon v-else :name="q.icon" :color="q.color" size="28" />
         <div class="quick-l">{{ q.label }}</div>
       </van-grid-item>
     </van-grid>
@@ -78,6 +79,7 @@ import { useUserStore } from '@/store/user'
 import { listResource } from '@/api/crud'
 import { getKpi } from '@/api/dashboard'
 import { statusText, statusTagType } from '@/utils/dict'
+import SurgeryIcon from '@/components/SurgeryIcon.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
