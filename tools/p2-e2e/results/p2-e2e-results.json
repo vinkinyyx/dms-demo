@@ -18,7 +18,7 @@
     "id": "create",
     "title": "created row visible",
     "status": "PASS",
-    "detail": "E2E_1786641282397"
+    "detail": "E2E_1786728450754"
   },
   {
     "scope": "RS",
@@ -32,14 +32,14 @@
     "id": "delete",
     "title": "deleted row gone",
     "status": "PASS",
-    "detail": "E2E_1786641282397"
+    "detail": "E2E_1786728450754"
   },
   {
     "scope": "ST",
     "id": "page",
     "title": "stocktake fields",
     "status": "PASS",
-    "detail": "经销商管理 工作台首页 基础数据 合同管理 订单业务 库存业务 库存查询 销售出库 收货入库 库存移动 库存调整 效期预警 库存盘点 序列号追溯 手术与营销 数据看板 业务报表 产品对码 审批中心 用户与权限 DMS admin 库存盘点 上传盘点单 ID 盘点期间 明细数 差异合计(绝对值) 迟交 上传时间 操作 暂无数据 暂无盘点单，点击右上角上传盘点单"
+    "detail": "经销商管理 工作台首页 基础数据 合同管理 订单业务 库存业务 库存查询 销售出库 收货入库 库存移动 库存调整 效期预警 库存盘点 序列号追溯 手术与营销 数据看板 业务报表 产品对码 审批中心 用户与权限 DMS admin 库存盘点 上传盘点单 ID 盘点期间 明细数 差异合计(绝对值) 迟交 上传时间 操作 1 202601 3 5 - 2026-08-14T16:30:20.724577+08:00 查看 2 202602 3 6 - 2026-08-14T16:30:20.787461+08:00 查看 "
   },
   {
     "scope": "ST",
@@ -60,7 +60,7 @@
     "id": "page",
     "title": "profile mfa visible",
     "status": "PASS",
-    "detail": "经销商管理 工作台首页 基础数据 合同管理 订单业务 库存业务 手术与营销 数据看板 业务报表 产品对码 审批中心 用户与权限 DMS admin 个人资料与安全 用户名 admin 姓名 超级管理员 二次验证 (MFA) 未启用 启用 MFA 请使用 Google Authenticator、Microsoft Authenticator 或 1Password 扫描密钥，然后输入 6 位验证码。 密钥Y67VLYXUJABXICQJNUWJ2KQOMRK3QMOA otpauthotpauth://totp/DMS%3Aadmin?secret=Y67VLYXUJABXICQJNUWJ2"
+    "detail": "经销商管理 工作台首页 基础数据 合同管理 订单业务 库存业务 手术与营销 数据看板 业务报表 产品对码 审批中心 用户与权限 DMS admin 个人资料与安全 用户名 admin 姓名 超级管理员 二次验证 (MFA) 未启用 启用 MFA 请使用 Google Authenticator、Microsoft Authenticator 或 1Password 扫描密钥，然后输入 6 位验证码。 密钥SBE45JKPUGMDNKSC4ICXNL2VZXG7IRYW otpauthotpauth://totp/DMS%3Aadmin?secret=SBE45JKPUGMDNKSC4ICXN"
   },
   {
     "scope": "PF",
@@ -74,7 +74,7 @@
     "id": "page",
     "title": "expiry page renders",
     "status": "PASS",
-    "detail": "经销商管理 工作台首页 基础数据 合同管理 订单业务 库存业务 库存查询 销售出库 收货入库 库存移动 库存调整 效期预警 库存盘点 序列号追溯 手术与营销 数据看板 业务报表 产品对码 审批中心 用户与权限 DMS admin 批次效期预警 90 天内到期 查询 已过期 0 批次 30天内到期 0 批次 90天内到期 0 批次 180天内到期 596 批次 状态 产品编码 产品名称 规格 批号 序列号 库存数量 单位 仓库 到期日期 暂无数据 共 0 条 1"
+    "detail": "经销商管理 工作台首页 基础数据 合同管理 订单业务 库存业务 库存查询 销售出库 收货入库 库存移动 库存调整 效期预警 库存盘点 序列号追溯 手术与营销 数据看板 业务报表 产品对码 审批中心 用户与权限 DMS admin 批次效期预警 90 天内到期 查询 已过期 0 批次 30天内到期 0 批次 90天内到期 0 批次 180天内到期 611 批次 状态 产品编码 产品名称 规格 批号 序列号 库存数量 单位 仓库 到期日期 暂无数据 共 0 条 1"
   },
   {
     "scope": "TR",

@@ -116,9 +116,10 @@ class TestL2Pagination:
 
     @pytest.mark.parametrize("module_name,api_path,_",
                              [(m[0], m[1], m[3]) for m in CORE_LIST_MODULES])
-    @pytest.mark.xfail(reason="部分模块后端分页排序不稳定，存在数据重叠")
     def test_pagination_different_pages(self, admin_client, module_name, api_path, _):
         """分页page参数生效：第1页和第2页数据不重叠"""
+        if module_name == "角色管理":
+            pytest.xfail("角色管理分页参数名特殊，待确认")
         resp1 = admin_client.get(api_path, {PAGE_PARAM: 1, SIZE_PARAM: 5})
         items1 = _get_list(resp1)
         if len(items1) < 5:
@@ -183,9 +184,10 @@ class TestL2Sorting:
         ("经销商管理", config.ApiPaths.DEALERS),
         ("销售订单", config.ApiPaths.SALES_ORDERS),
     ])
-    @pytest.mark.xfail(reason="sortField/sortOrder参数名可能与后端不一致")
     def test_sort_by_create_time_desc(self, admin_client, module_name, api_path):
         """按创建时间倒序排序"""
+        if module_name in ("产品管理", "经销商管理"):
+            pytest.xfail("sortField/sortOrder参数名与后端不一致，待对齐")
         resp = admin_client.get(api_path, {
             PAGE_PARAM: 1, SIZE_PARAM: 10,
             "sortField": "createTime", "sortOrder": "desc"

@@ -60,23 +60,23 @@ REPORT_MODULES = [
 
 # L1入口层：审批模块（4个）
 APPROVAL_MODULES = [
-    ("审批实例", config.ApiPaths.APPROVAL_INSTANCES, False),
-    ("审批流程", config.ApiPaths.APPROVAL_FLOWS, False),
-    ("审批委托", config.ApiPaths.APPROVAL_DELEGATES, False),
-    ("审批监控", config.ApiPaths.APPROVAL_MONITORS, False),
+    ("审批实例", config.ApiPaths.APPROVAL_INSTANCES, True),
+    ("审批流程", config.ApiPaths.APPROVAL_FLOWS, True),
+    ("审批委托", config.ApiPaths.APPROVAL_DELEGATES, True),
+    ("审批监控", config.ApiPaths.APPROVAL_MONITORS, True),
 ]
 
 # L1入口层：平台后台（9个）
 ADMIN_MODULES = [
-    ("租户管理", config.ApiPaths.ADMIN_TENANTS, False),
-    ("平台用户", config.ApiPaths.ADMIN_USERS, False),
-    ("字典类型", config.ApiPaths.ADMIN_DICT_TYPES, False),
-    ("字典项", config.ApiPaths.ADMIN_DICT_ITEMS, False),
+    ("租户管理", config.ApiPaths.ADMIN_TENANTS, True),
+    ("平台用户", config.ApiPaths.ADMIN_USERS, True),
+    ("字典类型", config.ApiPaths.ADMIN_DICT_TYPES, True),
+    ("字典项", config.ApiPaths.ADMIN_DICT_ITEMS, True),
     ("平台菜单", config.ApiPaths.ADMIN_MENUS, True),
-    ("审计日志", config.ApiPaths.ADMIN_AUDIT_LOGS, False),
-    ("登录日志", config.ApiPaths.ADMIN_LOGIN_LOGS, False),
+    ("审计日志", config.ApiPaths.ADMIN_AUDIT_LOGS, True),
+    ("登录日志", config.ApiPaths.ADMIN_LOGIN_LOGS, True),
     ("接口日志", config.ApiPaths.ADMIN_API_LOGS, True),
-    ("租户绑定", config.ApiPaths.ADMIN_TENANT_BINDINGS, False),
+    ("租户绑定", config.ApiPaths.ADMIN_TENANT_BINDINGS, True),
 ]
 
 
@@ -131,7 +131,6 @@ class TestL1ApprovalModules:
 
     @pytest.mark.parametrize("module_name,api_path,expected_ok",
                              [(m[0], m[1], m[2]) for m in APPROVAL_MODULES])
-    @pytest.mark.xfail(reason="BUG-019: 审批模块API全部404未实现")
     def test_approval_api_exists(self, admin_client, module_name, api_path, expected_ok):
         """审批模块API存在性验证"""
         resp = admin_client.get(api_path, {"page": 1, "pageSize": 1})

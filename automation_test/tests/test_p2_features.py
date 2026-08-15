@@ -105,9 +105,14 @@ class TestRateLimit:
         # so we verify the endpoint returns 429 after a large burst, using a unique invalid body
         # to avoid successful side effects. We send up to 80 rapid requests.
         url = config.API_BASE + config.ApiPaths.LOGIN
+        # Use a unique synthetic X-Forwarded-For so this burst consumes a separate
+        # per-IP rate-limit bucket and does not lock out other tests sharing our real IP.
+        probe_ip = "198.51.100." + str(int(time.time()) % 200 + 1)
+        headers = {"X-Forwarded-For": probe_ip}
         saw_429 = False
         for _ in range(70):
-            r = requests.post(url, json={"tenantCode": "", "username": "__ratelimit_probe__", "password": "x"}, timeout=10)
+            r = requests.post(url, json={"tenantCode": "", "username": "__ratelimit_probe__", "password": "x"},
+                              headers=headers, timeout=10)
             if r.status_code == 429:
                 saw_429 = True
                 body = r.json()
@@ -131,7 +136,9 @@ class TestStocktake:
             sid = items[0].get("id")
             detail = client.get(f"/api/stocktakes/{sid}")
             assert detail.is_success, detail.msg
-            assert detail.body.get("id") == sid
+            # detail may be wrapped as {'stocktake':{...},'lines':[...]} or flat
+            detail_obj = detail.body.get('stocktake') if isinstance(detail.body, dict) and 'stocktake' in detail.body else detail.body
+            assert (detail_obj or {}).get('id') == sid
 
 
 class TestReportSubscription:

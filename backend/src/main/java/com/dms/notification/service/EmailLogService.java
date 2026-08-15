@@ -42,6 +42,11 @@ public class EmailLogService {
     }
 
     @Transactional(readOnly = true)
+    public EmailLog getById(Long id) {
+        return repository.findById(id).orElse(null);
+    }
+
+    @Transactional(readOnly = true)
     public PageResult<EmailLog> list(String status, PageQuery pageQuery) {
         UUID tenantId = TenantContext.getTenantId();
         Page<EmailLog> page = status == null || status.isBlank()

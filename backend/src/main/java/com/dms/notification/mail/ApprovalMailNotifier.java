@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -30,6 +31,7 @@ public class ApprovalMailNotifier {
     @Value("${dms.mail.enabled:true}")
     private boolean enabled;
 
+    @Async
     public void sendTaskMail(ApprovalTask task, ApprovalInstance instance) {
         if (!enabled) return;
         userRepository.findById(task.getAssigneeId()).ifPresent(user -> {
@@ -45,6 +47,7 @@ public class ApprovalMailNotifier {
         });
     }
 
+    @Async
     public void sendCcMail(Long userId, ApprovalInstance instance) {
         if (!enabled) return;
         userRepository.findById(userId).ifPresent(user -> {
@@ -58,6 +61,7 @@ public class ApprovalMailNotifier {
         });
     }
 
+    @Async
     public void sendResultMail(ApprovalInstance instance) {
         if (!enabled || instance.getSubmitterId() == null) return;
         userRepository.findById(instance.getSubmitterId()).ifPresent(user -> {
@@ -71,6 +75,7 @@ public class ApprovalMailNotifier {
         });
     }
 
+    @Async
     public void sendReminderMail(ApprovalTask task, ApprovalInstance instance) {
         if (!enabled) return;
         userRepository.findById(task.getAssigneeId()).ifPresent(user -> {

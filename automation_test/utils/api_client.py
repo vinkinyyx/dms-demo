@@ -2,6 +2,8 @@
 DMS自动化测试 - API客户端封装
 提供统一的HTTP请求方法，自动携带Token、统一异常处理
 """
+import os
+import time
 import requests
 import json
 import logging
@@ -52,6 +54,23 @@ class ApiClient:
             return path
         return f"{self.base_url}{path}"
 
+
+    # Auto-retry login requests throttled by per-IP rate limit (429) so that the
+    # full suite sharing one IP does not cascade-fail. The dedicated rate-limit
+    # test uses a synthetic X-Forwarded-For and is unaffected.
+    def _maybe_retry_429(self, method, path, do_request):
+        enable = os.getenv("DMS_AUTORETRY_429", "1") != "0"
+        if not enable or not path.endswith(("/api/auth/login", "/api/admin/auth/login", "/api/auth/mfa/verify")):
+            return do_request()
+        for attempt in range(3):
+            resp = do_request()
+            if resp.status_code != 429:
+                return resp
+            wait = 20 * (attempt + 1)
+            logger.warning(f"429 on {path}; waiting {wait}s before retry {attempt+1}/3")
+            time.sleep(wait)
+        return resp
+
     def _log_and_return(self, method: str, path: str, response: requests.Response):
         """统一日志和返回"""
         try:
@@ -69,13 +88,11 @@ class ApiClient:
 
     def get(self, path: str, params: Dict = None, **kwargs) -> "ApiResponse":
         url = self._url(path)
-        resp = self.session.get(url, params=params, timeout=config.TIMEOUT, **kwargs)
-        return self._log_and_return("GET", path, resp)
+        return self._maybe_retry_429("GET", path, lambda: self._log_and_return("GET", path, self.session.get(url, params=params, timeout=config.TIMEOUT, **kwargs)))
 
     def post(self, path: str, json_data: Dict = None, **kwargs) -> "ApiResponse":
         url = self._url(path)
-        resp = self.session.post(url, json=json_data, timeout=config.TIMEOUT, **kwargs)
-        return self._log_and_return("POST", path, resp)
+        return self._maybe_retry_429("POST", path, lambda: self._log_and_return("POST", path, self.session.post(url, json=json_data, timeout=config.TIMEOUT, **kwargs)))
 
     def put(self, path: str, json_data: Dict = None, **kwargs) -> "ApiResponse":
         url = self._url(path)
