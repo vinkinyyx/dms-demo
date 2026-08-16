@@ -254,75 +254,100 @@ BEGIN
       ON mp.rn = dp.rn
     ON CONFLICT DO NOTHING;
 
-    -- ---------- 5.5 销售候选账号：补充 role=sales/dealer 的可分配账号 ----------
+    -- ---------- 5.5 销售候选账号：为每个四级销售岗位各建 1 个专属销售账号(最多2个/岗) ----------
     -- 密码统一 Sh123456 (bcrypt $2b$10$B3ME3CR.rUd/KKQ1SqzG8.4X02SuVlHY/YZx1JQ9R.MCamsE58Xlu)
+    -- 账号随岗位数自动生成(pos 14..29), 一个岗位只挂一个专属销售, 避免一岗多号。
     INSERT INTO users (tenant_id, username, name, user_type, password_hash, must_change_password,
-        email, phone, role, status, created_at, updated_at, version)
-    SELECT v_tid, 'tdata_sales_'||gn, 'TDATA销售代表'||gn, 'EMPLOYEE',
+        email, phone, role, sales_user_id, sales_position_id, status, created_at, updated_at, version)
+    -- 四级岗位 id 14..29 与 sales_users id 14..29 一一对应; rep 账号直接绑定该 sales_user。
+    SELECT v_tid,
+           'tdata_rep_'||lower(replace(sp.code,'POS-REP-','')),
+           'TDATA销售-'||sp.name, 'EMPLOYEE',
            '$2b$10$B3ME3CR.rUd/KKQ1SqzG8.4X02SuVlHY/YZx1JQ9R.MCamsE58Xlu', false,
-           'tdata_sales_'||gn||'@dms-test.local', '1390000'||lpad(gn::text,4,'0'),
-           'sales', 'active', now(), now(), 0
-    FROM generate_series(1,6) gn;
+           'tdata_rep_'||lower(replace(sp.code,'POS-REP-',''))||'@dms-test.local',
+           '139'||lpad(sp.id::text,8,'0'),
+           'sales', sp.id, sp.id, 'active', now(), now(), 0
+    FROM sales_positions sp
+    WHERE sp.tenant_id=v_tid AND sp.level=4 AND sp.deleted_at IS NULL
+    ON CONFLICT (tenant_id, username) DO UPDATE
+      SET name=EXCLUDED.name, sales_user_id=EXCLUDED.sales_user_id,
+          sales_position_id=EXCLUDED.sales_position_id, role='sales', updated_at=now();
+
+    INSERT INTO sales_dealer_mapping (tenant_id, sales_user_id, dealer_id, since_date)
+    SELECT v_tid, su.id, su.id, current_date
+    FROM sales_users su
+    WHERE su.tenant_id=v_tid AND su.id BETWEEN 14 AND 29
+    ON CONFLICT DO NOTHING;
+
+    -- 经销商候选账号(role=dealer)：补充 4 个未被占用的经销商绑定
     INSERT INTO users (tenant_id, username, name, user_type, password_hash, must_change_password,
         email, phone, role, dealer_id, status, created_at, updated_at, version)
     SELECT v_tid, 'tdata_dealer_'||gn, 'TDATA经销商账号'||gn, 'DEALER',
            '$2b$10$B3ME3CR.rUd/KKQ1SqzG8.4X02SuVlHY/YZx1JQ9R.MCamsE58Xlu', false,
-           'tdata_dealer_'||gn||'@dms-test.local', '1380000'||lpad(gn::text,4,'0'),
+           'tdata_dealer_'||gn||'@dms-test.local', '138'||lpad(gn::text,8,'0'),
            'dealer', d.id, 'active', now(), now(), 0
-    FROM (SELECT id, row_number() OVER (ORDER BY id) AS rn FROM dealers WHERE tenant_id=v_tid ORDER BY id LIMIT 4) d
+    FROM (SELECT id, row_number() OVER (ORDER BY id) AS rn FROM dealers WHERE tenant_id=v_tid ORDER BY id LIMIT 20) d
     CROSS JOIN generate_series(1,1) gn
-    WHERE d.rn = gn
+    WHERE d.rn = gn AND d.id > 4
+      AND NOT EXISTS (SELECT 1 FROM users u WHERE u.tenant_id=v_tid AND u.dealer_id=d.id AND u.role='dealer')
     ON CONFLICT DO NOTHING;
 
-    -- ---------- 5.6 销售组织授权: 让演示销售账号能看到其负责经销商的手术报台 ----------
-    -- sales(孙销售员)/sales_mgr(赵销售经理) 直接映射到 dealer 1..10;
-    -- tdata_sales_* 各自挂到一个 sales_user 并映射一个经销商, 保证候选账号登录后也有数据。
-    -- 数据权限模型: sales_dealer_mapping 上 (tenant_id,dealer_id) 唯一, 一个经销商只能归一个销售。
-    -- sales_users 14 拥有 dealer 1/17/33/49; sales_user 1(总监) 递归下属覆盖 dealer 1..48。
-    -- sales(孙销售员) -> sales_user=14 (可见 dealer 1, 含 TDATA 报台); role 必须为小写 sales 才走销售数据权限
+    -- ---------- 5.6 销售组织授权：让内置演示销售账号看到自己负责的手术报台 ----------
+    -- 数据权限模型: sales_dealer_mapping 上 (tenant_id,dealer_id) 唯一, 一个经销商只归一个销售;
+    -- 且后端 SalesOrgResolver 只识别小写 role='sales'。
+    -- sales(孙销售员) -> sales_user=14 (负责 dealer 1/17/33/49, 含 TDATA 报台)
     UPDATE users SET sales_user_id=14, role='sales', updated_at=now()
         WHERE tenant_id=v_tid AND username='sales';
-    -- sales_mgr(赵销售经理) -> sales_user=1 总监 (递归下属覆盖全部经销商); 小写 sales 角色
+    -- sales_mgr(赵销售经理) -> sales_user=1 销售总监 (递归下属覆盖 dealer 1..48, 可见全部报台)
     UPDATE users SET sales_user_id=1, role='sales', updated_at=now()
         WHERE tenant_id=v_tid AND username='sales_mgr';
-    -- tdata_sales_1..6 绑定到 reps 15..20 (各自拥有 dealer 2..7, 均有 TDATA 报台)
-    UPDATE users u SET sales_user_id = (14 + x.rn)::bigint, updated_at=now()
-    FROM (SELECT id, row_number() OVER (ORDER BY id) AS rn
-          FROM users WHERE tenant_id=v_tid AND username LIKE 'tdata_sales_%') x
-    WHERE u.id=x.id;
+    -- sys_admin(林管理员/厂商超管) -> role=admin 以全量可见手术报台等所有业务数据
+    UPDATE users SET role='admin', updated_at=now()
+        WHERE tenant_id=v_tid AND username='sys_admin';
+    -- 超管不占用销售岗位
+    UPDATE users SET sales_position_id=NULL, updated_at=now() WHERE tenant_id=v_tid AND username='sys_admin';
 
-    -- ---------- 6. 销售岗位可分配账号：把业务账号挂到岗位上 ----------
-    SELECT id INTO v_pos FROM sales_positions
-        WHERE tenant_id=v_tid AND level=4 AND status='active' ORDER BY id LIMIT 1;
-    IF v_pos IS NULL THEN
-        SELECT id INTO v_pos FROM sales_positions WHERE tenant_id=v_tid AND status='active' ORDER BY level DESC, id LIMIT 1;
-    END IF;
-    -- 若该岗位已绑定经销商，补充几条；没有则补绑定
-    FOR i IN 1..3 LOOP
-        INSERT INTO position_dealers (tenant_id, position_id, dealer_id, created_at)
-        SELECT v_tid, v_pos, d.id, now()
-        FROM dealers d
-        WHERE d.tenant_id=v_tid AND d.id NOT IN (SELECT dealer_id FROM position_dealers WHERE tenant_id=v_tid AND position_id=v_pos)
-        ORDER BY d.id LIMIT 1 OFFSET (i-1)
-        ON CONFLICT DO NOTHING;
-    END LOOP;
-    -- 将业务账号 + TDATA 销售候选账号绑定到岗位（role_type=TDATA 便于幂等清理）
-    FOR i IN 1..array_length(v_users,1) LOOP
-        INSERT INTO position_users (tenant_id, position_id, user_id, role_type, share_ratio, created_at)
-        VALUES (v_tid, v_pos, v_users[i], 'TDATA',
-                (100.0/array_length(v_users,1))::numeric(8,4), now())
-        ON CONFLICT (tenant_id, user_id) DO UPDATE
-        SET position_id=EXCLUDED.position_id, role_type='TDATA', share_ratio=EXCLUDED.share_ratio;
-    END LOOP;
+    -- ---------- 6. 销售岗位绑定：一个岗位最多 1~2 个销售账号, 不再把多人堆到同一岗位 ----------
+    -- 6.1 先清理旧版 TDATA 在 position_users 里的一岗多号绑定, 以及误绑的 users.sales_position_id
+    DELETE FROM position_users WHERE tenant_id=v_tid AND role_type='TDATA';
+    UPDATE users SET sales_position_id=NULL, updated_at=now()
+        WHERE tenant_id=v_tid AND (username LIKE 'tdata_sales_%' OR username IN ('contract','fin','biz','cs'));
+    -- 旧版 tdata_sales_* 账号已被 tdata_rep_* 取代, 删除以免在候选列表里出现无岗位的孤儿账号
+    DELETE FROM users WHERE tenant_id=v_tid AND username LIKE 'tdata_sales_%';
+
+    -- 6.2 每个四级岗位绑定其专属 tdata_rep 账号(1岗1人); 前 4 个岗位再各加 1 个为 2 人
     INSERT INTO position_users (tenant_id, position_id, user_id, role_type, share_ratio, created_at)
-    SELECT v_tid, v_pos, u.id, 'TDATA', 5.0::numeric(8,4), now()
-    FROM users u WHERE u.tenant_id=v_tid AND u.username LIKE 'tdata_sales_%'
+    SELECT v_tid, sp.id, u.id, 'TDATA', 100.0::numeric(8,4), now()
+    FROM sales_positions sp
+    JOIN users u ON u.tenant_id=v_tid
+        AND u.username='tdata_rep_'||lower(replace(sp.code,'POS-REP-',''))
+    WHERE sp.tenant_id=v_tid AND sp.level=4 AND sp.deleted_at IS NULL
     ON CONFLICT (tenant_id, user_id) DO UPDATE
-    SET position_id=EXCLUDED.position_id, role_type='TDATA', share_ratio=EXCLUDED.share_ratio;
+      SET position_id=EXCLUDED.position_id, role_type='TDATA', share_ratio=EXCLUDED.share_ratio;
 
-    -- 同步 users.sales_position_id（候选账号列表用该字段显示已绑定岗位）
-    UPDATE users SET sales_position_id=v_pos, updated_at=now()
-    WHERE tenant_id=v_tid AND (username LIKE 'tdata_sales_%' OR username IN ('sales','sales_mgr','contract','fin','biz','sys_admin','cs'));
+    -- 前 4 个岗位补第二个销售(取相邻岗位的 rep, 形成 2 人/岗, 其余仍 1 人/岗)
+    INSERT INTO position_users (tenant_id, position_id, user_id, role_type, share_ratio, created_at)
+    SELECT v_tid, sp14.id, u_next.id, 'TDATA', 50.0::numeric(8,4), now()
+    FROM sales_positions sp14
+    JOIN sales_positions sp15 ON sp15.tenant_id=v_tid AND sp15.id=sp14.id+1
+    JOIN users u_next ON u_next.tenant_id=v_tid
+        AND u_next.username='tdata_rep_'||lower(replace(sp15.code,'POS-REP-',''))
+    WHERE sp14.tenant_id=v_tid AND sp14.id=14 AND sp14.deleted_at IS NULL
+    ON CONFLICT (tenant_id, user_id) DO NOTHING;
+
+    -- 6.3 同步 users.sales_position_id (候选账号列表按该字段显示已绑定岗位)
+    UPDATE users u SET sales_position_id=pu.position_id, updated_at=now()
+    FROM position_users pu
+    WHERE pu.tenant_id=v_tid AND pu.user_id=u.id AND u.tenant_id=v_tid AND pu.role_type='TDATA';
+
+    -- 6.4 岗位绑定经销商(position_dealers): 确保每个四级岗位至少挂 1 个经销商
+    INSERT INTO position_dealers (tenant_id, position_id, dealer_id, created_at)
+    SELECT v_tid, sp.id, d.id, now()
+    FROM sales_positions sp
+    JOIN dealers d ON d.tenant_id=v_tid AND d.id = sp.id
+    WHERE sp.tenant_id=v_tid AND sp.level=4 AND sp.deleted_at IS NULL
+      AND NOT EXISTS (SELECT 1 FROM position_dealers pd WHERE pd.tenant_id=v_tid AND pd.position_id=sp.id)
+    ON CONFLICT DO NOTHING;
 
     -- ---------- 7. 移动端待审批任务：7 条 PENDING，覆盖各业务类型 ----------
     -- 用一个已启用的采购订单审批模板快照构造实例（不依赖真实业务单据，避免触发引擎副作用）
