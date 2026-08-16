@@ -187,7 +187,8 @@ BEGIN
     INSERT INTO surgery_reports (tenant_id, code, dealer_id, terminal_id, warehouse_id, sales_user_id,
         surgery_date, patient_info, doctor_name, status, remark, created_by, created_at, updated_at)
     SELECT v_tid, 'TDATA-SURG-'||lpad(gn::text,4,'0'),
-           v_dealer, v_hospital, v_wh, 21,
+           (SELECT id FROM dealers WHERE tenant_id=v_tid ORDER BY id LIMIT 1 OFFSET ((gn-1)%10)),
+           v_hospital, v_wh, 21,
            current_date - (gn-1)*3,
            '患者'||lpad(g::text,3,'0')||'(病案号 TDATA'||lpad(g::text,5,'0')||')',
            (ARRAY['张主任','李主任','王主任','赵主任'])[gn%4+1],
@@ -272,6 +273,23 @@ BEGIN
     CROSS JOIN generate_series(1,1) gn
     WHERE d.rn = gn
     ON CONFLICT DO NOTHING;
+
+    -- ---------- 5.6 销售组织授权: 让演示销售账号能看到其负责经销商的手术报台 ----------
+    -- sales(孙销售员)/sales_mgr(赵销售经理) 直接映射到 dealer 1..10;
+    -- tdata_sales_* 各自挂到一个 sales_user 并映射一个经销商, 保证候选账号登录后也有数据。
+    -- 数据权限模型: sales_dealer_mapping 上 (tenant_id,dealer_id) 唯一, 一个经销商只能归一个销售。
+    -- sales_users 14 拥有 dealer 1/17/33/49; sales_user 1(总监) 递归下属覆盖 dealer 1..48。
+    -- sales(孙销售员) -> sales_user=14 (可见 dealer 1, 含 TDATA 报台); role 必须为小写 sales 才走销售数据权限
+    UPDATE users SET sales_user_id=14, role='sales', updated_at=now()
+        WHERE tenant_id=v_tid AND username='sales';
+    -- sales_mgr(赵销售经理) -> sales_user=1 总监 (递归下属覆盖全部经销商); 小写 sales 角色
+    UPDATE users SET sales_user_id=1, role='sales', updated_at=now()
+        WHERE tenant_id=v_tid AND username='sales_mgr';
+    -- tdata_sales_1..6 绑定到 reps 15..20 (各自拥有 dealer 2..7, 均有 TDATA 报台)
+    UPDATE users u SET sales_user_id = (14 + x.rn)::bigint, updated_at=now()
+    FROM (SELECT id, row_number() OVER (ORDER BY id) AS rn
+          FROM users WHERE tenant_id=v_tid AND username LIKE 'tdata_sales_%') x
+    WHERE u.id=x.id;
 
     -- ---------- 6. 销售岗位可分配账号：把业务账号挂到岗位上 ----------
     SELECT id INTO v_pos FROM sales_positions
