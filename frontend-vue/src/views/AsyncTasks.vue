@@ -62,7 +62,7 @@ const page = ref(1), size = ref(20), taskType = ref('')
 async function reload(p = page.value) {
   page.value = p; loading.value = true
   try {
-    const params = { page, size }
+    const params = { page: page.value, size: size.value }
     if (taskType.value) params.taskType = taskType.value
     const { data } = await request({ url: '/api/async-tasks', method: 'get', params })
     rows.value = data?.list || []; total.value = data?.total || 0
