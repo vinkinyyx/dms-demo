@@ -1,10 +1,12 @@
 -- =====================================================================
--- DMS 测试环境补充演示数据 (幂等)
+-- DMS 演示数据补充脚本 (幂等，测试/生产通用)
 -- 覆盖: 合同工作台 / 序列号库存 / 效期预警 / 序列号追溯 / 手术植入报台 /
 --       报表订阅 / 产品对码 / 销售岗位可分配账号 / 移动端待审批任务
--- 标识前缀 TDATA- ，可重复执行
+-- 标识前缀 TDATA- ，可重复执行（重复执行会先清理旧 TDATA 数据再重建）
 -- 默认演示租户: 11111111-1111-1111-1111-111111111111
--- 用法: docker exec -i dms-test-postgres psql -U dms -d dms_test -v ON_ERROR_STOP=1 < scripts/seed_extra_test_data.sql
+-- 测试: docker exec -i dms-test-postgres psql -U dms -d dms_test -v ON_ERROR_STOP=1 < scripts/seed_extra_test_data.sql
+-- 生产: docker exec -i a3493e36ecba_dms-prod-postgres psql -U dms -d dms -v ON_ERROR_STOP=1 < scripts/seed_extra_test_data.sql
+-- 首次随 v3.12.5 同步到生产 (2026-08-16)
 -- =====================================================================
 BEGIN;
 
