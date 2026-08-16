@@ -10,9 +10,9 @@
 
 | 环境 | 前端入口 | 后端 API | 数据库 | 用途 |
 |---|---|---|---|---|
+| 生产 | `http://8.133.193.238/dms/` | Nginx 同源 `/api`、`/auth`、`/actuator` 反代后端容器 | `dms` | 正式生产环境（v3.12.4，Docker Compose 部署，2026-08-16 上线） |
 | 新测试 | `http://43.128.145.141` | Nginx 同源 `/api` 反代内网 `8080` | `dms_test` | 最新 DMS 测试环境，Docker Compose 部署 |
 | 旧测试 | `http://43.128.145.141` | `http://43.128.145.141` | `dms_test` | 历史测试环境 |
-| 生产 | `http://8.133.193.238:8081` | `http://8.133.193.238:8080` | `dms` | 正式演示与生产使用 |
 
 测试库已迁移到 Flyway V77。v3.11.0 合同模块重构：原「合同申请+合同」合并为「合同工作台」，新增「合同模板」菜单。测试环境与生产环境均支持业务前台、移动端 H5、平台后台三种登录方式。
 
@@ -20,16 +20,28 @@
 
 ## 2. 登录入口
 
-### 2.1 生产环境
+### 2.1 生产环境（v3.12.4，2026-08-16 上线）
 
 | 入口 | 地址 | 说明 |
 |---|---|---|
-| 业务前台登录页 | http://8.133.193.238:8081/login | 厂家/经销商租户用户登录 |
-| 业务工作台 | http://8.133.193.238:8081/ | 登录后进入业务 PC 工作台 |
-| 移动端 H5 登录 | http://8.133.193.238:8081/mobile/login | 移动端订单、报台、我的等功能 |
-| 平台后台 | http://8.133.193.238:8081/admin/ | 平台管理员登录入口 |
-| 后端健康检查 | http://8.133.193.238:8080/actuator/health | 返回 `{"status":"UP"}` 表示后端正常 |
-| Swagger API | http://8.133.193.238:8080/swagger-ui.html | 后端接口文档 |
+| 业务前台/PC 工作台 | http://8.133.193.238/dms/ | 厂家/经销商租户用户登录与工作台 |
+| 移动端 H5 | http://8.133.193.238/dms/mobile/login | 手机浏览器访问，订单/报台/审批/我的 |
+| 平台后台 | http://8.133.193.238/dms/admin/ | 平台管理员登录入口 |
+| 后端健康检查 | http://8.133.193.238/actuator/health | 返回 `{"status":"UP"}` 表示后端正常 |
+| 产品宣传手册 | http://8.133.193.238/ | 根路径为宣传手册站，与 DMS 并存 |
+
+**生产登录账号**：
+- 业务前台（租户 `default`）：`admin` / `Sh123456`（厂商超管）；演示账号 `mfr_a_admin` / `Sh123456`（租户 `MFR_A`）
+- 平台后台：`admin` / `Sh123456`
+
+**生产服务器与部署信息**：
+- SSH：`ssh root@8.133.193.238`，密码 `Welcomeyyx0616`
+- 部署目录：`/opt/dms/prod`（`docker-compose.yml` + `backend/app.jar` + `frontend/`）
+- 容器：`dms-prod-backend`、`dms-prod-postgres`、`dms-prod-redis`、`dms-prod-minio`
+- 统一入口：宿主机已有 `webgate`（nginx:80）容器，DMS 挂在 `/dms/`，API 走根路径 `/api`、`/auth`、`/actuator`
+- 配置文件：`/opt/webgate/nginx.conf`（DMS 静态文件挂载 `/opt/dms/prod/frontend:/usr/share/nginx/dms:ro`，并加入 `dms-prod` 网络反代后端）
+- 数据库/缓存：容器内网络，不对外暴露端口；后端仅映射 `127.0.0.1:18080`
+- 运维命令：`cd /opt/dms/prod && docker-compose ps`、`docker-compose logs -f backend`、`docker-compose up -d`
 
 ### 2.2 测试环境
 
