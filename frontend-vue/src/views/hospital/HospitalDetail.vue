@@ -29,7 +29,7 @@
             <el-table-column prop="code" label="报台号" width="180" />
             <el-table-column prop="doctor_name" label="医生" width="120" />
             <el-table-column prop="patient_info" label="患者" />
-            <el-table-column prop="surgery_date" label="手术日" width="120" />
+            <el-table-column label="手术日" width="120"><template #default="{ row }">{{ formatDate(row.surgery_date) }}</template></el-table-column>
             <el-table-column prop="status" label="状态" width="100" />
           </el-table>
           <el-empty v-if="!loading.surgery && surgeryRows.length === 0" description="暂无报台" />
@@ -42,7 +42,7 @@
             <el-table-column prop="totalAmount" label="金额" width="140" align="right">
               <template #default="{ row }">¥ {{ Number(row.totalAmount || 0).toFixed(2) }}</template>
             </el-table-column>
-            <el-table-column prop="orderDate" label="下单日" width="170" />
+            <el-table-column label="下单日" width="170"><template #default="{ row }">{{ formatDateTime(row.orderDate) }}</template></el-table-column>
           </el-table>
           <el-empty v-if="!loading.orders && orderRows.length === 0" description="暂无订单" />
         </div>
@@ -54,6 +54,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
+import { formatDate } from '@/utils/format'
 import { useRoute } from 'vue-router'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import request from '@/utils/request'

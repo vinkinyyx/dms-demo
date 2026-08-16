@@ -222,7 +222,7 @@
           <el-table-column prop="username" label="操作人" width="120" />
           <el-table-column prop="action" label="操作" width="100" />
           <el-table-column prop="changes" label="变更内容" />
-          <el-table-column prop="atTime" label="操作时间" width="160" />
+          <el-table-column label="操作时间" width="160"><template #default="{ row }">{{ formatDateTime(row.atTime) }}</template></el-table-column>
         </el-table>
         <el-empty v-if="!detailLogs.length" description="暂无操作记录" />
       </div>
@@ -257,7 +257,7 @@ import AttachmentUploader from '@/components/AttachmentUploader.vue'
 import { listResource, createResource, updateResource, deleteResource, getDetail, actionResource, getOperationLogs, httpGet } from '@/api/crud'
 import { statusText, statusTagType, fmt, labelOf, reloadDicts, loadDict, getDictOptions } from '@/utils/dict'
 import { getToken } from '@/utils/auth'
-import { formatAuto } from '@/utils/format'
+import { formatAuto, formatDateTime } from '@/utils/format'
 import { usePageLayout, invalidatePageLayoutCache } from '@/composables/usePageLayout'
 
 function dictLabel(col, v) {

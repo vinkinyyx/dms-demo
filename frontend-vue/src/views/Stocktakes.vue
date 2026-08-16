@@ -18,7 +18,7 @@
         <el-table-column label="迟交" width="90">
           <template #default="{ row }"><el-tag v-if="row.isLate" type="warning" size="small">迟交</el-tag><span v-else>-</span></template>
         </el-table-column>
-        <el-table-column prop="uploadedAt" label="上传时间" width="180" />
+<el-table-column label="上传时间" width="180"><template #default="{ row }">{{ formatDateTime(row.uploadedAt) }}</template></el-table-column>
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }"><el-button link type="primary" @click="viewDetail(row)">查看</el-button></template>
         </el-table-column>
@@ -72,6 +72,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { formatDateTime } from '@/utils/format'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
 import * as XLSX from 'xlsx'

@@ -97,7 +97,7 @@
             <template #default="{ row }"><el-tag :type="statusTagType(row.status)" size="small">{{ statusText(row.status) }}</el-tag></template>
           </el-table-column>
           <el-table-column prop="contactPhone" label="联系电话" width="130" />
-          <el-table-column prop="createdAt" label="创建时间" width="160" />
+          <el-table-column label="创建时间" width="160"><template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template></el-table-column>
           <el-table-column label="操作" width="120">
             <template #default="{ row }">
               <el-button size="small" @click="showTenantForm(row)">编辑</el-button>
@@ -196,6 +196,7 @@ import { ref, reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fmt, statusText, statusTagType } from '@/utils/dict'
 import * as api from '@/api/admin'
+import { formatDateTime } from '@/utils/format'
 
 const menus = [
   { key: 'overview', icon: 'DataBoard', label: '系统概览' },

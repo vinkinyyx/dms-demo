@@ -66,7 +66,7 @@
           <el-descriptions-item label="事件数">{{ result.eventsCount }}</el-descriptions-item>
         </el-descriptions>
         <el-table :data="result.events" border stripe class="block">
-          <el-table-column prop="at" label="时间" width="180" />
+          <el-table-column label="时间" width="180"><template #default="{ row }">{{ formatDateTime(row.at) }}</template></el-table-column>
           <el-table-column label="事件" width="120">
             <template #default="{ row }">
               <el-tag size="small" :type="eventType(row.event)">{{ eventLabel(row.event) }}</el-tag>
@@ -85,6 +85,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { formatDateTime } from '@/utils/format'
 import { Search } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 

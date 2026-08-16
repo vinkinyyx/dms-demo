@@ -33,7 +33,7 @@
             <el-table-column prop="sub_total" label="金额" width="140" align="right">
               <template #default="{ row }">¥ {{ Number(row.sub_total || 0).toFixed(2) }}</template>
             </el-table-column>
-            <el-table-column prop="created_at" label="下单时间" width="170" />
+            <el-table-column label="下单时间" width="170"><template #default="{ row }">{{ formatDateTime(row.created_at) }}</template></el-table-column>
           </el-table>
           <el-empty v-if="!loading.orders && orderRows.length === 0" description="暂无订单" />
         </div>
@@ -43,8 +43,8 @@
             <el-table-column prop="batch_no" label="批次" width="140" />
             <el-table-column prop="qty" label="数量" width="100" align="right" />
             <el-table-column prop="stock_status" label="状态" width="100" />
-            <el-table-column prop="prod_date" label="生产日期" width="120" />
-            <el-table-column prop="exp_date" label="有效期" width="120" />
+            <el-table-column label="生产日期" width="120"><template #default="{ row }">{{ formatDate(row.prod_date) }}</template></el-table-column>
+            <el-table-column label="有效期" width="120"><template #default="{ row }">{{ formatDate(row.exp_date) }}</template></el-table-column>
           </el-table>
           <el-empty v-if="!loading.inventory && invRows.length === 0" description="暂无库存" />
         </div>
@@ -53,7 +53,7 @@
             <el-table-column prop="code" label="报台号" width="180" />
             <el-table-column prop="doctor_name" label="医生" width="120" />
             <el-table-column prop="qty" label="数量" width="100" align="right" />
-            <el-table-column prop="surgery_date" label="手术日" width="120" />
+            <el-table-column label="手术日" width="120"><template #default="{ row }">{{ formatDate(row.surgery_date) }}</template></el-table-column>
             <el-table-column prop="patient_info" label="患者" />
           </el-table>
           <el-empty v-if="!loading.surgery && surgeryRows.length === 0" description="暂无报台" />
@@ -66,6 +66,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
+import { formatDateTime, formatDate } from '@/utils/format'
 import { useRoute } from 'vue-router'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import request from '@/utils/request'

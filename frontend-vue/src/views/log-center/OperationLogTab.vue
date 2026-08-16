@@ -14,7 +14,7 @@
       <el-button @click="reset">重置</el-button>
     </div>
     <el-table :data="rows" v-loading="loading" border stripe>
-      <el-table-column prop="createdAt" label="时间" width="180" />
+<el-table-column label="时间" width="180"><template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template></el-table-column>
       <el-table-column prop="username" label="用户" width="120" />
       <el-table-column prop="layer" label="层级" width="110" />
       <el-table-column label="方法" width="90">
@@ -83,6 +83,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { formatDateTime } from '@/utils/format'
 import request from '@/utils/request'
 
 const props = defineProps({ jumpDetail: { type: Function, default: null } })

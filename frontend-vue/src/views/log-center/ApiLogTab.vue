@@ -34,7 +34,7 @@
       </el-table-column>
       <el-table-column prop="username" label="调用方" width="130" />
       <el-table-column prop="spentMs" label="耗时(ms)" width="100" />
-      <el-table-column prop="startedAt" label="时间" width="180" />
+<el-table-column label="时间" width="180"><template #default="{ row }">{{ formatDateTime(row.startedAt) }}</template></el-table-column>
       <el-table-column label="操作" width="80" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openDetail(row)">详情</el-button>
@@ -69,6 +69,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { formatDateTime } from '@/utils/format'
 import request from '@/utils/request'
 
 const rows = ref([]), loading = ref(false), total = ref(0)

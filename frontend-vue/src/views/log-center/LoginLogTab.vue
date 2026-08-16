@@ -12,7 +12,7 @@
       <el-button @click="reset">重置</el-button>
     </div>
     <el-table :data="rows" v-loading="loading" border stripe>
-      <el-table-column prop="atTime" label="时间" width="180" />
+<el-table-column label="时间" width="180"><template #default="{ row }">{{ formatDateTime(row.atTime) }}</template></el-table-column>
       <el-table-column prop="username" label="用户名" width="140" />
       <el-table-column prop="displayName" label="姓名" width="120" />
       <el-table-column prop="loginType" label="类型" width="120" />
@@ -31,6 +31,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { formatDateTime } from '@/utils/format'
 import request from '@/utils/request'
 const rows = ref([]), loading = ref(false), total = ref(0)
 const query = reactive({ page: 1, size: 20, username: '', success: null, loginType: '' })

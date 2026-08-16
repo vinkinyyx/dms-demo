@@ -19,7 +19,7 @@
             <el-tag :type="row.active ? 'success' : 'info'" size="small">{{ row.active ? '启用' : '停用' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="lastRunAt" label="上次运行" width="180" />
+<el-table-column label="上次运行" width="180"><template #default="{ row }">{{ formatDateTime(row.lastRunAt) }}</template></el-table-column>
         <el-table-column label="结果" width="90">
           <template #default="{ row }">
             <el-tag v-if="row.lastStatus" size="small" :type="row.lastStatus==='SUCCESS'?'success':'danger'">{{ row.lastStatus==='SUCCESS'?'成功':'失败' }}</el-tag>
@@ -64,6 +64,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { formatDateTime } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 

@@ -35,8 +35,8 @@
         </el-table-column>
         <el-table-column prop="fileName" label="文件" min-width="200" show-overflow-tooltip />
         <el-table-column prop="createdName" label="提交人" width="120" />
-        <el-table-column prop="createdAt" label="提交时间" width="180" />
-        <el-table-column prop="finishedAt" label="完成时间" width="180" />
+        <el-table-column label="提交时间" width="180"><template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template></el-table-column>
+        <el-table-column label="完成时间" width="180"><template #default="{ row }">{{ formatDateTime(row.finishedAt) }}</template></el-table-column>
         <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
             <el-button v-if="row.status === 'SUCCESS' && row.objectKey" link type="primary" @click="download(row)">下载</el-button>
@@ -46,13 +46,15 @@
           </template>
         </el-table-column>
       </el-table>
-      <StateView v-if="!loading && rows.length===0" type="empty" text="暂无导入导出任务" />`r`n      <el-pagination class="pager" background layout="total, prev, pager, next" :total="total" :current-page="page" :page-size="size" @current-change="onPage" />
+      <StateView v-if="!loading && rows.length===0" type="empty" text="暂无导入导出任务" />
+      <el-pagination class="pager" background layout="total, prev, pager, next" :total="total" :current-page="page" :page-size="size" @current-change="onPage" />
     </el-card>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { formatDateTime } from '@/utils/format'
 import request from '@/utils/request'
 import StateView from '@/components/StateView.vue'
 
