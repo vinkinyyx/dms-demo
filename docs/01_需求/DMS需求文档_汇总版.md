@@ -684,8 +684,8 @@ DMS（Dealer Management System，经销商管理系统）是面向**医疗器械
 
 - 后端：Spring Boot jar，`Dockerfile.runtime`（jar-only）；前端：Vue3+Vite，nginx 托管 dist 并反代 `/api`；DB：PostgreSQL 14；Redis；MinIO。
 - 本地：后端 8080、前端 5173、Redis 6380，登录 admin / Sh123456。
-- 测试环境：http://43.128.145.141 ，后端 8082，DB `dms_test@5433`。
-- 生产环境：http://8.133.193.238:8081 ，后端 8080，DB `dms@5432`；正式部署需用户明确"推送正式环境"指令。
+- 测试环境：http://43.128.145.141/（统一 80 端口），DB 仅容器内网访问。
+- 生产环境：http://8.133.193.238/dms/（v3.12.4，2026-08-16 上线；统一 80 网关 webgate，`/dms/` 前台/移动、`/dms/admin/` 后台、`/api`、`/auth`、`/actuator` 反代后端），DB/Redis/MinIO 仅容器内网访问；正式部署需用户明确"推送正式环境"指令。
 - 部署模式：默认共享部署；独立部署作为后续交付选项（复用代码与数据模型，DB/文件/域名/日志独立）。
 
 ---

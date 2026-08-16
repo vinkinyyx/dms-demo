@@ -1195,7 +1195,7 @@ GET /api/admin/api-call-logs?path=/api/orders/transfer&statusCode=200
 - 后端：`mvn -o -DskipTests package` → `target/dms-backend.jar` → Docker 容器 `dms-test-backend`。
 - 数据库迁移：Flyway 自动执行 `V60__api_call_log_transfer_fields.sql`（仅新增列与索引，不影响存量数据）。
 - 阿里云测试环境（43.128.145.141）已就位。
-- 阿里云生产环境（8.133.193.238:8080/8081）等待用户指令再切换。
+- 阿里云生产环境已上线（v3.12.4，2026-08-16）：http://8.133.193.238/dms/ ，统一 80 端口 + `/dms/` 子路径，历史 8080/8081 端口拓扑已废弃。
 
 #### 8.1 v4.2.0 实际部署记录（2026-08-07 00:03 UTC+8）
 

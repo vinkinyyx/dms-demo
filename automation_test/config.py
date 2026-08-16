@@ -17,11 +17,12 @@ ENVIRONMENTS = {
         "mobile_url": "http://43.128.145.141/mobile",
     },
     "prod": {
-        "base_url": "http://8.133.193.238:8081",
-        "api_base": "http://8.133.193.238:8080",
-        "frontend_url": "http://8.133.193.238:8081",
-        "admin_url": "http://8.133.193.238:8081/admin",
-        "mobile_url": "http://8.133.193.238:8081/mobile",
+        # v3.12.4 生产环境（2026-08-16）：DMS 挂在统一 80 网关的 /dms/ 子路径，API 走根路径
+        "base_url": "http://8.133.193.238",
+        "api_base": "http://8.133.193.238",
+        "frontend_url": "http://8.133.193.238/dms/",
+        "admin_url": "http://8.133.193.238/dms/admin/",
+        "mobile_url": "http://8.133.193.238/dms/mobile/login",
     },
 }
 
