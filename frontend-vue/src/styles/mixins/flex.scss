@@ -1,0 +1,20 @@
+﻿/* ===== 通用 mixin：flex 布局 ===== */
+@mixin flex($justify: center, $align: center, $direction: row, $gap: null) {
+  display: flex;
+  flex-direction: $direction;
+  justify-content: $justify;
+  align-items: $align;
+  @if $gap != null { gap: $gap; }
+}
+
+@mixin flex-between($align: center) {
+  display: flex;
+  justify-content: space-between;
+  align-items: $align;
+}
+
+@mixin flex-col($gap: null) {
+  display: flex;
+  flex-direction: column;
+  @if $gap != null { gap: $gap; }
+}

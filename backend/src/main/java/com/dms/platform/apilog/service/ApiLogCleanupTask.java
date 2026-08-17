@@ -39,6 +39,9 @@ public class ApiLogCleanupTask {
     @Value("${dms.apilog.metadata-retention-days:365}")
     private int metadataRetentionDays;
 
+    @Value("${dms.log.retention-days:365}")
+    private int businessLogRetentionDays;
+
     /** 每天 03:15 执行 */
     @Scheduled(cron = "0 15 3 * * ?")
     @Transactional
@@ -48,6 +51,11 @@ public class ApiLogCleanupTask {
         } catch (Exception e) {
             log.warn("清理接口日志元数据失败: {}", e.getMessage());
         }
+        try {
+            purgeBusinessLogs();
+        } catch (Exception e) {
+            log.warn("清理业务日志失败: {}", e.getMessage());
+        }
     }
 
     void purgeMetadata() {
@@ -55,6 +63,18 @@ public class ApiLogCleanupTask {
         int deleted = jdbcTemplate.update("DELETE FROM api_http_logs WHERE started_at < ?", threshold);
         if (deleted > 0) {
             log.info("清理过期接口日志元数据 {} 条 (阈值 {})", deleted, threshold);
+        }
+    }
+
+    void purgeBusinessLogs() {
+        OffsetDateTime threshold = OffsetDateTime.now().minusDays(businessLogRetentionDays);
+        int apiCallLogs = jdbcTemplate.update("DELETE FROM api_call_log WHERE started_at < ?", threshold);
+        int opLogs = jdbcTemplate.update("DELETE FROM op_log WHERE created_at < ?", threshold);
+        int emailLogs = jdbcTemplate.update("DELETE FROM email_logs WHERE created_at < ?", threshold);
+        int operationLogs = jdbcTemplate.update("DELETE FROM operation_logs WHERE created_at < ?", threshold);
+        if (apiCallLogs + opLogs + emailLogs + operationLogs > 0) {
+            log.info("清理过期业务日志: api_call_log={}, op_log={}, email_logs={}, operation_logs={}, 阈值={}",
+                    apiCallLogs, opLogs, emailLogs, operationLogs, threshold);
         }
     }
 

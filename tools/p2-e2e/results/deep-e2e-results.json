@@ -1,0 +1,318 @@
+{
+  "total": 52,
+  "fail": 17,
+  "rows": [
+    {
+      "scope": "PC",
+      "name": "login",
+      "ok": false,
+      "detail": "http://43.128.145.141/login"
+    },
+    {
+      "scope": "PC",
+      "name": "/home",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/products",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/dealers",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/warehouses",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/hospitals",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/suppliers",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/orders",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/purchase-orders",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/receipts",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/sales-outs",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/inventory",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/stock-moves",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/inventory-adjustments",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/stocktakes",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/expiry-alerts",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/traceability",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/surgery-reports",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/promotions",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/contracts",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/contracts/templates",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/authorizations",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/dashboard",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/reports",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/report-subscriptions",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/product-mappings",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/approval/todo",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/approval/templates",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/approval/delegations",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/approval/admin",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/m/users",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/roles-manage",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/tenant-page-configs",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/log-center",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "PC",
+      "name": "/async-tasks",
+      "ok": true,
+      "detail": "http=200 len=186 通用经销商管理系统 医疗器械 / 快消 / 零售 经销商全生命周期管理平台 合同管理与电子签章 订单/库存/销售一体化 促销引擎与返利自动化 多租户 SaaS 架构 后台审计与操作"
+    },
+    {
+      "scope": "ADMIN",
+      "name": "login",
+      "ok": false,
+      "detail": "http://43.128.145.141/admin/login"
+    },
+    {
+      "scope": "ADMIN",
+      "name": "/admin/tenants",
+      "ok": false,
+      "detail": "http=200 len=28 DMS 平台后台 统一租户、权限、配置与审计中心 登 录"
+    },
+    {
+      "scope": "ADMIN",
+      "name": "/admin/admins",
+      "ok": false,
+      "detail": "http=200 len=28 DMS 平台后台 统一租户、权限、配置与审计中心 登 录"
+    },
+    {
+      "scope": "ADMIN",
+      "name": "/admin/roles",
+      "ok": false,
+      "detail": "http=200 len=28 DMS 平台后台 统一租户、权限、配置与审计中心 登 录"
+    },
+    {
+      "scope": "ADMIN",
+      "name": "/admin/menus",
+      "ok": false,
+      "detail": "http=200 len=28 DMS 平台后台 统一租户、权限、配置与审计中心 登 录"
+    },
+    {
+      "scope": "ADMIN",
+      "name": "/admin/dicts",
+      "ok": false,
+      "detail": "http=200 len=28 DMS 平台后台 统一租户、权限、配置与审计中心 登 录"
+    },
+    {
+      "scope": "ADMIN",
+      "name": "/admin/mappings",
+      "ok": false,
+      "detail": "http=200 len=28 DMS 平台后台 统一租户、权限、配置与审计中心 登 录"
+    },
+    {
+      "scope": "ADMIN",
+      "name": "/admin/logs/api",
+      "ok": false,
+      "detail": "http=200 len=28 DMS 平台后台 统一租户、权限、配置与审计中心 登 录"
+    },
+    {
+      "scope": "ADMIN",
+      "name": "/admin/logs/audits",
+      "ok": false,
+      "detail": "http=200 len=28 DMS 平台后台 统一租户、权限、配置与审计中心 登 录"
+    },
+    {
+      "scope": "ADMIN",
+      "name": "/admin/login-logs",
+      "ok": false,
+      "detail": "http=200 len=28 DMS 平台后台 统一租户、权限、配置与审计中心 登 录"
+    },
+    {
+      "scope": "MOBILE",
+      "name": "login",
+      "ok": false,
+      "detail": "http://43.128.145.141/mobile/login"
+    },
+    {
+      "scope": "MOBILE",
+      "name": "/mobile/home",
+      "ok": false,
+      "detail": "http=200 len=27 经销商管理 · 移动端 🌙 租户 账号 密码 登 录"
+    },
+    {
+      "scope": "MOBILE",
+      "name": "/mobile/orders",
+      "ok": false,
+      "detail": "http=200 len=27 经销商管理 · 移动端 🌙 租户 账号 密码 登 录"
+    },
+    {
+      "scope": "MOBILE",
+      "name": "/mobile/surgery-reports",
+      "ok": false,
+      "detail": "http=200 len=27 经销商管理 · 移动端 🌙 租户 账号 密码 登 录"
+    },
+    {
+      "scope": "MOBILE",
+      "name": "/mobile/dashboard",
+      "ok": false,
+      "detail": "http=200 len=27 经销商管理 · 移动端 🌙 租户 账号 密码 登 录"
+    },
+    {
+      "scope": "MOBILE",
+      "name": "/mobile/profile",
+      "ok": false,
+      "detail": "http=200 len=27 经销商管理 · 移动端 🌙 租户 账号 密码 登 录"
+    },
+    {
+      "scope": "JS",
+      "name": "console_errors",
+      "ok": false,
+      "detail": "PC-console:Failed to load resource: the server responded with a status of 401 ()"
+    }
+  ]
+}

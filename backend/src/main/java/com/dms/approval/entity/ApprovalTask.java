@@ -61,4 +61,15 @@ public class ApprovalTask {
     private OffsetDateTime updatedAt;
     @Version
     private Integer version;
+
+    @Transient
+    private String title;
+    @Transient
+    private String businessType;
+    @Transient
+    private String businessCode;
+    @Transient
+    private String submitterName;
+    @Transient
+    private String instanceStatus;
 }

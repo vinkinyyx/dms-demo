@@ -6,6 +6,7 @@ package com.dms.system.controller;
 
 import com.dms.common.ApiResponse;
 import com.dms.common.util.TenantContext;
+import com.dms.common.util.PagingUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
@@ -179,7 +180,7 @@ public class MiscSupplementController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         UUID tid = TenantContext.getTenantId();
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
         try {
             var qCnt = em.createNativeQuery("SELECT COUNT(*) FROM loans WHERE tenant_id = ?1");
             qCnt.setParameter(1, tid);
@@ -188,7 +189,7 @@ public class MiscSupplementController {
             var q = em.createNativeQuery(
                     "SELECT id, code, lender_dealer_id, borrower_dealer_id, status, reason, created_at, completed_at " +
                     "FROM loans WHERE tenant_id = ?1 ORDER BY created_at DESC LIMIT ?2 OFFSET ?3", Tuple.class);
-            q.setParameter(1, tid).setParameter(2, size).setParameter(3, offset);
+            q.setParameter(1, tid).setParameter(2, safeSize).setParameter(3, offset);
             @SuppressWarnings("unchecked")
             List<Tuple> rows = q.getResultList();
             List<Map<String, Object>> list = new ArrayList<>();
@@ -208,7 +209,7 @@ public class MiscSupplementController {
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("total", total);
             data.put("page", page);
-            data.put("size", size);
+            data.put("size", safeSize);
             data.put("list", list);
             return ApiResponse.ok(data);
         } catch (Exception e) {

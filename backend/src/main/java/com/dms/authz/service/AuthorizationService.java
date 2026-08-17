@@ -77,6 +77,8 @@ public class AuthorizationService {
             a.setDealerName(queryName("SELECT name FROM dealers WHERE id = ?1", a.getDealerId()));
         }
         a.setCategoryNames(namesForCsv("product_categories", a.getCategoryIds()));
+        a.setAuthorizedCategories(rowsForCsv("product_categories", a.getCategoryIds()));
+        a.setAuthorizedTerminals(rowsForCsv("hospitals", a.getTerminalIds()));
         a.setTerminalNames(namesForCsv("hospitals", a.getTerminalIds()));
     }
 
@@ -105,6 +107,28 @@ public class AuthorizationService {
         } catch (Exception e) { return null; }
     }
 
+    private java.util.List<java.util.Map<String, Object>> rowsForCsv(String table, String csv) {
+        java.util.List<java.util.Map<String, Object>> result = new ArrayList<>();
+        if (csv == null || csv.isBlank()) return result;
+        List<Long> ids = new ArrayList<>();
+        for (String s : csv.split(",")) {
+            s = s.trim();
+            if (!s.isEmpty()) { try { ids.add(Long.parseLong(s)); } catch (NumberFormatException ignored) {} }
+        }
+        if (ids.isEmpty()) return result;
+        try {
+            @SuppressWarnings("unchecked")
+            List<Object[]> rows = em.createNativeQuery(
+                    "SELECT id, name FROM " + table + " WHERE id IN (" +
+                    ids.stream().map(String::valueOf).collect(Collectors.joining(",")) + ")").getResultList();
+            for (Object[] row : rows) {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", row[0]); m.put("name", row[1]);
+                result.add(m);
+            }
+        } catch (Exception e) { return result; }
+        return result;
+    }
     @Transactional
     public Authorization create(Authorization req) {
         UUID tenantId = TenantContext.getTenantId();
@@ -132,7 +156,8 @@ public class AuthorizationService {
         }
         req.setId(null);
         req.setTenantId(tenantId);
-        if (req.getStatus() == null) req.setStatus("pending_approval");
+        // 新增授权必须经过审批，忽略客户端传入的 status，防止绕过审批直接生效
+        req.setStatus("pending_approval");
         if (req.getSource() == null) req.setSource("contract");
         if (req.getAuthType() == null) req.setAuthType("ORDER");
         req.setUpdatedAt(OffsetDateTime.now());
@@ -185,8 +210,7 @@ public class AuthorizationService {
             Long catId = line.getProductId() != null ? productCategoryId(line.getProductId()) : null;
             boolean matched = active.stream().anyMatch(a ->
                     (matchScope(a.getProductId(), line.getProductId()) || matchCategory(a.getCategoryIds(), catId))
-                            && matchScope(a.getTerminalId(), line.getTerminalId())
-                            && matchTerminalCsv(a.getTerminalIds(), line.getTerminalId()));
+                            && matchTerminal(a, line.getTerminalId()));
             AuthorizationCheckResult r = new AuthorizationCheckResult();
             r.setProductId(line.getProductId());
             r.setTerminalId(line.getTerminalId());
@@ -214,12 +238,24 @@ public class AuthorizationService {
     }
 
     private boolean matchTerminalCsv(String csv, Long terminalId) {
-        if (csv == null || csv.isBlank()) return true;
+        if (csv == null || csv.isBlank()) return false;
         if (terminalId == null) return true;
         for (String s : csv.split(",")) {
             if (s.trim().equals(String.valueOf(terminalId))) return true;
         }
         return false;
+    }
+
+    /**
+     * 终端匹配：授权未指定终端（terminalId 与 terminalIds 均空）表示通配；
+     * 否则当行未带 terminalId 时视为不限制；带值时要求命中单值或 CSV 列表。
+     */
+    private boolean matchTerminal(Authorization a, Long terminalId) {
+        boolean noScope = a.getTerminalId() == null && (a.getTerminalIds() == null || a.getTerminalIds().isBlank());
+        if (noScope) return true;
+        if (terminalId == null) return true;
+        if (a.getTerminalId() != null && a.getTerminalId().equals(terminalId)) return true;
+        return matchTerminalCsv(a.getTerminalIds(), terminalId);
     }
 
     /**
@@ -243,5 +279,13 @@ public class AuthorizationService {
         req.setUpdatedAt(OffsetDateTime.now());
         req.ensureScope();
         return tempAuthorizationRepository.save(req);
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        Authorization a = authorizationRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "授权不存在"));
+        a.setDeletedAt(OffsetDateTime.now());
+        authorizationRepository.save(a);
     }
 }

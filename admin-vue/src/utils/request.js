@@ -18,7 +18,7 @@ async function parseError(error) {
 
 service.interceptors.request.use((config) => {
   const token = localStorage.getItem('admin_access_token')
-  if (token) config.headers.Authorization = 'Bearer ' + token
+  if (token) if (config.headers && config.headers.Authorization !== '') config.headers.Authorization = 'Bearer ' + token
   return config
 })
 
@@ -30,11 +30,12 @@ service.interceptors.response.use(
     }
     const body = res && typeof res === 'object' ? res : await parseError({ response })
     const message = body.message || '请求失败'
-    ElMessage.error(message)
+    const isLoginPage = router.currentRoute.value.path === '/login'
     if (response.status === 401 || body.code === 40101 || body.code === 40104) {
       localStorage.removeItem('admin_access_token')
-      router.push('/login')
+      if (!isLoginPage) router.push('/login')
     }
+    if (!isLoginPage) ElMessage.error(message)
     const err = new Error(message)
     err.response = response
     err.data = body
@@ -43,11 +44,12 @@ service.interceptors.response.use(
   async (error) => {
     const status = error.response && error.response.status
     const body = await parseError(error)
+    const isLoginPage = router.currentRoute.value.path === '/login'
     if (status === 401 || body.code === 40101 || body.code === 40104) {
       localStorage.removeItem('admin_access_token')
-      router.push('/login')
+      if (!isLoginPage) router.push('/login')
     }
-    ElMessage.error(body.message || error.message || '网络错误')
+    if (!isLoginPage) ElMessage.error(body.message || error.message || '网络错误')
     const wrapped = new Error(body.message || error.message || '网络错误')
     wrapped.response = error.response
     wrapped.data = body

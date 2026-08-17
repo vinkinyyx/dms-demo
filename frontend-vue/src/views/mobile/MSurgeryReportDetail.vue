@@ -61,8 +61,8 @@ onMounted(async () => {
 <style scoped>
 .loading, .empty { padding: 40px 16px; text-align: center; }
 .detail-body { padding-bottom: 20px; }
-.status-bar { padding: 16px 20px; color: #fff; }
+.status-bar { padding: 16px 20px; color: var(--dms-text-inverse); }
 .status-bar .st-text { font-size: 18px; font-weight: 600; }
 .status-bar .st-code { font-size: 13px; opacity: .9; margin-top: 4px; }
-.st-completed { background: #67C23A; }
+.st-completed { background: var(--dms-color-success); }
 </style>

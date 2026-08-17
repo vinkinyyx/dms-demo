@@ -6,6 +6,7 @@ package com.dms.inventory.controller;
 
 import com.dms.common.ApiResponse;
 import com.dms.common.util.TenantContext;
+import com.dms.common.util.PagingUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,7 @@ public class InventoryController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sort) {
         UUID tid = TenantContext.getTenantId();
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
 
         StringBuilder where = new StringBuilder("WHERE inv.tenant_id = ?1");
         List<Object> params = new ArrayList<>();
@@ -77,7 +78,7 @@ public class InventoryController {
                 " ORDER BY inv.updated_at DESC NULLS LAST, inv.id DESC LIMIT ?" + idx + " OFFSET ?" + (idx + 1);
         var listQ = em.createNativeQuery(listSql, Tuple.class);
         for (int i = 0; i < params.size(); i++) listQ.setParameter(i + 1, params.get(i));
-        listQ.setParameter(idx, size);
+        listQ.setParameter(idx, safeSize);
         listQ.setParameter(idx + 1, offset);
 
         @SuppressWarnings("unchecked")
@@ -114,7 +115,7 @@ public class InventoryController {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("total", total);
         data.put("page", page);
-        data.put("size", size);
+        data.put("size", safeSize);
         data.put("list", list);
         return ApiResponse.ok(data);
     }

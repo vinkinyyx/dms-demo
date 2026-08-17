@@ -35,6 +35,17 @@ public class AdminJwtFilter extends OncePerRequestFilter {
 
     private final AdminJwtService adminJwtService;
 
+
+    private static final java.util.Set<String> IGNORED_PATHS = java.util.Set.of(
+            "/api/admin/auth/login",
+            "/api/admin/auth/refresh"
+    );
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return IGNORED_PATHS.contains(request.getRequestURI());
+    }
+
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,

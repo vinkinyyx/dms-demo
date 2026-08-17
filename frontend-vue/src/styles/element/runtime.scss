@@ -1,0 +1,125 @@
+/* ===== Element Plus 运行期 CSS 变量覆盖（Layer 3） ===== */
+/* 在 element-plus/dist/index.css 之后引入，用于统一品牌主色与语义令牌 */
+
+html:root {
+  /* 主色阶（Element Plus 通过 light-N/dark-2 派生 hover/active/disabled） */
+  --el-color-primary: var(--dms-color-primary);
+  --el-color-primary-light-3: var(--dms-blue-300);
+  --el-color-primary-light-5: var(--dms-blue-200);
+  --el-color-primary-light-7: var(--dms-blue-100);
+  --el-color-primary-light-8: var(--dms-blue-50);
+  --el-color-primary-light-9: var(--dms-blue-50);
+  --el-color-primary-dark-2: var(--dms-blue-600);
+
+  /* 语义色 */
+  --el-color-success: var(--dms-color-success);
+  --el-color-success-light-8: var(--dms-green-50);
+  --el-color-success-light-9: var(--dms-green-50);
+  --el-color-success-dark-2: var(--dms-green-600);
+  --el-color-warning: var(--dms-color-warning);
+  --el-color-warning-light-8: var(--dms-gold-50);
+  --el-color-warning-light-9: var(--dms-gold-50);
+  --el-color-warning-dark-2: var(--dms-gold-600);
+  --el-color-danger: var(--dms-color-danger);
+  --el-color-danger-light-8: var(--dms-red-50);
+  --el-color-danger-light-9: var(--dms-red-50);
+  --el-color-danger-dark-2: var(--dms-red-600);
+  --el-color-error: var(--dms-color-danger);
+  --el-color-error-light-8: var(--dms-red-50);
+  --el-color-error-light-9: var(--dms-red-50);
+  --el-color-error-dark-2: var(--dms-red-600);
+  --el-color-info: var(--dms-color-info);
+  --el-color-info-light-8: var(--dms-gray-100);
+  --el-color-info-light-9: var(--dms-gray-100);
+  --el-color-info-dark-2: var(--dms-gray-600);
+
+  /* 文本 */
+  --el-text-color-primary: var(--dms-text-1);
+  --el-text-color-regular: var(--dms-text-2);
+  --el-text-color-secondary: var(--dms-text-3);
+  --el-text-color-placeholder: var(--dms-text-placeholder);
+  --el-text-color-disabled: var(--dms-text-disabled);
+
+  /* 边框 */
+  --el-border-color: var(--dms-border-1);
+  --el-border-color-light: var(--dms-border-2);
+  --el-border-color-lighter: var(--dms-border-3);
+  --el-border-color-extra-light: var(--dms-gray-50);
+  --el-border-color-dark: var(--dms-gray-400);
+  --el-border-color-darker: var(--dms-gray-500);
+
+  /* 填充 */
+  --el-fill-color: var(--dms-gray-100);
+  --el-fill-color-light: var(--dms-bg-hover);
+  --el-fill-color-lighter: var(--dms-gray-50);
+  --el-fill-color-extra-light: var(--dms-gray-50);
+  --el-fill-color-blank: var(--dms-bg-container);
+  --el-bg-color: var(--dms-bg-container);
+  --el-bg-color-page: var(--dms-bg-page);
+  --el-bg-color-overlay: var(--dms-bg-elevated);
+  --el-mask-color: var(--dms-bg-mask);
+
+  /* 圆角 */
+  --el-border-radius-base: var(--dms-radius-base);
+  --el-border-radius-small: var(--dms-radius-sm);
+  --el-border-radius-round: var(--dms-radius-pill);
+  --el-border-radius-circle: var(--dms-radius-circle);
+
+  /* 阴影 */
+  --el-box-shadow: var(--dms-shadow-md);
+  --el-box-shadow-light: var(--dms-shadow-sm);
+  --el-box-shadow-lighter: var(--dms-shadow-sm);
+  --el-box-shadow-dark: var(--dms-shadow-lg);
+
+  /* 字体 */
+  --el-font-family: var(--dms-font-family);
+  --el-font-size-base: var(--dms-font-size-base);
+  --el-font-size-small: var(--dms-font-size-sm);
+  --el-font-size-extra-small: var(--dms-font-size-xs);
+  --el-font-size-medium: var(--dms-font-size-md);
+  --el-font-size-large: var(--dms-font-size-lg);
+  --el-font-weight-primary: var(--dms-font-weight-medium);
+
+  /* 组件级 */
+  --el-button-border-radius: var(--dms-radius-base);
+  --el-button-font-weight: var(--dms-font-weight-regular);
+  --el-input-border-radius: var(--dms-radius-base);
+  --el-card-border-radius: var(--dms-radius-base);
+  --el-card-padding: var(--dms-padding-card);
+  --el-dialog-border-radius: var(--dms-radius-lg);
+  --el-table-header-font-weight: var(--dms-font-weight-medium);
+  --el-table-row-hover-bg-color: var(--dms-bg-hover);
+  --el-menu-item-height: 44px;
+}
+
+/* 统一焦点光环，提升可访问性 */
+.el-button:focus-visible,
+.el-input__wrapper:focus-visible,
+.el-textarea__inner:focus-visible,
+.el-select__wrapper:focus-visible {
+  outline: none;
+  box-shadow: var(--dms-shadow-focus);
+}
+
+/* 卡片/弹窗统一质感 */
+.el-card {
+  border-color: var(--dms-border-3);
+  box-shadow: var(--dms-shadow-sm);
+}
+
+.el-dialog {
+  box-shadow: var(--dms-shadow-lg);
+}
+
+/* 表格表头 */
+.el-table th.el-table__cell {
+  background-color: var(--dms-gray-50);
+  color: var(--dms-text-2);
+  font-weight: var(--dms-font-weight-medium);
+}
+
+/* 滚动条质感（WebKit） */
+.el-scrollbar__bar.is-vertical,
+.el-scrollbar__bar.is-horizontal {
+  opacity: 0.6;
+}

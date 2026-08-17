@@ -23,6 +23,7 @@ import com.dms.common.util.ExcelImportUtils;
 import com.dms.common.util.ContentDispositionUtils;
 import org.springframework.web.multipart.MultipartFile;
 import com.dms.common.util.TenantContext;
+import com.dms.common.util.PagingUtil;
 import com.dms.org.controller.SalesOrgResolver;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
@@ -57,7 +58,7 @@ public class SurgeryReportController {
         UUID tid = TenantContext.getTenantId();
         Long uid = TenantContext.getUserId();
         UserCtx ctx = loadUserCtx(uid);
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
 
         Set<Long> allowed = SalesOrgResolver.resolveAccessibleDealerIds(em, tid,
                 ctx.role, ctx.salesUserId, ctx.dealerId);
@@ -67,7 +68,7 @@ public class SurgeryReportController {
             if (allowed.isEmpty()) {
                 Map<String, Object> data = new LinkedHashMap<>();
                 data.put("total", 0L); data.put("list", Collections.emptyList());
-                data.put("page", page); data.put("size", size);
+                data.put("page", safePage); data.put("size", safeSize);
                 return ApiResponse.ok(data);
             }
             where += " AND dealer_id = ANY(?2)";
@@ -92,7 +93,7 @@ public class SurgeryReportController {
         lq.setParameter(1, tid);
         int idx = 2;
         if (allowed != null) { lq.setParameter(idx++, allowed.toArray(new Long[0])); }
-        lq.setParameter(idx++, size);
+        lq.setParameter(idx++, safeSize);
         lq.setParameter(idx, offset);
         @SuppressWarnings("unchecked")
         List<Tuple> rows = lq.getResultList();

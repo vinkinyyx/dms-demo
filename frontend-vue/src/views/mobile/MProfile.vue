@@ -1,14 +1,19 @@
-<template>
+﻿<template>
   <div>
     <div class="profile-header">
       <van-icon name="user-circle-o" size="56" color="#fff" />
-      <div class="name">{{ userStore.user?.username || userStore.username }}</div>
-      <div class="meta" v-if="userStore.user?.userType">{{ userStore.user.userType }}</div>
+      <div class="name">{{ userStore.user?.displayName || userStore.user?.name || userStore.user?.username || userStore.username }}</div>
+      <div class="meta" v-if="userTypeLabel">{{ userTypeLabel }}</div>
     </div>
 
     <van-cell-group inset style="margin-top: -24px;">
+      <van-cell title="消息中心" icon="bell" is-link to="/mobile/messages" />
+      <van-cell title="我的审批" icon="todo-list-o" is-link to="/mobile/approvals" />
+    </van-cell-group>
+
+    <van-cell-group inset style="margin-top: 12px;">
       <van-cell title="账号" :value="userStore.user?.username || '-'" />
-      <van-cell title="角色" :value="userStore.user?.role || userStore.userType || '-'" />
+      <van-cell title="角色" :value="userStore.user?.roleName || userStore.user?.role || userTypeLabel || '-'" />
       <van-cell title="经销商" :value="userStore.user?.dealerName || (userStore.user?.dealerId ? '#' + userStore.user.dealerId : '-')" />
       <van-cell title="手机" :value="userStore.user?.phone || '-'" />
       <van-cell title="邮箱" :value="userStore.user?.email || '-'" />
@@ -21,12 +26,33 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { onMounted } from 'vue'
 import { showConfirmDialog, showToast } from 'vant'
 import { useUserStore } from '@/store/user'
 
+const USER_TYPE_LABELS = {
+  vendor: '厂商',
+  manufacturer: '厂商',
+  dealer: '经销商',
+  dealer_admin: '经销商管理员',
+  platform: '平台管理员',
+  admin: '管理员'
+}
+
 const router = useRouter()
 const userStore = useUserStore()
+
+const userTypeLabel = computed(() => {
+  const t = userStore.user?.userType
+  if (!t) return ''
+  return USER_TYPE_LABELS[t] || USER_TYPE_LABELS[String(t).toLowerCase()] || t
+})
+
+onMounted(() => {
+  if (!userStore.user?.username) userStore.fetchInfo().catch(() => {})
+})
 
 async function onLogout() {
   try {
@@ -42,8 +68,8 @@ async function onLogout() {
 
 <style scoped>
 .profile-header {
-  background: linear-gradient(135deg, #2C4B8E, #1E3A5F);
-  color: #fff;
+  background: linear-gradient(135deg, var(--dms-color-primary), var(--dms-blue-700));
+  color: var(--dms-text-inverse);
   padding: 36px 20px 48px;
   text-align: center;
 }

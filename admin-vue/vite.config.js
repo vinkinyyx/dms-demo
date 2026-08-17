@@ -6,7 +6,7 @@ import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 export default defineConfig({
-  base: '/admin/',
+  base: process.env.VITE_BASE || '/dms/admin/',
   plugins: [
     vue(),
     AutoImport({ imports: ['vue', 'vue-router', 'pinia'], resolvers: [ElementPlusResolver()] }),

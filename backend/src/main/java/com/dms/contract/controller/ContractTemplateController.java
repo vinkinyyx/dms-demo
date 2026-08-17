@@ -41,6 +41,7 @@ public class ContractTemplateController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String keyword) {
+        if (page < 1) throw new com.dms.common.BusinessException(com.dms.common.ErrorCode.PARAM_INVALID, "page: 页码从 1 起");
         return ApiResponse.ok(service.list(page, size, category, status, keyword));
     }
 

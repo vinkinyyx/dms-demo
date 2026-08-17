@@ -4,6 +4,7 @@
 package com.dms.config;
 
 import com.dms.operationlog.interceptor.RequestLoggingInterceptor;
+import com.dms.security.RateLimitInterceptor;
 import com.dms.security.TenantInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final TenantInterceptor tenantInterceptor;
     private final RequestLoggingInterceptor requestLoggingInterceptor;
+    private final RateLimitInterceptor rateLimitInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -38,6 +40,13 @@ public class WebConfig implements WebMvcConfigurer {
                         "/swagger-ui/**",
                         "/swagger-ui.html",
                         "/v3/api-docs/**"
+                );
+        registry.addInterceptor(rateLimitInterceptor)
+                .addPathPatterns(
+                        "/api/auth/login",
+                        "/api/auth/mfa/verify",
+                        "/api/auth/forgot-password",
+                        "/api/admin/auth/login"
                 );
     }
 }

@@ -25,8 +25,19 @@ public class NotificationController {
 
     @GetMapping
     public ApiResponse<PageResult<Notification>> list(@RequestParam(required = false) Boolean isRead,
+                                                       @RequestParam(required = false) String refType,
                                                        @Valid PageQuery pageQuery) {
-        return ApiResponse.ok(service.list(isRead, pageQuery));
+        return ApiResponse.ok(service.list(isRead, refType, pageQuery));
+    }
+
+    @GetMapping("/{id}")
+    public ApiResponse<Notification> detail(@PathVariable Long id) {
+        return ApiResponse.ok(service.get(id));
+    }
+
+    @GetMapping("/unread-count")
+    public ApiResponse<java.util.Map<String, Object>> unreadCount() {
+        return ApiResponse.ok(java.util.Map.of("count", service.unreadCount()));
     }
 
     @PostMapping
@@ -41,8 +52,13 @@ public class NotificationController {
     }
 
     @PostMapping("/read-all")
-    public ApiResponse<Map<String, Object>> readAll() {
-        int cnt = service.markAllRead();
+    public ApiResponse<Map<String, Object>> readAll(@RequestParam(required = false) String refType) {
+        int cnt = service.markAllRead(refType);
         return ApiResponse.ok(Map.of("updated", cnt));
+    }
+
+    @PostMapping("/mark-all-read")
+    public ApiResponse<Map<String, Object>> markAllReadAlias(@RequestParam(required = false) String refType) {
+        return readAll(refType);
     }
 }

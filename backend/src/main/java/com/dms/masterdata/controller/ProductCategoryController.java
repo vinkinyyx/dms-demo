@@ -59,7 +59,8 @@ public class ProductCategoryController {
         if (request == null) {
             throw new BusinessException(ErrorCode.PARAM_MISSING, "request body must not be empty");
         }
-        for (String fieldName : java.util.List.of("code", "name", "level")) {
+        // level is optional on create; the service defaults it to 1 (or derives it from parent).
+        for (String fieldName : java.util.List.of("code", "name")) {
             try {
                 java.lang.reflect.Field field = ProductCategory.class.getDeclaredField(fieldName);
                 field.setAccessible(true);

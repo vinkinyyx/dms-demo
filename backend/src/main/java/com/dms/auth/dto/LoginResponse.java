@@ -23,4 +23,6 @@ public class LoginResponse {
     private Long accessTokenExpiresIn;
     private Boolean mustChangePassword;
     private UserDTO user;
+    private Boolean mfaRequired;
+    private String mfaToken;
 }

@@ -49,10 +49,10 @@ const dealers = ref([])
 const selectedTenant = ref(null)
 
 const kpiCards = computed(() => ([
-  { key: 'tenants', label: '租户总数', display: kpi.value.totalTenants || 0, color: '#409EFF' },
-  { key: 'manufacturers', label: '厂商租户', display: kpi.value.manufacturerTenants || 0, color: '#67C23A' },
-  { key: 'dealers', label: '经销商租户', display: kpi.value.dealerTenants || 0, color: '#E6A23C' },
-  { key: 'active', label: '活跃租户', display: kpi.value.activeTenants || 0, color: '#F56C6C' }
+  { key: 'tenants', label: '租户总数', display: kpi.value.totalTenants || 0, color: '#1677ff' },
+  { key: 'manufacturers', label: '厂商租户', display: kpi.value.manufacturerTenants || 0, color: '#52c41a' },
+  { key: 'dealers', label: '经销商租户', display: kpi.value.dealerTenants || 0, color: '#faad14' },
+  { key: 'active', label: '活跃租户', display: kpi.value.activeTenants || 0, color: '#ff4d4f' }
 ]))
 
 async function load() {
@@ -86,7 +86,7 @@ onMounted(load)
 .hero p { color: #666; margin: 0; }
 .kpi-card { margin-bottom: 12px; text-align: center; }
 .kpi-v { font-size: 24px; font-weight: 700; }
-.kpi-l { font-size: 13px; color: #909399; margin-top: 6px; }
+.kpi-l { font-size: 13px; color: var(--dms-text-4); margin-top: 6px; }
 .links { margin-top: 12px; }
-code { background: #f5f7fa; padding: 1px 6px; border-radius: 3px; }
+code { background: var(--dms-bg-page); padding: 1px 6px; border-radius: 3px; }
 </style>

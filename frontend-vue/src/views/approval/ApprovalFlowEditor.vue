@@ -267,16 +267,16 @@ function zoomReset() { lf && lf.resetZoom() }
 onMounted(() => {
   lf = new LogicFlow({
     container: containerRef.value,
-    grid: { size: 10, visible: true, type: 'dot', config: { color: '#e0e0e0' } },
+    grid: { size: 10, visible: true, type: 'dot', config: { color: '#ebeef5' } },
     background: { color: '#fafbfc' },
     keyboard: { enabled: true },
     edgeType: 'polyline'
   })
   lf.setTheme({
     rect: { radius: 8, fill: '#eef4ff', stroke: '#2c6ef0', strokeWidth: 1.5 },
-    circle: { r: 22, fill: '#e8f7ee', stroke: '#18a058', strokeWidth: 1.5 },
+    circle: { r: 22, fill: '#f6ffed', stroke: '#52c41a', strokeWidth: 1.5 },
     polyline: { stroke: '#888', strokeWidth: 1.5, offset: 30 },
-    nodeText: { fontSize: 13, color: '#1f2d3d' }
+    nodeText: { fontSize: 13, color: '#303133' }
   })
   lf.on('node:click', ({ data }) => {
     if (data.properties && data.properties._kind === 'approval') openPanel(data.id)
@@ -299,9 +299,9 @@ watch(() => props.modelValue, (val) => {
 </script>
 
 <style scoped>
-.flow-editor { border: 1px solid #e4e7ed; border-radius: 6px; background: #fff; overflow: hidden; }
-.flow-toolbar { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px solid #eef0f3; background: #fafbfc; }
-.flow-tip { color: #909399; font-size: 12px; margin-left: auto; }
+.flow-editor { border: 1px solid var(--dms-border-1); border-radius: 6px; background: var(--dms-bg-container); overflow: hidden; }
+.flow-toolbar { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--dms-border-2); background: var(--dms-gray-50); }
+.flow-tip { color: var(--dms-text-4); font-size: 12px; margin-left: auto; }
 .flow-body { position: relative; }
 .flow-canvas { width: 100%; height: 560px; }
 .assignee-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }

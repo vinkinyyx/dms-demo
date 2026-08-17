@@ -77,6 +77,13 @@ public class ProductLineController {
         return ApiResponse.ok(service.update(id, request));
     }
 
+    @DeleteMapping("/{id}")
+    @OperationLog(businessType = "productLine", action = OperationAction.DELETE, remark = "产品线-删除")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        service.deleteById(id);
+        return ApiResponse.ok();
+    }
+
     @PostMapping("/{id}/deactivate")
     @OperationLog(businessType = "productLine", action = OperationAction.UPDATE, remark = "产品线-停用")
     public ApiResponse<Void> deactivate(@PathVariable Long id) {

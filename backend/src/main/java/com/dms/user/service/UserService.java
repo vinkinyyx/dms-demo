@@ -197,26 +197,22 @@ public class UserService {
 
     @Transactional
     public void incrementFailCount(Long userId) {
-        User user = loadUser(userId);
-        int next = (user.getLoginFailCount() == null ? 0 : user.getLoginFailCount()) + 1;
-        user.setLoginFailCount(next);
-        if (next >= MAX_FAIL_COUNT) {
-            user.setLockedUntil(OffsetDateTime.now().plusMinutes(LOCK_MINUTES));
-            log.warn("用户 {} 连续登录失败 {} 次，锁定至 {}", user.getUsername(), next, user.getLockedUntil());
+        OffsetDateTime now = OffsetDateTime.now();
+        int updated = userRepository.incrementLoginFailCount(
+                userId, MAX_FAIL_COUNT, now.plusMinutes(LOCK_MINUTES), now);
+        if (updated > 0) {
+            userRepository.findById(userId).ifPresent(user -> {
+                Integer failCount = user.getLoginFailCount();
+                if (failCount != null && failCount >= MAX_FAIL_COUNT) {
+                    log.warn("User {} failed login {} times, locked until {}", user.getUsername(), failCount, user.getLockedUntil());
+                }
+            });
         }
-        user.setUpdatedAt(OffsetDateTime.now());
-        userRepository.save(user);
     }
 
     @Transactional
     public void resetFailCount(Long userId, String ip) {
-        User user = loadUser(userId);
-        user.setLoginFailCount(0);
-        user.setLockedUntil(null);
-        user.setLastLoginAt(OffsetDateTime.now());
-        user.setLastLoginIp(ip);
-        user.setUpdatedAt(OffsetDateTime.now());
-        userRepository.save(user);
+        userRepository.resetLoginState(userId, ip, OffsetDateTime.now());
     }
 
     /**
@@ -267,5 +263,14 @@ public class UserService {
     private UUID resolveTenantId(UUID candidate) {
         if (candidate != null) return candidate;
         return TenantContext.getTenantId();
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        User u = userRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "用户不存在"));
+        u.setDeletedAt(OffsetDateTime.now());
+        u.setStatus("deleted");
+        userRepository.save(u);
     }
 }

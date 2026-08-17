@@ -71,6 +71,9 @@ public class ReceiptService {
         if (tenantId == null) {
             throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
         }
+        if (receipt.getWarehouseId() == null) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少仓库");
+        }
         receipt.setId(null);
         receipt.setTenantId(tenantId);
         if (receipt.getCode() == null) receipt.setCode(docNoGenerator.next("GR"));

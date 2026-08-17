@@ -19,5 +19,7 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Long>, Jpa
     Page<Warehouse> findByTenantId(UUID tenantId, Pageable pageable);
 
     boolean existsByTenantIdAndDealerIdAndCode(UUID tenantId, Long dealerId, String code);
+
+    boolean existsByTenantIdAndDealerIdAndType(UUID tenantId, Long dealerId, String type);
     java.util.Optional<Warehouse> findFirstByTenantIdAndCode(UUID tenantId, String code);
 }

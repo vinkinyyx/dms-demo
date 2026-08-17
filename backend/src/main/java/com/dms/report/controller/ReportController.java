@@ -5,9 +5,9 @@ import com.dms.report.dto.ReportQueryRequest;
 import com.dms.report.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -25,8 +25,10 @@ public class ReportController {
 
     private final ReportService service;
     private static final Set<String> REPORT_TYPES = Set.of(
-            "contract", "order", "inventory", "sales", "authorization",
-            "loan", "invoice", "rebate", "discount", "return");
+            "sales-ranking", "product-top10", "inventory-turnover", "order-trace",
+            "receivables", "surgery-stats", "sales", "contract", "authorization",
+            "loan", "rebate-discount", "inventory-aging", "order-approval",
+            "rebate", "discount", "order", "inventory", "invoice", "return");
 
     @GetMapping
     public ApiResponse<Map<String, Object>> list(@RequestParam(defaultValue = "1") int page,
@@ -44,28 +46,30 @@ public class ReportController {
         return ApiResponse.ok(data);
     }
 
-    @PostMapping("/{type}/query")
-    public ApiResponse<List<Map<String, Object>>> query(@PathVariable String type,
-                                                         @RequestBody(required = false) ReportQueryRequest request) {
-        Map<String, Object> filters = request == null || request.getFilters() == null
-                ? Map.of()
-                : request.getFilters();
-        return ApiResponse.ok(service.query(type, filters));
+    @GetMapping({"/contract","/authorization","/loan","/rebate-discount","/sales"})
+    public ApiResponse<List<Map<String, Object>>> legacyGet(HttpServletRequest request) {
+        String pathType = request.getRequestURI().substring(request.getRequestURI().lastIndexOf('/') + 1);
+        String type = "rebate-discount".equals(pathType) ? "rebate" : pathType;
+        return ApiResponse.ok(service.query(type, new java.util.HashMap<>()));
     }
 
-    @GetMapping({"/contract", "/authorization", "/loan", "/rebate-discount", "/rebate", "/discount", "/order", "/inventory", "/sales", "/invoice", "/return"})
-    public ApiResponse<List<Map<String, Object>>> compatibilityGet(HttpServletRequest request,
-                                                                    @RequestParam(required = false) String authType,
-                                                                    @RequestParam(required = false) String periodYyyymm) {
-        String type = request.getRequestURI().substring(request.getRequestURI().lastIndexOf('/') + 1);
-        Map<String, Object> filters = new LinkedHashMap<>();
-        if (authType != null && !authType.isBlank()) {
-            filters.put("authType", authType);
+    @PostMapping("/{type}/query")
+    public ApiResponse<List<Map<String, Object>>> query(@PathVariable String type,
+                                                        @RequestBody(required = false) ReportQueryRequest request) {
+        Map<String, Object> filters = request == null || request.getFilters() == null
+                ? new java.util.HashMap<>()
+                : new java.util.HashMap<>(request.getFilters());
+        if (request != null) {
+            if (request.getRange() != null) filters.putIfAbsent("range", request.getRange());
+            if (request.getStartDate() != null) filters.putIfAbsent("startDate", request.getStartDate());
+            if (request.getEndDate() != null) filters.putIfAbsent("endDate", request.getEndDate());
+            if (request.getLimit() != null) filters.putIfAbsent("limit", request.getLimit());
+            if (request.getPage() != null) filters.putIfAbsent("page", request.getPage());
+            if (request.getSize() != null) filters.putIfAbsent("size", request.getSize());
+            if (request.getDealerId() != null) filters.putIfAbsent("dealerId", request.getDealerId());
+            if (request.getHospitalId() != null) filters.putIfAbsent("hospitalId", request.getHospitalId());
+            if (request.getProductId() != null) filters.putIfAbsent("productId", request.getProductId());
         }
-        if (periodYyyymm != null && !periodYyyymm.isBlank()) {
-            filters.put("periodYyyymm", periodYyyymm);
-        }
-        String queryType = "rebate-discount".equals(type) ? "rebate" : type;
-        return ApiResponse.ok(service.query(queryType, filters));
+        return ApiResponse.ok(service.query(type, filters));
     }
 }

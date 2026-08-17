@@ -34,4 +34,9 @@ public class StocktakeController {
         }
         return ApiResponse.ok(service.upload(request.getStocktake(), request.getLines()));
     }
+
+    @GetMapping("/{id}")
+    public ApiResponse<java.util.Map<String, Object>> detail(@PathVariable Long id) {
+        return ApiResponse.ok(service.detail(id));
+    }
 }

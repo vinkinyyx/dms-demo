@@ -53,7 +53,7 @@ public class PlatformDictService {
         jdbcTemplate.update(con -> {
             PreparedStatement ps = con.prepareStatement(
                     "INSERT INTO dict_types (tenant_id, code, name, description, created_at, updated_at) " +
-                            "VALUES (NULL, ?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
+                            "VALUES (NULL, ?, ?, ?, ?, ?)", new String[]{"id"});
             ps.setString(1, code);
             ps.setString(2, name);
             ps.setString(3, description);
@@ -110,7 +110,7 @@ public class PlatformDictService {
         jdbcTemplate.update(con -> {
             PreparedStatement ps = con.prepareStatement(
                     "INSERT INTO dict_items (type_id, code, name, seq, status, created_at, updated_at) " +
-                            "VALUES (?, ?, ?, ?, 'active', ?, ?)", Statement.RETURN_GENERATED_KEYS);
+                            "VALUES (?, ?, ?, ?, 'active', ?, ?)", new String[]{"id"});
             ps.setLong(1, typeId);
             ps.setString(2, code);
             ps.setString(3, name);

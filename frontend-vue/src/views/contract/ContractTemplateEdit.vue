@@ -19,7 +19,7 @@
           <el-col :span="8">
             <el-form-item label="状态">
               <el-tag :type="templateStatusMeta(form.status).tag">{{ templateStatusMeta(form.status).label }}</el-tag>
-              <span v-if="isEdit" style="margin-left:12px;color:#909399">版本 V{{ form.version || 1 }}</span>
+              <span v-if="isEdit" style="margin-left:12px;color:var(--dms-text-4)">版本 V{{ form.version || 1 }}</span>
             </el-form-item>
           </el-col>
         </el-row>

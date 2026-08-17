@@ -86,4 +86,18 @@ public class StocktakeService {
         log.info("盘点单 {} 上传完毕，明细 {} 行，差异合计 {}", saved.getId(), totalLines, totalDiff);
         return saved;
     }
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> detail(Long id) {
+        UUID tenantId = TenantContext.getTenantId();
+        Stocktake st = stocktakeRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "??????"));
+        if (tenantId != null && !tenantId.equals(st.getTenantId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "????");
+        }
+        List<StocktakeLine> lines = lineRepository.findByStocktakeId(id);
+        java.util.Map<String, Object> data = new java.util.LinkedHashMap<>();
+        data.put("stocktake", st);
+        data.put("lines", lines);
+        return data;
+    }
 }

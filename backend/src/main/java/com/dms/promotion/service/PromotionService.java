@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -30,6 +31,8 @@ public class PromotionService {
     private static final Set<String> V1_NOT_YET_TYPES = Set.of("GIFT", "BUNDLE");
 
     private final PromotionRepository repository;
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager em;
 
     @Transactional(readOnly = true)
     public PageResult<Promotion> list(PageQuery pageQuery) {
@@ -42,8 +45,39 @@ public class PromotionService {
 
     @Transactional(readOnly = true)
     public Promotion get(Long id) {
-        return repository.findById(id)
+        Promotion p = repository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "促销不存在"));
+        p.setApplicableProducts(resolveScope(p.getProductScope(), "products", "name_cn"));
+        p.setApplicableDealers(resolveScope(p.getDealerScope(), "dealers", "name"));
+        return p;
+    }
+
+    @SuppressWarnings("unchecked")
+    private java.util.List<java.util.Map<String, Object>> resolveScope(java.util.Map<String, Object> scope, String table, String nameCol) {
+        java.util.List<java.util.Map<String, Object>> out = new java.util.ArrayList<>();
+        if (scope == null || scope.isEmpty()) return out;
+        Object type = scope.get("type");
+        Object ids = scope.get("ids");
+        if ("ALL".equals(type) || scope.get("all") == Boolean.TRUE) {
+            var rows = em.createNativeQuery("SELECT id, " + nameCol + " AS name FROM " + table + " LIMIT 500", jakarta.persistence.Tuple.class).getResultList();
+            for (var t : (List<jakarta.persistence.Tuple>) rows) {
+                java.util.Map<String, Object> m = new java.util.HashMap<>();
+                m.put("id", t.get("id")); m.put("name", t.get("name"));
+                out.add(m);
+            }
+            return out;
+        }
+        java.util.List<Object> idList = new java.util.ArrayList<>();
+        if (ids instanceof java.util.List) idList.addAll((java.util.List<Object>) ids);
+        if (idList.isEmpty()) return out;
+        var rows = em.createNativeQuery("SELECT id, " + nameCol + " AS name FROM " + table + " WHERE id IN (" +
+                idList.stream().map(String::valueOf).reduce((a, b) -> a + "," + b).orElse("0") + ")", jakarta.persistence.Tuple.class).getResultList();
+        for (var t : (List<jakarta.persistence.Tuple>) rows) {
+            java.util.Map<String, Object> m = new java.util.HashMap<>();
+            m.put("id", t.get("id")); m.put("name", t.get("name"));
+            out.add(m);
+        }
+        return out;
     }
 
     @Transactional

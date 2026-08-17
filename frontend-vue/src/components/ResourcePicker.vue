@@ -47,6 +47,7 @@ const PICKER_META = {
   dealers: { title: '选择经销商', cols: [{ k: 'code', l: '编码' }, { k: 'name', l: '名称' }, { k: 'level', l: '级别' }, { k: 'status', l: '状态' }] },
   products: { title: '选择产品', cols: [{ k: 'code', l: '编码' }, { k: 'name', l: '名称' }, { k: 'spec', l: '规格' }, { k: 'unit', l: '单位' }, { k: 'price', l: '单价' }] },
   hospitals: { title: '选择医院/终端', cols: [{ k: 'code', l: '编码' }, { k: 'name', l: '名称' }, { k: 'level', l: '等级' }] },
+  suppliers: { title: "选择供应商", cols: [{ k: "code", l: "编码" }, { k: "name", l: "名称" }, { k: "contactPerson", l: "联系人" }, { k: "status", l: "状态" }] },
   warehouses: { title: '选择仓库', cols: [{ k: 'code', l: '编码' }, { k: 'name', l: '名称' }, { k: 'type', l: '类型' }] },
   categories: { title: '选择分类', cols: [{ k: 'code', l: '编码' }, { k: 'name', l: '名称' }] },
   regions: { title: '选择区域', cols: [{ k: 'code', l: '编码' }, { k: 'name', l: '名称' }, { k: 'level', l: '级别' }] },

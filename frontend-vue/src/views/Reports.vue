@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="reports">
     <el-card shadow="never" class="hero">
       <div class="hero-row">
@@ -85,12 +85,12 @@ function rangeLabel(k) { return RANGE_LABELS[k] || k }
 .group-card { margin-bottom: 12px; }
 .group-header { display: flex; align-items: center; gap: 6px; font-weight: 600; }
 .group-items { display: flex; flex-direction: column; gap: 10px; }
-.group-item { padding: 12px 14px; border: 1px solid #ebeef5; border-radius: 6px; cursor: pointer; transition: all .15s; }
-.group-item:hover { border-color: #409EFF; background: #f5f9ff; transform: translateY(-1px); }
+.group-item { padding: 12px 14px; border: 1px solid var(--dms-border-2); border-radius: 6px; cursor: pointer; transition: all .15s; }
+.group-item:hover { border-color: var(--dms-color-primary); background: var(--dms-color-primary-bg); transform: translateY(-1px); }
 .gi-row { display: flex; align-items: center; gap: 8px; }
-.gi-icon { color: #2C4B8E; }
+.gi-icon { color: var(--dms-color-primary); }
 .gi-name { font-size: 14px; font-weight: 500; }
-.gi-desc { color: #909399; font-size: 12px; margin-top: 6px; line-height: 1.5; }
-.gi-meta { color: #C0C4CC; font-size: 12px; margin-top: 6px; display: flex; gap: 4px; }
+.gi-desc { color: var(--dms-text-4); font-size: 12px; margin-top: 6px; line-height: 1.5; }
+.gi-meta { color: var(--dms-text-placeholder); font-size: 12px; margin-top: 6px; display: flex; gap: 4px; }
 </style>
 

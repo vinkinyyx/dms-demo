@@ -17,10 +17,10 @@ export const REPORTS = {
         { value: 'NORMAL', label: '常规' }, { value: 'URGENT', label: '加急' } ] }
     ],
     kpi: [
-      { key: 'totalAmount', label: '总销售额', agg: 'sum', value: 'totalAmount', format: 'money', color: '#409EFF' },
-      { key: 'orderCount', label: '订单数', agg: 'sum', value: 'orderCount', format: 'number', color: '#67C23A' },
-      { key: 'avgAmount', label: '平均客单价', agg: 'avg', value: 'avgAmount', format: 'money', color: '#E6A23C' },
-      { key: 'dealerCount', label: '活跃经销商数', agg: 'count', value: 'dealerName', format: 'number', color: '#F56C6C' }
+      { key: 'totalAmount', label: '总销售额', agg: 'sum', value: 'totalAmount', format: 'money', color: '#1677ff' },
+      { key: 'orderCount', label: '订单数', agg: 'sum', value: 'orderCount', format: 'number', color: '#52c41a' },
+      { key: 'avgAmount', label: '平均客单价', agg: 'avg', value: 'avgAmount', format: 'money', color: '#faad14' },
+      { key: 'dealerCount', label: '活跃经销商数', agg: 'count', value: 'dealerName', format: 'number', color: '#ff4d4f' }
     ],
     chart: { type: 'bar', x: 'dealerName', y: 'totalAmount', name: '销售额', topN: 20 },
     cols: [
@@ -52,10 +52,10 @@ export const REPORTS = {
       { key: 'categoryCode', label: '产品分类', type: 'text' }
     ],
     kpi: [
-      { key: 'totalAmount', label: '总销售额', agg: 'sum', value: 'totalAmount', format: 'money', color: '#409EFF' },
-      { key: 'totalQty', label: '总销量', agg: 'sum', value: 'totalQty', format: 'number', color: '#67C23A' },
-      { key: 'dealerCount', label: '覆盖经销商数', agg: 'sum', value: 'dealerCount', format: 'number', color: '#E6A23C' },
-      { key: 'orderCount', label: '订单数', agg: 'sum', value: 'orderCount', format: 'number', color: '#F56C6C' }
+      { key: 'totalAmount', label: '总销售额', agg: 'sum', value: 'totalAmount', format: 'money', color: '#1677ff' },
+      { key: 'totalQty', label: '总销量', agg: 'sum', value: 'totalQty', format: 'number', color: '#52c41a' },
+      { key: 'dealerCount', label: '覆盖经销商数', agg: 'sum', value: 'dealerCount', format: 'number', color: '#faad14' },
+      { key: 'orderCount', label: '订单数', agg: 'sum', value: 'orderCount', format: 'number', color: '#ff4d4f' }
     ],
     chart: { type: 'bar', x: 'productName', y: 'totalAmount', name: '销售额', topN: 20 },
     cols: [
@@ -81,10 +81,10 @@ export const REPORTS = {
     desc: '按产品聚合当前库存与平均库龄',
     filters: [ { key: 'categoryCode', label: '产品分类', type: 'text' } ],
     kpi: [
-      { key: 'currentStock', label: '总库存', agg: 'sum', value: 'currentStock', format: 'number', color: '#409EFF' },
-      { key: 'qualifiedStock', label: '合格库存', agg: 'sum', value: 'qualifiedStock', format: 'number', color: '#67C23A' },
-      { key: 'pendingStock', label: '待检库存', agg: 'sum', value: 'pendingStock', format: 'number', color: '#E6A23C' },
-      { key: 'defectiveStock', label: '不合格库存', agg: 'sum', value: 'defectiveStock', format: 'number', color: '#F56C6C' }
+      { key: 'currentStock', label: '总库存', agg: 'sum', value: 'currentStock', format: 'number', color: '#1677ff' },
+      { key: 'qualifiedStock', label: '合格库存', agg: 'sum', value: 'qualifiedStock', format: 'number', color: '#52c41a' },
+      { key: 'pendingStock', label: '待检库存', agg: 'sum', value: 'pendingStock', format: 'number', color: '#faad14' },
+      { key: 'defectiveStock', label: '不合格库存', agg: 'sum', value: 'defectiveStock', format: 'number', color: '#ff4d4f' }
     ],
     chart: { type: 'bar', x: 'productName', y: 'currentStock', name: '当前库存', topN: 20 },
     cols: [
@@ -119,8 +119,8 @@ export const REPORTS = {
         { value: 'NORMAL', label: '常规' }, { value: 'URGENT', label: '加急' } ] }
     ],
     kpi: [
-      { key: 'orderCount', label: '订单数', agg: 'count', value: 'orderId', format: 'number', color: '#409EFF' },
-      { key: 'totalAmount', label: '订单总额', agg: 'sum', value: 'totalAmount', format: 'money', color: '#67C23A' }
+      { key: 'orderCount', label: '订单数', agg: 'count', value: 'orderId', format: 'number', color: '#1677ff' },
+      { key: 'totalAmount', label: '订单总额', agg: 'sum', value: 'totalAmount', format: 'money', color: '#52c41a' }
     ],
     chart: { type: 'bar', x: 'orderDate', y: 'orderId', name: '订单数' },
     cols: [
@@ -151,10 +151,10 @@ export const REPORTS = {
       { key: 'region', label: '区域', type: 'text' }
     ],
     kpi: [
-      { key: 'totalReceivable', label: '应收总额', agg: 'sum', value: 'totalReceivable', format: 'money', color: '#F56C6C' },
-      { key: 'age30', label: '0-30天', agg: 'sum', value: 'age30', format: 'money', color: '#67C23A' },
-      { key: 'ageOver90', label: '90+超期', agg: 'sum', value: 'ageOver90', format: 'money', color: '#F56C6C' },
-      { key: 'dealerCount', label: '应收经销商数', agg: 'count', value: 'dealerName', format: 'number', color: '#409EFF' }
+      { key: 'totalReceivable', label: '应收总额', agg: 'sum', value: 'totalReceivable', format: 'money', color: '#ff4d4f' },
+      { key: 'age30', label: '0-30天', agg: 'sum', value: 'age30', format: 'money', color: '#52c41a' },
+      { key: 'ageOver90', label: '90+超期', agg: 'sum', value: 'ageOver90', format: 'money', color: '#ff4d4f' },
+      { key: 'dealerCount', label: '应收经销商数', agg: 'count', value: 'dealerName', format: 'number', color: '#1677ff' }
     ],
     chart: { type: 'stackBar', x: 'dealerName', y: ['age30', 'age60', 'age90', 'ageOver90'], name: '账龄', topN: 20 },
     cols: [
@@ -184,10 +184,10 @@ export const REPORTS = {
       { key: 'to', label: '截止日期', type: 'date' }
     ],
     kpi: [
-      { key: 'surgeryCount', label: '报台数', agg: 'sum', value: 'surgeryCount', format: 'number', color: '#409EFF' },
-      { key: 'totalImplants', label: '植入数', agg: 'sum', value: 'totalImplants', format: 'number', color: '#67C23A' },
-      { key: 'hospitalCount', label: '覆盖医院', agg: 'count', value: 'hospitalName', format: 'number', color: '#E6A23C' },
-      { key: 'doctorCount', label: '覆盖医生', agg: 'sum', value: 'doctorCount', format: 'number', color: '#F56C6C' }
+      { key: 'surgeryCount', label: '报台数', agg: 'sum', value: 'surgeryCount', format: 'number', color: '#1677ff' },
+      { key: 'totalImplants', label: '植入数', agg: 'sum', value: 'totalImplants', format: 'number', color: '#52c41a' },
+      { key: 'hospitalCount', label: '覆盖医院', agg: 'count', value: 'hospitalName', format: 'number', color: '#faad14' },
+      { key: 'doctorCount', label: '覆盖医生', agg: 'sum', value: 'doctorCount', format: 'number', color: '#ff4d4f' }
     ],
     chart: { type: 'bar', x: 'hospitalName', y: 'surgeryCount', name: '报台数', topN: 20 },
     cols: [
@@ -215,8 +215,8 @@ export const REPORTS = {
       { key: 'to', label: '截止月份', type: 'text', placeholder: 'YYYY-MM' }
     ],
     kpi: [
-      { key: 'totalAmount', label: '总销售额', agg: 'sum', value: 'totalAmount', format: 'money', color: '#409EFF' },
-      { key: 'totalQty', label: '总销量', agg: 'sum', value: 'totalQty', format: 'number', color: '#67C23A' }
+      { key: 'totalAmount', label: '总销售额', agg: 'sum', value: 'totalAmount', format: 'money', color: '#1677ff' },
+      { key: 'totalQty', label: '总销量', agg: 'sum', value: 'totalQty', format: 'number', color: '#52c41a' }
     ],
     chart: { type: 'line', x: 'period', y: 'totalAmount', name: '销售额' },
     cols: [
@@ -235,7 +235,7 @@ export const REPORTS = {
     api: '/api/reports/contract/query', method: 'post', defaultRange: 'none',
     desc: '按状态聚合的合同数量与占比',
     filters: [],
-    kpi: [ { key: 'total', label: '合同总数', agg: 'sum', value: 'cnt', format: 'number', color: '#409EFF' } ],
+    kpi: [ { key: 'total', label: '合同总数', agg: 'sum', value: 'cnt', format: 'number', color: '#1677ff' } ],
     chart: { type: 'pie', x: 'status', y: 'cnt', name: '合同数' },
     cols: [ { k: 'status', l: '状态', w: 160 }, { k: 'cnt', l: '数量', w: 120, align: 'right' } ],
     drilldown: { type: 'none' }, exportName: '合同台账'
@@ -246,7 +246,7 @@ export const REPORTS = {
     desc: '经销商授权台账与分类汇总',
     filters: [ { key: 'authType', label: '授权类型', type: 'select', options: [
       { value: 'PRODUCT', label: '产品' }, { value: 'REGION', label: '区域' }, { value: 'HOSPITAL', label: '医院' } ] } ],
-    kpi: [ { key: 'total', label: '授权数', agg: 'count', value: 'dealerId', format: 'number', color: '#409EFF' } ],
+    kpi: [ { key: 'total', label: '授权数', agg: 'count', value: 'dealerId', format: 'number', color: '#1677ff' } ],
     chart: { type: 'pie', x: 'authType', y: 'cnt', name: '授权数' },
     cols: [ { k: 'dealerId', l: '经销商', w: 120 }, { k: 'authType', l: '授权类型', w: 120 },
             { k: 'cnt', l: '数量', w: 100, align: 'right' } ],
@@ -257,7 +257,7 @@ export const REPORTS = {
     api: '/api/reports/loan/query', method: 'post', defaultRange: 'none',
     desc: '借货台账与状态汇总',
     filters: [],
-    kpi: [ { key: 'total', label: '借货单数', agg: 'sum', value: 'cnt', format: 'number', color: '#409EFF' } ],
+    kpi: [ { key: 'total', label: '借货单数', agg: 'sum', value: 'cnt', format: 'number', color: '#1677ff' } ],
     chart: { type: 'pie', x: 'status', y: 'cnt', name: '借货数' },
     cols: [ { k: 'status', l: '状态', w: 160 }, { k: 'cnt', l: '数量', w: 120, align: 'right' } ],
     drilldown: { type: 'none' }, exportName: '借货余额超期'
@@ -268,8 +268,8 @@ export const REPORTS = {
     desc: '经销商返利周期数据（合并折扣请见详情）',
     filters: [ { key: 'periodYyyymm', label: '期间', type: 'text', placeholder: 'YYYYMM' } ],
     kpi: [
-      { key: 'netRebate', label: '净返利总额', agg: 'sum', value: 'netRebate', format: 'money', color: '#409EFF' },
-      { key: 'grossRebate', label: '毛返利', agg: 'sum', value: 'grossRebate', format: 'money', color: '#67C23A' }
+      { key: 'netRebate', label: '净返利总额', agg: 'sum', value: 'netRebate', format: 'money', color: '#1677ff' },
+      { key: 'grossRebate', label: '毛返利', agg: 'sum', value: 'grossRebate', format: 'money', color: '#52c41a' }
     ],
     chart: { type: 'line', x: 'periodYyyymm', y: 'netRebate', name: '净返利' },
     cols: [
@@ -293,7 +293,7 @@ export const REPORTS = {
       { key: 'categoryCode', label: '产品分类', type: 'text' }
     ],
     kpi: [
-      { key: 'skus', label: '滞销SKU数', agg: 'count', value: 'productId', format: 'number', color: '#F56C6C' }
+      { key: 'skus', label: '滞销SKU数', agg: 'count', value: 'productId', format: 'number', color: '#ff4d4f' }
     ],
     chart: { type: 'pie', x: 'ageBucket', y: 'qty', name: '库龄分布' },
     cols: [
@@ -319,8 +319,8 @@ export const REPORTS = {
       { key: 'to', label: '截止日期', type: 'date' }
     ],
     kpi: [
-      { key: 'rejectRate', label: '拒单率', agg: 'custom', value: 'rejectRate', format: 'percent', color: '#F56C6C' },
-      { key: 'avgHours', label: '平均审批时长(小时)', agg: 'avg', value: 'avgHours', format: 'number', color: '#409EFF' }
+      { key: 'rejectRate', label: '拒单率', agg: 'custom', value: 'rejectRate', format: 'percent', color: '#ff4d4f' },
+      { key: 'avgHours', label: '平均审批时长(小时)', agg: 'avg', value: 'avgHours', format: 'number', color: '#1677ff' }
     ],
     chart: { type: 'line', x: 'date', y: 'submitCount', name: '提交数' },
     cols: [

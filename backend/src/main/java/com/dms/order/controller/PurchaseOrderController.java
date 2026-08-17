@@ -16,6 +16,7 @@ import com.dms.common.util.ContentDispositionUtils;
 import com.dms.common.util.ExcelImportUtils;
 import org.springframework.web.multipart.MultipartFile;
 import com.dms.common.util.TenantContext;
+import com.dms.common.util.PagingUtil;
 import com.dms.approval.dto.StartApprovalRequest;
 import com.dms.approval.entity.ApprovalInstance;
 import com.dms.approval.service.ApprovalService;
@@ -54,7 +55,7 @@ public class PurchaseOrderController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long supplierId) {
         UUID tid = TenantContext.getTenantId();
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
 
         StringBuilder where = new StringBuilder(" WHERE tenant_id = ?1 AND deleted_at IS NULL");
         List<Object> params = new ArrayList<>();
@@ -89,7 +90,7 @@ public class PurchaseOrderController {
                 " ORDER BY po.created_at DESC LIMIT " + limitParam + " OFFSET " + offsetParam,
                 Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
-        q.setParameter(params.size() + 1, size);
+        q.setParameter(params.size() + 1, safeSize);
         q.setParameter(params.size() + 2, offset);
         @SuppressWarnings("unchecked")
         List<Tuple> rows = q.getResultList();
@@ -100,8 +101,8 @@ public class PurchaseOrderController {
         }
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("total", total);
-        data.put("page", page);
-        data.put("size", size);
+        data.put("page", safePage);
+        data.put("size", safeSize);
         data.put("list", list);
         return ApiResponse.ok(data);
     }
@@ -682,7 +683,8 @@ public class PurchaseOrderController {
     private Long toLong(Object o) {
         if (o == null) return null;
         if (o instanceof Number) return ((Number) o).longValue();
-        return Long.valueOf(String.valueOf(o));
+        try { return Long.valueOf(String.valueOf(o)); }
+        catch (NumberFormatException e) { throw new BusinessException(ErrorCode.PARAM_INVALID, "ID ?????: " + o); }
     }
 
     private String strOr(Object o, String def) {
@@ -695,7 +697,8 @@ public class PurchaseOrderController {
         if (o == null) return BigDecimal.ZERO;
         if (o instanceof BigDecimal) return (BigDecimal) o;
         if (o instanceof Number) return BigDecimal.valueOf(((Number) o).doubleValue());
-        return new BigDecimal(String.valueOf(o));
+        try { return new BigDecimal(String.valueOf(o)); }
+        catch (NumberFormatException e) { throw new BusinessException(ErrorCode.PARAM_INVALID, "??/???????: " + o); }
     }
 
     @DeleteMapping("/{id}")

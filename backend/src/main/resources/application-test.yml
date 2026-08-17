@@ -24,8 +24,9 @@ spring:
 dms:
   jwt:
     secret: test-secret-key-1234567890-1234567890-1234567890
-    access-token-ttl: 28800000
-    refresh-token-ttl: 604800000
+    # 会话有效期：access token 8 小时（28800000ms）；refresh token 7 天（604800000ms）
+    access-token-ttl: ${ACCESS_TOKEN_TTL:28800000}
+    refresh-token-ttl: ${REFRESH_TOKEN_TTL:604800000}
   seed:
     enabled: false
 

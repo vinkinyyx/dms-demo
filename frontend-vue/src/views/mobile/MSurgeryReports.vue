@@ -1,6 +1,9 @@
 <template>
   <div>
-    <van-nav-bar title="手术报台" :left-arrow="false">
+    <van-nav-bar :left-arrow="false">
+      <template #title>
+        <span class="nav-title"><SurgeryIcon :size="22" bg="#52c41a" /><span>手术报台</span></span>
+      </template>
       <template #right>
         <van-icon name="plus" size="20" @click="$router.push('/mobile/surgery-reports/create')" />
       </template>
@@ -30,7 +33,10 @@
         </van-cell>
       </van-cell-group>
     </van-list>
-    <van-empty v-if="finished && !list.length" description="暂无报台" />
+    <van-empty v-if="finished && !list.length">
+      <template #image><SurgeryIcon :size="72" bg="#52c41a" /></template>
+      <p>暂无报台，点击右下角新建</p>
+    </van-empty>
 
     <div class="fab-wrap">
       <van-button round type="primary" icon="plus" @click="$router.push('/mobile/surgery-reports/create')">新建报台</van-button>
@@ -43,6 +49,7 @@ import { ref } from 'vue'
 import { listResource } from '@/api/crud'
 import { statusText, statusTagType } from '@/utils/dict'
 import { formatDate } from '@/utils/format'
+import SurgeryIcon from '@/components/SurgeryIcon.vue'
 
 const list = ref([])
 const loading = ref(false)
@@ -64,6 +71,7 @@ async function onLoad() {
 </script>
 
 <style scoped>
-.date { color: #969799; font-size: 12px; }
+.date { color: var(--dms-text-4); font-size: 12px; }
 .fab-wrap { position: fixed; right: 16px; bottom: 80px; z-index: 10; }
+.nav-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
 </style>

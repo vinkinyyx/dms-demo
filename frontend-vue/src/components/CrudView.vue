@@ -65,6 +65,7 @@
       <el-button @click="onResetForm"><el-icon><RefreshLeft /></el-icon>重置</el-button>
       <div class="spacer" />
       <slot name="extra-actions" />
+      <el-button v-if="canBatchDelete" type="danger" plain :disabled="!selectedRows.length" @click="onBatchDelete">批量删除{{ selectedRows.length ? `（${selectedRows.length}）` : '' }}</el-button>
       <template v-for="b in extraToolbarButtons" :key="b.buttonKey">
         <el-button
           :type="b.buttonType || 'default'"
@@ -80,7 +81,7 @@
         <template #header>
           <span>{{ c.l }}</span>
           <el-icon v-if="c.filter" class="filter-icon" @click.stop="openFilter(c, $event)">
-            <Filter :color="colFilters[c.k] != null && colFilters[c.k] !== '' ? '#409EFF' : '#C0C4CC'" />
+            <Filter :color="colFilters[c.k] != null && colFilters[c.k] !== '' ? '#1677ff' : '#c0c4cc'" />
           </el-icon>
         </template>
         <template #default="{ row }">
@@ -140,7 +141,7 @@
       popper-class="crud-filter-popover"
     >
       <div v-if="currentFilterCol">
-        <div style="margin-bottom: 8px; color: #303133; font-weight: 600;">{{ currentFilterCol.l }} 过滤</div>
+        <div style="margin-bottom: 8px; color: var(--dms-text-2); font-weight: 600;">{{ currentFilterCol.l }} 过滤</div>
         <el-select v-if="currentFilterCol.filter?.type === 'select'" v-model="colFilters[currentFilterCol.k]"
           style="width:100%" clearable size="small" @click.stop>
           <el-option v-for="o in currentFilterCol.filter.options" :key="o.value" :label="o.label" :value="o.value" />
@@ -221,7 +222,7 @@
           <el-table-column prop="username" label="操作人" width="120" />
           <el-table-column prop="action" label="操作" width="100" />
           <el-table-column prop="changes" label="变更内容" />
-          <el-table-column prop="atTime" label="操作时间" width="160" />
+          <el-table-column label="操作时间" width="160"><template #default="{ row }">{{ formatDateTime(row.atTime) }}</template></el-table-column>
         </el-table>
         <el-empty v-if="!detailLogs.length" description="暂无操作记录" />
       </div>
@@ -234,7 +235,7 @@
         :before-upload="beforeImport">
         <el-button type="primary">选择Excel文件</el-button>
       </el-upload>
-      <p style="margin-top:12px;color:#909399">支持 .xlsx 和 .xls 格式，请按模板填写数据。导入按“编码”判断：编码已存在则更新该行（留空的列保留原值），不存在则新增。</p>
+      <p style="margin-top:12px;color:var(--dms-text-4)">支持 .xlsx 和 .xls 格式，请按模板填写数据。导入按“编码”判断：编码已存在则更新该行（留空的列保留原值），不存在则新增。</p>
       <el-button v-if="canDownloadTemplate" size="small" type="text" :loading="tplDownloading" @click="downloadTemplate">下载导入模板</el-button>
       <template #footer>
         <el-button @click="importVisible = false">取消</el-button>
@@ -256,7 +257,7 @@ import AttachmentUploader from '@/components/AttachmentUploader.vue'
 import { listResource, createResource, updateResource, deleteResource, getDetail, actionResource, getOperationLogs, httpGet } from '@/api/crud'
 import { statusText, statusTagType, fmt, labelOf, reloadDicts, loadDict, getDictOptions } from '@/utils/dict'
 import { getToken } from '@/utils/auth'
-import { formatAuto } from '@/utils/format'
+import { formatAuto, formatDateTime } from '@/utils/format'
 import { usePageLayout, invalidatePageLayoutCache } from '@/composables/usePageLayout'
 
 function dictLabel(col, v) {
@@ -317,6 +318,7 @@ const searchable = computed(() => props.config.searchable !== false)
 const canCreate = computed(() => !props.config.readonly && !props.config.noCreate)
 const canEdit = computed(() => !props.config.readonly)
 const canDelete = computed(() => !props.config.readonly && !props.config.noDelete)
+const canBatchDelete = computed(() => canDelete.value && props.config.batchDelete === true)
 const canImport = computed(() => !props.config.readonly && props.config.importable === true)
 const canExport = computed(() => props.config.exportable === true)
 const canDownloadTemplate = computed(() => canImport.value && props.config.templateable !== false)
@@ -425,7 +427,9 @@ function stripEmoji(s) { return String(s || '').replace(/[\u{1F000}-\u{1FFFF}\u2
 // 必含按钮：search/reset；其余为业务按钮（按 sortOrder 排）
 const mustButtonKeys = ['search', 'reset']
 const extraToolbarButtons = computed(() => visibleToolbar()
-  .filter((b) => !mustButtonKeys.includes(b.buttonKey)))
+  .filter((b) => !mustButtonKeys.includes(b.buttonKey))
+  // 业务模块显式标记 noCreate 时，隐藏后端布局下发的“新增/新建”按钮，避免打开空白表单
+  .filter((b) => !(props.config.noCreate && b.buttonKey === 'create')))
 
 function onResetForm() {
   keyword.value = ''
@@ -776,6 +780,17 @@ function onDelete(row) {
     .then(async () => { await deleteResource(props.config.api, row.id); ElMessage.success('删除成功'); fetchData() })
     .catch(() => {})
 }
+function onBatchDelete() {
+  if (!selectedRows.value.length) return
+  ElMessageBox.confirm(`确认删除选中的 ${selectedRows.value.length} 条记录？`, '批量删除', { type: 'warning' })
+    .then(async () => {
+      await Promise.all(selectedRows.value.map(row => deleteResource(props.config.api, row.id)))
+      ElMessage.success('批量删除完成')
+      selectedRows.value = []
+      fetchData()
+    })
+    .catch(() => {})
+}
 
 async function openDetail(row) {
   if (props.config.detailPath) { router.push(props.config.detailPath + '/' + row.id); return }
@@ -1054,7 +1069,7 @@ function onImportError(err, file) {
 
 <style scoped>
 .crud-container {
-  background: #fff;
+  background: var(--dms-bg-container);
   border-radius: 4px;
   padding: 16px;
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / .1), 0 1px 2px -1px rgb(0 0 0 / .1);
@@ -1062,10 +1077,10 @@ function onImportError(err, file) {
 .panel-title {
   margin-bottom: 16px;
   margin-top: 0;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid var(--dms-border-1);
   padding-bottom: 8px;
   font-size: 1rem;
-  color: #6379bb;
+  color: var(--dms-color-primary);
   font-weight: 500;
 }
 .pager { margin-top: 14px; display: flex; justify-content: flex-end; }

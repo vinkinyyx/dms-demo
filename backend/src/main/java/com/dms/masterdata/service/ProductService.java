@@ -42,7 +42,74 @@ public class ProductService {
     public PageResult<Product> list(PageQuery pageQuery, java.util.Map<String, String> filters) {
         UUID tenantId = TenantContext.getTenantId();
         var spec = com.dms.common.util.SpecUtil.<Product>byTenantAndFilters(tenantId, filters);
-        Page<Product> page = repository.findAll(spec, pageQuery.toPageable());
+        org.springframework.data.domain.Pageable pageable = pageQuery.toPageable();
+
+        // categoryName 是关联表(product_categories.name)的展示字段，不是 Product 实体属性。
+        // 直接把 categoryName 传给 JPA 排序会触发 SQL 异常并返回 500。这里改为按 join 后的分类名称排序：
+        // 通过一条原生查询拿到有序的 product id 列表，再用 id 分页加载数据，保证跨页全局排序正确。
+        boolean sortByCategoryName = pageable.getSort().stream()
+                .anyMatch(o -> "categoryName".equals(o.getProperty()));
+        if (sortByCategoryName) {
+            var order = pageable.getSort().getOrderFor("categoryName");
+            String dir = (order != null && order.getDirection() == org.springframework.data.domain.Sort.Direction.DESC)
+                    ? "DESC" : "ASC";
+            String kw = null;
+            if (filters != null) {
+                kw = filters.get("keyword");
+                if (kw == null || kw.isBlank()) kw = filters.get("kw");
+            }
+            StringBuilder sql = new StringBuilder(
+                "SELECT p.id FROM products p LEFT JOIN product_categories c ON p.category_id = c.id "
+                + "WHERE p.deleted_at IS NULL ");
+            java.util.List<Object> args = new java.util.ArrayList<>();
+            if (tenantId != null) { sql.append("AND p.tenant_id = ? "); args.add(tenantId); }
+            if (kw != null && !kw.isBlank()) {
+                sql.append("AND (LOWER(p.code) LIKE ? OR LOWER(p.name_cn) LIKE ? OR LOWER(p.spec) LIKE ?) ");
+                String like = "%" + kw.trim().toLowerCase() + "%";
+                args.add(like); args.add(like); args.add(like);
+            }
+            if (filters != null) {
+                for (var e : filters.entrySet()) {
+                    if ("keyword".equals(e.getKey()) || "kw".equals(e.getKey())) continue;
+                    if (e.getValue() == null || e.getValue().isBlank()) continue;
+                    // 仅对 products 表上存在的常用过滤字段做安全映射
+                    String col = switch (e.getKey()) {
+                        case "status" -> "p.status";
+                        case "productType" -> "p.product_type";
+                        case "code" -> "p.code";
+                        default -> null;
+                    };
+                    if (col != null) { sql.append("AND ").append(col).append(" = ? "); args.add(e.getValue().trim()); }
+                }
+            }
+            sql.append("ORDER BY c.name ").append(dir).append(" NULLS LAST, p.id ").append(dir);
+            jakarta.persistence.Query idQuery = em.createNativeQuery(sql.toString()).setMaxResults(100000);
+            for (int i = 0; i < args.size(); i++) idQuery.setParameter(i+1, args.get(i));
+            @SuppressWarnings("unchecked")
+            java.util.List<Number> idRows = idQuery.getResultList();
+            java.util.List<Long> orderedIds = new java.util.ArrayList<>();
+            for (Object o : idRows) orderedIds.add(((Number) o).longValue());
+
+            int total = orderedIds.size();
+            int from = Math.min((int) pageable.getOffset(), total);
+            int to = Math.min(from + pageable.getPageSize(), total);
+            java.util.List<Product> content;
+            if (from >= to) {
+                content = java.util.Collections.emptyList();
+            } else {
+                java.util.List<Long> pageIds = orderedIds.subList(from, to);
+                content = repository.findAllById(pageIds);
+                // 按 pageIds 顺序重排
+                java.util.Map<Long, Product> byId = new java.util.HashMap<>();
+                for (Product pp : content) byId.put(pp.getId(), pp);
+                content = new java.util.ArrayList<>();
+                for (Long id : pageIds) if (byId.containsKey(id)) content.add(byId.get(id));
+            }
+            fillCategoryNames(content);
+            return PageResult.of(new org.springframework.data.domain.PageImpl<>(content, pageable, total));
+        }
+
+        Page<Product> page = repository.findAll(spec, pageable);
         fillCategoryNames(page.getContent());
         return PageResult.of(page);
     }
@@ -112,6 +179,7 @@ public class ProductService {
 
     @Transactional
     public Product create(Product entity) {
+        validateProductType(entity.getProductType());
         UUID tenantId = TenantContext.getTenantId();
         if (tenantId == null) {
             throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
@@ -133,10 +201,30 @@ public class ProductService {
         opLog.log("product", saved.getId(), "CREATE", "新建产品 " + saved.getCode());
         return saved;
     }
+    public void validateProductType(String productType) {
+        if (productType == null || productType.isBlank()) {
+            return;
+        }
+        Long count = (Long) em.createNativeQuery("""
+                        SELECT COUNT(1)
+                        FROM dict_items di
+                        JOIN dict_types dt ON dt.id = di.type_id
+                        WHERE dt.code = 'product_type'
+                          AND di.code = :code
+                          AND di.status = 'active'
+                        """)
+                .setParameter("code", productType)
+                .getSingleResult();
+        if (count == null || count == 0) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "productType 非法，请使用字典 product_type 中的启用值");
+        }
+    }
+
 
     @Transactional
     public Product update(Long id, Product patch) {
         Product old = get(id);
+        validateProductType(patch.getProductType());
         if (patch.getCode() != null && !patch.getCode().equals(old.getCode())) {
             if (repository.existsByTenantIdAndCode(old.getTenantId(), patch.getCode())) {
                 throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "产品编码已存在: " + patch.getCode());

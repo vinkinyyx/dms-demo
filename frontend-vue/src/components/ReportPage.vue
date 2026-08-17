@@ -103,6 +103,7 @@ import { ArrowLeft, Aim, Refresh, Download, Star } from '@element-plus/icons-vue
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 import { rangeFor } from '@/config/reports'
+import { formatAuto } from '@/utils/format'
 
 const props = defineProps({ meta: { type: Object, required: true } })
 const emit = defineEmits(['back'])
@@ -121,7 +122,7 @@ const fromTo = ref(rangeFor(rangeKey.value))
 const chartRef = ref(null)
 let chartInst = null
 
-const PALETTE = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#9b59b6', '#16a085', '#e67e22']
+const PALETTE = ['#1677ff', '#52c41a', '#faad14', '#ff4d4f', '#909399', '#722ed1', '#13c2c2', '#fa8c16']
 
 const rangeOptions = [
   { value: 'today', label: '当日' },
@@ -386,21 +387,22 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); chartIns
 .rp-head-left { display: flex; align-items: center; gap: 10px; }
 .rp-title { font-size: 16px; font-weight: 600; }
 .rp-head-right { display: flex; align-items: center; gap: 8px; }
-.rp-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; padding: 8px 12px; background: #f5f7fa; border-radius: 4px; }
+.rp-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; padding: 8px 12px; background: var(--dms-bg-page); border-radius: 4px; }
 .rp-kpi { margin-bottom: 12px; }
-.kpi-card { background: #fff; border: 1px solid #ebeef5; border-top: 3px solid; border-radius: 4px; padding: 14px 16px; text-align: center; }
-.kpi-v { font-size: 22px; font-weight: 700; color: #303133; }
-.kpi-l { font-size: 12px; color: #909399; margin-top: 4px; }
+.kpi-card { background: var(--dms-bg-container); border: 1px solid var(--dms-border-2); border-top: 3px solid; border-radius: 4px; padding: 14px 16px; text-align: center; }
+.kpi-v { font-size: 22px; font-weight: 700; color: var(--dms-text-2); }
+.kpi-l { font-size: 12px; color: var(--dms-text-4); margin-top: 4px; }
 .rp-chart { width: 100%; height: 360px; margin-bottom: 12px; }
 .rp-table { width: 100%; }
 .rp-table :deep(.rp-clickable) { cursor: pointer; }
-.rp-table :deep(.rp-clickable:hover) td { background-color: #f5f9ff !important; }
-.rp-table .money { color: #ee0a24; font-weight: 600; }
+.rp-table :deep(.rp-clickable:hover) td { background-color: var(--dms-color-primary-bg) !important; }
+.rp-table .money { color: var(--dms-color-danger); font-weight: 600; }
 .rp-table .num { font-variant-numeric: tabular-nums; }
-.rp-table .link { color: #409EFF; cursor: pointer; text-decoration: underline; }
-.rp-child { margin-top: 12px; border: 1px solid #67C23A; }
+.rp-table .link { color: var(--dms-color-primary); cursor: pointer; text-decoration: underline; }
+.rp-child { margin-top: 12px; border: 1px solid var(--dms-color-success); }
 .rp-child-head { display: flex; align-items: center; gap: 8px; }
 .rp-child-title { font-weight: 600; }
-.rp-child-count { color: #909399; font-size: 12px; }
+.rp-child-count { color: var(--dms-text-4); font-size: 12px; }
 .spacer { flex: 1; }
 </style>
+

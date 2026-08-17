@@ -40,10 +40,13 @@ export const MENU_GROUPS = [
       { key: 'receipts', icon: 'TakeawayBox', label: '收货入库', permissionCode: 'receipt:view' },
       { key: 'stock-moves', icon: 'Switch', label: '库存移动', permissionCode: 'stock_move:view' },
       { key: 'inventory-adjustments', icon: 'ScaleToOriginal', label: '库存调整', permissionCode: 'inventory_adjustment:view' }
+      ,{ key: 'expiry-alerts', icon: 'AlarmClock', label: '效期预警', route: '/expiry-alerts', permissionCode: 'inventory:view' }
+      ,{ key: 'stocktakes', icon: 'Histogram', label: '库存盘点', route: '/stocktakes', permissionCode: 'inventory:view' }
+      ,{ key: 'traceability', icon: 'Search', label: '序列号追溯', route: '/traceability', permissionCode: 'inventory:view' }
     ]
   },
   {
-    group: '手术与营销售',
+    group: '手术与营销',
     items: [
       { key: 'surgery-reports', icon: 'FirstAidKit', label: '手术植入报台', permissionCode: 'surgery_report:view' },
       { key: 'promotions', icon: 'Present', label: '促销规则', permissionCode: 'promotion:view' }
@@ -63,6 +66,7 @@ export const MENU_GROUPS = [
       { key: 'report-sales-ranking', icon: 'DataAnalysis', label: '销售业绩排行', route: '/reports?key=sales-ranking', permissionCode: 'report_sales_ranking:view' },
       { key: 'report-product-top10', icon: 'TrophyBase', label: '产品销售 TOP10', route: '/reports?key=product-top10', permissionCode: 'report_product_top10:view' },
       { key: 'report-inventory-turnover', icon: 'Histogram', label: '库存周转', route: '/reports?key=inventory-turnover', permissionCode: 'report_inventory_turnover:view' },
+      { key: 'report-subscriptions', icon: 'BellFilled', label: '报表订阅', route: '/report-subscriptions', permissionCode: 'report:view' },
       { key: 'report-surgery-stats', icon: 'PieChart', label: '手术报台统计', route: '/reports?key=surgery-stats', permissionCode: 'report_surgery_stats:view' },
       { key: 'report-receivables', icon: 'Coin', label: '应收款项', route: '/reports?key=receivables', permissionCode: 'report_receivables:view' },
       { key: 'report-order-trace', icon: 'TrendCharts', label: '订单追溯', route: '/reports?key=order-trace', permissionCode: 'report_order_trace:view' }
@@ -91,11 +95,13 @@ export const MENU_GROUPS = [
       { key: 'users', icon: 'User', label: '账号管理', permissionCode: 'user:view' },
       { key: 'roles-manage', route: '/roles-manage', icon: 'Avatar', label: '角色权限', permissionCode: 'role:view' },
       { key: 'tenant-page-configs', route: '/tenant-page-configs', icon: 'Setting', label: '列表页配置', permissionCode: 'tenant_ui_config:view' },
-      { key: 'api-call-logs', icon: 'Connection', label: '接口调用日志', route: '/api-call-logs', permissionCode: 'api_log:view' }
-      ,{ key: 'email-logs', icon: 'Message', label: '邮件发送日志', route: '/email-logs', permissionCode: 'email_log:view' }
+      { key: 'log-center', icon: 'Notebook', label: '日志中心', route: '/log-center', permissionCode: 'api_log:view' }
+      ,{ key: 'async-tasks', icon: 'Files', label: '导入导出任务', route: '/async-tasks' }
     ]
   }
 ]
+
+
 
 
 

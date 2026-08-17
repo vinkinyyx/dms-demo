@@ -1,0 +1,74 @@
+/* ===== DMS Design Token (admin-vue, CSS 变量版) ===== */
+:root {
+  /* Layer 1: 主色 */
+  --dms-blue-50:#e6f4ff;--dms-blue-100:#bae0ff;--dms-blue-200:#91caff;
+  --dms-blue-300:#69b1ff;--dms-blue-400:#4096ff;--dms-blue-500:#1677ff;
+  --dms-blue-600:#0958d9;--dms-blue-700:#003eb3;--dms-blue-800:#002c8c;--dms-blue-900:#001d66;
+  --dms-green-50:#f6ffed;--dms-green-500:#52c41a;--dms-green-600:#389e0d;
+  --dms-gold-50:#fffbe6;--dms-gold-500:#faad14;--dms-gold-600:#d48806;
+  --dms-red-50:#fff2f0;--dms-red-500:#ff4d4f;--dms-red-600:#cf1322;
+  --dms-gray-50:#fafafa;--dms-gray-100:#f5f7fa;--dms-gray-200:#ebeef5;
+  --dms-gray-300:#e4e7ed;--dms-gray-400:#c0c4cc;--dms-gray-500:#909399;
+  --dms-gray-600:#606266;--dms-gray-700:#303133;--dms-gray-800:#1f2329;--dms-gray-900:#0d0e10;
+
+  --dms-chart-1:#1677ff;--dms-chart-2:#52c41a;--dms-chart-3:#faad14;--dms-chart-4:#ff4d4f;
+  --dms-chart-5:#722ed1;--dms-chart-6:#13c2c2;--dms-chart-7:#eb2f96;--dms-chart-8:#fa8c16;
+
+  /* Layer 2: 语义 */
+  --dms-color-primary:var(--dms-blue-500);
+  --dms-color-primary-hover:var(--dms-blue-400);
+  --dms-color-primary-active:var(--dms-blue-600);
+  --dms-color-primary-bg:var(--dms-blue-50);
+  --dms-color-success:var(--dms-green-500);--dms-color-success-bg:var(--dms-green-50);
+  --dms-color-warning:var(--dms-gold-500);--dms-color-warning-bg:var(--dms-gold-50);
+  --dms-color-danger:var(--dms-red-500);--dms-color-danger-bg:var(--dms-red-50);
+  --dms-color-info:var(--dms-gray-500);--dms-color-info-bg:var(--dms-gray-100);
+  --dms-text-1:var(--dms-gray-800);--dms-text-2:var(--dms-gray-700);
+  --dms-text-3:var(--dms-gray-600);--dms-text-4:var(--dms-gray-500);
+  --dms-text-placeholder:var(--dms-gray-400);--dms-text-disabled:var(--dms-gray-400);
+  --dms-text-inverse:#ffffff;
+  --dms-bg-page:var(--dms-gray-100);--dms-bg-container:#fff;--dms-bg-elevated:#fff;
+  --dms-bg-hover:var(--dms-gray-50);--dms-bg-selected:var(--dms-blue-50);
+  --dms-border-1:var(--dms-gray-300);--dms-border-2:var(--dms-gray-200);--dms-border-3:var(--dms-gray-100);
+  --dms-border-focus:var(--dms-blue-500);
+  --dms-link-color:var(--dms-blue-500);--dms-link-hover:var(--dms-blue-400);--dms-link-active:var(--dms-blue-600);
+  --dms-sider-bg:#001529;--dms-sider-bg-deep:#000c1c;--dms-sider-text:#cfd8dc;--dms-sider-text-active:#ffffff;
+
+  --dms-font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --dms-font-size-xs:12px;--dms-font-size-sm:13px;--dms-font-size-base:14px;--dms-font-size-md:16px;
+  --dms-font-size-lg:18px;--dms-font-size-xl:20px;--dms-font-size-2xl:24px;
+
+  --dms-spacing-1:4px;--dms-spacing-2:8px;--dms-spacing-3:12px;--dms-spacing-4:16px;
+  --dms-spacing-5:20px;--dms-spacing-6:24px;--dms-spacing-8:32px;
+  --dms-radius-sm:2px;--dms-radius-base:4px;--dms-radius-md:6px;--dms-radius-lg:8px;--dms-radius-pill:9999px;
+  --dms-shadow-sm:0 1px 2px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --dms-shadow-md:0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
+  --dms-shadow-lg:0 8px 24px rgba(0,0,0,.12),0 4px 8px rgba(0,0,0,.06);
+
+  /* Element Plus 覆盖 */
+  --el-color-primary:var(--dms-color-primary);
+  --el-color-primary-light-3:var(--dms-blue-300);
+  --el-color-primary-light-5:var(--dms-blue-200);
+  --el-color-primary-light-7:var(--dms-blue-100);
+  --el-color-primary-light-8:var(--dms-blue-50);
+  --el-color-primary-light-9:var(--dms-blue-50);
+  --el-color-primary-dark-2:var(--dms-blue-600);
+  --el-color-success:var(--dms-color-success);--el-color-success-light-9:var(--dms-green-50);--el-color-success-dark-2:var(--dms-green-600);
+  --el-color-warning:var(--dms-color-warning);--el-color-warning-light-9:var(--dms-gold-50);--el-color-warning-dark-2:var(--dms-gold-600);
+  --el-color-danger:var(--dms-color-danger);--el-color-danger-light-9:var(--dms-red-50);--el-color-danger-dark-2:var(--dms-red-600);
+  --el-color-error:var(--dms-color-danger);--el-color-error-light-9:var(--dms-red-50);--el-color-error-dark-2:var(--dms-red-600);
+  --el-color-info:var(--dms-color-info);
+  --el-text-color-primary:var(--dms-text-1);--el-text-color-regular:var(--dms-text-2);
+  --el-text-color-secondary:var(--dms-text-3);--el-text-color-placeholder:var(--dms-text-placeholder);
+  --el-border-color:var(--dms-border-1);--el-border-color-light:var(--dms-border-2);--el-border-color-lighter:var(--dms-border-3);
+  --el-fill-color:var(--dms-gray-100);--el-fill-color-light:var(--dms-bg-hover);--el-fill-color-blank:var(--dms-bg-container);
+  --el-bg-color:var(--dms-bg-container);--el-bg-color-page:var(--dms-bg-page);--el-bg-color-overlay:var(--dms-bg-elevated);
+  --el-border-radius-base:var(--dms-radius-base);--el-border-radius-small:var(--dms-radius-sm);
+  --el-box-shadow:var(--dms-shadow-md);--el-box-shadow-light:var(--dms-shadow-sm);--el-box-shadow-dark:var(--dms-shadow-lg);
+  --el-font-family:var(--dms-font-family);--el-font-size-base:var(--dms-font-size-base);
+  --el-card-border-radius:var(--dms-radius-base);--el-dialog-border-radius:var(--dms-radius-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,*::before,*::after { animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
+}

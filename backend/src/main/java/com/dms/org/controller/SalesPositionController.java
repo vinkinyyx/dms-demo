@@ -183,6 +183,8 @@ public class SalesPositionController {
         m.put("id", t.get("id")); m.put("code", t.get("code")); m.put("name", t.get("name"));
         m.put("level", t.get("level")); m.put("parentId", t.get("parent_id"));
         m.put("region", t.get("region")); m.put("status", t.get("status")); m.put("sortOrder", t.get("sort_order"));
+        m.put("createdAt", com.dms.common.util.DateFmt.fmt(t.get("created_at")));
+        m.put("updatedAt", com.dms.common.util.DateFmt.fmt(t.get("updated_at")));
         return ApiResponse.ok(m);
     }
 

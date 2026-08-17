@@ -26,6 +26,29 @@
             <ResourcePicker v-if="c.type === 'picker' || c.picker" v-model="row[c.k]"
               :resource="c.picker || 'products'" :placeholder="c.l" @pick="(p) => onPick(row, c, p)" />
             <el-input-number v-else-if="c.type === 'number'" v-model="row[c.k]" :controls="false" :min="c.min ?? 0" style="width:100%" />
+            <el-autocomplete
+              v-else-if="c.type === 'batch'"
+              v-model="row[c.k]"
+              :fetch-suggestions="(q, cb) => suggestBatches(q, cb, row)"
+              placeholder="选择出库批次"
+              value-key="batchNo"
+              clearable
+              style="width:100%"
+              @select="(item) => onBatchPick(row, item)"
+            >
+              <template #default="{ item }">
+                <div class="batch-opt">{{ item.batchNo }} <span class="batch-meta">可用 {{ item.qty }}{{ item.warehouseName ? ' · ' + item.warehouseName : '' }}</span></div>
+              </template>
+            </el-autocomplete>
+            <el-autocomplete
+              v-else-if="c.type === 'serial'"
+              v-model="row[c.k]"
+              :fetch-suggestions="(q, cb) => suggestSerials(q, cb, row)"
+              placeholder="选择序列号"
+              value-key="serialNo"
+              clearable
+              style="width:100%"
+            />
             <el-input v-else v-model="row[c.k]" :placeholder="c.placeholder || c.l" />
           </template>
         </el-table-column>
@@ -65,6 +88,7 @@ import { ElMessage } from 'element-plus'
 import { Upload, DocumentCopy, Plus } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 import ResourcePicker from '@/components/ResourcePicker.vue'
+import request from '@/utils/request'
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -101,7 +125,37 @@ function onPick(row, c, p) {
   if (c.picker === 'products') {
     row.qty = null
     row.unitPrice = p && p.row && p.row.price != null ? p.row.price : null
+    row.batchNo = null
+    row.serialNo = null
   }
+}
+
+function suggestBatches(query, cb, row) {
+  if (!row || !row.productId) { cb([]); return }
+  request({ url: '/api/inventory/available-batches', method: 'get', params: { productId: row.productId } })
+    .then((res) => {
+      let list = (res && res.data) || []
+      if (query) list = list.filter((b) => String(b.batchNo || '').toLowerCase().includes(String(query).toLowerCase()))
+      cb(list)
+    })
+    .catch(() => cb([]))
+}
+
+function onBatchPick(row, item) {
+  row.batchNo = item ? item.batchNo : row.batchNo
+}
+
+function suggestSerials(query, cb, row) {
+  if (!row || !row.productId) { cb([]); return }
+  const params = { productId: row.productId }
+  if (row.batchNo) params.batchNo = row.batchNo
+  request({ url: '/api/inventory/available-serials', method: 'get', params })
+    .then((res) => {
+      let list = (res && res.data) || []
+      if (query) list = list.filter((s) => String(s.serialNo || s).toLowerCase().includes(String(query).toLowerCase()))
+      cb(list.map((s) => (typeof s === 'string' ? { serialNo: s } : { serialNo: s.serialNo })))
+    })
+    .catch(() => cb([]))
 }
 
 function onImportXlsx(uploadFile) {
@@ -114,7 +168,6 @@ function onImportXlsx(uploadFile) {
       const ws = wb.Sheets[wb.SheetNames[0]]
       const json = XLSX.utils.sheet_to_json(ws, { defval: '' })
       if (!json.length) { ElMessage.warning('文件无数据'); return }
-      // 列名映射：产品编码 -> productId, 数量 -> qty, 批次号 -> batchNo, 序列号 -> serialNo, 单价 -> unitPrice
       const headerMap = {
         '产品编码': 'productCode', '产品': 'productName', '数量': 'qty',
         '批次号': 'batchNo', '序列号': 'serialNo', '单价': 'unitPrice'
@@ -161,8 +214,10 @@ function confirmPaste() {
 </script>
 
 <style scoped>
-.line-req { color: #f56c6c; margin-right: 4px; font-weight: bold; }
+.line-req { color: var(--dms-color-danger); margin-right: 4px; font-weight: bold; }
 .lines-item :deep(.el-form-item__content) { display: block; }
 .lines-box { width: 100%; }
 .lines-toolbar { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.batch-opt { display: flex; justify-content: space-between; gap: 8px; }
+.batch-meta { color: var(--dms-text-4); font-size: 12px; }
 </style>

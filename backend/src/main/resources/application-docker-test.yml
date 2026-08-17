@@ -27,8 +27,9 @@ spring:
 dms:
   jwt:
     secret: ${JWT_SECRET:dms-super-secret-key-please-change-in-prod-1234567890abcdef}
-    access-token-ttl: 28800000
-    refresh-token-ttl: 604800000
+    # 会话有效期：access token 8 小时（28800000ms）；refresh token 7 天（604800000ms）
+    access-token-ttl: ${ACCESS_TOKEN_TTL:28800000}
+    refresh-token-ttl: ${REFRESH_TOKEN_TTL:604800000}
   wechat:
     app-id: ${WECHAT_APP_ID:mock_appid}
     app-secret: ${WECHAT_APP_SECRET:mock_secret}

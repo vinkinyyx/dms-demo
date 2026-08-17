@@ -6,6 +6,7 @@ package com.dms.system.controller;
 
 import com.dms.common.ApiResponse;
 import com.dms.common.util.TenantContext;
+import com.dms.common.util.PagingUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
@@ -50,7 +51,7 @@ public class LookupController {
         UUID tid = TenantContext.getTenantId();
         boolean paged = page != null && size != null && size > 0;
         int pageSize = paged ? size : limit;
-        int offset = paged ? (page - 1) * size : 0;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = paged ? (safePage - 1) * safeSize : 0;
         // v3.7.9: 模糊搜索增加规格 spec；支持分页 page/size 返回 {total,list}；默认上限 500
         StringBuilder from = new StringBuilder(" FROM products p ");
         boolean withDealer = dealerId != null;
@@ -113,7 +114,7 @@ public class LookupController {
             Map<String, Object> pg = new LinkedHashMap<>();
             pg.put("total", total);
             pg.put("page", page);
-            pg.put("size", size);
+            pg.put("size", safeSize);
             pg.put("list", out);
             return ApiResponse.ok(pg);
         }

@@ -2,7 +2,8 @@ package com.dms.approval.controller;
 
 import com.dms.approval.dto.*;
 import com.dms.approval.entity.*;
-import com.dms.approval.service.ApprovalService;
+import com.dms.approval.service.ApprovalService;import com.dms.approval.service.ApprovalSummaryBuilder;
+import jakarta.persistence.EntityManager;
 import com.dms.common.ApiResponse;
 import com.dms.common.BusinessException;
 import com.dms.common.ErrorCode;
@@ -21,6 +22,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ApprovalController {
     private final ApprovalService approvalService;
+    private final EntityManager em;
 
     @PostMapping("/instances/start")
     public ApiResponse<ApprovalInstance> start(@RequestBody(required = false) StartApprovalRequest request) {
@@ -71,6 +73,11 @@ public class ApprovalController {
         ));
     }
 
+    @GetMapping("/instances/{id}/summary")
+    public ApiResponse<Map<String, Object>> getInstanceSummary(@PathVariable Long id) {
+        return ApiResponse.ok(approvalService.getInstance(id) == null ? Map.of() : ApprovalSummaryBuilder.build(em, approvalService.getInstance(id)));
+    }
+
     @GetMapping("/instances/by-business")
     public ApiResponse<ApprovalInstance> latestInstance(@RequestParam String businessType, @RequestParam Long businessId) {
         return ApiResponse.ok(approvalService.latestInstance(businessType, businessId));
@@ -113,3 +120,4 @@ public class ApprovalController {
         return ApiResponse.ok(approvalService.terminate(id, request));
     }
 }
+

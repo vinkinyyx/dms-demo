@@ -1,0 +1,110 @@
+﻿services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dms-prod-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dms
+      POSTGRES_USER: dms
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Shanghai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dms -d dms"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dms-prod
+
+  redis:
+    image: redis:7-alpine
+    container_name: dms-prod-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dms-prod
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: dms-prod-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      TZ: Asia/Shanghai
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dms-prod
+
+  backend:
+    image: eclipse-temurin:17-jre-alpine
+    container_name: dms-prod-backend
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "java $$JAVA_OPTS -jar app.jar"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker-test
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dms
+      DB_USER: dms
+      DB_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: dms
+      APP_BASE_URL: http://8.133.193.238
+      MAIL_ENABLED: "${MAIL_ENABLED:-true}"
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM:-${MAIL_USERNAME}}
+      SEED_ENABLED: "${SEED_ENABLED:-true}"
+      JWT_SECRET: ${JWT_SECRET}
+      JAVA_OPTS: -Xms256m -Xmx640m -XX:+UseG1GC -Duser.timezone=Asia/Shanghai
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:18080:8080"
+    volumes:
+      - ./backend/app.jar:/app/app.jar:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 24
+      start_period: 120s
+    networks:
+      - dms-prod
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  dms-prod:
+    name: dms-prod

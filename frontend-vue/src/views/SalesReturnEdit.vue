@@ -55,7 +55,7 @@
 
     <el-card shadow="never" style="margin-top:14px">
       <template #header><el-icon><Goods /></el-icon>销退明细
-        <span style="margin-left:12px;color:#909399;font-weight:normal">数量只能小于等于可退数量，行可删除</span>
+        <span style="margin-left:12px;color:var(--dms-text-4);font-weight:normal">数量只能小于等于可退数量，行可删除</span>
       </template>
       <el-table :data="form.lines" border size="small">
         <el-table-column type="index" label="#" width="50" />

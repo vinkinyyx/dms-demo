@@ -139,5 +139,5 @@ onMounted(loadDealers)
 <style scoped>
 .ctx-card { padding: 0; }
 .ctx-bar { display: flex; align-items: center; gap: 8px; }
-.ctx-label { color: #606266; font-size: 13px; }
+.ctx-label { color: var(--dms-text-3); font-size: 13px; }
 </style>

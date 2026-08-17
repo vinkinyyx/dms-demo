@@ -1,5 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+function isTokenValid(token) {
+  if (!token) return false
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return !payload.exp || payload.exp * 1000 > Date.now()
+  } catch (e) {
+    return false
+  }
+}
+
 const routes = [
   { path: '/login', name: 'Login', component: () => import('@/views/auth/Login.vue'), meta: { public: true } },
   {
@@ -21,11 +31,15 @@ const routes = [
   }
 ]
 
-const router = createRouter({ history: createWebHistory('/admin/'), routes })
+const router = createRouter({ history: createWebHistory('/dms/admin/'), routes })
 
 router.beforeEach((to) => {
   const token = localStorage.getItem('admin_access_token')
-  if (!to.meta.public && !token) return { path: '/login' }
+  if (!isTokenValid(token)) {
+    localStorage.removeItem('admin_access_token')
+    if (!to.meta.public) return { path: '/login' }
+    return true
+  }
   if (to.path === '/login' && token) return { path: '/' }
   return true
 })

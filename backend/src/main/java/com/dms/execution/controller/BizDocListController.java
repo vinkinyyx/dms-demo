@@ -9,6 +9,7 @@ package com.dms.execution.controller;
 
 import com.dms.common.ApiResponse;
 import com.dms.common.util.TenantContext;
+import com.dms.common.util.PagingUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +40,7 @@ public class BizDocListController {
             @RequestParam(required = false) Long sourceOrderId,
             @RequestParam(required = false) String status) {
         UUID tid = TenantContext.getTenantId();
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
 
         StringBuilder where = new StringBuilder("WHERE so.tenant_id = ?1");
         List<Object> params = new ArrayList<>();
@@ -68,7 +69,7 @@ public class BizDocListController {
                 " ORDER BY so.updated_at DESC NULLS LAST, so.id DESC LIMIT ?" + idx + " OFFSET ?" + (idx + 1);
         var q = em.createNativeQuery(sql, Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
-        q.setParameter(idx, size);
+        q.setParameter(idx, safeSize);
         q.setParameter(idx + 1, offset);
 
         @SuppressWarnings("unchecked")
@@ -99,7 +100,7 @@ public class BizDocListController {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("total", total);
         data.put("page", page);
-        data.put("size", size);
+        data.put("size", safeSize);
         data.put("list", list);
         return ApiResponse.ok(data);
     }
@@ -117,7 +118,7 @@ public class BizDocListController {
             @RequestParam(required = false) Long sourcePoId,
             @RequestParam(required = false) String status) {
         UUID tid = TenantContext.getTenantId();
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
 
         StringBuilder where = new StringBuilder("WHERE r.tenant_id = ?1");
         List<Object> params = new ArrayList<>();
@@ -135,15 +136,17 @@ public class BizDocListController {
         String sql = "SELECT r.id, r.code, r.is_red, r.warehouse_id, r.ref_doc_type, r.ref_doc_id, " +
                 "r.status, r.auto_created, r.source_po_id, r.received_at, " +
                 "r.created_at, r.updated_at, " +
-                "w.name AS warehouse_name, po.code AS source_po_code " +
+                "w.name AS warehouse_name, po.code AS source_po_code, " +
+                "COALESCE(s.name, po.supplier_name) AS supplier_name " +
                 "FROM receipts r " +
                 "LEFT JOIN warehouses w ON w.id = r.warehouse_id " +
                 "LEFT JOIN purchase_orders po ON po.id = r.source_po_id " +
+                "LEFT JOIN suppliers s ON s.id = po.supplier_id " +
                 where +
                 " ORDER BY r.updated_at DESC NULLS LAST, r.id DESC LIMIT ?" + idx + " OFFSET ?" + (idx + 1);
         var q = em.createNativeQuery(sql, Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
-        q.setParameter(idx, size);
+        q.setParameter(idx, safeSize);
         q.setParameter(idx + 1, offset);
 
         @SuppressWarnings("unchecked")
@@ -156,6 +159,7 @@ public class BizDocListController {
             m.put("isRed", t.get("is_red"));
             m.put("warehouseId", t.get("warehouse_id"));
             m.put("warehouseName", t.get("warehouse_name"));
+            m.put("supplierName", t.get("supplier_name"));
             m.put("refDocType", t.get("ref_doc_type"));
             m.put("refDocId", t.get("ref_doc_id"));
             m.put("status", t.get("status"));
@@ -171,7 +175,7 @@ public class BizDocListController {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("total", total);
         data.put("page", page);
-        data.put("size", size);
+        data.put("size", safeSize);
         data.put("list", list);
         return ApiResponse.ok(data);
     }

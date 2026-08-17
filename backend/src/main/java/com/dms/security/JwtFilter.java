@@ -47,6 +47,23 @@ public class JwtFilter extends OncePerRequestFilter {
     private final TenantRepository tenantRepository;
     private final ObjectMapper objectMapper;
 
+
+    private static final Set<String> IGNORED_PATHS = Set.of(
+            "/api/auth/login",
+            "/api/auth/mfa/verify",
+            "/api/auth/refresh",
+            "/api/auth/forgot-password",
+            "/api/auth/wechat/qrcode",
+            "/api/auth/wechat/callback",
+            "/api/admin/auth/login",
+            "/api/admin/auth/refresh"
+    );
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return IGNORED_PATHS.contains(request.getRequestURI());
+    }
+
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,

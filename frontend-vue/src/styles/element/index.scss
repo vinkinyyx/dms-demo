@@ -1,0 +1,20 @@
+﻿/* ===== Element Plus SCSS 变量覆盖（编译期预留） ===== */
+/* 主题主要由 runtime.scss 以 CSS 变量方式覆盖；本文件保留 SCSS 变量定义，
+   必须在 element-plus 样式之前引入。 */
+
+@forward "element-plus/theme-chalk/src/common/var.scss" with (
+  $colors: (
+    "primary": ("base": #1677ff),
+    "success": ("base": #52c41a),
+    "warning": ("base": #faad14),
+    "danger":  ("base": #ff4d4f),
+    "error":   ("base": #ff4d4f),
+    "info":    ("base": #909399)
+  ),
+  $border-radius: (
+    "base": 4px,
+    "small": 2px,
+    "round": 9999px,
+    "circle": 100%
+  )
+);

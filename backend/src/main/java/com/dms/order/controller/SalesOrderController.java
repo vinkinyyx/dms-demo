@@ -17,6 +17,7 @@ import com.dms.common.util.DateFmt;
 import com.dms.common.util.ExcelExportUtils;
 import com.dms.common.util.ExcelImportUtils;
 import com.dms.common.util.TenantContext;
+import com.dms.common.util.PagingUtil;
 import com.dms.approval.dto.StartApprovalRequest;
 import com.dms.approval.entity.ApprovalInstance;
 import com.dms.approval.service.ApprovalService;
@@ -55,7 +56,7 @@ public class SalesOrderController {
             @RequestParam(required = false) Long dealerId,
             @RequestParam(required = false) Long warehouseId) {
         UUID tid = TenantContext.getTenantId();
-        int offset = (page - 1) * size;
+        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
 
         StringBuilder where = new StringBuilder(" WHERE o.tenant_id = ?1 AND o.deleted_at IS NULL AND COALESCE(o.is_red,false) = false");
         List<Object> params = new ArrayList<>();
@@ -85,7 +86,7 @@ public class SalesOrderController {
                 " ORDER BY o.created_at DESC LIMIT " + limitParam + " OFFSET " + offsetParam,
                 Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
-        q.setParameter(params.size() + 1, size);
+        q.setParameter(params.size() + 1, safeSize);
         q.setParameter(params.size() + 2, offset);
 
         @SuppressWarnings("unchecked")
@@ -95,8 +96,8 @@ public class SalesOrderController {
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("total", total);
-        data.put("page", page);
-        data.put("size", size);
+        data.put("page", safePage);
+        data.put("size", safeSize);
         data.put("list", list);
         return ApiResponse.ok(data);
     }
@@ -185,24 +186,45 @@ public class SalesOrderController {
         if (status == null) return ApiResponse.fail(40404, "销售订单不存在");
         if (!"DRAFT".equals(status)) return ApiResponse.fail(40009, "仅草稿可编辑，当前状态: " + status);
 
-        BigDecimal total = calcTotal(body);
+        // partial update: preserve existing values when fields are omitted
+        Object[] cur = (Object[]) em.createNativeQuery(
+                "SELECT order_type, dealer_id, warehouse_id, COALESCE(CAST(ship_snapshot AS text),'{}'), amount_incl_tax, expected_date, COALESCE(remark,''), COALESCE(CAST(extra AS text),'{}') FROM orders WHERE id = ?1 AND tenant_id = ?2")
+            .setParameter(1, id).setParameter(2, tid).getSingleResult();
+
+        Object orderType = body.containsKey("orderType") ? body.get("orderType") : cur[0];
+        Long dealerId = body.containsKey("dealerId") ? toLong(body.get("dealerId")) : toLong(cur[1]);
+        Long warehouseId = body.containsKey("warehouseId") ? toLong(body.get("warehouseId")) : toLong(cur[2]);
+        String snapJson = body.containsKey("dealerName") ? shipSnapshot(body) : String.valueOf(cur[3]);
+        Object expectedDate = body.containsKey("expectedDate") ? body.get("expectedDate") : cur[5];
+        String remark = body.containsKey("remark") ? String.valueOf(body.get("remark")) : String.valueOf(cur[6]);
+        String extraJson = body.containsKey("extra") ? extraToJson(body.get("extra")) : String.valueOf(cur[7]);
+
+        BigDecimal total;
+        if (body.containsKey("lines")) {
+            total = calcTotal(body);
+        } else {
+            total = cur[4] == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(cur[4]));
+        }
+
         em.createNativeQuery(
                 "UPDATE orders SET order_type = ?1, dealer_id = ?2, warehouse_id = ?3, ship_snapshot = CAST(?4 AS jsonb), " +
                 "amount_incl_tax = ?5, final_amount = ?5, expected_date = CAST(?6 AS date), remark = ?7, extra = CAST(?8 AS jsonb), updated_at = now() " +
                 "WHERE id = ?9 AND tenant_id = ?10")
-            .setParameter(1, body.getOrDefault("orderType", "NORMAL"))
-            .setParameter(2, toLong(body.get("dealerId")))
-            .setParameter(3, toLong(body.get("warehouseId")))
-            .setParameter(4, shipSnapshot(body))
+            .setParameter(1, orderType == null ? "NORMAL" : orderType)
+            .setParameter(2, dealerId)
+            .setParameter(3, warehouseId)
+            .setParameter(4, snapJson)
             .setParameter(5, total)
-            .setParameter(6, body.get("expectedDate"))
-            .setParameter(7, body.getOrDefault("remark", ""))
-            .setParameter(8, extraToJson(body.get("extra")))
+            .setParameter(6, expectedDate)
+            .setParameter(7, remark)
+            .setParameter(8, extraJson)
             .setParameter(9, id).setParameter(10, tid)
             .executeUpdate();
 
-        em.createNativeQuery("DELETE FROM order_lines WHERE order_id = ?1").setParameter(1, id).executeUpdate();
-        insertLines(id, body);
+        if (body.containsKey("lines")) {
+            em.createNativeQuery("DELETE FROM order_lines WHERE order_id = ?1").setParameter(1, id).executeUpdate();
+            insertLines(id, body);
+        }
         return ApiResponse.ok(Map.of("id", id));
     }
 

@@ -50,6 +50,13 @@ public class EmailLog {
     @Column(name = "error_message", columnDefinition = "text")
     private String errorMessage;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer retries = 0;
+
+    @Column(name = "duration_ms")
+    private Long durationMs;
+
     @Column(name = "sent_at")
     private OffsetDateTime sentAt;
 

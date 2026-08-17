@@ -6,13 +6,16 @@ spring:
     host: ${MAIL_HOST:smtp.163.com}
     port: ${MAIL_PORT:465}
     username: ${MAIL_USERNAME:vinkinyu@163.com}
-    password: ${MAIL_PASSWORD:BU2qCuGPnLV6Afe9}
+    password: ${MAIL_PASSWORD:}
     protocol: smtps
     properties:
       mail.smtp.auth: true
       mail.smtp.ssl.enable: true
       mail.smtp.starttls.enable: true
       mail.smtp.starttls.required: false
+      mail.smtp.connectiontimeout: ${SMTP_CONN_TIMEOUT:5000}
+      mail.smtp.timeout: ${SMTP_TIMEOUT:5000}
+      mail.smtp.writetimeout: ${SMTP_WRITE_TIMEOUT:5000}
   application:
     name: dms-backend
   profiles:
@@ -50,14 +53,15 @@ spring:
 
 dms:
   app:
-    base-url: ${APP_BASE_URL:http://8.133.193.238:8083}
+    base-url: ${APP_BASE_URL:http://43.128.145.141}
   mail:
     from: ${MAIL_FROM:${MAIL_USERNAME:vinkinyu@163.com}}
     enabled: ${MAIL_ENABLED:true}
   jwt:
     secret: ${JWT_SECRET:dms-super-secret-key-please-change-in-prod-1234567890abcdef}
-    access-token-ttl: 28800000
-    refresh-token-ttl: 604800000
+    # 会话有效期：access token 8 小时（28800000ms）；refresh token 7 天（604800000ms）
+    access-token-ttl: ${ACCESS_TOKEN_TTL:28800000}
+    refresh-token-ttl: ${REFRESH_TOKEN_TTL:604800000}
   wechat:
     app-id: ${WECHAT_APP_ID:mock_appid}
     app-secret: ${WECHAT_APP_SECRET:mock_secret}
@@ -80,13 +84,22 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: dms
 
 springdoc:
   api-docs:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
 
 
 

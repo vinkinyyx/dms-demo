@@ -151,6 +151,12 @@ public class OrderService {
             if (l.getQty() == null || l.getUnitPrice() == null) {
                 throw new BusinessException(ErrorCode.PARAM_INVALID, "订单行 qty/unitPrice 不能为空");
             }
+            if (l.getQty().signum() <= 0) {
+                throw new BusinessException(ErrorCode.PARAM_INVALID, "订单行数量必须大于 0");
+            }
+            if (l.getUnitPrice().signum() < 0) {
+                throw new BusinessException(ErrorCode.PARAM_INVALID, "订单行单价不能为负");
+            }
             BigDecimal subTotal = l.getQty().multiply(l.getUnitPrice()).setScale(2, RoundingMode.HALF_UP);
             amountInclTax = amountInclTax.add(subTotal);
             OrderLine le = OrderLine.builder()

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="receipt-edit">
     <div class="page-toolbar">
       <el-button @click="$router.back()"><el-icon><ArrowLeft /></el-icon>返回</el-button>
@@ -20,15 +20,15 @@
         <el-descriptions-item label="状态">
           <el-tag :type="statusTagType(receipt.status)" size="small">{{ statusText(receipt.status) }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="????">{{ formatDateTime(receipt.createdAt) }}</el-descriptions-item>
-        <el-descriptions-item label="????">{{ formatDateTime(receipt.updatedAt) }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ formatDateTime(receipt.createdAt) }}</el-descriptions-item>
+        <el-descriptions-item label="更新时间">{{ formatDateTime(receipt.updatedAt) }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
 
     <el-card v-if="receipt.sourcePo" shadow="never" style="margin-top:14px">
       <template #header>
         <el-icon><Tickets /></el-icon>关联采购订单
-        <span style="margin-left:12px;color:#909399;font-weight:normal">来源单据（不可编辑）</span>
+        <span style="margin-left:12px;color:var(--dms-text-4);font-weight:normal">来源单据（不可编辑）</span>
       </template>
       <el-descriptions :column="3" border size="small">
         <el-descriptions-item label="采购单号">{{ receipt.sourcePo.code || '-' }}</el-descriptions-item>
@@ -36,14 +36,14 @@
         <el-descriptions-item label="采购状态"><el-tag :type="statusTagType(receipt.sourcePo.status)" size="small">{{ statusText(receipt.sourcePo.status) }}</el-tag></el-descriptions-item>
         <el-descriptions-item label="供应商">{{ receipt.sourcePo.supplierName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="入库仓库">{{ receipt.sourcePo.warehouseName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="????">{{ formatDate(receipt.sourcePo.expectedDate) }}</el-descriptions-item>
+        <el-descriptions-item label="期望到货日期">{{ formatDate(receipt.sourcePo.expectedDate) }}</el-descriptions-item>
         <el-descriptions-item label="含税金额">{{ receipt.sourcePo.amountInclTax != null ? receipt.sourcePo.amountInclTax : '-' }}</el-descriptions-item>
         <el-descriptions-item label="税额">{{ receipt.sourcePo.taxAmount != null ? receipt.sourcePo.taxAmount : '-' }}</el-descriptions-item>
         <el-descriptions-item label="实付金额">{{ receipt.sourcePo.finalAmount != null ? receipt.sourcePo.finalAmount : '-' }}</el-descriptions-item>
         <el-descriptions-item label="下单人">{{ receipt.sourcePo.createdByName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="????">{{ formatDateTime(receipt.sourcePo.createdAt) }}</el-descriptions-item>
+        <el-descriptions-item label="下单时间">{{ formatDateTime(receipt.sourcePo.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="审批人">{{ receipt.sourcePo.approvedByName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="????" :span="2">{{ formatDateTime(receipt.sourcePo.approvedAt) }}</el-descriptions-item>
+        <el-descriptions-item label="审批时间" :span="2">{{ formatDateTime(receipt.sourcePo.approvedAt) }}</el-descriptions-item>
         <el-descriptions-item label="采购备注" :span="3">{{ receipt.sourcePo.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
@@ -51,7 +51,7 @@
     <el-card v-if="receipt.poLines && receipt.poLines.length > 0" shadow="never" style="margin-top:14px">
       <template #header>
         <el-icon><Goods /></el-icon>采购订单产品明细
-        <span style="margin-left:12px;color:#909399;font-weight:normal">可收货数量（采购数量 - 已收）</span>
+        <span style="margin-left:12px;color:var(--dms-text-4);font-weight:normal">可收货数量（采购数量 - 已收）</span>
       </template>
       <el-table :data="receipt.poLines" border size="small" style="width:100%">
         <el-table-column type="index" label="#" width="50" />
@@ -88,7 +88,7 @@
     <el-card shadow="never" style="margin-top:14px">
       <template #header>
         <el-icon><Box /></el-icon>收货子单列表
-        <span style="margin-left:12px;color:#909399;font-weight:normal">每次收货一张子单，独立确认/取消</span>
+        <span style="margin-left:12px;color:var(--dms-text-4);font-weight:normal">每次收货一张子单，独立确认/取消</span>
       </template>
       <el-empty v-if="!receipt.batches || receipt.batches.length === 0" description="暂无子单，请点击顶部 [创建收货单] 开始" />
 
@@ -96,9 +96,9 @@
         <div class="batch-head">
           <span class="batch-code">{{ batch.code }}</span>
           <el-tag :type="batchTagType(batch.status)" size="small" style="margin-left:8px">{{ batchStatusText(batch.status) }}</el-tag>
-          <span class="batch-meta">?? {{ formatDateTime(batch.createdAt) }}</span>
-          <span v-if="batch.confirmedAt" class="batch-meta">?? {{ formatDateTime(batch.confirmedAt) }}</span>
-          <span v-if="batch.cancelledAt" class="batch-meta">?? {{ formatDateTime(batch.cancelledAt) }} {{ batch.cancelReason ? '('+batch.cancelReason+')' : '' }}</span>
+          <span class="batch-meta">创建：{{ formatDateTime(batch.createdAt) }}</span>
+          <span v-if="batch.confirmedAt" class="batch-meta">确认：{{ formatDateTime(batch.confirmedAt) }}</span>
+          <span v-if="batch.cancelledAt" class="batch-meta">取消：{{ formatDateTime(batch.cancelledAt) }} {{ batch.cancelReason ? '('+batch.cancelReason+')' : '' }}</span>
         </div>
 
         <el-table :data="batch.lines || []" border size="small" style="width:100%">
@@ -143,7 +143,7 @@
                 <el-button size="small" link type="primary" @click="openSerialPaste(row)">粘贴序列号</el-button>
               </div>
               <span v-else-if="row.isSerialManaged" class="serial-preview">{{ row.serialNos || '-' }}</span>
-              <span v-else style="color:#c0c4cc">—</span>
+              <span v-else style="color:var(--dms-text-placeholder)">—</span>
             </template>
           </el-table-column>
           <el-table-column v-if="batch.status === 'DRAFT'" label="操作" width="80" fixed="right">
@@ -213,7 +213,7 @@
         <el-icon><Tickets /></el-icon>操作记录
       </template>
       <el-table :data="opLogs" border size="small" style="width:100%">
-        <el-table-column label="??" width="170"><template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template></el-table-column>
+        <el-table-column label="操作时间" width="170"><template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template></el-table-column>
         <el-table-column label="操作人" width="120" prop="operatorName" />
         <el-table-column label="操作" width="120" prop="action" />
         <el-table-column label="备注" prop="remark" />
@@ -226,9 +226,9 @@
         title="支持换行、逗号、分号、空格、Tab 分隔；系统会自动去重并统计数量。" />
       <el-input v-model="serialPasteText" type="textarea" :rows="8"
         placeholder="请粘贴序列号，例如：&#10;SN001,SN002,SN003&#10;或每行一个" />
-      <div style="margin-top:8px;color:#606266;font-size:13px">
+      <div style="margin-top:8px;color:var(--dms-text-3);font-size:13px">
         识别到 <b>{{ serialPasteParsed.length }}</b> 个序列号
-        <span v-if="serialPasteDup" style="color:#e6a23c">（已自动去重 {{ serialPasteDup }} 个）</span>
+        <span v-if="serialPasteDup" style="color:var(--dms-color-warning)">（已自动去重 {{ serialPasteDup }} 个）</span>
       </div>
       <template #footer>
         <el-button @click="serialPasteVisible = false">取消</el-button>
@@ -513,13 +513,13 @@ async function submitCancelRemaining() {
 <style scoped>
 .page-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
 .page-toolbar .spacer { flex: 1; }
-.batch-card { border: 1px solid #ebeef5; border-radius: 6px; padding: 10px; margin-top: 12px; }
+.batch-card { border: 1px solid var(--dms-border-2); border-radius: 6px; padding: 10px; margin-top: 12px; }
 .batch-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-.batch-code { font-weight: 600; font-size: 15px; color: #303133; }
-.batch-meta { color: #909399; font-size: 12px; }
+.batch-code { font-weight: 600; font-size: 15px; color: var(--dms-text-2); }
+.batch-meta { color: var(--dms-text-4); font-size: 12px; }
 .batch-actions { margin-top: 10px; display: flex; gap: 8px; }
-.serial-preview { font-size: 12px; color: #606266; white-space: pre-wrap; line-height: 1.4; }
+.serial-preview { font-size: 12px; color: var(--dms-text-3); white-space: pre-wrap; line-height: 1.4; }
 .serial-cell { display: flex; flex-direction: column; gap: 4px; }
 .serial-cell .el-button { align-self: flex-start; padding: 0; }
-.serial-warn :deep(.el-textarea__inner) { border-color: #e6a23c; }
+.serial-warn :deep(.el-textarea__inner) { border-color: var(--dms-color-warning); }
 </style>

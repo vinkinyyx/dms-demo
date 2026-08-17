@@ -213,9 +213,9 @@ onMounted(reload)
 .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
 .spacer { flex: 1; }
 .pager { margin-top: 16px; display: flex; justify-content: flex-end; }
-.cond-block, .node-card { background: #fafbfc; border: 1px solid #ebeef5; border-radius: 6px; padding: 12px; margin-bottom: 12px; }
+.cond-block, .node-card { background: var(--dms-gray-50); border: 1px solid var(--dms-border-2); border-radius: 6px; padding: 12px; margin-bottom: 12px; }
 .node-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .node-title { font-weight: 600; }
 .assignee-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
-.tip { color: #909399; font-size: 12px; margin-top: 8px; }
+.tip { color: var(--dms-text-4); font-size: 12px; margin-top: 8px; }
 </style>

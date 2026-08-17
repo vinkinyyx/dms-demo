@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div>
     <van-nav-bar title="我的业绩" />
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
@@ -116,16 +116,16 @@ onMounted(loadAll)
 </script>
 
 <style scoped>
-.kpi-block { background: #fff; margin: 10px 12px; border-radius: 12px; padding: 14px 8px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-.kpi-title { font-size: 14px; font-weight: 600; color: #323233; margin: 0 6px 8px; }
-.kpi-v { font-size: 22px; font-weight: 700; color: #2C4B8E; }
-.kpi-l { font-size: 12px; color: #969799; margin-top: 4px; }
-.sec-title { font-size: 15px; font-weight: 600; margin: 16px 16px 8px; color: #323233; }
+.kpi-block { background: var(--dms-bg-container); margin: 10px 12px; border-radius: 12px; padding: 14px 8px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.kpi-title { font-size: 14px; font-weight: 600; color: var(--dms-text-2); margin: 0 6px 8px; }
+.kpi-v { font-size: 22px; font-weight: 700; color: var(--dms-color-primary); }
+.kpi-l { font-size: 12px; color: var(--dms-text-4); margin-top: 4px; }
+.sec-title { font-size: 15px; font-weight: 600; margin: 16px 16px 8px; color: var(--dms-text-2); }
 .trend-body { padding: 8px 16px 12px; }
 .trend-row { display: flex; align-items: center; padding: 6px 0; font-size: 13px; }
-.trend-l { width: 64px; color: #646566; }
-.trend-bar-wrap { flex: 1; background: #f2f3f5; height: 8px; border-radius: 4px; margin: 0 8px; overflow: hidden; }
-.trend-bar { background: linear-gradient(90deg, #2C4B8E, #1989fa); height: 100%; }
-.trend-v { color: #ee0a24; font-weight: 600; min-width: 88px; text-align: right; }
-.amt { color: #ee0a24; font-weight: 600; }
+.trend-l { width: 64px; color: var(--dms-text-3); }
+.trend-bar-wrap { flex: 1; background: var(--dms-gray-100); height: 8px; border-radius: 4px; margin: 0 8px; overflow: hidden; }
+.trend-bar { background: linear-gradient(90deg, var(--dms-color-primary), var(--dms-color-primary)); height: 100%; }
+.trend-v { color: var(--dms-color-danger); font-weight: 600; min-width: 88px; text-align: right; }
+.amt { color: var(--dms-color-danger); font-weight: 600; }
 </style>

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { login as loginApi, getInfo, logout as logoutApi, getMyPermissions } from '@/api/auth'
+import { login as loginApi, mfaVerify as mfaVerifyApi, getInfo, logout as logoutApi, getMyPermissions } from '@/api/auth'
 import { getToken, setToken, setRefreshToken, getUser, setUser, clearAuth, setPermissions, getPermissions } from '@/utils/auth'
 
 export const useUserStore = defineStore('user', {
@@ -23,6 +23,22 @@ export const useUserStore = defineStore('user', {
       if (data.refreshToken) setRefreshToken(data.refreshToken)
       setUser(this.user)
       // 拉全量权限码，前端 v-has 指令使用
+      try {
+        const pres = await getMyPermissions()
+        const perms = (pres && pres.data) || []
+        this.permissions = perms
+        setPermissions(perms)
+      } catch (e) { /* ignore */ }
+      return data
+    },
+    async mfaVerify({ mfaToken, code }) {
+      const res = await mfaVerifyApi({ mfaToken, code })
+      const data = res.data || {}
+      this.token = data.accessToken
+      this.user = data.user || {}
+      setToken(data.accessToken)
+      if (data.refreshToken) setRefreshToken(data.refreshToken)
+      setUser(this.user)
       try {
         const pres = await getMyPermissions()
         const perms = (pres && pres.data) || []

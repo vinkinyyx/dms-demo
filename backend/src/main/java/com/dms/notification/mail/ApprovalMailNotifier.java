@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -24,12 +25,13 @@ public class ApprovalMailNotifier {
     @Value("${dms.mail.from:${spring.mail.username:}}")
     private String from;
 
-    @Value("${dms.app.base-url:http://8.133.193.238:8083}")
+    @Value("${dms.app.base-url:http://43.128.145.141}")
     private String baseUrl;
 
     @Value("${dms.mail.enabled:true}")
     private boolean enabled;
 
+    @Async
     public void sendTaskMail(ApprovalTask task, ApprovalInstance instance) {
         if (!enabled) return;
         userRepository.findById(task.getAssigneeId()).ifPresent(user -> {
@@ -45,6 +47,7 @@ public class ApprovalMailNotifier {
         });
     }
 
+    @Async
     public void sendCcMail(Long userId, ApprovalInstance instance) {
         if (!enabled) return;
         userRepository.findById(userId).ifPresent(user -> {
@@ -58,6 +61,7 @@ public class ApprovalMailNotifier {
         });
     }
 
+    @Async
     public void sendResultMail(ApprovalInstance instance) {
         if (!enabled || instance.getSubmitterId() == null) return;
         userRepository.findById(instance.getSubmitterId()).ifPresent(user -> {
@@ -71,6 +75,7 @@ public class ApprovalMailNotifier {
         });
     }
 
+    @Async
     public void sendReminderMail(ApprovalTask task, ApprovalInstance instance) {
         if (!enabled) return;
         userRepository.findById(task.getAssigneeId()).ifPresent(user -> {

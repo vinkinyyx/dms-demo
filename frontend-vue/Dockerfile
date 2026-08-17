@@ -1,5 +1,6 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app
+ENV NODE_OPTIONS=--max-old-space-size=2048
 COPY frontend-vue/package*.json ./
 RUN npm ci --registry=https://registry.npmmirror.com
 COPY frontend-vue/ ./
@@ -7,6 +8,7 @@ RUN npm run build
 
 FROM node:20-alpine AS admin-builder
 WORKDIR /app
+ENV NODE_OPTIONS=--max-old-space-size=2048
 COPY admin-vue/package*.json ./
 RUN npm ci --registry=https://registry.npmmirror.com
 COPY admin-vue/ ./

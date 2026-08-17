@@ -16,7 +16,7 @@
 """
 import argparse, json, re, sys, urllib.request, urllib.error
 
-DEFAULT_BASE = "http://8.133.193.238:8082"
+DEFAULT_BASE = "http://43.128.145.141"
 IGNORE_FIELDS = {"password"}          # 密码出于安全不返回，忽略
 DETAIL_ONLY = {"lines", "attrs"}      # 列表可能省略，详情回填即可
 SKIP_KEYS = {"materials"}             # 未启用/无后端的遗留模块

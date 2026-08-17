@@ -105,6 +105,16 @@ public class ProductLineService {
         repository.save(entity);
     }
 
+    @Transactional
+    public void deleteById(Long id) {
+        ProductLine entity = get(id);
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId != null && !repository.findByTenantIdAndParentId(tenantId, id).isEmpty()) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "该产品线下存在子产品线，无法删除");
+        }
+        repository.delete(entity);
+    }
+
     private void validateLevel(ProductLine entity) {
         if (entity.getLevel() != null && entity.getLevel() < 1) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "产品线层级必须 >= 1");
