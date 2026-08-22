@@ -73,7 +73,7 @@ public class OrderApprovalExecutionController {
 
         // 拷贝明细
         var lineQ = em.createNativeQuery(
-                "SELECT product_id, qty FROM order_lines WHERE order_id = ?1", Tuple.class);
+                "SELECT product_id, qty FROM order_lines WHERE order_id = ?1 AND COALESCE(line_level,'NORMAL') <> 'PARENT'", Tuple.class);
         lineQ.setParameter(1, id);
         @SuppressWarnings("unchecked")
         List<Tuple> ls = lineQ.getResultList();

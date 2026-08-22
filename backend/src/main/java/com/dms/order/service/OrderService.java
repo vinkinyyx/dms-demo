@@ -142,45 +142,53 @@ public class OrderService {
             throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "订单授权校验失败: " + String.join("; ", unauth));
         }
 
-        // 2. 计算行小计
+        // 2. 计算行小计（含行折扣）
         BigDecimal amountInclTax = BigDecimal.ZERO;
+        BigDecimal lineDiscountTotal = BigDecimal.ZERO;
         List<OrderLine> lineEntities = new ArrayList<>();
         List<PromotionLine> promoLines = new ArrayList<>();
         int seqCounter = 1;
         for (OrderCreateRequest.Line l : request.getLines()) {
-            if (l.getQty() == null || l.getUnitPrice() == null) {
-                throw new BusinessException(ErrorCode.PARAM_INVALID, "订单行 qty/unitPrice 不能为空");
-            }
-            if (l.getQty().signum() <= 0) {
+            if (l.getQty() == null || l.getQty().signum() <= 0) {
                 throw new BusinessException(ErrorCode.PARAM_INVALID, "订单行数量必须大于 0");
             }
-            if (l.getUnitPrice().signum() < 0) {
+            BigDecimal unitPrice = l.getUnitPrice() == null ? BigDecimal.ZERO : l.getUnitPrice();
+            if (unitPrice.signum() < 0) {
                 throw new BusinessException(ErrorCode.PARAM_INVALID, "订单行单价不能为负");
             }
-            BigDecimal subTotal = l.getQty().multiply(l.getUnitPrice()).setScale(2, RoundingMode.HALF_UP);
-            amountInclTax = amountInclTax.add(subTotal);
+            BigDecimal gross = l.getQty().multiply(unitPrice).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal lineDiscount = calcDiscount(gross, l.getLineDiscountType(), l.getLineDiscountValue());
+            BigDecimal subTotal = gross.subtract(lineDiscount).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+            amountInclTax = amountInclTax.add(gross);
+            lineDiscountTotal = lineDiscountTotal.add(lineDiscount);
             OrderLine le = OrderLine.builder()
                     .productId(l.getProductId())
                     .qty(l.getQty())
-                    .unitPrice(l.getUnitPrice())
+                    .unitPrice(unitPrice)
                     .taxRate(l.getTaxRate())
                     .subTotal(subTotal)
                     .isGift(false)
                     .seq(l.getSeq() == null ? seqCounter++ : l.getSeq())
                     .updatedAt(OffsetDateTime.now())
                     .build();
+            le.setLineDiscountType(l.getLineDiscountType());
+            le.setLineDiscountValue(l.getLineDiscountValue());
+            le.setLineDiscountAmount(lineDiscount);
+            le.setHeaderDiscountAmount(BigDecimal.ZERO);
             lineEntities.add(le);
-            promoLines.add(new PromotionLine(l.getProductId(), l.getQty(), l.getUnitPrice(), subTotal));
+            promoLines.add(new PromotionLine(l.getProductId(), l.getQty(), unitPrice, subTotal));
         }
 
-        // 3. 促销引擎
+        // 3. 促销引擎 + 用户整单折扣
         PromotionEvaluationResult evalResult = promotionEngine.evaluate(tenantId, request.getDealerId(), promoLines);
         if (Boolean.TRUE.equals(evalResult.getRejected())) {
             throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
                     "促销规则拒绝: " + String.join("; ", evalResult.getRejectedReasons()));
         }
-
-        BigDecimal discount = evalResult.getDiscountTotal() == null ? BigDecimal.ZERO : evalResult.getDiscountTotal();
+        BigDecimal promoDiscount = evalResult.getDiscountTotal() == null ? BigDecimal.ZERO : evalResult.getDiscountTotal();
+        BigDecimal headerDiscount = calcDiscount(amountInclTax.subtract(lineDiscountTotal),
+                request.getHeaderDiscountType(), request.getHeaderDiscountValue());
+        BigDecimal discount = promoDiscount.add(lineDiscountTotal).add(headerDiscount);
         BigDecimal finalAmount = amountInclTax.subtract(discount).max(BigDecimal.ZERO);
 
         // 4. 保存订单
@@ -203,10 +211,23 @@ public class OrderService {
                 .updatedAt(OffsetDateTime.now())
                 .build();
         order.ensureSnapshot();
+        order.setHeaderDiscountType(request.getHeaderDiscountType());
+        order.setHeaderDiscountValue(request.getHeaderDiscountValue());
         Order saved = orderRepository.save(order);
 
         for (OrderLine le : lineEntities) {
             le.setOrderId(saved.getId());
+        }
+        lineRepository.saveAll(lineEntities);
+
+        BigDecimal headerDiscountBase = amountInclTax.subtract(lineDiscountTotal);
+        for (OrderLine le : lineEntities) {
+            BigDecimal lineGross = le.getUnitPrice().multiply(le.getQty());
+            BigDecimal weight = headerDiscountBase.compareTo(BigDecimal.ZERO) > 0
+                    ? lineGross.divide(headerDiscountBase, 6, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+            BigDecimal hdAlloc = headerDiscount.multiply(weight).setScale(2, RoundingMode.HALF_UP);
+            le.setHeaderDiscountAmount(hdAlloc);
         }
         lineRepository.saveAll(lineEntities);
 
@@ -336,5 +357,19 @@ public class OrderService {
     private Order loadOrder(Long id) {
         return orderRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "订单不存在"));
+    }
+
+    private BigDecimal calcDiscount(BigDecimal base, String type, BigDecimal value) {
+        if (base == null || base.signum() <= 0 || value == null || value.signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        if ("PERCENT".equalsIgnoreCase(type) || "PERCENTAGE".equalsIgnoreCase(type)) {
+            BigDecimal pct = value.compareTo(BigDecimal.ONE) > 0 ? value.divide(BigDecimal.valueOf(100)) : value;
+            return base.multiply(pct).setScale(2, RoundingMode.HALF_UP);
+        }
+        if ("AMOUNT".equalsIgnoreCase(type) || "FIXED".equalsIgnoreCase(type)) {
+            return value.min(base).setScale(2, RoundingMode.HALF_UP);
+        }
+        return BigDecimal.ZERO;
     }
 }

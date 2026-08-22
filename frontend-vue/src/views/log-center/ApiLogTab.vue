@@ -12,7 +12,7 @@
       <el-select v-model="query.status" placeholder="状态码" clearable style="width:120px">
         <el-option v-for="s in [200,400,401,403,404,500]" :key="s" :label="s" :value="s" />
       </el-select>
-      <el-date-picker v-model="dateRange" type="datetimerange" value-format="YYYY-MM-DDTHH:mm:ss" start-placeholder="开始" end-placeholder="结束" />
+      <el-date-picker v-model="dateRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" start-placeholder="开始" end-placeholder="结束" />
       <el-button type="primary" @click="reload(1)">查询</el-button>
       <el-button @click="reset">重置</el-button>
     </div>

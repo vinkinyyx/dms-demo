@@ -37,6 +37,10 @@
         <el-form-item label="管理员账号"><el-input v-model="form.adminUsername" /></el-form-item>
         <el-form-item label="管理员密码"><el-input v-model="form.adminPassword" type="password" show-password /></el-form-item>
         <el-form-item label="管理员姓名"><el-input v-model="form.adminName" /></el-form-item>
+        <el-form-item label="进销存/库存管理">
+          <el-switch v-model="form.inventoryEnabled" />
+          <span style="margin-left:10px;color:#909399">关闭后隐藏采购和库存菜单，销售出库由ERP回调</span>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialog = false">取消</el-button>
@@ -56,7 +60,7 @@ import { listManufacturers, createManufacturer, enableTenant, disableTenant } fr
 const list = ref([]); const total = ref(0); const page = ref(1); const size = ref(20)
 const loading = ref(false); const keyword = ref('')
 const dialog = ref(false); const saving = ref(false)
-const form = reactive({ code: '', name: '', contactName: '', contactPhone: '', adminUsername: '', adminPassword: '', adminName: '' })
+const form = reactive({ code: '', name: '', contactName: '', contactPhone: '', adminUsername: '', adminPassword: '', adminName: '', inventoryEnabled: true })
 
 async function load() {
   loading.value = true
@@ -66,8 +70,9 @@ async function load() {
   } finally { loading.value = false }
 }
 function onPage(p) { page.value = p; load() }
+function inventoryEnabled(row) { return row.modulesEnabled?.inventoryEnabled !== false }
 function openCreate() {
-  Object.assign(form, { code: '', name: '', contactName: '', contactPhone: '', adminUsername: '', adminPassword: '', adminName: '' })
+  Object.assign(form, { code: '', name: '', contactName: '', contactPhone: '', adminUsername: '', adminPassword: '', adminName: '', inventoryEnabled: true })
   dialog.value = true
 }
 async function save() {

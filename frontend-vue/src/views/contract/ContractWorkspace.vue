@@ -25,7 +25,7 @@
       </div>
 
       <el-table :data="list" v-loading="loading" border stripe size="small">
-        <el-table-column prop="code" label="合同编号" width="190" />
+        <el-table-column prop="code" label="合同编号" width="190"><template #default="{ row }"><el-link type="primary" @click="goDetail(row.id)">{{ row.code }}</el-link></template></el-table-column>
         <el-table-column prop="name" label="合同名称" min-width="200" show-overflow-tooltip />
         <el-table-column label="分类" width="110">
           <template #default="{ row }">{{ categoryLabel(row.category) }}</template>
@@ -47,13 +47,20 @@
             <el-tag :type="statusMeta(row.status).tag" size="small">{{ statusMeta(row.status).label }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="goDetail(row.id)">查看</el-button>
-            <el-button v-if="row.status === 'draft' || row.status === 'rejected'" link type="primary" @click="goEdit(row.id)">编辑</el-button>
-            <el-button v-if="row.status === 'draft'" link type="warning" @click="doSubmit(row.id)">提交</el-button>
-            <el-button v-if="row.status === 'draft'" link type="danger" @click="doDelete(row.id)">删除</el-button>
-            <el-button v-if="row.status === 'pending'" link type="info" @click="doWithdraw(row.id)">撤回</el-button>
+            <div class="row-actions">
+              <el-button link type="primary" @click="goDetail(row.id)">查看</el-button>
+              <el-button v-if="rowActions(row).length <= 2" v-for="a in rowActions(row)" :key="a.key" link :type="a.type" @click="a.on(row.id)">{{ a.label }}</el-button>
+              <el-dropdown v-if="rowActions(row).length > 2" trigger="click" @command="(cmd)=>cmd.on(row.id)">
+                <el-button link type="primary">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item v-for="a in rowActions(row)" :key="a.key" :command="a">{{ a.label }}</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -76,7 +83,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import { listContracts, submitContract, withdrawContract, deleteContract, exportContracts } from './api'
 import { CATEGORY_OPTIONS, APP_TYPE_OPTIONS, categoryLabel, appTypeLabel, statusMeta } from './dict'
 import request from '@/utils/request'
@@ -153,6 +160,14 @@ async function doDelete(id) {
   ElMessage.success('已删除')
   load()
 }
+function rowActions(row){
+  const a=[]
+  if(row.status==='draft'||row.status==='rejected') a.push({key:'edit',label:'编辑',type:'primary',on:(id)=>goEdit(id)})
+  if(row.status==='draft') a.push({key:'submit',label:'提交',type:'warning',on:(id)=>doSubmit(id)})
+  if(row.status==='draft') a.push({key:'delete',label:'删除',type:'danger',on:(id)=>doDelete(id)})
+  if(row.status==='pending') a.push({key:'withdraw',label:'撤回',type:'info',on:(id)=>doWithdraw(id)})
+  return a
+}
 onMounted(load)
 </script>
 
@@ -160,4 +175,5 @@ onMounted(load)
 .toolbar { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
 .filters { display: flex; gap: 8px; flex-wrap: wrap; }
 .pager { margin-top: 16px; justify-content: flex-end; }
+.row-actions { display: flex; gap: 6px; align-items: center; }
 </style>

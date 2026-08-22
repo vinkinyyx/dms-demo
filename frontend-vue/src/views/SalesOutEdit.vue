@@ -1,5 +1,5 @@
-﻿<template>
-  <div class="sales-out-edit">
+<template>
+  <div class="area-page sales-out-edit">
     <div class="page-toolbar">
       <el-button @click="$router.back()"><el-icon><ArrowLeft /></el-icon>返回</el-button>
 <el-button @click="printSalesOut">打印</el-button>
@@ -11,6 +11,8 @@
         <el-icon><CircleClose /></el-icon>取消剩余发货
       </el-button>
     </div>
+    <div class="area-scroll">
+
 
     <el-card shadow="never">
       <template #header><el-icon><Document /></el-icon>出库单信息</template>
@@ -213,6 +215,7 @@
       </el-table>
       <el-empty v-if="!opLogs.length" description="暂无操作记录" :image-size="60" />
     </el-card>
+    </div>
   </div>
 </template>
 <script setup>
@@ -249,9 +252,10 @@ const currentSerialRow = ref(null)
 const availableSerials = ref([])
 const selectedSerialNo = ref('')
 
+const isViewMode = computed(() => route.query.mode === 'view' || route.query.readonly === '1')
 const activeParentStatuses = ['DRAFT', 'APPROVED', 'PARTIAL_SHIPPED']
-const canCreateBatch = computed(() => activeParentStatuses.includes(salesOut.status))
-const canCancelRemaining = computed(() => activeParentStatuses.includes(salesOut.status))
+const canCreateBatch = computed(() => !isViewMode.value && activeParentStatuses.includes(salesOut.status))
+const canCancelRemaining = computed(() => !isViewMode.value && activeParentStatuses.includes(salesOut.status))
 
 function formatTime(s) { return formatDateTime(s) }
 function orderTypeText(t) { return ({ NORMAL: '常规销售', URGENT: '紧急销售', RETURN: '退货' })[t] || t || '-' }

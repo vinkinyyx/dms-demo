@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import jakarta.persistence.criteria.Predicate;
 
 @Slf4j
 @Service
@@ -42,6 +43,22 @@ public class ProductService {
     public PageResult<Product> list(PageQuery pageQuery, java.util.Map<String, String> filters) {
         UUID tenantId = TenantContext.getTenantId();
         var spec = com.dms.common.util.SpecUtil.<Product>byTenantAndFilters(tenantId, filters);
+        // excludeBundle=true 时，排除存在 active BOM 的母件（用于价格维护等只选子件/单品的场景）
+        if (filters != null && "true".equalsIgnoreCase(filters.get("excludeBundle"))) {
+            var base = spec;
+            spec = (root, query, cb) -> {
+                var sub = query.subquery(Long.class);
+                var subRoot = sub.from(com.dms.masterdata.entity.ProductBundle.class);
+                sub.select(subRoot.get("productId")).where(
+                    cb.equal(subRoot.get("versionStatus"), "active"),
+                    cb.isNull(subRoot.get("deletedAt")));
+                var ps = new java.util.ArrayList<Predicate>();
+                var basePred = base.toPredicate(root, query, cb);
+                if (basePred != null) ps.add(basePred);
+                ps.add(cb.not(root.get("id").in(sub)));
+                return cb.and(ps.toArray(new Predicate[0]));
+            };
+        }
         org.springframework.data.domain.Pageable pageable = pageQuery.toPageable();
 
         // categoryName 是关联表(product_categories.name)的展示字段，不是 Product 实体属性。
@@ -105,13 +122,36 @@ public class ProductService {
                 content = new java.util.ArrayList<>();
                 for (Long id : pageIds) if (byId.containsKey(id)) content.add(byId.get(id));
             }
-            fillCategoryNames(content);
+            fillDisplayNames(content);
             return PageResult.of(new org.springframework.data.domain.PageImpl<>(content, pageable, total));
         }
 
         Page<Product> page = repository.findAll(spec, pageable);
-        fillCategoryNames(page.getContent());
+        fillDisplayNames(page.getContent());
         return PageResult.of(page);
+    }
+
+    private void fillDisplayNames(java.util.List<Product> products) {
+        fillCategoryNames(products);
+        fillProductLineNames(products);
+        fillIsBundle(products);
+    }
+
+    private void fillIsBundle(java.util.List<Product> products) {
+        if (products == null || products.isEmpty()) return;
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        for (Product p : products) if (p.getId() != null) ids.add(p.getId());
+        if (ids.isEmpty()) return;
+        java.util.Set<Long> bundleIds = new java.util.HashSet<>();
+        try {
+            @SuppressWarnings("unchecked")
+            java.util.List<Number> rows = em.createNativeQuery(
+                "SELECT DISTINCT product_id FROM product_bundles WHERE version_status = 'active' AND deleted_at IS NULL AND product_id IN (:ids)")
+                .setParameter("ids", ids)
+                .getResultList();
+            for (Number n : rows) bundleIds.add(n.longValue());
+        } catch (Exception ignored) {}
+        for (Product p : products) p.setIsBundle(bundleIds.contains(p.getId()));
     }
 
     private void fillCategoryNames(java.util.List<Product> products) {
@@ -138,6 +178,29 @@ public class ProductService {
             }
         } catch (Exception ignored) {}
         fillProductTypeNames(products);
+    }
+
+    private void fillProductLineNames(java.util.List<Product> products) {
+        if (products == null || products.isEmpty()) return;
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        for (Product p : products) {
+            if (p.getProductLineId() != null) ids.add(p.getProductLineId());
+        }
+        if (ids.isEmpty()) return;
+        try {
+            @SuppressWarnings("unchecked")
+            java.util.List<Object[]> rows = em.createNativeQuery(
+                "SELECT id, name FROM product_lines WHERE id IN (:ids) AND deleted_at IS NULL")
+                .setParameter("ids", ids)
+                .getResultList();
+            java.util.Map<Long, String> map = new java.util.HashMap<>();
+            for (Object[] row : rows) {
+                map.put(((Number) row[0]).longValue(), String.valueOf(row[1]));
+            }
+            for (Product p : products) {
+                if (p.getProductLineId() != null) p.setProductLineName(map.get(p.getProductLineId()));
+            }
+        } catch (Exception ignored) {}
     }
 
     private void fillProductTypeNames(java.util.List<Product> products) {
@@ -173,7 +236,17 @@ public class ProductService {
                 if (name != null) p.setCategoryName(String.valueOf(name));
             } catch (Exception ignored) {}
         }
+        if (p.getProductLineId() != null) {
+            try {
+                Object lineName = em.createNativeQuery(
+                        "SELECT name FROM product_lines WHERE id = ?1 AND deleted_at IS NULL")
+                        .setParameter(1, p.getProductLineId())
+                        .getResultList().stream().findFirst().orElse(null);
+                if (lineName != null) p.setProductLineName(String.valueOf(lineName));
+            } catch (Exception ignored) {}
+        }
         fillProductTypeNames(java.util.List.of(p));
+        fillIsBundle(java.util.List.of(p));
         return p;
     }
 
@@ -234,6 +307,7 @@ public class ProductService {
         if (patch.getNameCn() != null) old.setNameCn(patch.getNameCn());
         if (patch.getNameEn() != null) old.setNameEn(patch.getNameEn());
         if (patch.getCategoryId() != null) old.setCategoryId(patch.getCategoryId());
+        if (patch.getProductLineId() != null) old.setProductLineId(patch.getProductLineId());
         if (patch.getProductType() != null) old.setProductType(patch.getProductType());
         if (patch.getSpec() != null) old.setSpec(patch.getSpec());
         if (patch.getUnit() != null) old.setUnit(patch.getUnit());
@@ -254,7 +328,7 @@ public class ProductService {
 
 
     /**
-     * ????? upsert????????????????????????????? true ?????
+     * 通用 upsert 辅助方法；保存成功且存在 id 时返回 true，否则 false
      */
     /**
      * 按业务编码 upsert（供批量导入）：编码已存在则按非空字段更新，否则新建。返回 true 表示新建。
@@ -316,3 +390,4 @@ public class ProductService {
         opLog.log("product", id, "DEACTIVATE", "停用产品 " + entity.getCode());
     }
 }
+

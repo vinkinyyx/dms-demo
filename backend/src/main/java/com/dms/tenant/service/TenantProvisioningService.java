@@ -89,7 +89,7 @@ public class TenantProvisioningService {
                 .status(STATUS_ACTIVE)
                 .tenantType(TYPE_MANUFACTURER)
                 .deploymentMode(DEPLOY_SHARED)
-                .modulesEnabled(new HashMap<>())
+                .modulesEnabled(modules(request.getInventoryEnabled()))
                 .quota(new HashMap<>())
                 .attrs(new HashMap<>())
                 .contactName(request.getContactName())
@@ -166,7 +166,7 @@ public class TenantProvisioningService {
                 .tenantType(TYPE_DEALER)
                 .deploymentMode(DEPLOY_SHARED)
                 .ownerManufacturerId(manufacturer.getId())
-                .modulesEnabled(new HashMap<>())
+                .modulesEnabled(modules(request.getInventoryEnabled()))
                 .quota(new HashMap<>())
                 .attrs(new HashMap<>())
                 .contactName(request.getContactName())
@@ -411,6 +411,12 @@ public class TenantProvisioningService {
         return userRepository.save(user);
     }
 
+    private Map<String,Object> modules(Boolean inventoryEnabled) {
+        Map<String,Object> m = new HashMap<>();
+        m.put("inventoryEnabled", inventoryEnabled == null || inventoryEnabled);
+        return m;
+    }
+
     private Tenant loadTenant(UUID id) {
         return tenantRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TENANT_NOT_FOUND));
@@ -459,6 +465,7 @@ public class TenantProvisioningService {
                 .disableReason(t.getDisableReason())
                 .disabledAt(t.getDisabledAt())
                 .enabledAt(t.getEnabledAt())
+                .modulesEnabled(t.getModulesEnabled())
                 .createdAt(t.getCreatedAt())
                 .build();
     }

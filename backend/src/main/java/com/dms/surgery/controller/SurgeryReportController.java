@@ -295,7 +295,7 @@ private boolean isSerialManaged(UUID tid, Long productId) {
                 "WHERE sr.id = ?1 AND sr.tenant_id = ?2 AND sr.deleted_at IS NULL", Tuple.class)
                 .setParameter(1, id).setParameter(2, tid).getResultList();
         if (rows.isEmpty()) {
-            throw new BusinessException(ErrorCode.NOT_FOUND, "??????");
+            throw new BusinessException(ErrorCode.NOT_FOUND, "未找到数据");
         }
         Tuple t = rows.get(0);
         Map<String, Object> m = new LinkedHashMap<>();

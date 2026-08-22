@@ -42,6 +42,9 @@ public class Product {
     @Column(name = "category_id")
     private Long categoryId;
 
+    @Column(name = "product_line_id")
+    private Long productLineId;
+
     @Column(name = "product_type", length = 32)
     private String productType;
 
@@ -97,7 +100,14 @@ public class Product {
     @Transient
     private String productTypeName;
 
+    @Transient
+    private String productLineName;
+
+    @Transient
+    private Boolean isBundle;
+
     public void ensureAttrs() {
         if (attrs == null) attrs = new HashMap<>();
     }
 }
+

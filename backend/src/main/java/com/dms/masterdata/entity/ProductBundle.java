@@ -51,6 +51,15 @@ public class ProductBundle {
     @Column(name = "version_note", columnDefinition = "TEXT")
     private String versionNote;
 
+    @Column(name = "bom_version", nullable = false, length = 32)
+    private String bomVersion;
+
+    @Column(name = "version_status", nullable = false, length = 16)
+    private String versionStatus;
+
+    @Column(name = "version_locked", nullable = false)
+    private Boolean versionLocked;
+
     @Column(name = "valid_from")
     private OffsetDateTime validFrom;
 
@@ -77,4 +86,13 @@ public class ProductBundle {
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
+
+    @Transient
+    private java.util.List<ProductBundleLine> lines;
+
+    @Transient
+    private String productCode;
+
+    @Transient
+    private String productName;
 }

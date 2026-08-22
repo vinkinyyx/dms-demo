@@ -164,7 +164,7 @@
           <el-form-item label="标签" required><el-input v-model="dictItemForm.label" /></el-form-item>
           <el-form-item label="值" required><el-input v-model="dictItemForm.value" /></el-form-item>
           <el-form-item label="排序"><el-input-number v-model="dictItemForm.sortOrder" :controls="false" /></el-form-item>
-          <el-form-item label="状态"><el-select v-model="dictItemForm.status"><el-option label="启用" value="active" /><el-option label="停用" value="inactive" /></el-select></el-form-item>
+          <el-form-item label="状态"><el-select v-model="dictItemForm.status" style="width:100%"><el-option label="启用" value="active" /><el-option label="停用" value="inactive" /></el-select></el-form-item>
         </el-form>
         <template #footer>
           <el-button @click="dictItemFormVisible = false">取消</el-button>
@@ -180,7 +180,7 @@
           <el-form-item label="行业"><el-input v-model="tenantForm.industry" /></el-form-item>
           <el-form-item label="联系人"><el-input v-model="tenantForm.contactName" /></el-form-item>
           <el-form-item label="联系电话"><el-input v-model="tenantForm.contactPhone" /></el-form-item>
-          <el-form-item label="状态"><el-select v-model="tenantForm.status"><el-option label="启用" value="active" /><el-option label="停用" value="inactive" /></el-select></el-form-item>
+          <el-form-item label="状态"><el-select v-model="tenantForm.status" style="width:100%"><el-option label="启用" value="active" /><el-option label="停用" value="inactive" /></el-select></el-form-item>
         </el-form>
         <template #footer>
           <el-button @click="tenantFormVisible = false">取消</el-button>

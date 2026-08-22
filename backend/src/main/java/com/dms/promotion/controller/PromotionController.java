@@ -46,4 +46,10 @@ public class PromotionController {
         service.deactivate(id);
         return ApiResponse.ok();
     }
+
+    @PostMapping("/{id}/activate")
+    public ApiResponse<Void> activate(@PathVariable Long id) {
+        service.activate(id);
+        return ApiResponse.ok();
+    }
 }

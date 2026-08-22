@@ -32,13 +32,21 @@
         <el-table-column label="更新时间" width="180">
           <template #default="{ row }">{{ formatDate(row.updatedAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="goEdit(row.id)">编辑</el-button>
-            <el-button v-if="row.status === 'draft'" link type="success" @click="doPublish(row.id)">发布</el-button>
-            <el-button v-if="row.status === 'published'" link type="warning" @click="doDisable(row.id)">停用</el-button>
-            <el-button link type="primary" @click="doNewVersion(row.id)">新建版本</el-button>
-            <el-button v-if="row.status !== 'published'" link type="danger" @click="doDelete(row.id)">删除</el-button>
+            <div class="row-actions">
+              <template v-for="(a, idx) in rowActions(row)" :key="a.key">
+                <el-button v-if="idx < 2" link :type="a.type" @click="a.on(row.id)">{{ a.label }}</el-button>
+              </template>
+              <el-dropdown v-if="rowActions(row).length > 2" trigger="click" @command="(cmd)=>cmd.on(row.id)">
+                <el-button link type="primary">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item v-for="a in rowActions(row).slice(2)" :key="a.key" :command="a">{{ a.label }}</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -54,7 +62,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, ArrowDown } from '@element-plus/icons-vue'
 import { listTemplates, publishTemplate, disableTemplate, newTemplateVersion, deleteTemplate } from './api'
 import { CATEGORY_OPTIONS, TEMPLATE_STATUS_OPTIONS, categoryLabel, templateStatusMeta } from './dict'
 import { formatDate } from '@/utils/format'
@@ -101,10 +109,19 @@ async function doDelete(id) {
   ElMessage.success('已删除')
   load()
 }
+function rowActions(row){
+  const a=[{key:'edit',label:'编辑',type:'primary',on:(id)=>goEdit(id)}]
+  if(row.status==='draft') a.push({key:'pub',label:'发布',type:'success',on:(id)=>doPublish(id)})
+  if(row.status==='published') a.push({key:'dis',label:'停用',type:'warning',on:(id)=>doDisable(id)})
+  a.push({key:'newver',label:'新建版本',type:'primary',on:(id)=>doNewVersion(id)})
+  if(row.status!=='published') a.push({key:'del',label:'删除',type:'danger',on:(id)=>doDelete(id)})
+  return a
+}
 onMounted(load)
 </script>
 
 <style scoped>
 .toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
 .pager { margin-top: 16px; justify-content: flex-end; }
+.row-actions { display: flex; gap: 6px; align-items: center; }
 </style>

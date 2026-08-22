@@ -65,4 +65,13 @@ public class ProductBundleLine {
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
+
+    @Transient
+    private String childProductCode;
+
+    @Transient
+    private String childProductName;
+
+    @Transient
+    private String childProductSpec;
 }

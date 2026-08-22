@@ -21,6 +21,8 @@ public class OrderCreateRequest {
     private LocalDate expectedDate;
     private Boolean isRed;
     private Long refOrderId;
+    private String headerDiscountType;
+    private BigDecimal headerDiscountValue;
     private List<Line> lines;
 
     @Data
@@ -30,5 +32,7 @@ public class OrderCreateRequest {
         private BigDecimal unitPrice;
         private BigDecimal taxRate;
         private Integer seq;
+        private String lineDiscountType;
+        private BigDecimal lineDiscountValue;
     }
 }

@@ -684,7 +684,7 @@ public class PurchaseOrderController {
         if (o == null) return null;
         if (o instanceof Number) return ((Number) o).longValue();
         try { return Long.valueOf(String.valueOf(o)); }
-        catch (NumberFormatException e) { throw new BusinessException(ErrorCode.PARAM_INVALID, "ID ?????: " + o); }
+        catch (NumberFormatException e) { throw new BusinessException(ErrorCode.PARAM_INVALID, "ID 格式非法: " + o); }
     }
 
     private String strOr(Object o, String def) {
@@ -698,7 +698,7 @@ public class PurchaseOrderController {
         if (o instanceof BigDecimal) return (BigDecimal) o;
         if (o instanceof Number) return BigDecimal.valueOf(((Number) o).doubleValue());
         try { return new BigDecimal(String.valueOf(o)); }
-        catch (NumberFormatException e) { throw new BusinessException(ErrorCode.PARAM_INVALID, "??/???????: " + o); }
+        catch (NumberFormatException e) { throw new BusinessException(ErrorCode.PARAM_INVALID, "采购/采退单ID格式非法: " + o); }
     }
 
     @DeleteMapping("/{id}")

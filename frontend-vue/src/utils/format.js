@@ -21,7 +21,7 @@ export function formatDate(value) {
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/
 
 export function looksLikeDateKey(key) {
-  return /(^|_)(at|time|date)$|At$|Time$|Date$/.test(String(key || ''))
+  return /(^|_)(at|time|date|from|to)$|At$|Time$|Date$|(From|To)$/i.test(String(key || ''))
 }
 
 export function formatAuto(value, key = '') {

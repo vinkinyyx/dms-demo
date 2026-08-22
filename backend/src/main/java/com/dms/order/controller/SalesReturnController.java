@@ -8,17 +8,25 @@ package com.dms.order.controller;
 
 import com.dms.annotation.OperationLog;
 import com.dms.common.ApiResponse;
+import com.dms.common.BusinessException;
+import com.dms.common.ErrorCode;
 import com.dms.common.enums.OperationAction;
 import com.dms.common.util.TenantContext;
 import com.dms.common.util.PagingUtil;
+import com.dms.common.util.ContentDispositionUtils;
+import com.dms.common.util.ExcelExportUtils;
 import com.dms.approval.dto.StartApprovalRequest;
 import com.dms.approval.entity.ApprovalInstance;
 import com.dms.approval.service.ApprovalService;
 import com.dms.execution.service.AutoDocGenerator;
+import com.dms.v4.V4Money;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -61,10 +69,10 @@ public class SalesReturnController {
         String limitParam = "?" + idx++;
         String offsetParam = "?" + idx++;
         var q = em.createNativeQuery(
-                "SELECT o.id, o.code, o.order_type, o.dealer_id, o.warehouse_id, o.ref_order_id, o.ref_sales_out_id, o.return_reason, " +
+                "SELECT o.id, o.code, o.order_type, o.dealer_id, o.warehouse_id, o.ref_order_id, o.ref_sales_out_id, o.return_reason, o.reason_code, " +
                 "COALESCE(NULLIF(CAST(o.ship_snapshot AS jsonb)->>'dealerName',''), d.name) AS dealer_name, " +
-                "w.name AS warehouse_name, u.name AS audit_user_name, o.approved_at, " +
-                "o.amount_incl_tax, o.final_amount, o.expected_date, o.status, o.created_at " +
+                "w.name AS warehouse_name, u.name AS audit_user_name, o.approved_at, o.submitted_at, o.cancelled_at, " +
+                "o.amount_incl_tax, o.final_amount, o.tax_amount, o.expected_date, o.status, o.remark, o.created_at " +
                 "FROM orders o LEFT JOIN dealers d ON d.id=o.dealer_id " +
                 "LEFT JOIN warehouses w ON w.id=o.warehouse_id LEFT JOIN users u ON u.id=o.approved_by " +
                 where + " ORDER BY o.created_at DESC LIMIT " + limitParam + " OFFSET " + offsetParam, Tuple.class);
@@ -81,13 +89,54 @@ public class SalesReturnController {
         return ApiResponse.ok(data);
     }
 
+    @GetMapping("/actions/export")
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> export(@RequestParam(required = false) String status,
+                                         @RequestParam(required = false) Long dealerId,
+                                         @RequestParam(required = false) Long warehouseId,
+                                         @RequestParam(required = false) String reasonCode) {
+        UUID tid = TenantContext.getTenantId();
+        StringBuilder sql = new StringBuilder(
+                "SELECT o.id, o.code, o.order_type, o.dealer_id, d.name AS dealer_name, o.warehouse_id, w.name AS warehouse_name, " +
+                "o.ref_order_id, o.ref_sales_out_id, o.amount_incl_tax, o.final_amount, o.return_reason, o.reason_code, o.status, o.expected_date, o.created_at " +
+                "FROM orders o LEFT JOIN dealers d ON d.id = o.dealer_id " +
+                "LEFT JOIN warehouses w ON w.id = o.warehouse_id " +
+                "WHERE o.tenant_id = ?1 AND o.deleted_at IS NULL AND COALESCE(o.is_red,true) = true ");
+        List<Object> params = new ArrayList<>();
+        params.add(tid);
+        int idx = 2;
+        if (status != null && !status.isBlank()) { sql.append(" AND o.status = ?").append(idx++); params.add(status); }
+        if (dealerId != null) { sql.append(" AND o.dealer_id = ?").append(idx++); params.add(dealerId); }
+        if (warehouseId != null) { sql.append(" AND o.warehouse_id = ?").append(idx++); params.add(warehouseId); }
+        if (reasonCode != null && !reasonCode.isBlank()) { sql.append(" AND o.reason_code = ?").append(idx++); params.add(reasonCode); }
+        sql.append(" ORDER BY o.created_at DESC");
+        var q = em.createNativeQuery(sql.toString(), Tuple.class);
+        for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) list.add(toBrief(t));
+        String[] headers = {"ID", "销退单号", "订单类型", "经销商ID", "经销商", "仓库ID", "收货仓库", "金额", "退货原因", "原因编码", "状态", "期望收货日期", "创建时间"};
+        String[] fields = {"id", "code", "orderType", "dealerId", "dealerName", "warehouseId", "warehouseName", "finalAmount", "returnReason", "reasonCode", "status", "expectedDate", "createdAt"};
+        byte[] excel;
+        try {
+            excel = ExcelExportUtils.exportMapToExcel(list, headers, fields);
+        } catch (Exception e) {
+            throw new RuntimeException("导出销退单失败: " + e.getMessage(), e);
+        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDispositionUtils.attachment("销退订单列表.xlsx"))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(excel);
+    }
+
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
     public ApiResponse<Map<String, Object>> get(@PathVariable Long id) {
         UUID tid = TenantContext.getTenantId();
         var q = em.createNativeQuery(
                 "SELECT o.*, d.name AS dealer_name, w.name AS warehouse_name, " +
-                "so.code AS ref_sales_out_code, o0.code AS ref_order_code " +
+                "so.code AS ref_sales_out_code, so.status AS source_sales_out_status, so.source_order_id AS ref_sales_out_order_id, o0.code AS ref_order_code " +
                 "FROM orders o LEFT JOIN dealers d ON d.id=o.dealer_id " +
                 "LEFT JOIN warehouses w ON w.id=o.warehouse_id " +
                 "LEFT JOIN sales_outs so ON so.id=o.ref_sales_out_id " +
@@ -110,18 +159,30 @@ public class SalesReturnController {
         data.put("refOrderCode", t.get("ref_order_code"));
         data.put("refSalesOutId", t.get("ref_sales_out_id"));
         data.put("refSalesOutCode", t.get("ref_sales_out_code"));
+        data.put("sourceSalesOutId", t.get("ref_sales_out_id"));
+        data.put("sourceSalesOutCode", t.get("ref_sales_out_code"));
         data.put("returnReason", t.get("return_reason"));
+        try { data.put("reasonCode", t.get("reason_code")); } catch (Exception ignored) {}
         data.put("remark", t.get("remark"));
         data.put("status", t.get("status"));
         data.put("amountInclTax", t.get("amount_incl_tax"));
         data.put("finalAmount", t.get("final_amount"));
+        try { data.put("sourceSalesOutStatus", t.get("source_sales_out_status")); } catch (Exception ignored) {}
+        data.put("taxAmount", t.get("tax_amount"));
         data.put("expectedDate", t.get("expected_date"));
+        try { data.put("submittedAt", t.get("submitted_at")); } catch (Exception ignored) {}
+        try { data.put("approvedAt", t.get("approved_at")); } catch (Exception ignored) {}
+        try { data.put("cancelledAt", t.get("cancelled_at")); } catch (Exception ignored) {}
         try { data.put("createdAt", com.dms.common.util.DateFmt.fmt(t.get("created_at"))); } catch (Exception ignored) {}
 
         var lq = em.createNativeQuery(
-                "SELECT ol.id, ol.seq, ol.product_id, ol.qty, ol.unit_price, ol.tax_rate, ol.sub_total, " +
-                "p.code AS p_code, p.name_cn AS p_name, p.spec AS p_spec, p.unit AS p_unit, p.is_serial_managed " +
-                "FROM order_lines ol LEFT JOIN products p ON p.id=ol.product_id WHERE ol.order_id=?1 ORDER BY ol.seq, ol.id", Tuple.class);
+                "SELECT ol.id, ol.seq, ol.product_id, ol.qty, ol.unit_price, ol.tax_rate, ol.sub_total, ol.final_amount, ol.batch_no, ol.serial_no, ol.extra, " +
+                "p.code AS p_code, p.name_cn AS p_name, p.spec AS p_spec, p.unit AS p_unit, p.is_serial_managed, " +
+                "COALESCE(sol.shipped_qty, sol.qty, 0) AS shipped_qty, COALESCE(sol.returned_qty,0) AS returned_qty, COALESCE(sol.return_locked_qty,0) AS locked_qty, sol.seq AS source_line_no, ol2.seq AS order_line_no " +
+                "FROM order_lines ol LEFT JOIN products p ON p.id=ol.product_id " +
+                "LEFT JOIN sales_out_lines sol ON sol.id = CAST(COALESCE(ol.extra->>'sourceOutLineId','0') AS bigint) " +
+                "LEFT JOIN order_lines ol2 ON ol2.id = sol.source_order_line_id " +
+                "WHERE ol.order_id=?1 ORDER BY ol.seq, ol.id", Tuple.class);
         lq.setParameter(1, id);
         @SuppressWarnings("unchecked")
         List<Tuple> lrows = lq.getResultList();
@@ -129,11 +190,21 @@ public class SalesReturnController {
         for (Tuple l : lrows) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", l.get("id")); m.put("seq", l.get("seq"));
+            m.put("id", l.get("id"));
+            m.put("sourceOutLineId", sourceOutLineId(l.get("extra"), l.get("id")));
+            m.put("lineNo", l.get("source_line_no"));
+            m.put("orderLineNo", l.get("order_line_no"));
             m.put("productId", l.get("product_id"));
             m.put("productCode", l.get("p_code")); m.put("productName", l.get("p_name"));
             m.put("productSpec", l.get("p_spec")); m.put("unit", l.get("p_unit"));
+            m.put("batchNo", l.get("batch_no")); m.put("serialNo", l.get("serial_no"));
             m.put("qty", l.get("qty")); m.put("unitPrice", l.get("unit_price"));
             m.put("taxRate", l.get("tax_rate")); m.put("subtotal", l.get("sub_total"));
+            m.put("finalAmount", l.get("final_amount"));
+            m.put("shippedQty", l.get("shipped_qty"));
+            m.put("returnedQty", l.get("returned_qty"));
+            m.put("lockedQty", l.get("locked_qty"));
+            m.put("returnableQty", toBd(l.get("shipped_qty")).subtract(toBd(l.get("returned_qty"))).subtract(toBd(l.get("locked_qty"))).max(BigDecimal.ZERO));
             m.put("isSerialManaged", l.get("is_serial_managed"));
             lines.add(m);
         }
@@ -146,21 +217,34 @@ public class SalesReturnController {
     @Transactional(readOnly = true)
     public ApiResponse<List<Map<String, Object>>> shippedOuts(
             @RequestParam(required = false) Long orderId,
-            @RequestParam(required = false) Long dealerId) {
+            @RequestParam(required = false) Long dealerId,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String batchNo,
+            @RequestParam(required = false) String serialNo,
+            @RequestParam(required = false) Long productId) {
         UUID tid = TenantContext.getTenantId();
         StringBuilder sql = new StringBuilder(
-                "SELECT so.id, so.code, so.dealer_id, so.warehouse_id, so.source_order_id, so.status, " +
+                "SELECT so.id, so.code, so.dealer_id, so.warehouse_id, so.source_order_id, so.status, COALESCE(so.sales_date, so.shipped_at, so.created_at) AS sales_date, " +
                 "d.name AS dealer_name, w.name AS warehouse_name, o.code AS order_code " +
                 "FROM sales_outs so LEFT JOIN dealers d ON d.id=so.dealer_id " +
                 "LEFT JOIN warehouses w ON w.id=so.warehouse_id LEFT JOIN orders o ON o.id=so.source_order_id " +
-                "WHERE so.tenant_id=?1 AND so.deleted_at IS NULL AND COALESCE(so.is_red,false)=false " +
-                "AND so.status IN ('PARTIAL_SHIPPED','COMPLETED')");
+                "WHERE so.tenant_id=? AND so.deleted_at IS NULL AND COALESCE(so.is_red,false)=false " +
+                "AND so.status IN ('COMPLETED','PARTIAL_OUTBOUND','PARTIAL_SHIPPED','SHIPPED') " +
+                "AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id " +
+                "AND (COALESCE(sl.shipped_qty,sl.qty,0) - COALESCE(sl.return_locked_qty,0) - COALESCE(sl.returned_qty,0)) > 0)");
         List<Object> params = new ArrayList<>();
         params.add(tid);
-        int idx = 2;
-        if (orderId != null) { sql.append(" AND so.source_order_id = ?").append(idx++); params.add(orderId); }
-        if (dealerId != null) { sql.append(" AND so.dealer_id = ?").append(idx++); params.add(dealerId); }
-        sql.append(" ORDER BY so.id DESC LIMIT 200");
+        if (orderId != null) { sql.append(" AND so.source_order_id = ?"); params.add(orderId); }
+        if (dealerId != null) { sql.append(" AND so.dealer_id = ?"); params.add(dealerId); }
+        if (startDate != null && !startDate.isBlank()) { sql.append(" AND COALESCE(so.sales_date, so.shipped_at, so.created_at) >= ?"); params.add(java.sql.Date.valueOf(startDate)); }
+        if (endDate != null && !endDate.isBlank()) { sql.append(" AND COALESCE(so.sales_date, so.shipped_at, so.created_at) <= ?"); params.add(java.sql.Date.valueOf(endDate)); }
+        if (keyword != null && !keyword.isBlank()) { sql.append(" AND (o.code ILIKE ? OR so.code ILIKE ? OR d.name ILIKE ?)"); String kw="%"+keyword+"%"; params.add(kw); params.add(kw); params.add(kw); }
+        if (batchNo != null && !batchNo.isBlank()) { sql.append(" AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id AND sl.batch_no ILIKE ?)"); params.add("%"+batchNo+"%"); }
+        if (serialNo != null && !serialNo.isBlank()) { sql.append(" AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id AND sl.serial_no ILIKE ?)"); params.add("%"+serialNo+"%"); }
+        if (productId != null) { sql.append(" AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id AND sl.product_id=?)"); params.add(productId); }
+        sql.append(" ORDER BY so.sales_date DESC, so.id DESC LIMIT 200");
         var q = em.createNativeQuery(sql.toString(), Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
         @SuppressWarnings("unchecked")
@@ -172,7 +256,7 @@ public class SalesReturnController {
             m.put("dealerId", t.get("dealer_id")); m.put("dealerName", t.get("dealer_name"));
             m.put("warehouseId", t.get("warehouse_id")); m.put("warehouseName", t.get("warehouse_name"));
             m.put("orderId", t.get("source_order_id")); m.put("orderCode", t.get("order_code"));
-            m.put("status", t.get("status"));
+            m.put("salesDate", com.dms.common.util.DateFmt.fmt(t.get("sales_date"))); m.put("status", t.get("status"));
             list.add(m);
         }
         return ApiResponse.ok(list);
@@ -191,10 +275,12 @@ public class SalesReturnController {
         Tuple h = hr.get(0);
 
         var lq = em.createNativeQuery(
-                "SELECT sol.id, sol.seq, sol.product_id, sol.batch_no, sol.serial_no, " +
-                "COALESCE(sol.shipped_qty, sol.qty, 0) AS shipped_qty, sol.unit_price, sol.tax_rate, " +
-                "p.code AS p_code, p.name_cn AS p_name, p.spec AS p_spec, p.unit AS p_unit, p.is_serial_managed " +
+                "SELECT sol.id, sol.seq, sol.product_id, sol.batch_no, sol.serial_no, sol.source_order_line_id, " +
+                "COALESCE(sol.shipped_qty, sol.qty, 0) AS shipped_qty, COALESCE(sol.return_locked_qty,0) AS locked_qty, COALESCE(sol.returned_qty,0) AS returned_qty, sol.unit_price, sol.tax_rate, sol.final_amount, " +
+                "p.code AS p_code, p.name_cn AS p_name, p.spec AS p_spec, p.unit AS p_unit, p.is_serial_managed, " +
+                "COALESCE(ol.is_gift,false) AS is_gift, COALESCE(ol.line_level,'NORMAL') AS line_level, ol.seq AS order_line_no " +
                 "FROM sales_out_lines sol LEFT JOIN products p ON p.id=sol.product_id " +
+                "LEFT JOIN order_lines ol ON ol.id = sol.source_order_line_id " +
                 "WHERE sol.sales_out_id=?1 ORDER BY sol.seq, sol.id", Tuple.class);
         lq.setParameter(1, salesOutId);
         @SuppressWarnings("unchecked")
@@ -202,32 +288,30 @@ public class SalesReturnController {
         List<Map<String, Object>> lines = new ArrayList<>();
         for (Tuple l : rows) {
             BigDecimal shipped = new BigDecimal(String.valueOf(l.get("shipped_qty")));
-            BigDecimal alreadyReturned = BigDecimal.ZERO;
-            try {
-                Object ar = em.createNativeQuery(
-                        "SELECT COALESCE(SUM(ol.qty),0) FROM order_lines ol JOIN orders o ON o.id=ol.order_id " +
-                        "WHERE o.ref_sales_out_id=?1 AND o.tenant_id=?2 AND COALESCE(o.is_red,false)=true AND o.status NOT IN ('CANCELLED','REJECTED') " +
-                        "AND ol.product_id=?3 AND COALESCE(ol.batch_no,'')=COALESCE(CAST(?4 AS varchar),'') AND COALESCE(ol.serial_no,'')=COALESCE(CAST(?5 AS varchar),'')")
-                        .setParameter(1, salesOutId).setParameter(2, tid)
-                        .setParameter(3, l.get("product_id"))
-                        .setParameter(4, l.get("batch_no"))
-                        .setParameter(5, l.get("serial_no"))
-                        .getSingleResult();
-                alreadyReturned = new BigDecimal(String.valueOf(ar));
-            } catch (Exception ignored) {}
-            BigDecimal returnable = shipped.subtract(alreadyReturned);
+            BigDecimal locked = toBd(l.get("locked_qty"));
+            BigDecimal returned = toBd(l.get("returned_qty"));
+            boolean lineIsGift = Boolean.TRUE.equals(l.get("is_gift"));
+            String lineLevel = l.get("line_level") == null ? "NORMAL" : String.valueOf(l.get("line_level"));
+            if (lineIsGift || "PARENT".equals(lineLevel)) continue;
+            BigDecimal returnable = shipped.subtract(locked).subtract(returned);
             if (returnable.signum() < 0) returnable = BigDecimal.ZERO;
             if (returnable.signum() == 0) continue;
             Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", l.get("id"));
+            m.put("sourceOutLineId", l.get("id"));
+            m.put("lineNo", l.get("seq"));
+            m.put("orderLineNo", l.get("order_line_no"));
             m.put("productId", l.get("product_id"));
             m.put("productCode", l.get("p_code")); m.put("productName", l.get("p_name"));
             m.put("productSpec", l.get("p_spec")); m.put("unit", l.get("p_unit"));
             m.put("batchNo", l.get("batch_no")); m.put("serialNo", l.get("serial_no"));
             m.put("isSerialManaged", l.get("is_serial_managed"));
             m.put("shippedQty", shipped);
+            m.put("lockedQty", locked);
+            m.put("returnedQty", returned);
             m.put("returnableQty", returnable);
             m.put("qty", returnable);
-            m.put("unitPrice", l.get("unit_price"));
+            m.put("unitPrice", toBd(l.get("final_amount")).divide(shipped, 4, java.math.RoundingMode.HALF_UP));
             m.put("taxRate", l.get("tax_rate"));
             lines.add(m);
         }
@@ -245,13 +329,13 @@ public class SalesReturnController {
     public ApiResponse<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         UUID tid = TenantContext.getTenantId();
         if (body.get("dealerId") == null) return ApiResponse.fail(40001, "经销商不能为空");
-        if (body.get("warehouseId") == null) return ApiResponse.fail(40001, "收货仓库不能为空");
-        if (body.get("refSalesOutId") == null) return ApiResponse.fail(40001, "必须关联已发货的发货单");
-        if (body.get("returnReason") == null || String.valueOf(body.get("returnReason")).isBlank())
+        Long refSalesOutId = firstLong(body, "refSalesOutId", "sourceSalesOutId");
+        if (refSalesOutId == null) return ApiResponse.fail(40001, "必须关联已发货的发货单");
+        String reasonText = firstString(body, "returnReason", "reason");
+        String reasonCode = firstString(body, "reasonCode");
+        if ((reasonText == null || reasonText.isBlank()) && (reasonCode == null || reasonCode.isBlank()))
             return ApiResponse.fail(40001, "退货原因不能为空");
 
-        Long refSalesOutId = toLong(body.get("refSalesOutId"));
-        // 校验发货单存在且已发货
         var soQ = em.createNativeQuery(
                 "SELECT id, source_order_id, dealer_id, warehouse_id, status FROM sales_outs WHERE id=?1 AND tenant_id=?2 AND COALESCE(is_red,false)=false", Tuple.class);
         soQ.setParameter(1, refSalesOutId).setParameter(2, tid);
@@ -262,30 +346,34 @@ public class SalesReturnController {
         if (!"PARTIAL_SHIPPED".equals(so.get("status")) && !"COMPLETED".equals(so.get("status")))
             return ApiResponse.fail(40001, "只能关联已发货(部分发货/已完成)的发货单");
 
+        Long warehouseId = firstLong(body, "warehouseId");
+        if (warehouseId == null) warehouseId = toLong(so.get("warehouse_id"));
+
         String code = docNoGenerator.next("RS");
-        BigDecimal total = calcTotal(body);
-
-        var insert = em.createNativeQuery(
-                "INSERT INTO orders (tenant_id, code, order_type, is_red, dealer_id, warehouse_id, ref_order_id, ref_sales_out_id, return_reason, " +
-                "ship_snapshot, amount_incl_tax, discount_amount, final_amount, tax_amount, expected_date, status, remark, extra, created_at, updated_at, created_by) " +
-                "VALUES (?1, ?2, 'RETURN', true, ?3, ?4, ?5, ?6, ?7, CAST(?8 AS jsonb), ?9, 0, ?9, 0, CAST(?10 AS date), 'DRAFT', ?11, CAST(?12 AS jsonb), now(), now(), ?13) RETURNING id");
-        insert.setParameter(1, tid).setParameter(2, code)
-              .setParameter(3, toLong(body.get("dealerId")))
-              .setParameter(4, toLong(body.get("warehouseId")))
-              .setParameter(5, so.get("source_order_id"))
-              .setParameter(6, refSalesOutId)
-              .setParameter(7, body.get("returnReason"))
-              .setParameter(8, "{}")
-              .setParameter(9, total)
-              .setParameter(10, body.get("expectedDate"))
-              .setParameter(11, body.getOrDefault("remark", ""))
-              .setParameter(12, "{}")
-              .setParameter(13, TenantContext.getUserId());
-        Long id = ((Number) insert.getSingleResult()).longValue();
-
         String validate = validateReturnLines(tid, refSalesOutId, body);
         if (validate != null) return ApiResponse.fail(40001, validate);
-        insertLines(id, body);
+        BigDecimal total = calcTotal(refSalesOutId, body);
+
+        var insert = em.createNativeQuery(
+                "INSERT INTO orders (tenant_id, code, order_type, is_red, dealer_id, warehouse_id, ref_order_id, ref_sales_out_id, return_reason, reason_code, " +
+                "ship_snapshot, amount_incl_tax, discount_amount, final_amount, tax_amount, expected_date, status, remark, extra, created_at, updated_at, created_by) " +
+                "VALUES (?1, ?2, 'RETURN', true, ?3, ?4, ?5, ?6, ?7, ?8, CAST(?9 AS jsonb), ?10, 0, ?10, 0, CAST(?11 AS date), 'DRAFT', ?12, CAST(?13 AS jsonb), now(), now(), ?14) RETURNING id");
+        insert.setParameter(1, tid).setParameter(2, code)
+              .setParameter(3, toLong(body.get("dealerId")))
+              .setParameter(4, warehouseId)
+              .setParameter(5, so.get("source_order_id"))
+              .setParameter(6, refSalesOutId)
+              .setParameter(7, reasonText)
+              .setParameter(8, reasonCode)
+              .setParameter(9, "{}")
+              .setParameter(10, total)
+              .setParameter(11, body.get("expectedDate"))
+              .setParameter(12, body.getOrDefault("remark", ""))
+              .setParameter(13, "{}")
+              .setParameter(14, TenantContext.getUserId());
+        Long id = ((Number) insert.getSingleResult()).longValue();
+
+        insertLines(id, refSalesOutId, body);
 
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("id", id); res.put("code", code);
@@ -299,33 +387,88 @@ public class SalesReturnController {
         UUID tid = TenantContext.getTenantId();
         String status = getStatus(id, tid);
         if (status == null) return ApiResponse.fail(40404, "销退订单不存在");
-        if (!"DRAFT".equals(status)) return ApiResponse.fail(40009, "仅草稿可编辑，当前状态: " + status);
+        if (!List.of("DRAFT","REJECTED").contains(status)) return ApiResponse.fail(40009, "仅草稿或驳回状态可编辑，当前状态: " + status);
 
-        Long refSalesOutId = toLong(body.get("refSalesOutId"));
+        Long refSalesOutId = firstLong(body, "refSalesOutId", "sourceSalesOutId");
         String validate = validateReturnLines(tid, refSalesOutId, body);
         if (validate != null) return ApiResponse.fail(40001, validate);
 
-        BigDecimal total = calcTotal(body);
+        Long warehouseId = firstLong(body, "warehouseId");
+        BigDecimal total = calcTotal(refSalesOutId, body);
         em.createNativeQuery(
-                "UPDATE orders SET dealer_id=?1, warehouse_id=?2, ref_sales_out_id=?3, return_reason=?4, " +
-                "amount_incl_tax=?5, final_amount=?5, expected_date=CAST(?6 AS date), remark=?7, updated_at=now() WHERE id=?8 AND tenant_id=?9")
-          .setParameter(1, toLong(body.get("dealerId"))).setParameter(2, toLong(body.get("warehouseId")))
-          .setParameter(3, refSalesOutId).setParameter(4, body.get("returnReason"))
-          .setParameter(5, total).setParameter(6, body.get("expectedDate"))
-          .setParameter(7, body.getOrDefault("remark", ""))
-          .setParameter(8, id).setParameter(9, tid).executeUpdate();
+                "UPDATE orders SET dealer_id=?1, warehouse_id=?2, ref_sales_out_id=?3, return_reason=?4, reason_code=?5, " +
+                "amount_incl_tax=?6, final_amount=?6, expected_date=CAST(?7 AS date), remark=?8, updated_at=now() WHERE id=?9 AND tenant_id=?10")
+          .setParameter(1, toLong(body.get("dealerId"))).setParameter(2, warehouseId)
+          .setParameter(3, refSalesOutId)
+          .setParameter(4, firstString(body, "returnReason", "reason"))
+          .setParameter(5, firstString(body, "reasonCode"))
+          .setParameter(6, total).setParameter(7, body.get("expectedDate"))
+          .setParameter(8, body.getOrDefault("remark", ""))
+          .setParameter(9, id).setParameter(10, tid).executeUpdate();
         em.createNativeQuery("DELETE FROM order_lines WHERE order_id=?1").setParameter(1, id).executeUpdate();
-        insertLines(id, body);
+        insertLines(id, refSalesOutId, body);
         return ApiResponse.ok(Map.of("id", id));
     }
 
+    @PostMapping("/{id}/create-red-out")
+    @OperationLog(businessType = "salesReturn", action = OperationAction.CREATE, remark = "销退订单-生成红字销售出库")
+    @Transactional
+    public ApiResponse<Map<String, Object>> createRedOut(@PathVariable Long id) {
+        UUID tid = TenantContext.getTenantId();
+        var rq = em.createNativeQuery("SELECT id,status,dealer_id,warehouse_id,final_amount,code FROM orders WHERE id=?1 AND tenant_id=?2 AND COALESCE(is_red,false)=true", Tuple.class)
+                .setParameter(1,id).setParameter(2,tid).getResultList();
+        if (rq.isEmpty()) return ApiResponse.fail(40404, "销退订单不存在");
+        Tuple r = (Tuple) rq.get(0);
+        String status = String.valueOf(r.get("status"));
+        if (!List.of("APPROVED","RECEIVING","COMPLETED").contains(status)) return ApiResponse.fail(40009, "仅已审批销退订单可生成红字销售出库");
+        Long dealerId = toLong(r.get("dealer_id"));
+        Long warehouseId = toLong(r.get("warehouse_id"));
+        var exists = em.createNativeQuery("SELECT id,code FROM sales_outs WHERE source_order_id=?1 AND tenant_id=?2 AND COALESCE(is_red,false)=true AND deleted_at IS NULL ORDER BY id DESC LIMIT 1", Tuple.class)
+                .setParameter(1,id).setParameter(2,tid).getResultList();
+        if (!exists.isEmpty()) {
+            Tuple e = (Tuple) exists.get(0);
+            return ApiResponse.ok(Map.of("id", e.get("id"), "code", e.get("code"), "existed", true));
+        }
+        String code = docNoGenerator.next("GIR");
+        var ins = em.createNativeQuery(
+                "INSERT INTO sales_outs (tenant_id,code,dealer_id,warehouse_id,is_red,status,auto_created,source_order_id,sales_date,amount_incl_tax,created_at,updated_at,created_by) " +
+                "VALUES (?1,?2,?3,?4,true,'DRAFT',false,?5,CURRENT_DATE,?6,now(),now(),?7) RETURNING id", Tuple.class)
+          .setParameter(1,tid).setParameter(2,code).setParameter(3,dealerId).setParameter(4,warehouseId).setParameter(5,id).setParameter(6,r.get("final_amount")).setParameter(7,TenantContext.getUserId());
+        Tuple inserted = (Tuple) ins.getSingleResult();
+        Long outId = ((Number) inserted.get("id")).longValue();
+        var lines = em.createNativeQuery("SELECT product_id,product_code,product_name,product_spec,batch_no,serial_no,qty,unit_price,tax_rate,sub_total,extra FROM order_lines WHERE order_id=?1 ORDER BY seq,id", Tuple.class)
+                .setParameter(1,id).getResultList();
+        int seq=1;
+        for (Object o : lines) {
+            Tuple l = (Tuple) o;
+            BigDecimal qty = toBd(l.get("qty"));
+            BigDecimal price = toBd(l.get("unit_price")).negate();
+            BigDecimal sub = toBd(l.get("sub_total")).negate();
+            em.createNativeQuery(
+                    "INSERT INTO sales_out_lines (sales_out_id,seq,product_id,warehouse_id,batch_no,serial_no,expected_qty,qty,unit_price,subtotal,created_at) " +
+                    "VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,now())")
+              .setParameter(1,outId).setParameter(2,seq++).setParameter(3,toLong(l.get("product_id"))).setParameter(4,warehouseId)
+              .setParameter(5,l.get("batch_no")).setParameter(6,l.get("serial_no")).setParameter(7,qty).setParameter(8,qty).setParameter(9,price).setParameter(10,sub)
+              .executeUpdate();
+        }
+        Map<String,Object> res = new LinkedHashMap<>();
+        res.put("id", outId); res.put("code", code); res.put("existed", false);
+        return ApiResponse.ok(res);
+    }
+
     @PostMapping("/{id}/submit")
+    @OperationLog(businessType = "salesReturn", action = OperationAction.UPDATE, remark = "销退订单-提交审批")
     @Transactional
     public ApiResponse<Map<String, Object>> submit(@PathVariable Long id) {
         UUID tid = TenantContext.getTenantId();
-        int n = em.createNativeQuery("UPDATE orders SET status='PENDING_APPROVAL', submitted_at=now(), updated_at=now() WHERE id=?1 AND tenant_id=?2 AND status='DRAFT' AND COALESCE(is_red,false)=true")
+        int n = em.createNativeQuery("UPDATE orders SET status='PENDING_APPROVAL', submitted_at=now(), updated_at=now() WHERE id=?1 AND tenant_id=?2 AND status IN ('DRAFT','REJECTED') AND COALESCE(is_red,false)=true")
                 .setParameter(1, id).setParameter(2, tid).executeUpdate();
         if (n == 0) return ApiResponse.fail(40009, "Only draft sales return can be submitted");
+        String lockError = lockReturnLines(tid, id, false);
+        if (lockError != null) {
+            em.createNativeQuery("UPDATE orders SET status='DRAFT', updated_at=now() WHERE id=?1 AND tenant_id=?2").setParameter(1, id).setParameter(2, tid).executeUpdate();
+            return ApiResponse.fail(40009, lockError);
+        }
         try {
             StartApprovalRequest request = new StartApprovalRequest();
             request.setBusinessType("SALES_RETURN");
@@ -338,6 +481,7 @@ public class SalesReturnController {
             boolean approved = "APPROVED".equals(instance.getStatus().name()) || "AUTO_APPROVED".equals(instance.getStatus().name());
             return ApiResponse.ok(Map.of("id", id, "newStatus", approved ? "APPROVED" : "PENDING_APPROVAL", "approvalInstanceId", instance.getId(), "autoApproved", approved));
         } catch (Exception e) {
+            lockReturnLines(tid, id, true);
             em.createNativeQuery("UPDATE orders SET status='DRAFT', updated_at=now() WHERE id=?1 AND tenant_id=?2").setParameter(1, id).setParameter(2, tid).executeUpdate();
             throw e;
         }
@@ -361,7 +505,7 @@ public class SalesReturnController {
     }
 
     @PostMapping("/{id}/approve")
-    @OperationLog(businessType = "purchaseReturn", action = OperationAction.APPROVE, remark = "采退订单-审批通过")
+    @OperationLog(businessType = "salesReturn", action = OperationAction.APPROVE, remark = "销退订单-审批通过")
     @Transactional
     public ApiResponse<Map<String, Object>> approve(@PathVariable Long id) {
         ApprovalInstance instance = approvalService.approveBusiness("SALES_RETURN", id, null);
@@ -374,6 +518,8 @@ public class SalesReturnController {
     @Transactional
     public ApiResponse<Map<String, Object>> reject(@PathVariable Long id) {
         ApprovalInstance instance = approvalService.rejectBusiness("SALES_RETURN", id, null);
+        UUID tid = TenantContext.getTenantId();
+        lockReturnLines(tid, id, true);
         return ApiResponse.ok(Map.of("id", id, "newStatus", instance.getStatus().name(), "approvalInstanceId", instance.getId()));
     }
 
@@ -384,7 +530,7 @@ public class SalesReturnController {
         UUID tid = TenantContext.getTenantId();
         String status = getStatus(id, tid);
         if (status == null) return ApiResponse.fail(40404, "销退订单不存在");
-        if (!"DRAFT".equals(status) && !"APPROVED".equals(status))
+        if (!List.of("DRAFT","PENDING_APPROVAL","REJECTED","APPROVED").contains(status))
             return ApiResponse.fail(40009, "当前状态不允许取消: " + status);
         if ("APPROVED".equals(status)) {
             Object cnt = em.createNativeQuery(
@@ -398,14 +544,15 @@ public class SalesReturnController {
             if (new BigDecimal(String.valueOf(rcv)).signum() > 0)
                 return ApiResponse.fail(40009, "已存在收货记录，不能取消销退订单");
         }
-        em.createNativeQuery("UPDATE orders SET status='CANCELLED', closed_at=now(), updated_at=now() WHERE id=?1 AND tenant_id=?2")
+        lockReturnLines(tid, id, true);
+        em.createNativeQuery("UPDATE orders SET status='CANCELLED', cancelled_at=now(), updated_at=now() WHERE id=?1 AND tenant_id=?2")
           .setParameter(1, id).setParameter(2, tid).executeUpdate();
         em.createNativeQuery(
                 "UPDATE receipts SET status='CANCELLED', updated_at=now() WHERE ref_doc_type='sales_return' AND ref_doc_id=?1 AND tenant_id=?2 AND status IN ('DRAFT','APPROVED','PARTIAL_RECEIVED')")
           .setParameter(1, id).setParameter(2, tid).executeUpdate();
         em.createNativeQuery(
                 "UPDATE receipt_batches SET status='CANCELLED', cancelled_at=now(), updated_at=now() WHERE receipt_id IN " +
-                "(SELECT id FROM receipts WHERE ref_doc_type='sales_return' AND ref_doc_id=?1 AND tenant_id=?2) AND status='DRAFT'")
+                "(SELECT id FROM receipts WHERE ref_doc_type='sales_return' AND ref_doc_id=?1 AND tenant_id=?2) AND status IN ('DRAFT','REJECTED')")
           .setParameter(1, id).setParameter(2, tid).executeUpdate();
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("id", id); res.put("status", "CANCELLED");
@@ -425,92 +572,117 @@ public class SalesReturnController {
     }
 
     // ==================== 辅助 ====================
-    @SuppressWarnings("unchecked")
-    private String validateReturnLines(UUID tid, Long refSalesOutId, Map<String, Object> body) {
-        if (refSalesOutId == null) return "必须关联已发货的发货单";
-        List<Map<String, Object>> lines = (List<Map<String, Object>>) body.get("lines");
-        if (lines == null || lines.isEmpty()) return "销退明细不能为空";
-        for (int i = 0; i < lines.size(); i++) {
-            Map<String, Object> l = lines.get(i);
-            if (l.get("productId") == null) return "第 " + (i + 1) + " 行未选择产品";
-            BigDecimal qty = toBd(l.get("qty"));
-            if (qty.signum() <= 0) return "第 " + (i + 1) + " 行退货数量必须大于 0";
-        }
-        // 按 product+batch+serial 聚合退货数量，校验不超过可退数量
-        var lq = em.createNativeQuery(
-                "SELECT product_id, COALESCE(batch_no,'') AS batch_no, COALESCE(serial_no,'') AS serial_no, " +
-                "COALESCE(SUM(COALESCE(shipped_qty,qty,0)),0) AS shipped " +
-                "FROM sales_out_lines WHERE sales_out_id=?1 GROUP BY product_id, batch_no, serial_no", Tuple.class);
-        lq.setParameter(1, refSalesOutId);
-        Map<String, BigDecimal> shippedMap = new HashMap<>();
-        for (Object o : lq.getResultList()) {
+    private String lockReturnLines(UUID tid, Long returnOrderId, boolean unlock) {
+        var rows = em.createNativeQuery("SELECT id, qty, extra FROM order_lines WHERE order_id=?1", Tuple.class).setParameter(1, returnOrderId).getResultList();
+        for (Object o : rows) {
             Tuple t = (Tuple) o;
-            String key = t.get("product_id") + "|" + t.get("batch_no") + "|" + t.get("serial_no");
-            shippedMap.put(key, new BigDecimal(String.valueOf(t.get("shipped"))));
-        }
-        // 减去其它未取消销退已占用的数量
-        var aq = em.createNativeQuery(
-                "SELECT ol.product_id, COALESCE(ol.batch_no,'') AS batch_no, COALESCE(ol.serial_no,'') AS serial_no, " +
-                "COALESCE(SUM(ol.qty),0) AS used FROM order_lines ol JOIN orders o ON o.id=ol.order_id " +
-                "WHERE o.ref_sales_out_id=?1 AND o.tenant_id=?2 AND COALESCE(o.is_red,false)=true AND o.status NOT IN ('CANCELLED','REJECTED') " +
-                "GROUP BY ol.product_id, ol.batch_no, ol.serial_no", Tuple.class);
-        aq.setParameter(1, refSalesOutId).setParameter(2, tid);
-        Map<String, BigDecimal> usedMap = new HashMap<>();
-        for (Object o : aq.getResultList()) {
-            Tuple t = (Tuple) o;
-            String key = t.get("product_id") + "|" + t.get("batch_no") + "|" + t.get("serial_no");
-            usedMap.put(key, new BigDecimal(String.valueOf(t.get("used"))));
-        }
-        Map<String, BigDecimal> reqMap = new HashMap<>();
-        int rowNo = 0;
-        for (Map<String, Object> l : lines) {
-            rowNo++;
-            String key = l.get("productId") + "|" + strOr(l.get("batchNo"), "") + "|" + strOr(l.get("serialNo"), "");
-            reqMap.merge(key, toBd(l.get("qty")), BigDecimal::add);
-        }
-        for (Map.Entry<String, BigDecimal> e : reqMap.entrySet()) {
-            BigDecimal shipped = shippedMap.getOrDefault(e.getKey(), BigDecimal.ZERO);
-            BigDecimal used = usedMap.getOrDefault(e.getKey(), BigDecimal.ZERO);
-            BigDecimal available = shipped.subtract(used);
-            if (e.getValue().compareTo(available) > 0) {
-                return "第 " + rowNo + " 行累计退货数量 " + e.getValue() + " 超过可退数量 " + available + "（已发货 " + shipped + "，已退 " + used + "）";
+            Long outLineId = jsonLong(t.get("extra"), "sourceOutLineId");
+            if (outLineId == null) continue;
+            BigDecimal qty = toBd(t.get("qty"));
+            if (unlock) {
+                em.createNativeQuery("UPDATE sales_out_lines SET return_locked_qty=GREATEST(return_locked_qty-?1,0) WHERE id=?2").setParameter(1, qty).setParameter(2, outLineId).executeUpdate();
+            } else {
+                int updated = em.createNativeQuery("UPDATE sales_out_lines SET return_locked_qty=return_locked_qty+?1 WHERE id=?2 AND COALESCE(shipped_qty,qty,0)-COALESCE(return_locked_qty,0)-COALESCE(returned_qty,0)>=?1").setParameter(1, qty).setParameter(2, outLineId).executeUpdate();
+                if (updated == 0) return "可退数量不足，原出库行可能已被其他销退单锁定";
             }
         }
         return null;
     }
 
+    private Long jsonLong(Object extra, String key) {
+        if (extra == null) return null;
+        try {
+            var m = new com.fasterxml.jackson.databind.ObjectMapper().readValue(String.valueOf(extra), Map.class);
+            Object v = m.get(key);
+            return v == null ? null : Long.valueOf(String.valueOf(v));
+        } catch (Exception e) { return null; }
+    }
+
     @SuppressWarnings("unchecked")
-    private void insertLines(Long orderId, Map<String, Object> body) {
+    private String validateReturnLines(UUID tid, Long refSalesOutId, Map<String, Object> body) {
+        if (refSalesOutId == null) return "请选择原销售出库单";
+        List<Map<String, Object>> lines = (List<Map<String, Object>>) body.get("lines");
+        if (lines == null || lines.isEmpty()) return "请添加销退明细";
+        Map<Long, BigDecimal> reqMap = new HashMap<>();
+        for (int i = 0; i < lines.size(); i++) {
+            Map<String, Object> l = lines.get(i);
+            Long sourceOutLineId = toLong(l.get("sourceOutLineId"));
+            if (sourceOutLineId == null) sourceOutLineId = toLong(l.get("id"));
+            if (sourceOutLineId == null) return "第 " + (i + 1) + " 行缺少原出库行";
+            BigDecimal qty = toBd(l.get("qty"));
+            if (qty.signum() <= 0) return "第 " + (i + 1) + " 行退货数量必须大于0";
+            reqMap.merge(sourceOutLineId, qty, BigDecimal::add);
+        }
+        for (Map.Entry<Long, BigDecimal> e : reqMap.entrySet()) {
+            var rs = em.createNativeQuery("SELECT COALESCE(shipped_qty,qty,0) AS shipped, COALESCE(return_locked_qty,0) AS locked, COALESCE(returned_qty,0) AS returned FROM sales_out_lines WHERE id=?1 AND sales_out_id=?2", Tuple.class)
+                    .setParameter(1, e.getKey()).setParameter(2, refSalesOutId).getResultList();
+            if (rs.isEmpty()) return "原出库行 " + e.getKey() + " 不存在";
+            Tuple t = (Tuple) rs.get(0);
+            BigDecimal available = toBd(t.get("shipped")).subtract(toBd(t.get("locked"))).subtract(toBd(t.get("returned")));
+            if (e.getValue().compareTo(available) > 0) return "原出库行 " + e.getKey() + " 可退数量不足";
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void insertLines(Long orderId, Long refSalesOutId, Map<String, Object> body) {
         List<Map<String, Object>> lines = (List<Map<String, Object>>) body.get("lines");
         if (lines == null) return;
         int seq = 1;
         for (Map<String, Object> l : lines) {
             if (l.get("productId") == null) continue;
             BigDecimal qty = toBd(l.get("qty"));
-            BigDecimal price = toBd(l.get("unitPrice"));
-            BigDecimal tax = toBd(l.get("taxRate"));
+            Long sourceOutLineId = toLong(l.get("sourceOutLineId"));
+            if (sourceOutLineId == null) sourceOutLineId = toLong(l.get("id"));
+            Tuple source = sourceOutLine(refSalesOutId, sourceOutLineId);
+            BigDecimal shipped = toBd(source.get("shipped_qty"));
+            if (shipped.signum() <= 0) shipped = toBd(source.get("qty"));
+            BigDecimal sourceAmount = toBd(source.get("final_amount"));
+            BigDecimal price = shipped.signum() > 0 ? sourceAmount.divide(shipped, 4, java.math.RoundingMode.HALF_UP) : toBd(l.get("unitPrice"));
+            BigDecimal tax = toBd(source.get("tax_rate"));
             if (tax.signum() == 0) tax = new BigDecimal("0.13");
             BigDecimal sub = qty.multiply(price);
+            var taxSplit = com.dms.v4.V4Money.splitTax(sub, tax);
+            String extra = "{\"sourceOutLineId\":" + sourceOutLineId + "}";
             em.createNativeQuery(
-                    "INSERT INTO order_lines (order_id, seq, product_id, batch_no, serial_no, qty, unit_price, tax_rate, sub_total, is_gift, created_at, updated_at) " +
-                    "VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,now(),now())")
+                    "INSERT INTO order_lines (order_id, seq, product_id, product_code, product_name, product_spec, batch_no, serial_no, qty, unit_price, tax_rate, sub_total, standard_price_incl_tax, final_amount, amount_excl_tax, tax_amount, extra, is_gift, created_at, updated_at) " +
+                    "VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?12,?12,?13,?14,CAST(?15 AS jsonb),?16,now(),now())")
               .setParameter(1, orderId).setParameter(2, seq++)
               .setParameter(3, toLong(l.get("productId")))
-              .setParameter(4, l.get("batchNo"))
-              .setParameter(5, l.get("serialNo"))
-              .setParameter(6, qty).setParameter(7, price).setParameter(8, tax).setParameter(9, sub)
-              .setParameter(10, Boolean.TRUE.equals(l.get("isGift")))
+              .setParameter(4, l.get("productCode")).setParameter(5, l.get("productName")).setParameter(6, l.get("productSpec"))
+              .setParameter(7, l.get("batchNo"))
+              .setParameter(8, l.get("serialNo"))
+              .setParameter(9, qty).setParameter(10, price).setParameter(11, tax).setParameter(12, sub)
+              .setParameter(13, taxSplit.get("excl")).setParameter(14, taxSplit.get("tax"))
+              .setParameter(15, extra).setParameter(16, Boolean.TRUE.equals(l.get("isGift")))
               .executeUpdate();
         }
     }
 
-    private BigDecimal calcTotal(Map<String, Object> body) {
+    private BigDecimal calcTotal(Long refSalesOutId, Map<String, Object> body) {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> lines = (List<Map<String, Object>>) body.get("lines");
         BigDecimal total = BigDecimal.ZERO;
-        if (lines != null) for (Map<String, Object> l : lines)
-            total = total.add(toBd(l.get("qty")).multiply(toBd(l.get("unitPrice"))));
+        if (lines == null) return total;
+        for (Map<String, Object> l : lines) {
+            Long sourceOutLineId = toLong(l.get("sourceOutLineId"));
+            if (sourceOutLineId == null) sourceOutLineId = toLong(l.get("id"));
+            Tuple source = sourceOutLine(refSalesOutId, sourceOutLineId);
+            BigDecimal shipped = toBd(source.get("shipped_qty"));
+            if (shipped.signum() <= 0) shipped = toBd(source.get("qty"));
+            BigDecimal sourceAmount = toBd(source.get("final_amount"));
+            BigDecimal price = shipped.signum() > 0 ? sourceAmount.divide(shipped, 4, java.math.RoundingMode.HALF_UP) : toBd(l.get("unitPrice"));
+            total = total.add(com.dms.v4.V4Money.money(toBd(l.get("qty")).multiply(price)));
+        }
         return total;
+    }
+
+    private Tuple sourceOutLine(Long refSalesOutId, Long sourceOutLineId) {
+        if (refSalesOutId == null || sourceOutLineId == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "原出库行不能为空");
+        var rs = em.createNativeQuery("SELECT id, product_id, qty, shipped_qty, final_amount, tax_rate FROM sales_out_lines WHERE id=?1 AND sales_out_id=?2", Tuple.class)
+                .setParameter(1, sourceOutLineId).setParameter(2, refSalesOutId).getResultList();
+        if (rs.isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND, "原出库行不存在");
+        return (Tuple) rs.get(0);
     }
 
     private ApiResponse<Map<String, Object>> doTransition(Long id, String from, String to) {
@@ -543,9 +715,14 @@ public class SalesReturnController {
         m.put("refOrderId", t.get("ref_order_id"));
         m.put("refSalesOutId", t.get("ref_sales_out_id"));
         m.put("returnReason", t.get("return_reason"));
+        try { m.put("reasonCode", t.get("reason_code")); } catch (Exception ignored) {}
+        try {
+            Object ed = t.get("expected_date");
+            m.put("expectedDate", ed == null ? null : ed.toString());
+        } catch (Exception ignored) {}
         m.put("amountInclTax", t.get("amount_incl_tax"));
         m.put("finalAmount", t.get("final_amount"));
-        m.put("auditUserName", t.get("audit_user_name"));
+        try { m.put("auditUserName", t.get("audit_user_name")); } catch (Exception ignored) {}
         m.put("status", t.get("status"));
         try { m.put("createdAt", com.dms.common.util.DateFmt.fmt(t.get("created_at"))); } catch (Exception ignored) {}
         return m;
@@ -573,12 +750,47 @@ public class SalesReturnController {
         return m;
     }
 
+    private Long sourceOutLineId(Object extra, Object fallback) {
+        if (extra != null) {
+            try {
+                @SuppressWarnings("unchecked") Map<String,Object> m = (extra instanceof Map) ? (Map<String,Object>) extra : new com.fasterxml.jackson.databind.ObjectMapper().readValue(String.valueOf(extra), Map.class);
+                Object v = m.get("sourceOutLineId");
+                if (v != null) return Long.valueOf(String.valueOf(v));
+            } catch (Exception ignored) {}
+        }
+        return toLong(fallback);
+    }
+
     private Long toLong(Object o) {
         if (o == null) return null;
         if (o instanceof Number) return ((Number) o).longValue();
         String s = String.valueOf(o).trim();
         if (s.isEmpty()) return null;
         try { return Long.parseLong(s); } catch (Exception e) { return null; }
+    }
+
+    private Long firstLong(Map<String, Object> body, String... keys) {
+        if (body == null || keys == null) return null;
+        for (String k : keys) {
+            Object v = body.get(k);
+            if (v != null) {
+                Long lv = toLong(v);
+                if (lv != null) return lv;
+            }
+        }
+        return null;
+    }
+
+    private String firstString(Map<String, Object> body, String... keys) {
+        if (body == null || keys == null) return null;
+        for (String k : keys) {
+            Object v = body.get(k);
+            if (v != null) {
+                String s = String.valueOf(v).trim();
+                if (!s.isEmpty()) return s;
+            }
+        }
+        return null;
     }
 
     private BigDecimal toBd(Object o) {

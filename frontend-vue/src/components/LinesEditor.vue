@@ -1,223 +1,183 @@
 <template>
-  <el-form-item :label="field.label || '明细'" :required="field.required" class="lines-item">
-    <div class="lines-box">
-      <div class="lines-toolbar" v-if="field.importable || field.serialPasteSplit">
-        <el-upload v-if="field.importable" :show-file-list="false" :auto-upload="false" accept=".xlsx,.xls" :on-change="onImportXlsx">
-          <el-button size="small" type="success" plain>
-            <el-icon><Upload /></el-icon>批量导入
+  <div class="lines-editor">
+    <el-table :data="modelValue" border size="small">
+      <el-table-column type="index" label="#" width="50" />
+      <el-table-column v-for="col in visibleCols" :key="colKey(col, $index)" :label="colTitle(col)" :width="col.width" :min-width="col.minWidth">
+        <template #header>
+          <span>{{ colTitle(col) }}</span>
+          <span v-if="col.required" class="required-mark">*</span>
+        </template>
+        <template #default="{ row }">
+          <el-select
+            v-if="colType(col) === 'select'"
+            v-model="row[colField(col)]"
+            :placeholder="col.placeholder || colTitle(col)"
+            clearable
+            filterable
+            :multiple="col.multiple === true"
+            :multiple-limit="col.multipleLimit"
+            :collapse-tags="col.multiple === true"
+            :collapse-tags-tooltip="col.multiple === true"
+            style="width:100%"
+          >
+            <el-option v-for="opt in (col.options || [])" :key="opt.value" :label="opt.label" :value="opt.value" />
+          </el-select>
+          <ResourcePicker
+            v-else-if="colType(col) === 'resource' || colType(col) === 'picker'"
+            v-model="row[colField(col)]"
+            :resource="col.resource || col.picker"
+            :multiple="col.multiple"
+            :placeholder="col.placeholder || colTitle(col)"
+            :disabled="col.disabledOnEdit && row.id"
+            :display-value="row[col.displayKey]"
+            @pick="(p) => onResourcePick(row, col, p)"
+          />
+          <el-input
+            v-else-if="colType(col) === 'textarea'"
+            v-model="row[colField(col)]"
+            type="textarea"
+            :rows="2"
+            :placeholder="col.placeholder"
+          />
+          <el-input-number
+            v-else-if="colType(col) === 'number'"
+            v-model="row[colField(col)]"
+            :min="col.min ?? 0"
+            :max="col.max"
+            :step="col.step ?? 1"
+            :precision="col.precision"
+            :controls="false"
+            style="width:100%"
+          />
+          <el-switch
+            v-else-if="colType(col) === 'switch' || colType(col) === 'boolean'"
+            v-model="row[colField(col)]"
+            :active-value="col.activeValue ?? true"
+            :inactive-value="col.inactiveValue ?? false"
+          />
+          <el-date-picker
+            v-else-if="colType(col) === 'date'"
+            v-model="row[colField(col)]"
+            type="date"
+            value-format="YYYY-MM-DD"
+            style="width:100%"
+          />
+          <el-input v-else v-model="row[colField(col)]" :placeholder="col.placeholder || colTitle(col)" :readonly="col.readonly" />
+        </template>
+      </el-table-column>
+      <el-table-column v-if="!readonly" label="操作" width="70" fixed="right">
+        <template #default="{ $index }">
+          <el-button size="small" type="danger" link @click="removeLine($index)">
+            <el-icon><Delete /></el-icon>
           </el-button>
-        </el-upload>
-        <el-button v-if="field.serialPasteSplit" size="small" type="info" plain @click="showPaste = true">
-          <el-icon><DocumentCopy /></el-icon>粘贴序列号
-        </el-button>
-        <el-button size="small" type="primary" plain @click="addRow">
-          <el-icon><Plus /></el-icon>添加明细行
-        </el-button>
-        <el-button size="small" type="warning" plain @click="addSerialRow" v-if="hasSerialCol">
-          <el-icon><Plus /></el-icon>序列号批量行
-        </el-button>
-      </div>
-      <el-table :data="rows" border size="small" style="width:100%">
-        <el-table-column v-for="c in cols" :key="c.k" :min-width="c.w || 140">
-          <template #header>
-            <span v-if="c.required" class="line-req">*</span>{{ c.l }}
-          </template>
-          <template #default="{ row }">
-            <ResourcePicker v-if="c.type === 'picker' || c.picker" v-model="row[c.k]"
-              :resource="c.picker || 'products'" :placeholder="c.l" @pick="(p) => onPick(row, c, p)" />
-            <el-input-number v-else-if="c.type === 'number'" v-model="row[c.k]" :controls="false" :min="c.min ?? 0" style="width:100%" />
-            <el-autocomplete
-              v-else-if="c.type === 'batch'"
-              v-model="row[c.k]"
-              :fetch-suggestions="(q, cb) => suggestBatches(q, cb, row)"
-              placeholder="选择出库批次"
-              value-key="batchNo"
-              clearable
-              style="width:100%"
-              @select="(item) => onBatchPick(row, item)"
-            >
-              <template #default="{ item }">
-                <div class="batch-opt">{{ item.batchNo }} <span class="batch-meta">可用 {{ item.qty }}{{ item.warehouseName ? ' · ' + item.warehouseName : '' }}</span></div>
-              </template>
-            </el-autocomplete>
-            <el-autocomplete
-              v-else-if="c.type === 'serial'"
-              v-model="row[c.k]"
-              :fetch-suggestions="(q, cb) => suggestSerials(q, cb, row)"
-              placeholder="选择序列号"
-              value-key="serialNo"
-              clearable
-              style="width:100%"
-            />
-            <el-input v-else v-model="row[c.k]" :placeholder="c.placeholder || c.l" />
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right">
-          <template #default="{ $index }">
-            <el-button size="small" type="danger" link @click="removeRow($index)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-button v-if="!field.importable && !field.serialPasteSplit" size="small" type="primary" plain style="margin-top:8px" @click="addRow">
-        <el-icon><Plus /></el-icon>添加明细行
-      </el-button>
-    </div>
-    <el-dialog v-model="showPaste" title="粘贴序列号（支持换行/逗号/分号分隔）" width="600px">
-      <el-form label-width="80px">
-        <el-form-item label="产品">
-          <ResourcePicker v-model="pasteProduct" resource="products" placeholder="选择产品" @pick="onPasteProductPick" />
-        </el-form-item>
-        <el-form-item label="批次号">
-          <el-input v-model="pasteBatch" placeholder="批次管理产品需填，序列号管理可不填" />
-        </el-form-item>
-        <el-form-item label="序列号">
-          <el-input v-model="pasteText" type="textarea" :rows="8" placeholder="每行一个，或用 , ; 空格 分隔；自动按数量展开为多行" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showPaste = false">取消</el-button>
-        <el-button type="primary" @click="confirmPaste">展开为明细行</el-button>
-      </template>
-    </el-dialog>
-  </el-form-item>
+        </template>
+      </el-table-column>
+    </el-table>
+    <el-button v-if="!readonly" size="small" type="primary" plain @click="addLine" style="margin-top: 10px">
+      <el-icon><Plus /></el-icon>添加明细行
+    </el-button>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Upload, DocumentCopy, Plus } from '@element-plus/icons-vue'
-import * as XLSX from 'xlsx'
-import ResourcePicker from '@/components/ResourcePicker.vue'
-import request from '@/utils/request'
+import { computed, ref } from 'vue'
+import { Delete, Plus } from '@element-plus/icons-vue'
+import ResourcePicker from './ResourcePicker.vue'
 
 const props = defineProps({
-  modelValue: { type: Array, default: () => [] },
-  field: { type: Object, required: true }
+  modelValue: { type: Array, required: true },
+  columns: { type: Array, default: () => [] },
+  field: { type: Object, default: null },
+  context: { type: Object, default: () => ({}) },
+  readonly: { type: Boolean, default: false },
+  scene: { type: String, default: 'default' }
 })
 const emit = defineEmits(['update:modelValue'])
 
-const defaultCols = [
-  { k: 'productId', l: '产品', type: 'picker', picker: 'products' },
-  { k: 'qty', l: '数量', type: 'number' },
-  { k: 'unitPrice', l: '单价', type: 'number' },
-  { k: 'taxRate', l: '税率', type: 'number' }
-]
-const cols = props.field.cols
-  ? props.field.cols.map((c) => ({ k: c.k, l: c.l, type: c.type, picker: c.picker, w: c.w, required: c.required, placeholder: c.placeholder }))
-  : defaultCols
+const resolvedColumns = computed(() => {
+  if (Array.isArray(props.columns) && props.columns.length) return props.columns
+  if (props.field && Array.isArray(props.field.columns) && props.field.columns.length) return props.field.columns
+  if (props.field && Array.isArray(props.field.cols) && props.field.cols.length) return props.field.cols
+  return []
+})
 
-const hasSerialCol = computed(() => cols.some((c) => c.k === 'serialNo'))
-const rows = ref(props.modelValue.length ? [...props.modelValue] : [{}])
+const visibleCols = computed(() => {
+  return resolvedColumns.value.filter(c => {
+    if (!c || c.hidden) return false
+    if (Array.isArray(c.scenes) && c.scenes.length && !c.scenes.includes(props.scene)) return false
+    if (typeof c.showIf === 'function') {
+      try { if (!c.showIf(props.context || {})) return false } catch (_) { /* ignore */ }
+    }
+    if (Array.isArray(c.showWhen) && c.showWhen.length === 2) {
+      if ((props.context || {})[c.showWhen[0]] !== c.showWhen[1]) return false
+    }
+    return true
+  })
+})
 
-const showPaste = ref(false)
-const pasteText = ref('')
-const pasteProduct = ref(null)
-const pasteBatch = ref('')
+const internalSync = ref(false)
 
-watch(rows, (v) => {
-  emit('update:modelValue', v.filter((r) => Object.values(r).some((x) => x !== '' && x != null)).map((r, i) => ({ seq: i + 1, ...r })))
-}, { deep: true })
+function colField(c) { return c.field || c.k || c.prop }
+function colTitle(c) { return c.title || c.label || c.l || '' }
+function colType(c) { return c.type || (c.picker ? 'picker' : 'text') }
+function colKey(c, idx) { return c.field || c.k || c.prop || ('col-' + idx) }
 
-function addRow() { rows.value.push({}) }
-function removeRow(i) { rows.value.splice(i, 1) }
-function addSerialRow() { rows.value.push({ qty: 1 }) }
-function onPick(row, c, p) {
-  if (c.picker === 'products') {
-    row.qty = null
-    row.unitPrice = p && p.row && p.row.price != null ? p.row.price : null
-    row.batchNo = null
-    row.serialNo = null
-  }
-}
-
-function suggestBatches(query, cb, row) {
-  if (!row || !row.productId) { cb([]); return }
-  request({ url: '/api/inventory/available-batches', method: 'get', params: { productId: row.productId } })
-    .then((res) => {
-      let list = (res && res.data) || []
-      if (query) list = list.filter((b) => String(b.batchNo || '').toLowerCase().includes(String(query).toLowerCase()))
-      cb(list)
-    })
-    .catch(() => cb([]))
-}
-
-function onBatchPick(row, item) {
-  row.batchNo = item ? item.batchNo : row.batchNo
-}
-
-function suggestSerials(query, cb, row) {
-  if (!row || !row.productId) { cb([]); return }
-  const params = { productId: row.productId }
-  if (row.batchNo) params.batchNo = row.batchNo
-  request({ url: '/api/inventory/available-serials', method: 'get', params })
-    .then((res) => {
-      let list = (res && res.data) || []
-      if (query) list = list.filter((s) => String(s.serialNo || s).toLowerCase().includes(String(query).toLowerCase()))
-      cb(list.map((s) => (typeof s === 'string' ? { serialNo: s } : { serialNo: s.serialNo })))
-    })
-    .catch(() => cb([]))
-}
-
-function onImportXlsx(uploadFile) {
-  const file = uploadFile.raw
-  if (!file) return
-  const reader = new FileReader()
-  reader.onload = (ev) => {
-    try {
-      const wb = XLSX.read(ev.target.result, { type: 'array' })
-      const ws = wb.Sheets[wb.SheetNames[0]]
-      const json = XLSX.utils.sheet_to_json(ws, { defval: '' })
-      if (!json.length) { ElMessage.warning('文件无数据'); return }
-      const headerMap = {
-        '产品编码': 'productCode', '产品': 'productName', '数量': 'qty',
-        '批次号': 'batchNo', '序列号': 'serialNo', '单价': 'unitPrice'
-      }
-      const newRows = []
-      for (const r of json) {
-        const row = {}
-        for (const [hk, hv] of Object.entries(r)) {
-          const k = headerMap[hk] || hk
-          if (['productCode', 'productName', 'qty', 'batchNo', 'serialNo', 'unitPrice'].includes(k)) {
-            row[k === 'productCode' || k === 'productName' ? 'productCode' : k] = hv
-          }
-        }
-        if (row.productCode) row.productId = String(row.productCode)
-        newRows.push(row)
-      }
-      rows.value = [...rows.value.filter((r) => Object.values(r).some((v) => v !== '' && v != null)), ...newRows]
-      ElMessage.success('已导入 ' + newRows.length + ' 行（产品编码/名称已带入，请手动选择产品带出默认信息）')
-    } catch (e) {
-      ElMessage.error('解析失败：' + (e.message || e))
+function addLine() {
+  const blank = {}
+  for (const c of resolvedColumns.value) {
+    const f = colField(c)
+    if (!f) continue
+    if (c.value !== undefined) blank[f] = c.value
+    else if (c.defaultValue !== undefined) blank[f] = c.defaultValue
+    else {
+      const t = colType(c)
+      if (t === 'number') blank[f] = 0
+      else if (t === 'switch' || t === 'boolean') blank[f] = false
+      else blank[f] = t === 'select' ? '' : ''
     }
   }
-  reader.readAsArrayBuffer(file)
+  const next = [...(props.modelValue || []), blank]
+  internalSync.value = true
+  emit('update:modelValue', next)
 }
 
-function onPasteProductPick(p) {
-  if (p && p.row) {
-    pasteProduct.value = p.row.id
-  }
+function removeLine(i) {
+  const next = props.modelValue.slice()
+  next.splice(i, 1)
+  internalSync.value = true
+  emit('update:modelValue', next)
 }
 
-function confirmPaste() {
-  if (!pasteText.value.trim()) { ElMessage.warning('请粘贴序列号'); return }
-  if (!pasteProduct.value) { ElMessage.warning('请选择产品'); return }
-  const items = pasteText.value.split(/[\s,;,,\uFF0C;,\uFF1B\n\r]+/).map((s) => s.trim()).filter(Boolean)
-  if (!items.length) { ElMessage.warning('未识别到任何序列号'); return }
-  for (const sn of items) {
-    rows.value.push({ productId: pasteProduct.value, serialNo: sn, batchNo: pasteBatch.value || '', qty: 1 })
+function onResourcePick(row, col, picked) {
+  if (!picked) return
+  if (col.onPick) col.onPick(row, picked)
+  const raw = picked.raw || picked.row || picked
+  if (col.resource === 'products' || col.picker === 'products') {
+    if (raw) {
+      const field = colField(col)
+      if (field && field.endsWith('ProductId')) {
+        const prefix = field.slice(0, -'ProductId'.length)
+        if (raw.code) row[prefix + 'ProductCode'] = raw.code
+        if (raw.nameCn || raw.name) row[prefix + 'ProductName'] = raw.nameCn || raw.name
+        if (raw.spec) row[prefix + 'ProductSpec'] = raw.spec
+      }
+      if (raw.code && !row.productCode) row.productCode = raw.code
+      if ((raw.nameCn || raw.name) && !row.productName) row.productName = raw.nameCn || raw.name
+      if (raw.spec && !row.productSpec) row.productSpec = raw.spec
+      if (raw.unit && !row.unit) row.unit = raw.unit
+      if (raw.price != null && row.unitPrice == null) row.unitPrice = raw.price
+    }
   }
-  showPaste.value = false
-  pasteText.value = ''
-  ElMessage.success('已展开 ' + items.length + ' 行')
+  if (col.bindFields) {
+    for (const [target, source] of Object.entries(col.bindFields)) {
+      const v = source.split('.').reduce((o, k) => (o ? o[k] : undefined), raw)
+      if (v !== undefined) row[target] = v
+    }
+  }
 }
 </script>
 
 <style scoped>
-.line-req { color: var(--dms-color-danger); margin-right: 4px; font-weight: bold; }
-.lines-item :deep(.el-form-item__content) { display: block; }
-.lines-box { width: 100%; }
-.lines-toolbar { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-.batch-opt { display: flex; justify-content: space-between; gap: 8px; }
-.batch-meta { color: var(--dms-text-4); font-size: 12px; }
+.lines-editor { width: 100%; }
+.required-mark { color: var(--el-color-danger); margin-left: 2px; }
 </style>

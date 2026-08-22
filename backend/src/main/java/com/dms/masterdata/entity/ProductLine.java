@@ -61,4 +61,7 @@ public class ProductLine {
 
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
+
+    @Transient
+    private String parentName;
 }

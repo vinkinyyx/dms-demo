@@ -1,0 +1,13 @@
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app
+ENV NODE_OPTIONS=--max-old-space-size=2048
+COPY package*.json ./
+RUN npm ci --registry=https://registry.npmmirror.com
+COPY . ./
+RUN npm run build
+
+FROM nginx:1.25-alpine
+COPY --from=frontend-builder /app/dist /usr/share/nginx/html
+COPY nginx-vue.conf /etc/nginx/nginx.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

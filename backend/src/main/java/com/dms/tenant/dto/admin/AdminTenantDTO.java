@@ -4,12 +4,12 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
 @Builder
 public class AdminTenantDTO {
-
     private UUID id;
     private String code;
     private String name;
@@ -23,6 +23,7 @@ public class AdminTenantDTO {
     private Long boundDealerId;
     private UUID boundManufacturerTenantId;
     private String disableReason;
+    private Map<String, Object> modulesEnabled;
     private OffsetDateTime disabledAt;
     private OffsetDateTime enabledAt;
     private OffsetDateTime createdAt;

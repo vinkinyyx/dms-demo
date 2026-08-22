@@ -35,13 +35,16 @@ public class ProductLineService {
         UUID tenantId = TenantContext.getTenantId();
         var spec = com.dms.common.util.SpecUtil.<ProductLine>byTenantAndFilters(tenantId, filters);
         Page<ProductLine> page = repository.findAll(spec, pageQuery.toPageable());
+        page.forEach(this::fillParentName);
         return PageResult.of(page);
     }
 
     @Transactional(readOnly = true)
     public ProductLine get(Long id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "产品线不存在"));
+        ProductLine entity = repository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "\u4ea7\u54c1\u5c42\u6b21\u4e0d\u5b58\u5728"));
+        fillParentName(entity);
+        return entity;
     }
 
     @Transactional(readOnly = true)
@@ -62,10 +65,10 @@ public class ProductLineService {
     public ProductLine create(ProductLine entity) {
         UUID tenantId = TenantContext.getTenantId();
         if (tenantId == null) {
-            throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "\u7f3a\u5c11 tenantId");
         }
         if (repository.existsByTenantIdAndCode(tenantId, entity.getCode())) {
-            throw new BusinessException(ErrorCode.RESOURCE_CONFLICT, "产品线编码已存在");
+            throw new BusinessException(ErrorCode.RESOURCE_CONFLICT, "\u4ea7\u54c1\u5c42\u6b21\u7f16\u7801\u5df2\u5b58\u5728");
         }
         validateLevel(entity);
         entity.setId(null);
@@ -81,7 +84,7 @@ public class ProductLineService {
         ProductLine old = get(id);
         if (patch.getCode() != null && !patch.getCode().equals(old.getCode())) {
             if (repository.existsByTenantIdAndCodeAndIdNot(old.getTenantId(), patch.getCode(), id)) {
-                throw new BusinessException(ErrorCode.RESOURCE_CONFLICT, "产品线编码已存在: " + patch.getCode());
+                throw new BusinessException(ErrorCode.RESOURCE_CONFLICT, "\u4ea7\u54c1\u5c42\u6b21\u7f16\u7801\u5df2\u5b58\u5728: " + patch.getCode());
             }
             old.setCode(patch.getCode());
         }
@@ -92,6 +95,7 @@ public class ProductLineService {
         if (patch.getSortOrder() != null) old.setSortOrder(patch.getSortOrder());
         if (patch.getStatus() != null) old.setStatus(patch.getStatus());
         validateLevel(old);
+        fillParentName(old);
         old.setUpdatedAt(OffsetDateTime.now());
         return repository.save(old);
     }
@@ -99,7 +103,7 @@ public class ProductLineService {
     @Transactional
     public void deactivate(Long id) {
         ProductLine entity = get(id);
-        log.info("停用产品线: id={} code={}", id, entity.getCode());
+        log.info("\u505c\u7528\u4ea7\u54c1\u5c42\u6b21 id={} code={}", id, entity.getCode());
         entity.setStatus("inactive");
         entity.setUpdatedAt(OffsetDateTime.now());
         repository.save(entity);
@@ -110,17 +114,32 @@ public class ProductLineService {
         ProductLine entity = get(id);
         UUID tenantId = TenantContext.getTenantId();
         if (tenantId != null && !repository.findByTenantIdAndParentId(tenantId, id).isEmpty()) {
-            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "该产品线下存在子产品线，无法删除");
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "\u8be5\u4ea7\u54c1\u5c42\u6b21\u4e0b\u5b58\u5728\u5b50\u4ea7\u54c1\u5c42\u6b21\uff0c\u65e0\u6cd5\u5220\u9664");
         }
         repository.delete(entity);
     }
 
     private void validateLevel(ProductLine entity) {
-        if (entity.getLevel() != null && entity.getLevel() < 1) {
-            throw new BusinessException(ErrorCode.PARAM_INVALID, "产品线层级必须 >= 1");
+        if (entity.getLevel() == null) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "\u4ea7\u54c1\u5c42\u6b21\u4e0d\u80fd\u4e3a\u7a7a");
         }
-        if (entity.getLevel() != null && entity.getLevel() > 3) {
-            throw new BusinessException(ErrorCode.PARAM_INVALID, "产品线层级不能超过 3（BU/产品线/分类）");
+        if (entity.getLevel() < 1 || entity.getLevel() > 3) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "\u4ea7\u54c1\u5c42\u6b21\u53ea\u80fd\u662f1\u30012\u30013");
         }
+        if (entity.getLevel() > 1 && entity.getParentId() == null) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "\u4e0a\u7ea7\u4ea7\u54c1\u5c42\u6b21\u4e0d\u80fd\u4e3a\u7a7a");
+        }
+        if (entity.getParentId() != null) {
+            ProductLine parent = repository.findById(entity.getParentId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "\u4e0a\u7ea7\u4ea7\u54c1\u5c42\u6b21\u4e0d\u5b58\u5728"));
+            if (parent.getLevel() + 1 != entity.getLevel()) {
+                throw new BusinessException(ErrorCode.PARAM_INVALID, "\u4ea7\u54c1\u5c42\u6b21\u5fc5\u987b\u4e0e\u4e0a\u7ea7\u5c42\u6b21\u8fde\u7eed");
+            }
+        }
+    }
+
+    private void fillParentName(ProductLine entity) {
+        if (entity == null || entity.getParentId() == null) return;
+        repository.findById(entity.getParentId()).ifPresent(parent -> entity.setParentName(parent.getName()));
     }
 }

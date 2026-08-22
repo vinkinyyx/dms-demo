@@ -107,6 +107,7 @@ const _dictLoading = {}
 export function getDictOptions(type) {
   if (_dictCache[type]) return _dictCache[type]
   const arr = reactive([])
+  arr.__dictType = type
   _dictCache[type] = arr
   loadDict(type)
   return arr

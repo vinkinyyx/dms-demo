@@ -1,4 +1,4 @@
-﻿/* ===== DMS 全局业务样式 ===== */
+/* ===== DMS 全局业务样式 ===== */
 
 /* 页面通用容器 */
 .page { padding: var(--dms-padding-page); }
@@ -146,3 +146,22 @@
   :deep(.el-table .cell) { padding-left: 6px; padding-right: 6px; }
   :deep(.el-card__body) { padding: var(--dms-spacing-4); }
 }
+
+/* ===== 统一编辑/只读页：.el-main.main 作为唯一纵向滚动容器，避免多层嵌套导致无法滚动 ===== */
+.layout .el-main.main{display:block;overflow-y:auto;overflow-x:hidden;min-height:0;flex:1 1 auto;position:relative;}
+.area-page{
+  min-height:100%;
+  background:var(--dms-bg-page);
+  display:flex;flex-direction:column;
+  overflow:visible;
+}
+.area-page .area-scroll{flex:1 1 auto;min-height:0;overflow:visible;padding:0 2px;}
+.area-page .page-toolbar,
+.area-page .page-header{
+  flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;background:#fff;border:1px solid var(--dms-border-2,#ebeef5);border-radius:var(--dms-radius-base,6px);
+  margin-bottom:12px;
+}
+.area-page .page-title{display:flex;align-items:center;gap:8px;}
+.area-page .page-title h3{margin:0;font-size:16px;font-weight:600;}
+.area-page .page-actions{display:flex;gap:8px;}

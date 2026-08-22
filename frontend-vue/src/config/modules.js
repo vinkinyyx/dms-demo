@@ -1,23 +1,23 @@
 const S_ACTIVE = [{ value: 'active', label: '启用' }, { value: 'inactive', label: '停用' }]
 const S_ACTIVE_BLOCK = [...S_ACTIVE, { value: 'blocked', label: '冻结' }]
 const UNITS = [{ value: '个', label: '个' }, { value: '盒', label: '盒' }, { value: '箱', label: '箱' }, { value: '支', label: '支' }, { value: '瓶', label: '瓶' }, { value: '包', label: '包' }, { value: '套', label: '套' }]
-const CURRENCIES = [{ value: 'CNY', label: '人民币' }, { value: 'USD', label: '美元' }, { value: 'EUR', label: '欧元' }]
+const CURRENCIES = [{ value: 'CNY', label: 'CNY' }, { value: 'USD', label: 'USD' }, { value: 'EUR', label: 'EUR' }]
 
 // 获取数据字典选项
 import { getDictOptions } from '@/utils/dict'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { actionResource } from '@/api/crud'
 
 const products = {
-  key: 'products', title: '产品管理', api: '/api/products', detailable: true, importable: true, exportable: true, batchDelete: true,
+  key: 'products', title: '产品管理', api: '/api/products', detailable: true, detailPath: '/products', businessType: 'product', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '产品编码', w: 130, filter: { type: 'text' } }, 
     { k: 'nameCn', l: '中文名称', filter: { type: 'text' } },
     { k: 'productType', l: '产品类型', w: 100, filter: { type: 'select', options: getDictOptions('product_type') } },
-    { k: 'categoryName', l: '产品分类', w: 120, filter: { type: 'text' } },
+    { k: 'categoryName', l: '产品分类', w: 120, filter: { type: 'select', remote: 'categories' } },
     { k: 'spec', l: '规格型号', w: 120, filter: { type: 'text' } }, 
     { k: 'unit', l: '单位', w: 70, filter: { type: 'select', options: UNITS } }, 
-    { k: 'currentPrice', l: '参考单价', w: 100, filter: { type: 'number' } },
-    { k: 'taxRate', l: '税率', w: 70, filter: { type: 'number' } }, 
     { k: 'udiRequired', l: 'UDI追溯', w: 80, filter: { type: 'select', options: [{ value: true, label: '是' }, { value: false, label: '否' }] } },
     { k: 'isSerialManaged', l: '序列号管理', w: 90, filter: { type: 'select', options: [{ value: true, label: '是' }, { value: false, label: '否' }] } },
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } },
@@ -30,10 +30,9 @@ const products = {
     { key: 'nameEn', label: '英文名称', group: '基本信息' },
     { key: 'productType', label: '产品类型', type: 'select', required: true, group: '基本信息', options: getDictOptions('product_type') },
     { key: 'categoryId', label: '产品分类', required: true, group: '基本信息', picker: 'categories' },
-    { key: 'spec', label: '规格型号', group: '规格与价格' },
-    { key: 'unit', label: '单位', type: 'select', group: '规格与价格', value: '个', options: UNITS },
-    { key: 'currentPrice', label: '参考单价', type: 'number', group: '规格与价格' },
-    { key: 'taxRate', label: '税率(如 0.13)', type: 'number', group: '规格与价格', value: 0.13 },
+    { key: 'productLineId', label: '产品层次', group: '基本信息', picker: 'product-lines' },
+    { key: 'spec', label: '规格型号', group: '规格信息' },
+    { key: 'unit', label: '单位', type: 'select', group: '规格信息', value: '个', options: UNITS },
     { key: 'udiRequired', label: '需要UDI追溯', type: 'boolean', group: '医疗器械', value: true },
     { key: 'isSerialManaged', label: '序列号管理', type: 'boolean', group: '医疗器械', value: false },
     { key: 'warnMonths', label: '临期预警(月)', type: 'number', group: '医疗器械', value: 3 },
@@ -44,7 +43,7 @@ const products = {
 }
 
 const categories = {
-  key: 'categories', title: '产品分类', api: '/api/product-categories', detailable: true, importable: true, exportable: true, batchDelete: true,
+  key: 'categories', title: '产品分类', api: '/api/product-categories', detailable: true, detailPath: '/categories', businessType: 'productCategory', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '分类编码', w: 140, filter: { type: 'text' } }, 
@@ -64,7 +63,7 @@ const categories = {
 }
 
 const dealers = {
-  key: 'dealers', title: '经销商管理', api: '/api/dealers', detailable: true, importable: true, exportable: true, batchDelete: true,
+  key: 'dealers', title: '经销商管理', api: '/api/dealers', detailable: true, detailPath: '/dealers', businessType: 'dealer', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '经销商编码', w: 130, filter: { type: 'text' } }, 
@@ -97,7 +96,7 @@ const dealers = {
 }
 
 const hospitals = {
-  key: 'hospitals', title: '医院管理', api: '/api/hospitals', detailable: true, importable: true, exportable: true, batchDelete: true,
+  key: 'hospitals', title: '医院管理', api: '/api/hospitals', detailable: true, detailPath: '/hospitals', businessType: 'hospital', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '医院编码', w: 130, filter: { type: 'text' } }, 
@@ -121,7 +120,7 @@ const hospitals = {
 }
 
 const warehouses = {
-  key: 'warehouses', title: '仓库管理', api: '/api/warehouses', detailable: true, importable: true, exportable: true, batchDelete: true,
+  key: 'warehouses', title: '仓库管理', api: '/api/warehouses', detailable: true, detailPath: '/warehouses', businessType: 'warehouse', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '仓库编码', w: 130, filter: { type: 'text' } }, 
@@ -142,7 +141,7 @@ const warehouses = {
 }
 
 const regions = {
-  key: 'regions', title: '区域管理', api: '/api/regions', detailable: true, importable: true, exportable: true, batchDelete: true,
+  key: 'regions', title: '区域管理', api: '/api/regions', detailable: true, detailPath: '/regions', businessType: 'region', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '区域编码', w: 140, filter: { type: 'text' } }, 
@@ -162,7 +161,7 @@ const regions = {
 }
 
 const suppliers = {
-  key: 'suppliers', title: '供应商管理', api: '/api/suppliers', detailable: true, importable: true, exportable: true, batchDelete: true,
+  key: 'suppliers', title: '供应商管理', api: '/api/suppliers', detailable: true, detailPath: '/suppliers', businessType: 'supplier', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '供应商编码', w: 130, filter: { type: 'text' } }, 
@@ -190,39 +189,42 @@ const suppliers = {
 }
 
 const productPrices = {
-  key: 'product-prices', title: '产品价格', api: '/api/product-prices', importable: true, exportable: true,
+  key: 'product-prices', title: '产品价格', api: '/api/product-prices', detailable: true, detailPath: '/product-prices', businessType: 'product_price', noDelete: true, noEdit: true, importable: false, exportable: true,
+  rowActions: [
+    { key: 'activate', label: '生效', type: 'success', when: ['inactive'] },
+    { key: 'deactivate', label: '失效', type: 'warning', when: ['active'] }
+  ],
   cols: [
-    { k: 'id', l: 'ID', w: 60, filter: { type: 'number' } }, 
-    { k: 'productCode', l: '产品编码', w: 130, link: { menu: 'products', valueKey: 'productId' }, filter: { type: 'text' } },
-    { k: 'productName', l: '产品名称', filter: { type: 'text' } }, 
-    { k: 'partnerType', l: '范围', w: 90, filter: { type: 'select', options: [{ value: 'GLOBAL', label: '全局' }, { value: 'DEALER', label: '按经销商' }, { value: 'SUPPLIER', label: '按供应商' }] } }, 
-    { k: 'partnerName', l: '伙伴', w: 120, filter: { type: 'text' } },
-    { k: 'purchasePrice', l: '采购价', w: 110, filter: { type: 'number' } }, 
-    { k: 'salesPrice', l: '销售价', w: 110, filter: { type: 'number' } }, 
-    { k: 'currency', l: '货币', w: 70, filter: { type: 'select', options: CURRENCIES } }, 
-    { k: 'status', l: '状态', w: 70, filter: { type: 'select', options: S_ACTIVE } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'id', l: '编号', w: 60 },
+    { k: 'productCode', l: 'SKU编码', w: 130, filter: { type: 'text' } },
+    { k: 'productName', l: 'SKU名称', minWidth: 160, showOverflowTooltip: true },
+    { k: 'priceTypeText', l: '价格类型', w: 100, filter: { type: 'select', options: [{ value: 'SALE', label: '销售价' }, { value: 'PURCHASE', label: '采购价' }] } },
+    { k: 'priceContextText', l: '价格用途', w: 110 },
+    { k: 'partnerName', l: '经销商/供应商', w: 180, filter: { type: 'resource', resource: 'dealers', paramKey: 'partnerId' } },
+    { k: 'currency', l: '币种', w: 80 },
+    { k: 'inclPrice', l: '含税价', w: 110 },
+    { k: 'exclPrice', l: '不含税价', w: 120 },
+    { k: 'taxRate', l: '税率', w: 80 },
+    { k: 'validFrom', l: '生效开始', w: 120, filter: { type: 'date' } },
+    { k: 'validTo', l: '生效结束', w: 120, filter: { type: 'date' } },
+    { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } }
   ],
   form: [
-    { key: 'productId', label: '产品', required: true, type: 'product-picker' },
-    { key: 'partnerType', label: '范围', type: 'select', required: true, options: [{ value: 'GLOBAL', label: '全局' }, { value: 'DEALER', label: '按经销商' }, { value: 'SUPPLIER', label: '按供应商' }] },
-    { key: 'partnerId', label: '伙伴ID（GLOBAL 填 0）', type: 'number' },
-    { key: 'purchasePrice', label: '采购价', type: 'number', required: true },
-    { key: 'salesPrice', label: '销售价', type: 'number', required: true },
-    { key: 'currency', label: '货币', type: 'select', value: 'CNY', options: CURRENCIES },
-    { key: 'effectiveDate', label: '生效日期', type: 'date' },
-    { key: 'expireDate', label: '失效日期', type: 'date' },
-    { key: 'status', label: '状态', type: 'select', value: 'active', options: S_ACTIVE }
+    { key: 'priceType', label: '价格类型', type: 'select', required: true, value: 'SALE', group: '价格对象', options: [{ value: 'SALE', label: '销售价' }, { value: 'PURCHASE', label: '采购价' }] },
+    { key: 'productId', label: 'SKU', required: true, type: 'product-picker', group: '价格对象' },
+    { key: 'partnerId', label: '经销商', required: true, picker: 'dealers', group: '价格对象', showWhen: ['priceType', 'SALE'] },
+    { key: 'componentPrices', label: 'BOM子件销售价', type: 'component-prices', group: '价格信息', full: true },
+    { key: 'currency', label: '币种', type: 'select', value: 'CNY', group: '价格对象', options: CURRENCIES },
+    { key: 'inclPrice', label: '含税价', type: 'number', precision: 4, required: true, group: '价格信息', calc: { op: 'divide', from: ['inclPrice','taxRate'], target: 'exclPrice' } },
+    { key: 'taxRate', label: '税率', type: 'number', precision: 4, value: 0.13, min: 0, max: 1, group: '价格信息', calc: { op: 'divide', from: ['inclPrice','taxRate'], target: 'exclPrice' } },
+    { key: 'exclPrice', label: '不含税价', type: 'number', precision: 4, group: '价格信息', readonly: true },
+    { key: 'validFrom', label: '生效开始', type: 'date', group: '有效期' },
+    { key: 'validTo', label: '生效结束', type: 'date', group: '有效期' },
+    { key: 'status', label: '状态', type: 'select', value: 'active', options: S_ACTIVE, group: '状态' }
   ]
 }
-
-
-
-
-
 const authorizations = {
-  key: 'authorizations', title: '授权管理', api: '/api/authorizations', detailable: true, exportable: true,
+  key: 'authorizations', title: '授权管理', api: '/api/authorizations', detailable: true, detailPath: '/authorizations', businessType: 'authorization', exportable: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '授权编号', w: 160, filter: { type: 'text' } }, 
@@ -246,79 +248,70 @@ const authorizations = {
 }
 
 const promotions = {
-  key: 'promotions', title: '促销规则', api: '/api/promotions',
+  noDelete: true, key: 'promotions', title: '促销规则', api: '/api/promotions', detailable: true, detailPath: '/promotions', businessType: 'promotion', exportable: true,
+  rowActions: [
+    { key: 'activate', label: '启用', type: 'success', when: ['draft', 'inactive'] },
+    { key: 'deactivate', label: '停用', type: 'warning', when: ['active'] }
+  ],
+  rowActionHandlers: {
+    activate(row) { ElMessageBox.confirm('确认启用该促销规则？', '提示', { type: 'warning' }).then(async () => { await actionResource('/api/promotions', row.id, '/activate', 'POST'); ElMessage.success('已启用'); location.reload() }).catch(() => {}) },
+    deactivate(row) { ElMessageBox.confirm('确认停用该促销规则？', '提示', { type: 'warning' }).then(async () => { await actionResource('/api/promotions', row.id, '/deactivate', 'POST'); ElMessage.success('已停用'); location.reload() }).catch(() => {}) }
+  },
   cols: [
-    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
-    { k: 'code', l: '编码', w: 130, filter: { type: 'text' } }, 
-    { k: 'name', l: '名称', filter: { type: 'text' } }, 
-    { k: 'promoType', l: '类型', w: 120, filter: { type: 'select', options: [{ value: 'MOQ', label: '起订量(MOQ)' }, { value: 'FULL_REDUCTION', label: '满减' }] } }, 
-    { k: 'priority', l: '优先级', w: 70, filter: { type: 'number' } }, 
-    { k: 'validFrom', l: '开始', w: 110, filter: { type: 'date' } }, 
-    { k: 'validTo', l: '结束', w: 110, filter: { type: 'date' } }, 
-    { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: [{ value: 'draft', label: '草稿' }, { value: 'active', label: '启用' }, { value: 'paused', label: '暂停' }] } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'id', l: '编号', w: 60 },
+    { k: 'code', l: '规则编码', w: 150, filter: { type: 'text' } },
+    { k: 'name', l: '规则名称', minWidth: 160, filter: { type: 'text' } },
+    { k: 'promoType', l: '促销模式', w: 120, filter: { type: 'select', options: [{ value: 'GIFT', label: '满A赠B' }, { value: 'FULL_REDUCTION', label: '满A减钱' }] } },
+    { k: 'priority', l: '优先级', w: 90 },
+    { k: 'validFrom', l: '开始时间', w: 170 },
+    { k: 'validTo', l: '结束时间', w: 170 },
+    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'draft', label: '草稿' }, { value: 'active', label: '启用' }, { value: 'inactive', label: '停用' }] } }
   ],
   form: [
-    { key: 'code', label: '促销编码', required: true, group: '基本信息' },
-    { key: 'name', label: '促销名称', required: true, group: '基本信息' },
-    { key: 'promoType', label: '促销类型', type: 'select', required: true, value: 'MOQ', group: '基本信息', options: [{ value: 'MOQ', label: '起订量(MOQ)' }, { value: 'FULL_REDUCTION', label: '满减' }] },
-    { key: 'priority', label: '优先级(越大越优先)', type: 'number', value: 10, group: '规则' },
-    { key: 'exclusive', label: '排他', type: 'boolean', value: true, group: '规则' },
-    { key: 'validFrom', label: '生效开始', type: 'date', group: '有效期' },
-    { key: 'validTo', label: '生效结束', type: 'date', group: '有效期' },
-    { key: 'status', label: '状态', type: 'select', value: 'draft', group: '状态', options: [{ value: 'draft', label: '草稿' }, { value: 'active', label: '启用' }, { value: 'paused', label: '暂停' }] },
-    { key: 'description', label: '说明', type: 'textarea', group: '其它' }
+    { key: 'code', label: '规则编码', required: true, group: '基本信息' },
+    { key: 'name', label: '规则名称', required: true, group: '基本信息' },
+    { key: 'promoType', label: '促销模式', type: 'select', required: true, value: 'GIFT', group: '基本信息', options: [{ value: 'GIFT', label: '满A赠B' }, { value: 'FULL_REDUCTION', label: '满A减钱' }] },
+    { key: 'priority', label: '优先级', type: 'number', value: 50, group: '基本信息' },
+    { key: 'validFrom', label: '开始时间', type: 'datetime', group: '有效期' },
+    { key: 'validTo', label: '结束时间', type: 'datetime', group: '有效期' },
+    { key: 'description', label: '说明', type: 'textarea', group: '其他' },
+    { key: 'status', label: '状态', type: 'select', value: 'draft', group: '其他', options: [{ value: 'draft', label: '草稿' }, { value: 'active', label: '启用' }, { value: 'inactive', label: '停用' }] },
+    { key: 'rules', type: 'lines', label: '规则明细', required: true, group: '规则明细', cols: [
+      { k: 'targetType', l: '命中对象类型', type: 'select', required: true, value: 'SKU', options: [{ value: 'SKU', label: 'SKU' }, { value: 'LINE', label: '产品层次' }] },
+      { k: 'targetProductId', l: '命中SKU', type: 'picker', picker: 'products', displayKey: 'targetProductName', showIf: (ctx) => ctx.targetType === 'SKU' },
+      { k: 'targetProductLineId', l: '命中产品层次', type: 'picker', picker: 'product-lines', displayKey: 'targetProductLineName', showIf: (ctx) => ctx.targetType === 'LINE' },
+      { k: 'thresholdQty', l: '门槛数量A', type: 'number', required: true },
+      { k: 'giftProductId', l: '赠品SKU', type: 'picker', picker: 'products', displayKey: 'giftProductName', required: true, showIf: (ctx) => ctx.promoType === 'GIFT' },
+      { k: 'giftQty', l: '赠品数量', type: 'number', required: true, showIf: (ctx) => ctx.promoType === 'GIFT' },
+      { k: 'cycle', l: '赠送周期', type: 'select', value: 'ONCE', showIf: (ctx) => ctx.promoType === 'GIFT', options: [{ value: 'ONCE', label: '仅赠一次' }, { value: 'EVERY_N', label: '每满N循环' }] },
+      { k: 'everyN', l: '每满N数量', type: 'number', showIf: (ctx) => ctx.promoType === 'GIFT' && ctx.cycle === 'EVERY_N' },
+      { k: 'reduceAmount', l: '减免金额', type: 'number', required: true, showIf: (ctx) => ctx.promoType === 'FULL_REDUCTION' }
+    ] }
   ]
 }
-
-const LINE_STOCK = [
-  { k: 'productId', l: '产品', type: 'picker', picker: 'products', format: 'productName' },
-  { k: 'batchNo', l: '批次号' }, { k: 'serialNo', l: '序列号' }, { k: 'qty', l: '数量', type: 'number' }
-]
-const LINE_ORDER = [
-  { k: 'productId', l: '产品', type: 'picker', picker: 'products', format: 'productName', required: true },
-  { k: 'qty', l: '数量', type: 'number', required: true },
-  { k: 'unitPrice', l: '单价', type: 'number' },
-  { k: 'taxRate', l: '税率', type: 'number' }
-]
-
 const orders = {
-  key: 'orders', title: '销售订单', api: '/api/sales-orders', detailable: true, noDelete: true, editableWhen: ['DRAFT'], maxActions: 2, pageSize: 30,
-  importable: true, exportable: true,
-  statusActions: [
-    { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'primary', confirm: '确认提交此销售订单进入审批？' },
-    { label: '审批通过', when: ['PENDING_APPROVAL'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此销售订单？（将自动生成销售出库草稿）' },
-    { label: '驳回', when: ['PENDING_APPROVAL'], method: 'POST', path: '/reject', type: 'danger', confirm: '确认驳回此销售订单？' },
-    { label: '取消', when: ['DRAFT', 'APPROVED'], method: 'POST', path: '/cancel', type: 'warning', confirm: '确认取消此销售订单？' }
+  key: 'orders', title: '销售订单', api: '/api/sales-orders', detailable: true, detailPath: '/orders', editPath: '/order-create/sales', noDelete: false, createPath: '/order-create/sales', maxActions: 3, pageSize: 30, editableWhen: ['DRAFT', 'REJECTED'], deletableWhen: ['DRAFT', 'REJECTED'],
+  rowActions: [
+    { key: 'cancel', label: '取消', type: 'warning', when: ['APPROVED'], method: 'POST', path: '/cancel', confirm: '确认取消此订单？' },
+    { key: 'simulateShip', label: '生成出库单', type: 'primary', when: ['APPROVED'], method: 'POST', path: '/simulate-ship', confirm: '确认根据此订单生成销售出库单？' }
   ],
+  rowButtonPermissions: { cancel: row => Number(row.shippedQty || 0) === 0 },
   cols: [
-    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
-    { k: 'code', l: '销售单号', w: 170, filter: { type: 'text' } }, 
-    { k: 'orderType', l: '类型', w: 90, filter: { type: 'select', options: [{ value: 'NORMAL', label: '常规销售' }, { value: 'URGENT', label: '紧急销售' }] } }, 
-    { k: 'dealerName', l: '经销商', filter: { type: 'text' } }, 
-    { k: 'warehouseName', l: '发货仓库', w: 120, filter: { type: 'text' } }, 
-    { k: 'amountInclTax', l: '含税金额', w: 120, filter: { type: 'number' } }, 
-    { k: 'finalAmount', l: '实付金额', w: 120, filter: { type: 'number' } }, 
-    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'PENDING_APPROVAL', label: '审批中' }, { value: 'APPROVED', label: '已审批' }, { value: 'SHIPPING', label: '发货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } }, 
-    { k: 'auditUserName', l: '审核人', w: 90, filter: { type: 'text' } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
-  ],
-  form: [
-    { key: 'orderType', label: '销售类型', type: 'select', required: true, value: 'NORMAL', group: '销售信息', options: [{ value: 'NORMAL', label: '常规销售' }, { value: 'URGENT', label: '紧急销售' }] },
-    { key: 'dealerId', label: '经销商', required: true, picker: 'dealers', group: '销售信息' },
-    { key: 'warehouseId', label: '发货仓库', required: true, picker: 'warehouses', group: '销售信息' },
-    { key: 'expectedDate', label: '期望发货日期', type: 'date', group: '销售信息' },
-    { key: 'remark', label: '销售备注', type: 'textarea', group: '其它' },
-    { key: 'lines', type: 'lines', label: '销售明细', required: true, group: '销售明细', cols: LINE_ORDER }
+    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
+    { k: 'code', l: '销售订单号', w: 170, filter: { type: 'text' } },
+    { k: 'dealerName', l: '经销商', w: 200, filter: { type: 'select', remote: 'dealers' } },
+    { k: 'finalAmount', l: '最终金额', w: 120 },
+    { k: 'status', l: '状态', w: 110, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'PENDING_APPROVAL', label: '审批中' }, { value: 'APPROVED', label: '已审批' }, { value: 'SHIPPING', label: '发货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } },
+    { k: 'createdAt', l: '创建时间', w: 170, filter: { type: 'date' } }
   ]
 }
 
 const salesReturns = {
-  key: 'sales-returns', title: '销退订单', api: '/api/sales-returns', detailable: true, noDelete: true, maxActions: 2, pageSize: 30, createPath: '/sales-return-edit/new', detailPath: '/sales-return-edit',
+  key: 'sales-returns', title: '销退订单', api: '/api/sales-returns', detailable: true, noDelete: false, noEdit: false, maxActions: 2, pageSize: 30, createPath: '/sales-return-edit', editPath: '/sales-return-edit', viewPath: '/sales-return-edit', readonlyQuery: true, exportable: true,
+  editableWhen: ['DRAFT', 'REJECTED'],
+  deletableWhen: ['DRAFT', 'REJECTED', 'CANCELLED'],
   statusActions: [
-    { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'warning', confirm: '确认提交此销退订单进入审批？' },
+    { label: '提交审批', when: ['DRAFT', 'REJECTED'], method: 'POST', path: '/submit', type: 'warning', confirm: '确认提交此销退订单进入审批？' },
     { label: '审批通过', when: ['PENDING_APPROVAL'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此销退订单？（将自动生成销退入库草稿）' },
     { label: '驳回', when: ['PENDING_APPROVAL'], method: 'POST', path: '/reject', type: 'danger', confirm: '确认驳回此销退订单？' },
     { label: '取消', when: ['DRAFT', 'APPROVED'], method: 'POST', path: '/cancel', type: 'warning', confirm: '确认取消此销退订单？' }
@@ -326,15 +319,35 @@ const salesReturns = {
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '销退单号', w: 170, filter: { type: 'text' } },
-    { k: 'dealerName', l: '经销商', filter: { type: 'text' } },
-    { k: 'warehouseName', l: '收货仓库', w: 120, filter: { type: 'text' } },
+    { k: 'dealerName', l: '经销商', w: 200, filter: { type: 'resource', resource: 'dealers', paramKey: 'dealerId' } },
+    { k: 'warehouseName', l: '收货仓库', w: 120, filter: { type: 'resource', resource: 'warehouses', paramKey: 'warehouseId' } },
+    { k: 'reasonCode', l: '退货原因', w: 120, filter: { type: 'select', options: [
+      { value: 'NORMAL', label: '常规退货' },
+      { value: 'PRE_OP_CONTAMINATION', label: '术前污染' },
+      { value: 'QUALITY_ISSUE', label: '质量问题' },
+      { value: 'NEAR_EXPIRY', label: '近效期退货' },
+      { value: 'EXPIRED', label: '过期退货' },
+      { value: 'OVER_SHIP', label: '多发/错发' },
+      { value: 'CUSTOMER_RETURN', label: '客户原因' },
+      { value: 'DAMAGED', label: '运输破损' },
+      { value: 'OTHER', label: '其他' }
+    ] } },
     { k: 'finalAmount', l: '金额', w: 110, filter: { type: 'number' } },
-    { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'PENDING_APPROVAL', label: '审批中' }, { value: 'APPROVED', label: '已审批' }, { value: 'RECEIVING', label: '收货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } },
+    { k: 'status', l: '状态', w: 100, tag: (r) => {
+      const map = { DRAFT: 'info', PENDING_APPROVAL: 'warning', APPROVED: 'primary', RECEIVING: 'primary', COMPLETED: 'success', CANCELLED: 'info', REJECTED: 'danger' }
+      return { type: map[r.status] || 'info' }
+    }, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'PENDING_APPROVAL', label: '审批中' }, { value: 'APPROVED', label: '已审批' }, { value: 'RECEIVING', label: '收货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } },
     { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }
   ]
 }
+const PURCHASE_LINE_COLS = [
+  { k: 'productId', l: '产品SKU', type: 'picker', picker: 'products', displayKey: 'productName', required: true },
+  { k: 'qty', l: '数量', type: 'number', required: true, precision: 4 },
+  { k: 'remark', l: '备注' }
+]
+
 const purchaseOrders = {
-  key: 'purchase-orders', title: '采购订单', api: '/api/purchase-orders', detailable: true, noDelete: true, editableWhen: ['DRAFT'], maxActions: 2, pageSize: 30,
+  key: 'purchase-orders', title: '采购订单', api: '/api/purchase-orders', detailable: true, detailPath: '/purchase-orders', businessType: 'purchaseOrder', noDelete: true, editableWhen: ['DRAFT'], maxActions: 2, pageSize: 30,
   importable: true, exportable: true,
   statusActions: [
     { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'primary', confirm: '确认提交此采购订单进入审批？' },
@@ -361,7 +374,7 @@ const purchaseOrders = {
     { key: 'warehouseId', label: '入库仓库', required: true, picker: 'warehouses', group: '采购信息' },
     { key: 'expectedDate', label: '期望到货日期', type: 'date', group: '采购信息' },
     { key: 'remark', label: '采购备注', type: 'textarea', group: '其它' },
-    { key: 'lines', type: 'lines', label: '采购明细', required: true, group: '采购明细', cols: LINE_ORDER }
+    { key: 'lines', type: 'lines', label: '采购明细', required: true, group: '采购明细', cols: PURCHASE_LINE_COLS }
   ]
 }
 
@@ -393,7 +406,7 @@ const inventory = {
     { k: 'warehouseName', l: '仓库', w: 120, filter: { type: 'text' } }, 
     { k: 'batchNo', l: '批次号', w: 120, filter: { type: 'text' } }, 
     { k: 'serialNo', l: '序列号', w: 130, filter: { type: 'text' } }, 
-    { k: 'stockStatus', l: '库存状态', w: 90, filter: { type: 'select', options: getDictOptions('stock_status') } }, 
+    { k: 'stockStatus', l: '库存状态', w: 90, filter: { type: 'select', options: [{ value: 'QUALIFIED', label: '合格' },{ value: 'PENDING', label: '待检' },{ value: 'DEFECTIVE', label: '不合格' },{ value: 'QUARANTINED', label: '冻结' }] } }, 
     { k: 'qty', l: '数量', w: 90, filter: { type: 'number' } }, 
     { k: 'expDate', l: '到期日', w: 110, filter: { type: 'date' } }, 
     { k: 'inSource', l: '入库来源', w: 110, filter: { type: 'text' } }
@@ -401,7 +414,7 @@ const inventory = {
 }
 
 const salesOuts = {
-  key: 'sales-outs', title: '销售出库', api: '/api/sales-outs', detailable: true, importable: false, exportable: false, noEdit: true, noCreate: true, noDelete: true, maxActions: 1,
+  key: 'sales-outs', title: '销售出库', api: '/api/sales-outs', detailable: true, detailPath: '/sales-out-edit', viewPath: '/sales-out-edit', readonlyQuery: true, importable: false, exportable: false, noEdit: true, noCreate: true, noDelete: true, maxActions: 2,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '出库单号', w: 170, filter: { type: 'text' } },
@@ -427,7 +440,7 @@ const salesOuts = {
   }
 }
 const receipts = {
-  key: 'receipts', title: '收货入库', api: '/api/receipts', detailable: true, importable: false, exportable: true, noEdit: true, noCreate: true, noDelete: true, maxActions: 3,
+  key: 'receipts', title: '收货入库', api: '/api/receipts', detailable: true, detailPath: '/receipts', businessType: 'receipt', importable: false, exportable: true, noEdit: true, noCreate: true, noDelete: true, maxActions: 3,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '入库单号', w: 170, filter: { type: 'text' } },
@@ -467,7 +480,7 @@ const receipts = {
 }
 
 const stockMoves = {
-  key: 'stock-moves', title: '库存移动', api: '/api/stock-moves', detailable: true,
+  key: 'stock-moves', title: '库存移动', api: '/api/stock-moves', detailable: true, detailPath: '/stock-moves', businessType: 'stockMove',
   noEdit: true, noDelete: true, importable: false, exportable: true, createPath: '/stock-move-edit/new',
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
@@ -499,8 +512,16 @@ const stockMoves = {
   actions: [{ key: 'open', label: '查看', path: '/stock-move-edit', type: 'primary', isRoute: true }]
 }
 
+const STOCK_LINE_COLS = [
+  { k: 'productId', l: '产品SKU', type: 'picker', picker: 'products', displayKey: 'productName', required: true },
+  { k: 'batchNo', l: '批号' },
+  { k: 'serialNo', l: '序列号' },
+  { k: 'qty', l: '调整数量', type: 'number', required: true, precision: 4 },
+  { k: 'remark', l: '备注' }
+]
+
 const inventoryAdjustments = {
-  key: 'inventory-adjustments', title: '库存调整', api: '/api/inventory-adjustments', detailable: true, noEdit: true,
+  key: 'inventory-adjustments', title: '库存调整', api: '/api/inventory-adjustments', detailable: true, detailPath: '/inventory-adjustments', businessType: 'inventoryAdjustment', noEdit: true,
   importable: true, exportable: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
@@ -517,12 +538,12 @@ const inventoryAdjustments = {
     { key: 'type', label: '调整类型', type: 'select', required: true, value: 'STOCKTAKE', group: '调整信息', options: [{ value: 'STOCKTAKE', label: '盘点差异' }, { value: 'DAMAGE', label: '报损' }, { value: 'CORRECT', label: '数据修正' }, { value: 'OTHER', label: '其他' }] },
     { key: 'stockStatus', label: '库存状态', type: 'select', value: 'QUALIFIED', group: '调整信息', options: [{ value: 'QUALIFIED', label: '合格' }, { value: 'PENDING', label: '待检' }, { value: 'DEFECTIVE', label: '不合格' }] },
     { key: 'remark', label: '原因说明', type: 'textarea', required: true, group: '其它' },
-    { key: 'lines', type: 'lines', label: '调整明细', required: true, group: '调整明细', cols: LINE_STOCK }
+    { key: 'lines', type: 'lines', label: '调整明细', required: true, group: '调整明细', cols: STOCK_LINE_COLS }
   ]
 }
 
 const surgeryReports = {
-  key: 'surgery-reports', title: '手术植入报台', api: '/api/surgery-reports', detailable: true,
+  key: 'surgery-reports', title: '手术植入报台', api: '/api/surgery-reports', detailable: true, detailPath: '/surgery-reports', businessType: 'surgeryReport',
   importable: true, exportable: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
@@ -705,108 +726,85 @@ const reportOrderTrace = { ...reportBase, key: 'report-order-trace', title: '订
 }
 
 const productLines = {
-  key: 'product-lines', title: '产品线管理', api: '/api/product-lines', detailable: true,
+  key: 'product-lines', title: '产品层次', api: '/api/product-lines', detailable: true, detailPath: '/product-lines', businessType: 'productLine',
   cols: [
-    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
-    { k: 'code', l: '产品线编码', w: 130, filter: { type: 'text' } },
-    { k: 'name', l: '产品线名称', filter: { type: 'text' } },
-    { k: 'parentId', l: '父产品线ID', w: 100, filter: { type: 'number' } },
-    { k: 'level', l: '层级', w: 80, filter: { type: 'number' } },
-    { k: 'sortOrder', l: '排序', w: 80, filter: { type: 'number' } },
-    { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, { k: 'code', l: '层次编码', w: 130, filter: { type: 'text' } }, { k: 'name', l: '层次名称', filter: { type: 'text' } },
+    { k: 'parentName', l: '上级层次', w: 160 },
+    { k: 'level', l: '产品层次', w: 100, filter: { type: 'select', options: [{ value: 1, label: '产品层次1' }, { value: 2, label: '产品层次2' }, { value: 3, label: '产品层次3' }] } },
+    { k: 'sortOrder', l: '排序', w: 80 }, { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } }, { k: 'updatedAt', l: '更新时间', w: 160 }
   ],
   form: [
-    { key: 'code', label: '产品线编码', required: true, group: '基本信息' },
-    { key: 'name', label: '产品线名称', required: true, group: '基本信息' },
-    { key: 'parentId', label: '父产品线', picker: 'product-lines', group: '基本信息' },
-    { key: 'level', label: '层级', type: 'number', required: true, value: 1, group: '基本信息' },
-    { key: 'description', label: '描述', type: 'textarea', group: '基本信息' },
-    { key: 'sortOrder', label: '排序', type: 'number', value: 0, group: '基本信息' },
-    { key: 'status', label: '状态', type: 'select', value: 'active', group: '状态', options: S_ACTIVE }
-  ]
-}
-
-const productPackageLevels = {
-  key: 'product-package-levels', title: '产品包装层级', api: '/api/product-package-levels', detailable: true,
-  cols: [
-    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
-    { k: 'code', l: '包装编码', w: 130, filter: { type: 'text' } },
-    { k: 'name', l: '包装名称', filter: { type: 'text' } },
-    { k: 'productId', l: '产品ID', w: 100, filter: { type: 'number' } },
-    { k: 'parentId', l: '父包装ID', w: 100, filter: { type: 'number' } },
-    { k: 'level', l: '层级', w: 80, filter: { type: 'number' } },
-    { k: 'quantity', l: '数量', w: 80, filter: { type: 'number' } },
-    { k: 'uom', l: '单位', w: 80, filter: { type: 'text' } },
-    { k: 'gtin', l: 'GTIN', w: 130, filter: { type: 'text' } },
-    { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
-  ],
-  form: [
-    { key: 'productId', label: '产品', required: true, picker: 'products', group: '基本信息' },
-    { key: 'code', label: '包装编码', required: true, group: '基本信息' },
-    { key: 'name', label: '包装名称', required: true, group: '基本信息' },
-    { key: 'parentId', label: '父包装', picker: 'product-package-levels', group: '基本信息' },
-    { key: 'level', label: '层级', type: 'number', required: true, value: 1, group: '基本信息' },
-    { key: 'quantity', label: '数量', type: 'number', required: true, value: 1, group: '基本信息' },
-    { key: 'uom', label: '单位', group: '基本信息' },
-    { key: 'barcodeFormat', label: '条码格式', group: '条码信息' },
-    { key: 'gtin', label: 'GTIN', group: '条码信息' },
-    { key: 'snRule', label: '序列号规则', group: '条码信息' },
-    { key: 'description', label: '描述', type: 'textarea', group: '基本信息' },
-    { key: 'sortOrder', label: '排序', type: 'number', value: 0, group: '基本信息' },
+    { key: 'code', label: '层次编码', required: true, group: '基本信息' }, { key: 'name', label: '层次名称', required: true, group: '基本信息' },
+    { key: 'parentId', label: '上级产品层次', picker: 'product-lines', group: '基本信息' },
+    { key: 'level', label: '产品层次', type: 'select', required: true, value: 1, group: '基本信息', options: [{ value: 1, label: '产品层次1' }, { value: 2, label: '产品层次2' }, { value: 3, label: '产品层次3' }] },
+    { key: 'description', label: '描述', type: 'textarea', group: '基本信息' }, { key: 'sortOrder', label: '排序', type: 'number', value: 0, group: '基本信息' },
     { key: 'status', label: '状态', type: 'select', value: 'active', group: '状态', options: S_ACTIVE }
   ]
 }
 
 const productBundles = {
-  key: 'product-bundles', title: '产品组合', api: '/api/product-bundles', detailable: true,
+  noDelete: true, key: 'product-bundles', title: '产品组合(BOM)', api: '/api/product-bundles', detailable: true, detailPath: '/product-bundles', businessType: 'product_bundle',
+  editableWhen: ['draft'],
+  rowActions: [
+    { key: 'edit', label: '编辑', type: 'primary', versionStatusIn: ['draft'] },
+    { key: 'newVersion', label: '新建版本', type: 'primary', versionStatusIn: ['active'], confirm: '确认基于当前版本新建草稿版本？原版本保持当前状态。' },
+    { key: 'activateDraft', label: '发布', type: 'success', versionStatusIn: ['draft'], confirm: '确认发布此草稿版本？发布后原版本将变为历史版本。' }
+  ],
+  deletableWhen: [],
+  hideRowActions: ['delete'],
+  rowActionHandlers: {
+    newVersion(row, _b, { openForm, refresh }) {
+      ElMessageBox.confirm('确认基于当前版本新建草稿版本？原版本保持当前状态，草稿可编辑子件。', '提示', { type: 'warning' })
+        .then(async () => {
+          const res = await actionResource('/api/product-bundles', row.id, '/new-version', 'POST');
+          const draft = res && res.data ? res.data : res;
+          ElMessage.success('已创建草稿新版本，可继续编辑子件');
+          if (openForm && draft && draft.id != null) { openForm(draft); if (refresh) refresh(); }
+          else location.reload();
+        })
+        .catch(() => {});
+    },
+    activateDraft(row, _b, { refresh }) {
+      ElMessageBox.confirm('确认发布此草稿版本？发布后原版本将变为历史版本。', '提示', { type: 'warning' })
+        .then(async () => { await actionResource('/api/product-bundles', row.id, '/activate', 'POST'); ElMessage.success('版本已发布'); if (refresh) refresh(); else location.reload(); })
+        .catch(() => {});
+    }
+  },
   cols: [
-    { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
-    { k: 'code', l: '组合编码', w: 130, filter: { type: 'text' } },
-    { k: 'name', l: '组合名称', filter: { type: 'text' } },
-    { k: 'productId', l: '产品ID', w: 100, filter: { type: 'number' } },
-    { k: 'pricingType', l: '定价类型', w: 100, filter: { type: 'select', options: [
-      { value: 'STANDARD', label: '标准定价' },
-      { value: 'DISCOUNT', label: '折扣定价' },
-      { value: 'FIXED', label: '固定价格' }
-    ] } },
-    { k: 'bundlePrice', l: '组合价格', w: 120, filter: { type: 'number' } },
-    { k: 'allowSplit', l: '允许拆分', w: 90, filter: { type: 'select', options: [
-      { value: true, label: '是' },
-      { value: false, label: '否' }
-    ] } },
-    { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } },
-    { k: 'validFrom', l: '生效日期', w: 110, filter: { type: 'date' } },
-    { k: 'validTo', l: '失效日期', w: 110, filter: { type: 'date' } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'id', l: '编号', w: 60 },
+    { k: 'code', l: 'BOM编码', w: 150, filter: { type: 'text' } },
+    { k: 'name', l: 'BOM名称', minWidth: 160, filter: { type: 'text' } },
+    { k: 'productCode', l: '母件SKU编码', w: 140, sortable: true },
+    { k: 'productName', l: '母件SKU名称', w: 180, showOverflowTooltip: true },
+    { k: 'bomVersion', l: '版本', w: 90 },
+    { k: 'versionStatus', l: '版本状态', w: 100, tag: (r) => ({ type: r.versionStatus === 'active' ? 'success' : 'info' }) },
+    { k: 'validFrom', l: '生效开始', w: 170 }, { k: 'validTo', l: '生效结束', w: 170 },
+    { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } }
   ],
   form: [
-    { key: 'productId', label: '产品', required: true, picker: 'products', group: '基本信息' },
-    { key: 'code', label: '组合编码', required: true, group: '基本信息' },
-    { key: 'name', label: '组合名称', required: true, group: '基本信息' },
-    { key: 'description', label: '描述', type: 'textarea', group: '基本信息' },
-    { key: 'pricingType', label: '定价类型', type: 'select', required: true, value: 'STANDARD', group: '定价信息', options: [
-      { value: 'STANDARD', label: '标准定价' },
-      { value: 'DISCOUNT', label: '折扣定价' },
-      { value: 'FIXED', label: '固定价格' }
-    ] },
-    { key: 'bundlePrice', label: '组合价格', type: 'number', group: '定价信息' },
-    { key: 'allowSplit', label: '允许拆分', type: 'boolean', value: false, group: '规则信息' },
-    { key: 'splitRule', label: '拆分规则', type: 'textarea', group: '规则信息' },
-    { key: 'versionNote', label: '版本说明', type: 'textarea', group: '版本信息' },
-    { key: 'validFrom', label: '生效日期', type: 'date', group: '有效期' },
-    { key: 'validTo', label: '失效日期', type: 'date', group: '有效期' },
-    { key: 'status', label: '状态', type: 'select', value: 'active', group: '状态', options: S_ACTIVE }
+    { key: 'productId', label: 'BOM母件SKU', required: true, type: 'product-picker', group: '基本信息', readonlyOnEdit: true },
+    { key: 'code', label: 'BOM编码', required: true, group: '基本信息', readonlyOnEdit: true },
+    { key: 'name', label: 'BOM名称', required: true, group: '基本信息', readonlyOnEdit: true },
+    { key: 'bomVersion', label: 'BOM版本', group: '版本管理', value: '1', readonly: true },
+    { key: 'versionStatus', label: '版本状态', type: 'select', value: 'active', group: '版本管理', readonly: true, options: [{ value: 'active', label: '当前版本' }, { value: 'history', label: '历史版本' }, { value: 'draft', label: '草稿' }] },
+    { key: 'validFrom', label: '生效开始', type: 'date', group: '有效期' },
+    { key: 'validTo', label: '生效结束', type: 'date', group: '有效期' },
+    { key: 'allowSplit', label: '允许子件分开发货', type: 'boolean', value: true, group: '发货控制' },
+    { key: 'description', label: '说明', type: 'textarea', group: '其他' },
+    { key: 'status', label: '状态', type: 'select', value: 'active', group: '其他', options: S_ACTIVE },
+    { key: 'lines', type: 'lines', label: 'BOM子件', required: true, group: '子件维护', cols: [
+      { k: 'childProductId', l: '子件SKU', type: 'picker', picker: 'products', displayKey: 'childProductName', required: true },
+      { k: 'quantity', l: '数量', type: 'number', required: true, precision: 4, min: 1 },
+      { k: 'lineType', l: '子件类型', type: 'select', value: 'FIXED', options: [{ value: 'FIXED', label: '固定子件' }, { value: 'OPTIONAL', label: '可选子件' }] },
+      { k: 'isRequired', l: '是否必选', type: 'boolean', value: true },
+      { k: 'description', l: '说明' }
+    ] }
   ]
 }
 
 export const MODULE_CONFIGS = {
   products, categories, dealers, hospitals, warehouses, regions, suppliers,
-  'product-lines': productLines, 'product-package-levels': productPackageLevels, 'product-bundles': productBundles,
+  'product-lines': productLines, 'product-bundles': productBundles,
   'product-prices': productPrices,
   authorizations, promotions,
   orders, 'sales-returns': salesReturns, 'purchase-orders': purchaseOrders, 'purchase-returns': purchaseReturns,
@@ -816,3 +814,4 @@ export const MODULE_CONFIGS = {
   'report-inventory-turnover': reportInventoryTurnover, 'report-surgery-stats': reportSurgeryStats,
   'report-receivables': reportReceivables, 'report-order-trace': reportOrderTrace
 }
+

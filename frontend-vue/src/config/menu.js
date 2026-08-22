@@ -5,11 +5,10 @@ export const MENU_GROUPS = [
       { key: 'products', icon: 'Goods', label: '产品管理', permissionCode: 'products:view' },
       { key: 'categories', icon: 'Files', label: '产品分类', permissionCode: 'product_category:view' },
       { key: 'product-lines', icon: 'Connection', label: '产品线管理', permissionCode: 'product_line:view' },
-      { key: 'product-package-levels', icon: 'Box', label: '产品包装层级', permissionCode: 'product_package:view' },
       { key: 'product-bundles', icon: 'Goods', label: '产品组合', permissionCode: 'product_bundle:view' },
       { key: 'dealers', icon: 'OfficeBuilding', label: '经销商管理', permissionCode: 'dealer:view' },
       { key: 'hospitals', icon: 'FirstAidKit', label: '医院/终端', permissionCode: 'hospital:view' },
-      { key: 'warehouses', icon: 'House', label: '仓库管理', permissionCode: 'warehouse:view' },
+      { key: 'warehouses', icon: 'House', label: '仓库管理', inventoryOnly: true, permissionCode: 'warehouse:view' },
       { key: 'regions', icon: 'Location', label: '区域管理', permissionCode: 'region:view' },
       { key: 'suppliers', icon: 'Shop', label: '供应商', permissionCode: 'supplier:view' },
       { key: 'product-prices', icon: 'Money', label: '产品价格', permissionCode: 'product_price:view' }
@@ -28,21 +27,21 @@ export const MENU_GROUPS = [
     items: [
       { key: 'orders', icon: 'Sell', label: '销售订单', permissionCode: 'sales_order:view' },
       { key: 'sales-returns', icon: 'RefreshLeft', label: '销退订单', permissionCode: 'sales_return:view' },
-      { key: 'purchase-orders', icon: 'ShoppingCart', label: '采购订单', permissionCode: 'purchase_order:view' },
-      { key: 'purchase-returns', icon: 'RefreshRight', label: '采退订单', permissionCode: 'purchase_return:view' }
+      { key: 'purchase-orders', icon: 'ShoppingCart', label: '采购订单', purchaseOnly: true, permissionCode: 'purchase_order:view' },
+      { key: 'purchase-returns', icon: 'RefreshRight', label: '采退订单', purchaseOnly: true, permissionCode: 'purchase_return:view' }
     ]
   },
   {
     group: '库存业务',
     items: [
-      { key: 'inventory', icon: 'Box', label: '库存查询', permissionCode: 'inventory:view' },
-      { key: 'sales-outs', icon: 'Van', label: '销售出库', permissionCode: 'sales_out:view' },
-      { key: 'receipts', icon: 'TakeawayBox', label: '收货入库', permissionCode: 'receipt:view' },
-      { key: 'stock-moves', icon: 'Switch', label: '库存移动', permissionCode: 'stock_move:view' },
-      { key: 'inventory-adjustments', icon: 'ScaleToOriginal', label: '库存调整', permissionCode: 'inventory_adjustment:view' }
-      ,{ key: 'expiry-alerts', icon: 'AlarmClock', label: '效期预警', route: '/expiry-alerts', permissionCode: 'inventory:view' }
-      ,{ key: 'stocktakes', icon: 'Histogram', label: '库存盘点', route: '/stocktakes', permissionCode: 'inventory:view' }
-      ,{ key: 'traceability', icon: 'Search', label: '序列号追溯', route: '/traceability', permissionCode: 'inventory:view' }
+      { key: 'inventory', inventoryOnly: true, icon: 'Box', label: '库存查询', permissionCode: 'inventory:view' },
+      { key: 'sales-outs', inventoryOnly: true, icon: 'Van', label: '销售出库', permissionCode: 'sales_out:view' },
+      { key: 'receipts', inventoryOnly: true, icon: 'TakeawayBox', label: '收货入库', permissionCode: 'receipt:view' },
+      { key: 'stock-moves', inventoryOnly: true, icon: 'Switch', label: '库存移动', permissionCode: 'stock_move:view' },
+      { key: 'inventory-adjustments', inventoryOnly: true, icon: 'ScaleToOriginal', label: '库存调整', permissionCode: 'inventory_adjustment:view' }
+      ,{ key: 'expiry-alerts', inventoryOnly: true, icon: 'AlarmClock', label: '效期预警', route: '/expiry-alerts', permissionCode: 'inventory:view' }
+      ,{ key: 'stocktakes', inventoryOnly: true, icon: 'Histogram', label: '库存盘点', route: '/stocktakes', permissionCode: 'inventory:view' }
+      ,{ key: 'traceability', inventoryOnly: true, icon: 'Search', label: '序列号追溯', route: '/traceability', permissionCode: 'inventory:view' }
     ]
   },
   {

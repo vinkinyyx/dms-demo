@@ -180,7 +180,7 @@ const optionalToolbar = computed(() => visibleToolbar.value.filter(b => !['searc
 
 const localRowActionMap = computed(() => {
   const defaults = {
-    'dealer-profile': { buttonKey: 'view', label: '????', buttonType: 'primary', permissionCode: 'dealer:view', sortOrder: 10 }
+    'dealer-profile': { buttonKey: 'view', label: '\u67e5\u770b', buttonType: 'primary', permissionCode: 'dealer:view', sortOrder: 10 }
   }
   return defaults[props.pageKey] || null
 })
@@ -204,7 +204,7 @@ const visibleRowActions = computed(() => {
   if (props.rowActions && Object.keys(props.rowActions).length) {
     for (const [key, handler] of Object.entries(props.rowActions)) {
       if (!handler || actions.some(b => b.buttonKey === key)) continue
-      actions.push({ buttonKey: key, label: key === 'view' ? '??' : key, buttonType: key === 'create' ? 'primary' : 'default', permissionCode: null, sortOrder: 100 + actions.length })
+      actions.push({ buttonKey: key, label: key === 'view' ? '\u67e5\u770b' : key, buttonType: key === 'create' ? 'primary' : 'default', permissionCode: null, sortOrder: 100 + actions.length })
     }
   }
   if (localRowActionMap.value && !actions.some(b => b.buttonKey === localRowActionMap.value.buttonKey)) {

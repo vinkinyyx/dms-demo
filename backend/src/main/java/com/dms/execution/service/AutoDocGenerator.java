@@ -72,25 +72,29 @@ public class AutoDocGenerator {
            .setParameter(5, isRed).setParameter(6, orderId).setParameter(7, t.get("amount_incl_tax"));
         Long soId = ((Number) ins.getSingleResult()).longValue();
 
-        // 拷贝明细：把订单行的 qty 作为 expected_qty（应发数），shipped_qty/qty 初始化为 0
+        // 拷贝明细：把订单行的 qty 作为 expected_qty（应发数），shipped_qty/qty 初始化为 0。
+        // v4.1.1：跳过 BOM 母件行（无实物）和促销赠品行（0 元，不可出库/退货），并记录源订单行 id。
         var lq = em.createNativeQuery(
-                "SELECT product_id, qty, unit_price, tax_rate, sub_total, seq FROM order_lines WHERE order_id = ?1 ORDER BY seq, id", Tuple.class);
+                "SELECT id, product_id, qty, unit_price, tax_rate, sub_total, seq, line_level, is_gift FROM order_lines WHERE order_id = ?1 ORDER BY seq, id", Tuple.class);
         lq.setParameter(1, orderId);
         @SuppressWarnings("unchecked")
         List<Tuple> ls = lq.getResultList();
         int seq = 1;
         for (Tuple l : ls) {
             try {
+                String lineLevel = l.get("line_level") == null ? "NORMAL" : String.valueOf(l.get("line_level"));
+                boolean isGift = Boolean.TRUE.equals(l.get("is_gift"));
+                if ("PARENT".equals(lineLevel) || isGift) continue;
                 em.createNativeQuery(
-                        "INSERT INTO sales_out_lines (sales_out_id, seq, product_id, warehouse_id, expected_qty, shipped_qty, qty, " +
+                        "INSERT INTO sales_out_lines (sales_out_id, seq, product_id, warehouse_id, source_order_line_id, expected_qty, shipped_qty, qty, " +
                         "unit_price, tax_rate, subtotal, created_at) " +
-                        "VALUES (?1, ?2, ?3, ?4, ?5, 0, 0, ?6, ?7, ?8, now())")
+                        "VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, 0, ?7, ?8, ?9, now())")
                     .setParameter(1, soId).setParameter(2, seq++)
-                    .setParameter(3, l.get("product_id")).setParameter(4, whId)
-                    .setParameter(5, l.get("qty"))
-                    .setParameter(6, l.get("unit_price"))
-                    .setParameter(7, l.get("tax_rate"))
-                    .setParameter(8, l.get("sub_total"))
+                    .setParameter(3, l.get("product_id")).setParameter(4, whId).setParameter(5, l.get("id"))
+                    .setParameter(6, l.get("qty"))
+                    .setParameter(7, l.get("unit_price"))
+                    .setParameter(8, l.get("tax_rate"))
+                    .setParameter(9, l.get("sub_total"))
                     .executeUpdate();
             } catch (Exception ex) {
                 log.warn("拷贝订单 {} 明细失败: {}", orderId, ex.getMessage());

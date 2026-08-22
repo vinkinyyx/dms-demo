@@ -497,7 +497,7 @@ public class SalesOutService {
         if (reason != null && !reason.isBlank()) {
             so.getSurgeryInfo().put("cancelReason", reason);
             so.getSurgeryInfo().put("cancelType", "PARTIAL");
-            so.getSurgeryInfo().put("cancelAt", OffsetDateTime.now().toString());
+            so.getSurgeryInfo().put("cancelAt", com.dms.common.util.DateFmt.fmt(OffsetDateTime.now()));
         }
         so.setUpdatedAt(OffsetDateTime.now());
         return salesOutRepository.save(so);
@@ -551,7 +551,7 @@ public class SalesOutService {
         if (reason != null && !reason.isBlank()) {
             so.getSurgeryInfo().put("cancelReason", reason);
             so.getSurgeryInfo().put("cancelType", "FULL");
-            so.getSurgeryInfo().put("cancelAt", OffsetDateTime.now().toString());
+            so.getSurgeryInfo().put("cancelAt", com.dms.common.util.DateFmt.fmt(OffsetDateTime.now()));
         }
         so.setUpdatedAt(OffsetDateTime.now());
         return salesOutRepository.save(so);

@@ -21,4 +21,10 @@ public interface ProductBundleRepository extends JpaRepository<ProductBundle, Lo
     boolean existsByTenantIdAndProductIdAndCode(UUID tenantId, Long productId, String code);
 
     boolean existsByTenantIdAndProductIdAndCodeAndIdNot(UUID tenantId, Long productId, String code, Long id);
+
+    java.util.List<ProductBundle> findByTenantIdAndProductIdAndVersionStatus(UUID tenantId, Long productId, String versionStatus);
+
+    @org.springframework.data.jpa.repository.Query("select max(b.bomVersion) from ProductBundle b where b.tenantId=?1 and b.productId=?2 and b.deletedAt is null")
+    java.util.Optional<String> findMaxBomVersion(UUID tenantId, Long productId);
+
 }

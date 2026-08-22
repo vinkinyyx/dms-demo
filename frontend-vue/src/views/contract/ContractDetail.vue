@@ -70,6 +70,20 @@
       </el-timeline>
     </el-card>
 
+    <el-card shadow="never" class="op-logs">
+      <template #header><span>操作日志</span></template>
+      <el-timeline v-if="opLogs.length">
+        <el-timeline-item v-for="(log, idx) in opLogs" :key="idx" :timestamp="formatDate(log.atTime)" placement="top">
+          <div class="log-head">
+            <el-tag size="small">{{ log.username || log.operator || '系统' }}</el-tag>
+            <span class="log-action">{{ log.action }}</span>
+          </div>
+          <div class="log-changes" v-if="log.changes">{{ log.changes }}</div>
+        </el-timeline-item>
+      </el-timeline>
+      <el-empty v-else description="暂无操作日志" />
+    </el-card>
+
     <div class="footer-actions" v-if="detail">
       <el-button v-if="detail.status === 'draft' || detail.status === 'rejected'" type="primary" @click="$router.push('/contracts/' + detail.id + '/edit')">编辑</el-button>
       <el-button v-if="detail.status === 'draft'" type="warning" @click="doSubmit">提交审批</el-button>
@@ -87,6 +101,7 @@ import { getToken } from '@/utils/auth'
 import { getContract, submitContract, withdrawContract, addContractAttachment, deleteContractAttachment } from './api'
 import { categoryLabel, appTypeLabel, statusMeta } from './dict'
 import { formatDate } from '@/utils/format'
+import { getOperationLogs } from '@/api/crud'
 
 const route = useRoute()
 const router = useRouter()
@@ -97,6 +112,7 @@ function previewAtt(row){ previewId.value = row.fileId; previewName.value = row.
 function printContract(){ window.open('/print/contract/'+route.params.id, '_blank') }
 const loading = ref(false)
 const detail = ref(null)
+const opLogs = ref([])
 const headers = { Authorization: 'Bearer ' + (getToken() || '') }
 const canEdit = computed(() => detail.value && (detail.value.status === 'draft' || detail.value.status === 'rejected'))
 const dynamicFields = computed(() => {
@@ -109,6 +125,10 @@ async function load() {
   try {
     const res = await getContract(route.params.id)
     detail.value = res.data || res
+    try {
+      const lr = await getOperationLogs('contract', route.params.id, 'contract')
+      opLogs.value = Array.isArray(lr && lr.data) ? lr.data : []
+    } catch (e) { opLogs.value = [] }
   } finally {
     loading.value = false
   }
@@ -153,4 +173,8 @@ onMounted(load)
 <style scoped>
 .header { margin-bottom: 12px; }
 .footer-actions { text-align: right; margin-top: 16px; }
+.op-logs { margin-top: 12px; }
+.log-head { display: flex; gap: 8px; align-items: center; }
+.log-action { color: var(--el-text-color-regular); }
+.log-changes { color: var(--el-text-color-secondary); font-size: 13px; margin-top: 4px; white-space: pre-wrap; }
 </style>

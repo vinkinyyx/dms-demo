@@ -65,6 +65,12 @@ public class Order {
     @Column(name = "discount_amount", precision = 18, scale = 2)
     private BigDecimal discountAmount;
 
+    @Column(name = "header_discount_type", length = 16)
+    private String headerDiscountType;
+
+    @Column(name = "header_discount_value", precision = 18, scale = 4)
+    private BigDecimal headerDiscountValue;
+
     @Column(name = "final_amount", precision = 18, scale = 2)
     private BigDecimal finalAmount;
 

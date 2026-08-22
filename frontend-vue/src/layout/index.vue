@@ -63,9 +63,9 @@
         </el-dropdown>
       </el-header>
       <el-main class="main">
-        <router-view v-slot="{ Component }">
+        <router-view v-slot="{ Component, route: viewRoute }">
           <keep-alive :max="10">
-            <component :is="Component" :key="$route.fullPath" />
+            <component :is="Component" :key="viewRoute.fullPath" />
           </keep-alive>
         </router-view>
       </el-main>
@@ -90,6 +90,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { MENU_GROUPS } from '@/config/menu'
 import { unreadCount } from '@/api/notification'
+import request from '@/utils/request'
 import { Bell, Moon, Sunny, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { ensurePermissions } from '@/directives/has'
@@ -105,16 +106,19 @@ initTheme()
 const unread = ref(0)
 const themeMode = ref(document.documentElement.dataset.mode || 'light')
 function toggleThemeMode(){ applyThemeMode(); themeMode.value = document.documentElement.dataset.mode || 'light' }
-function toggleSidebar(){ collapsed.value = !collapsed.value; persistSidebar() }
+function toggleSidebar(){ collapsed.value = !collapsed.value; persistSidebar(); applySidebarVar() }
+function applySidebarVar(){ document.documentElement.style.setProperty('--dms-sidebar-w', collapsed.value ? '64px' : '230px'); window.dispatchEvent(new Event('sidebar-toggle')) }
 async function loadUnread(){ try { const r=await unreadCount(); unread.value=Number(r.data?.count||0) } catch(e){ unread.value=0 } }
 function goNotifications(){ router.push('/notifications') }
 setInterval(loadUnread, 60000)
 const permissionsLoaded = ref(false)
+const features = ref({ inventoryEnabled: true, purchaseEnabled: true })
 
-onMounted(async () => {
+onMounted(async () => { applySidebarVar();
   collapsed.value = localStorage.getItem('dms:sidebar:collapsed') === '1'
   await ensurePermissions()
   await loadUnread()
+  try { const r = await request.get('/api/tenant/features'); if (r.data) Object.assign(features.value, r.data) } catch(e) {}
   permissionsLoaded.value = true
 })
 
@@ -131,6 +135,8 @@ function permSet() {
   return out
 }
 function menuVisible(item) {
+  if (item.inventoryOnly && !features.value.inventoryEnabled) return false
+  if (item.purchaseOnly && !features.value.purchaseEnabled) return false
   if (!item.permissionCode) return true
   return permSet().has(item.permissionCode)
 }
@@ -219,6 +225,7 @@ function onCommand(cmd) {
 
 <style scoped lang="scss">
 .layout { height: 100vh; background: var(--dms-bg-page); }
+.layout > .el-container { min-height: 0; }
 .sidebar {
   background: linear-gradient(180deg,#243447 0%,#1f2d3d 100%);
   border-right: 1px solid #1a2533;

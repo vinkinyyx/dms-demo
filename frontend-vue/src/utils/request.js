@@ -16,7 +16,8 @@ function mutationKey(config) {
   const method = String(config.method).toLowerCase()
   if (!['post', 'put', 'patch', 'delete'].includes(method)) return ''
   if (config.skipDuplicate) return ''
-  return [method, config.url || '', JSON.stringify(config.params || {}), JSON.stringify(config.data || '')].join('|')
+  const url = String(config.url || '').replace(/\/\d+(?=\?|$)/, '/:id')
+  return [method, url, JSON.stringify(config.params || {})].join('|')
 }
 
 function removeInflight(config) {
@@ -143,7 +144,6 @@ service.interceptors.response.use(
       return Promise.reject(error)
     }
     if (status === 404) {
-      router.push('/404')
       return Promise.reject(error)
     }
     if (status && status >= 500) {

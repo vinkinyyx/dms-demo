@@ -1,3 +1,79 @@
+## v4.1.0 (2026-08-22) - BOM 价格双轨 / 行折扣优先级 / 促销计价口径统一
+
+### 新增
+- **BOM 子件价与单品价双轨维护**：`product_prices` 新增 `price_context`（STANDALONE/BOM_HEADER/BOM_COMPONENT）和 `bom_parent_product_id`，同一 SKU 可分别维护单品价和作为某 BOM 子件的价格。
+- BOM 母件销售价保存为 1 条 BOM_HEADER（0 元头）+ N 条 BOM_COMPONENT（子件价），母件记录完整保留不再被子件覆盖。
+- BOM 母件价生效/失效级联更新其下所有子件价状态。
+- 价格列表新增「价格用途」列及「经销商」「价格类型」过滤；默认隐藏 BOM_COMPONENT 子件行。
+- 后端单元测试 `V4CalculatorTest` 覆盖 BOM 子件专用价/不回退单品价、行折扣优先级、行后金额占比分摊。
+
+### 修复
+- **BOM 子件下单价格回退到单品价**：子件价格只取该 BOM 上下文的 BOM_COMPONENT 价，查不到返回 0，不再回退 STANDALONE。
+- **BOM 子件行折扣丢失**：`V4Calculator.buildLine` 漏设 `lineLevel=CHILD`，子件行在数据库中变成 NORMAL，提交重算时 `childDiscounts` 读不到。已修正，行折扣优先级最高（先算行折扣，再分摊整单折扣/促销满减）。
+- **BOM 母件参与总价/折扣/出库**：母件金额始终为 0，不计总价、不平摊折扣、不参与出库。
+- **折扣分摊口径**：按「行折扣后金额占比」平摊整单折扣+促销满减，2 位小数 HALF_UP，尾差吸收到最大行。
+- **满减保存误报未选产品**：BigDecimal 金额被 instanceof Number 误判、targetType=LINE 仍强制要求 SKU。
+- **产品价格只读页显示裸 ID**：SKU/经销商/BOM 母件统一显示编码+名称。
+
+### 数据
+- Flyway `V108__bom_component_price_context.sql`：新增字段与上下文隔离唯一索引；迁移历史 BOM 子件价为 BOM_COMPONENT 并补建 BOM_HEADER 0 元记录。
+
+### 文档
+- 需求：`docs/01_需求/v4.1.0/DMS_v4.1.0_需求规格.md`
+- 设计：`docs/02_设计/v4.1.0/DMS_v4.1.0_技术设计.md`
+- 测试：`docs/03_测试/v4.1.0/DMS_v4.1.0_测试场景.md`
+- 版本决策：今后 bugfix 自动升 PATCH；MINOR/MAJOR 升级由用户决定（见 `.memory/layers/layer4-decisions.md`）。
+## v4.0.3 (2026-08-21) - 促销赠品手动刷新 / 幂等 / 标准金额占比分摊
+
+### 修复
+- **赠品在每次数量/产品变动时无限累加**：原预览在每次输入变化时都执行完整促销试算，且请求未携带 `isGift`，后端把已有赠品行当作计费行再次叠加赠品。改为：数量/产品/折扣变化只做价格预览（不生成赠品、不应用满减），新增「刷新赠品及价格」按钮在需要时统一计算；保存/提交前自动刷新一次。后端忽略入参中的赠品行并以当前计费行为准，重复刷新幂等。
+- **折扣分摊与业务口径不符**：原逻辑分段在“剩余可分摊余额”上重复分摊。改为仅对非赠品、非 BOM 母件行，按标准金额占比一次性分摊「行折扣 + 整单折扣 + 促销满减」总额，2 位小数 HALF_UP，尾差吸收到最大行；出库单价 = 最终金额 / 数量。示例：标准 1000/500、总折扣 300 → 最终 800/400。
+- **赠品行字段名不一致**：试算接口返回 `gift` 而前端只读 `isGift`，导致刷新后赠品行不渲染。前端兼容 `gift/isGift` 两种返回。
+- **管理后台测试环境白屏**：`admin-vue` 产物 base 为 `/dms/admin/`，但测试环境以 `/admin/` 挂载，JS 资源 404 回退到 index.html。按测试环境 `/admin/` 重新构建并部署。
+
+### 新增
+- 销售订单明细卡片头部「刷新赠品及价格」按钮与命中促销提示条（买赠/满减文案）。
+- 明细列新增「出库单价」。
+- `POST /api/sales-orders/preview` 支持 `applyPromotions` 开关，全量试算时返回 `promotionMessages`；创建/更新/提交始终走全量试算，保证落库一致。
+- 需求/设计/测试文档：`docs/01_需求/v4.0.0/DMS_v4.0.0-bugfix.9_需求规格.md`、`docs/02_设计/v4.0.0/DMS_v4.0.0-bugfix.9_技术设计.md`、`docs/03_测试/v4.0.0/DMS_v4.0.0-bugfix.9_测试场景.md`。
+
+### 自动化
+- 扩展 `automation_test/e2e/specs/12-orders-promo-bom-return.spec.js`：价格预览不产生赠品、刷新幂等、命中文案、标准金额占比分摊（800/400、出库单价）、赠品持久化与锁定。
+- 真实浏览器脚本 `automation_test/e2e/promo-ui-refresh.cjs` 覆盖按钮交互。
+## v4.0.2 (2026-08-21) - 促销赠品动态行 / BOM 全出库 / 销退分摊金额
+
+### 修复
+- **买2送5促销不生效**：`V4Calculator.applyGift` 将 `EVERY_N.cycle` 规则的 `thresholdQty=0` 误判为不命中，且只认 camelCase 字段。兼容 `thresholdQty/buyQty/everyN` 和 `giftQty/gift_qty`，每满 N 自动循环计算赠品数量。
+- **赠品未在订单明细内动态展示且不可锁定**：新增 `POST /api/sales-orders/preview` 后端试算接口，`OrderCreate.vue` 改为以后端返回的 BOM、赠品、折扣和分摊金额刷新页面；赠品行展示在明细表内，产品/数量/折扣/删除均不可编辑，最终金额为 0。
+- **赠品重复/幂等问题**：每次试算前清理旧赠品行，同一赠品 SKU 按规则聚合数量，避免多规则或反复编辑产生重复行。
+- **BOM 订单生成销售出库后仍部分出库**：BOM 母件无实物、无价格，却被复制到出库并纳入完成度统计。`V4ErpService` 和审批自动建单一律过滤 `line_level='PARENT'`，状态刷新只统计子件、普通行和赠品。
+- **销退明细缺少平摊单价/行总价/汇总金额**：从原 `sales_out_lines.final_amount / shipped_qty` 回填平摊含税单价，编辑页和只读页展示单价、行总价及汇总退货金额；创建/更新时后端按原出库行重算总额，不信任前端金额。
+- **销退原发货单区域浪费空间**：改为紧凑单行信息，在编辑页和只读页均可见。
+- **销售订单经销商字段仍偏窄**：新增/编辑页经销商列加宽到 18 栅格，订单详情只读页改为两列描述，降低长名称截断。
+
+### 自动化
+- 新增 `automation_test/e2e/specs/12-orders-promo-bom-return.spec.js`，覆盖：PRD-J002 买2送5生成 PRD-J003 赠品 15、赠品持久化、BOM 审批后一键出库完成、销退平摊单价和汇总金额、Console 无报错。
+- 新增需求/设计/测试文档：`docs/01_需求/v4.0.0/DMS_v4.0.0-bugfix.8_需求规格.md`、`docs/02_设计/v4.0.0/DMS_v4.0.0-bugfix.8_技术设计.md`、`docs/03_测试/v4.0.0/DMS_v4.0.0-bugfix.8_测试场景.md`。
+- `.memory/layers/layer3-lessons.md` 新增 L50-L52：促销/赠品必须后端试算并回读持久化，BOM 母件不得参与出库完成度，销退金额必须由原出库行后端重算。
+
+## v4.0.1 (2026-08-21) - 促销启用 / 引用字段显示 / 销售定价一致性 / 审批流修复
+
+### 修复
+- **促销规则列表「启用」按钮无反应**：后端只有 `/promotions/{id}/deactivate`，前端调用的 `/activate` 返回 404 且被空 catch 吞掉。新增 `PromotionController.activate` + `PromotionService.activate`，统一写入 `updatedAt/updatedBy`。
+- **促销/明细只读页显示裸 id 和枚举码**：`ResourceDetail.lineValue` 只特判了 `childProductId`，`targetProductId/giftProductId/cycle(EVERY_N)` 等直接输出数字或码值。改为通用渲染：select 映射中文 label，`*Id`/picker 字段优先取 `displayKey`，再按 `xxxCode + xxxName` 拼装。
+- **销售订单前端价格与后端解析不一致导致提交报「产品 22 没有有效销售价格」**：前端 `loadPrice` 未传 `partnerId`，且会回退到任意 active 价；后端严格按「经销商专属→GLOBAL(0)→GLOBAL(null)」解析。前端并发查询 DEALER+GLOBAL 并严格按同优先级取价，无价时单价置 0 并在提交前以产品编码+名称阻断；后端异常信息改为 `产品 [PRD-B001 人工骨修复颗粒（β-TCP）] 没有维护有效销售价格…`，不再抛 id。
+- **销退提交提示无审批流**：`approval_node_assignees` 被清空（0 行），5 个 ENABLED 默认模板审批节点全部无审批人，Controller 捕获异常后把状态回滚为 DRAFT。新增 Flyway V107 幂等修复，为默认模板补 SYS_ADMIN(系统管理员)；提交后真实进入 `PENDING_APPROVAL/RUNNING`。
+- **表单宽度不齐导致经销商等长文本被截断**：`OrderCreate` 经销商列 span 8→12，`CrudView` 通用表单列 span 8→12，`SalesReturnEdit/PurchaseReturnEdit` 主字段统一 span 12，所有选择/日期/数字控件保持 `width:100%`。
+- **销退原发货单区域过大**：`el-empty` 替换为紧凑的图标+一行提示，卡片 body padding 收紧；选择发货单弹窗 680→640、表格高 240→200、列宽整体收窄。
+
+### 数据
+- Flyway `V107__repair_default_approval_assignees.sql`：幂等修复 PO/SRT/PRT/CT/AUTH 五个 ENABLED 默认模板缺失的审批人（SYS_ADMIN 角色）。
+
+### 自动化
+- 新增 `automation_test/e2e/specs/11-six-fixes-regression.spec.js`，覆盖：促销明细无裸 id/枚举、经销商列宽、点新建后表单清空 + 添加行拦截、销退原发货单区域紧凑、弹窗 640 宽度、Console 无报错。
+- `AGENTS.md` 第 5 节新增 4 条强制验收项：引用字段必须显示名称、状态按钮必须回读状态、前后端价格/库存解析必须一致、审批提交必须回读 status/approval_instances。
+- `.memory/layers/layer3-lessons.md` 新增 L46–L49 教训。
+
 ## v3.12.5 (2026-08-18) - 导入导出分页修复与全站时间格式化热修复
 
 ### 修复
@@ -956,3 +1032,4 @@ v3.8.7 沉淀了 D13 规范和基础设施（platform_button_configs 表、v-has
 - Layer 2 §18 列表页布局规范保持冻结（v3.8.7 入冻结区，本版未变更规范文字）。
 - Layer 4 D13：本版本正式落地 D13（CrudView 接入、菜单按权限过滤、admin-vue 维护入口完善）。
 - D12 状态：原文 2026-08-06 已因 PowerShell 编码异常丢失；按上下文重写并锁定 deploy-fast 流程。
+

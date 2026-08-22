@@ -33,12 +33,19 @@
         <el-table-column label="更新时间" width="170">
           <template #default="{ row }">{{ formatTime(row.updatedAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="onEdit(row)">编辑</el-button>
-            <el-button v-if="row.status === 'DRAFT' || row.status === 'DISABLED'" size="small" type="success" @click="onPublish(row)">发布</el-button>
-            <el-button v-if="row.status === 'ENABLED'" size="small" type="warning" @click="onDisable(row)">停用</el-button>
-            <el-button size="small" @click="onNewVersion(row)">新版本</el-button>
+            <div class="row-actions">
+              <template v-for="(a, idx) in rowActions(row)" :key="a.key">
+                <el-button v-if="idx < 2" size="small" :type="a.type" @click="a.on(row)">{{ a.label }}</el-button>
+              </template>
+              <el-dropdown v-if="rowActions(row).length > 2" trigger="click" @command="(cmd)=>cmd.on(row)">
+                <el-button size="small">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+                <template #dropdown><el-dropdown-menu>
+                  <el-dropdown-item v-for="a in rowActions(row).slice(2)" :key="a.key" :command="a">{{ a.label }}</el-dropdown-item>
+                </el-dropdown-menu></template>
+              </el-dropdown>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -93,6 +100,7 @@ import {
   listTemplates, getTemplate, createTemplate, updateTemplate,
   publishTemplate, disableTemplate, newTemplateVersion
 } from '@/api/approval'
+import { ArrowDown } from '@element-plus/icons-vue'
 import AssigneePicker from './AssigneePicker.vue'
 import ApprovalFlowEditor from './ApprovalFlowEditor.vue'
 import {
@@ -205,6 +213,13 @@ async function onNewVersion(row) {
   await newTemplateVersion(row.id)
   ElMessage.success('已创建新版本草稿')
   reload()
+}
+function rowActions(row){
+  const a=[{key:'edit',label:'编辑',type:'',on:(r)=>onEdit(r)}]
+  if(row.status==='DRAFT'||row.status==='DISABLED') a.push({key:'pub',label:'发布',type:'success',on:(r)=>onPublish(r)})
+  if(row.status==='ENABLED') a.push({key:'dis',label:'停用',type:'warning',on:(r)=>onDisable(r)})
+  a.push({key:'newver',label:'新版本',type:'',on:(r)=>onNewVersion(r)})
+  return a
 }
 onMounted(reload)
 </script>

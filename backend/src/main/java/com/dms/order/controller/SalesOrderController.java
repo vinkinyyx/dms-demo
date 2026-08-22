@@ -22,6 +22,8 @@ import com.dms.approval.dto.StartApprovalRequest;
 import com.dms.approval.entity.ApprovalInstance;
 import com.dms.approval.service.ApprovalService;
 import com.dms.execution.service.AutoDocGenerator;
+import com.dms.v4.V4ErpService;
+import com.dms.v4.V4OrderService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +48,8 @@ public class SalesOrderController {
     private final AutoDocGenerator autoDocGenerator;
     private final com.dms.common.util.DocNoGenerator docNoGenerator;
     private final ApprovalService approvalService;
+    private final V4OrderService v4OrderService;
+    private final V4ErpService v4ErpService;
 
     @GetMapping
     @Transactional(readOnly = true)
@@ -54,7 +58,12 @@ public class SalesOrderController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long dealerId,
-            @RequestParam(required = false) Long warehouseId) {
+            @RequestParam(required = false) Long warehouseId,
+            @RequestParam(required = false) String createdFrom,
+            @RequestParam(required = false) String createdTo,
+            @RequestParam(required = false) String createdAt,
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String keyword) {
         UUID tid = TenantContext.getTenantId();
         int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
 
@@ -65,6 +74,30 @@ public class SalesOrderController {
         if (status != null && !status.isBlank()) { where.append(" AND o.status = ?").append(idx++); params.add(status); }
         if (dealerId != null) { where.append(" AND o.dealer_id = ?").append(idx++); params.add(dealerId); }
         if (warehouseId != null) { where.append(" AND o.warehouse_id = ?").append(idx++); params.add(warehouseId); }
+        if (createdFrom != null && !createdFrom.isBlank()) { where.append(" AND o.created_at >= ?").append(idx++); params.add(java.sql.Timestamp.valueOf(java.time.LocalDate.parse(createdFrom).atStartOfDay())); }
+        if (createdTo != null && !createdTo.isBlank()) { where.append(" AND o.created_at <= ?").append(idx++); params.add(java.sql.Timestamp.valueOf(java.time.LocalDate.parse(createdTo).plusDays(1).atStartOfDay())); }
+        if (createdAt != null && !createdAt.isBlank()) {
+            String[] parts = createdAt.split(",");
+            String fromPart = parts[0].trim();
+            String toPart = parts.length > 1 ? parts[1].trim() : "";
+            if (!fromPart.isEmpty()) { where.append(" AND o.created_at >= ?").append(idx++); params.add(java.sql.Timestamp.valueOf(java.time.LocalDate.parse(fromPart).atStartOfDay())); }
+            if (!toPart.isEmpty()) { where.append(" AND o.created_at < ?").append(idx++); params.add(java.sql.Timestamp.valueOf(java.time.LocalDate.parse(toPart).plusDays(1).atStartOfDay())); }
+            else if (!fromPart.isEmpty() && parts.length == 1) { where.append(" AND o.created_at < ?").append(idx++); params.add(java.sql.Timestamp.valueOf(java.time.LocalDate.parse(fromPart).plusDays(1).atStartOfDay())); }
+        }
+        if (code != null && !code.isBlank()) { where.append(" AND o.code ILIKE ?").append(idx++); params.add("%" + code.trim() + "%"); }
+        if (keyword != null && !keyword.isBlank()) {
+            where.append(" AND (");
+            String[] tokens = keyword.trim().split("[\s,，]+");
+            boolean first = true;
+            for (String token : tokens) {
+                if (token.isBlank()) continue;
+                if (!first) where.append(" OR ");
+                where.append("(o.code ILIKE ? OR d.name ILIKE ?)").append(idx++).append(idx++);
+                String kw = "%" + token.trim() + "%"; params.add(kw); params.add(kw);
+                first = false;
+            }
+            where.append(")");
+        }
 
         var qCnt = em.createNativeQuery("SELECT COUNT(*) FROM orders o " + where);
         for (int i = 0; i < params.size(); i++) qCnt.setParameter(i + 1, params.get(i));
@@ -77,7 +110,8 @@ public class SalesOrderController {
                 "COALESCE(NULLIF(CAST(o.ship_snapshot AS jsonb)->>'dealerName',''), d.name) AS dealer_name, " +
                 "o.warehouse_id, w.name AS warehouse_name, u.name AS audit_user_name, o.approved_at AS audit_at, " +
                 "o.amount_incl_tax, o.discount_amount, o.final_amount, o.tax_amount, o.expected_date, " +
-                "o.status, o.extra, o.created_at " +
+                "o.status, o.extra, o.created_at, " +
+                "COALESCE((SELECT SUM(sol.qty) FROM sales_out_lines sol JOIN sales_outs so ON so.id=sol.sales_out_id WHERE so.source_order_id=o.id AND so.tenant_id=o.tenant_id AND COALESCE(so.is_red,false)=false AND so.deleted_at IS NULL),0) AS shipped_qty " +
                 "FROM orders o " +
                 "LEFT JOIN dealers d ON d.id = o.dealer_id " +
                 "LEFT JOIN warehouses w ON w.id = o.warehouse_id " +
@@ -102,6 +136,12 @@ public class SalesOrderController {
         return ApiResponse.ok(data);
     }
 
+    @PostMapping("/preview")
+    @Transactional(readOnly = true)
+    public ApiResponse<Map<String, Object>> preview(@RequestBody Map<String, Object> body) {
+        return ApiResponse.ok(v4OrderService.previewSalesOrder(body));
+    }
+
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
     public ApiResponse<Map<String, Object>> detail(@PathVariable Long id) {
@@ -111,7 +151,7 @@ public class SalesOrderController {
 
         var q = em.createNativeQuery(
                 "SELECT ol.id, ol.seq, ol.product_id, p.code AS p_code, p.name_cn AS p_name, p.spec AS p_spec, " +
-                "ol.qty, ol.unit_price, ol.tax_rate, ol.sub_total, ol.is_gift " +
+                "ol.qty, ol.unit_price, ol.tax_rate, ol.sub_total, ol.standard_price_incl_tax, ol.line_discount_type, ol.line_discount_value, ol.line_discount_amount, ol.promo_discount_amount, ol.header_discount_amount, ol.discount_amount, ol.final_amount, ol.amount_excl_tax, ol.tax_amount AS line_tax_amount, ol.is_gift, ol.bom_parent_product_id, ol.bom_parent_line_id, ol.bom_version, ol.bom_group_no, ol.component_qty, ol.line_level, ol.is_group_header, ol.closed_qty " +
                 "FROM order_lines ol LEFT JOIN products p ON p.id = ol.product_id " +
                 "WHERE ol.order_id = ?1 ORDER BY ol.seq, ol.id", Tuple.class);
         q.setParameter(1, id);
@@ -128,9 +168,27 @@ public class SalesOrderController {
             l.put("productSpec", t.get("p_spec"));
             l.put("qty", t.get("qty"));
             l.put("unitPrice", t.get("unit_price"));
+            l.put("standardPriceInclTax", t.get("standard_price_incl_tax"));
             l.put("taxRate", t.get("tax_rate"));
             l.put("subtotal", t.get("sub_total"));
+            l.put("lineDiscountType", t.get("line_discount_type"));
+            l.put("lineDiscountValue", t.get("line_discount_value"));
+            l.put("lineDiscountAmount", t.get("line_discount_amount"));
+            l.put("promoDiscountAmount", t.get("promo_discount_amount"));
+            l.put("headerDiscountAmount", t.get("header_discount_amount"));
+            l.put("discountAmount", t.get("discount_amount"));
+            l.put("finalAmount", t.get("final_amount"));
+            l.put("amountExclTax", t.get("amount_excl_tax"));
+            l.put("taxAmount", t.get("line_tax_amount"));
             l.put("isGift", t.get("is_gift"));
+            l.put("bomParentProductId", t.get("bom_parent_product_id"));
+            l.put("bomParentLineId", t.get("bom_parent_line_id"));
+            l.put("bomVersion", t.get("bom_version"));
+            l.put("lineLevel", t.get("line_level"));
+            l.put("isGroupHeader", Boolean.TRUE.equals(t.get("is_group_header")));
+            l.put("bomGroupNo", t.get("bom_group_no"));
+            l.put("componentQty", t.get("component_qty"));
+            l.put("closedQty", t.get("closed_qty"));
             lines.add(l);
         }
         data.put("lines", lines);
@@ -144,31 +202,10 @@ public class SalesOrderController {
     public ApiResponse<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         UUID tid = TenantContext.getTenantId();
         if (body.get("dealerId") == null) return ApiResponse.fail(40001, "经销商不能为空");
-        if (body.get("warehouseId") == null) return ApiResponse.fail(40001, "发货仓库不能为空");
 
-        String code = docNoGenerator.next("SO");
-        BigDecimal total = calcTotal(body);
-
-        var insert = em.createNativeQuery(
-                "INSERT INTO orders (tenant_id, code, order_type, dealer_id, warehouse_id, ship_snapshot, " +
-                "amount_incl_tax, discount_amount, final_amount, tax_amount, expected_date, status, remark, extra, " +
-                "created_at, updated_at, created_by) " +
-                "VALUES (?1, ?2, ?3, ?4, ?5, CAST(?6 AS jsonb), ?7, 0, ?7, 0, CAST(?8 AS date), 'DRAFT', ?9, CAST(?10 AS jsonb), now(), now(), ?11) " +
-                "RETURNING id");
-        insert.setParameter(1, tid);
-        insert.setParameter(2, code);
-        insert.setParameter(3, body.getOrDefault("orderType", "NORMAL"));
-        insert.setParameter(4, toLong(body.get("dealerId")));
-        insert.setParameter(5, toLong(body.get("warehouseId")));
-        insert.setParameter(6, shipSnapshot(body));
-        insert.setParameter(7, total);
-        insert.setParameter(8, body.get("expectedDate"));
-        insert.setParameter(9, body.getOrDefault("remark", ""));
-        insert.setParameter(10, extraToJson(body.get("extra")));
-        insert.setParameter(11, TenantContext.getUserId());
-        Long id = ((Number) insert.getSingleResult()).longValue();
-
-        insertLines(id, body);
+        Map<String, Object> created = v4OrderService.createSalesOrder(body);
+        Long id = Long.valueOf(String.valueOf(created.get("id")));
+        String code = String.valueOf(created.get("code"));
         audit(id, "SO_CREATE");
 
         Map<String, Object> res = new LinkedHashMap<>();
@@ -178,80 +215,17 @@ public class SalesOrderController {
     }
 
     @PutMapping("/{id}")
-    @OperationLog(businessType = "salesOrder", action = OperationAction.UPDATE, remark = "销售订单-更新")
+    @OperationLog(businessType = "salesOrder", action = OperationAction.UPDATE, remark = "update sales order")
     @Transactional
     public ApiResponse<Map<String, Object>> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        UUID tid = TenantContext.getTenantId();
-        String status = getStatus(id, tid);
-        if (status == null) return ApiResponse.fail(40404, "销售订单不存在");
-        if (!"DRAFT".equals(status)) return ApiResponse.fail(40009, "仅草稿可编辑，当前状态: " + status);
-
-        // partial update: preserve existing values when fields are omitted
-        Object[] cur = (Object[]) em.createNativeQuery(
-                "SELECT order_type, dealer_id, warehouse_id, COALESCE(CAST(ship_snapshot AS text),'{}'), amount_incl_tax, expected_date, COALESCE(remark,''), COALESCE(CAST(extra AS text),'{}') FROM orders WHERE id = ?1 AND tenant_id = ?2")
-            .setParameter(1, id).setParameter(2, tid).getSingleResult();
-
-        Object orderType = body.containsKey("orderType") ? body.get("orderType") : cur[0];
-        Long dealerId = body.containsKey("dealerId") ? toLong(body.get("dealerId")) : toLong(cur[1]);
-        Long warehouseId = body.containsKey("warehouseId") ? toLong(body.get("warehouseId")) : toLong(cur[2]);
-        String snapJson = body.containsKey("dealerName") ? shipSnapshot(body) : String.valueOf(cur[3]);
-        Object expectedDate = body.containsKey("expectedDate") ? body.get("expectedDate") : cur[5];
-        String remark = body.containsKey("remark") ? String.valueOf(body.get("remark")) : String.valueOf(cur[6]);
-        String extraJson = body.containsKey("extra") ? extraToJson(body.get("extra")) : String.valueOf(cur[7]);
-
-        BigDecimal total;
-        if (body.containsKey("lines")) {
-            total = calcTotal(body);
-        } else {
-            total = cur[4] == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(cur[4]));
-        }
-
-        em.createNativeQuery(
-                "UPDATE orders SET order_type = ?1, dealer_id = ?2, warehouse_id = ?3, ship_snapshot = CAST(?4 AS jsonb), " +
-                "amount_incl_tax = ?5, final_amount = ?5, expected_date = CAST(?6 AS date), remark = ?7, extra = CAST(?8 AS jsonb), updated_at = now() " +
-                "WHERE id = ?9 AND tenant_id = ?10")
-            .setParameter(1, orderType == null ? "NORMAL" : orderType)
-            .setParameter(2, dealerId)
-            .setParameter(3, warehouseId)
-            .setParameter(4, snapJson)
-            .setParameter(5, total)
-            .setParameter(6, expectedDate)
-            .setParameter(7, remark)
-            .setParameter(8, extraJson)
-            .setParameter(9, id).setParameter(10, tid)
-            .executeUpdate();
-
-        if (body.containsKey("lines")) {
-            em.createNativeQuery("DELETE FROM order_lines WHERE order_id = ?1").setParameter(1, id).executeUpdate();
-            insertLines(id, body);
-        }
-        return ApiResponse.ok(Map.of("id", id));
+        return ApiResponse.ok(v4OrderService.updateSalesOrder(id, body));
     }
 
     @PostMapping("/{id}/submit")
-    @OperationLog(businessType = "salesOrder", action = OperationAction.UPDATE, remark = "销售订单-提交审批")
+    @OperationLog(businessType = "salesOrder", action = OperationAction.UPDATE, remark = "submit sales order")
     @Transactional
     public ApiResponse<Map<String, Object>> submit(@PathVariable Long id) {
-        UUID tid = TenantContext.getTenantId();
-        int n = em.createNativeQuery("UPDATE orders SET status='PENDING_APPROVAL', submitted_at=now(), updated_at=now() WHERE id=?1 AND tenant_id=?2 AND status='DRAFT'")
-                .setParameter(1, id).setParameter(2, tid).executeUpdate();
-        if (n == 0) return ApiResponse.fail(40009, "Only draft sales order can be submitted");
-        try {
-            StartApprovalRequest request = new StartApprovalRequest();
-            request.setBusinessType("SALES_ORDER");
-            request.setBusinessId(id);
-            Object code = em.createNativeQuery("SELECT code FROM orders WHERE id=?1").setParameter(1, id).getSingleResult();
-            request.setBusinessCode(String.valueOf(code));
-            request.setTitle("Sales order approval: " + request.getBusinessCode());
-            request.setBusinessSnapshot(buildApprovalSnapshot(id));
-            ApprovalInstance instance = approvalService.start(request);
-            boolean approved = "APPROVED".equals(instance.getStatus().name()) || "AUTO_APPROVED".equals(instance.getStatus().name());
-            return ApiResponse.ok(Map.of("id", id, "newStatus", approved ? "APPROVED" : "PENDING_APPROVAL", "approvalInstanceId", instance.getId(), "autoApproved", approved));
-        } catch (Exception e) {
-            em.createNativeQuery("UPDATE orders SET status='DRAFT', updated_at=now() WHERE id=?1 AND tenant_id=?2")
-                    .setParameter(1, id).setParameter(2, tid).executeUpdate();
-            throw e;
-        }
+        return ApiResponse.ok(v4OrderService.submit(id));
     }
 
     @PostMapping("/{id}/approve")
@@ -274,46 +248,16 @@ public class SalesOrderController {
     }
 
     @PostMapping("/{id}/cancel")
-    @OperationLog(businessType = "salesOrder", action = OperationAction.UPDATE, remark = "销售订单-取消")
+    @OperationLog(businessType = "salesOrder", action = OperationAction.UPDATE, remark = "cancel sales order")
     @Transactional
     public ApiResponse<Map<String, Object>> cancel(@PathVariable Long id) {
-        UUID tid = TenantContext.getTenantId();
-        String status = getStatus(id, tid);
-        if (status == null) return ApiResponse.fail(40404, "销售订单不存在");
-        if (!"DRAFT".equals(status) && !"APPROVED".equals(status)) {
-            return ApiResponse.fail(40009, "当前状态不允许取消: " + status);
-        }
+        return ApiResponse.ok(v4OrderService.cancel(id));
+    }
 
-        if ("APPROVED".equals(status)) {
-            Object cnt = em.createNativeQuery(
-                    "SELECT COUNT(*) FROM sales_outs WHERE tenant_id = ?1 AND source_order_id = ?2 AND status NOT IN ('DRAFT','CANCELLED')")
-                    .setParameter(1, tid).setParameter(2, id).getSingleResult();
-            if (((Number) cnt).longValue() > 0)
-                return ApiResponse.fail(40009, "存在已执行的销售出库单，不能取消销售订单");
-
-            Object shipped = em.createNativeQuery(
-                    "SELECT COALESCE(SUM(COALESCE(shipped_qty,0)),0) FROM sales_out_lines WHERE sales_out_id IN " +
-                    "(SELECT id FROM sales_outs WHERE source_order_id = ?1)").setParameter(1, id).getSingleResult();
-            if (new BigDecimal(String.valueOf(shipped)).signum() > 0)
-                return ApiResponse.fail(40009, "已存在发货记录，不能取消销售订单");
-        }
-
-        em.createNativeQuery("UPDATE orders SET status='CANCELLED', cancelled_at=now(), updated_at=now() WHERE id=?1 AND tenant_id=?2")
-          .setParameter(1, id).setParameter(2, tid).executeUpdate();
-        em.createNativeQuery(
-                "UPDATE sales_outs SET status='CANCELLED', cancelled_at=now(), updated_at=now() " +
-                "WHERE source_order_id=?1 AND tenant_id=?2 AND status IN ('DRAFT','APPROVED','PARTIAL_SHIPPED')")
-          .setParameter(1, id).setParameter(2, tid).executeUpdate();
-        // 同步取消该订单下出库单的 DRAFT 发货子单
-        em.createNativeQuery(
-                "UPDATE sales_out_batches SET status='CANCELLED', cancelled_at=now(), updated_at=now() " +
-                "WHERE sales_out_id IN (SELECT id FROM sales_outs WHERE source_order_id=?1 AND tenant_id=?2) AND status='DRAFT'")
-          .setParameter(1, id).setParameter(2, tid).executeUpdate();
-
-        audit(id, "SO_CANCEL");
-        Map<String, Object> res = new LinkedHashMap<>();
-        res.put("id", id); res.put("status", "CANCELLED");
-        return ApiResponse.ok(res);
+    @PostMapping("/{id}/simulate-ship")
+    @Transactional
+    public ApiResponse<Map<String, Object>> simulateShip(@PathVariable Long id) {
+        return ApiResponse.ok(v4ErpService.simulateShip(id));
     }
 
     @DeleteMapping("/{id}")
@@ -486,13 +430,19 @@ public class SalesOrderController {
         try { m.put("discountAmount", t.get("discount_amount")); } catch (Exception ignored) {}
         try { m.put("finalAmount", t.get("final_amount")); } catch (Exception ignored) {}
         try { m.put("taxAmount", t.get("tax_amount")); } catch (Exception ignored) {}
+        try { m.put("amountExclTax", t.get("amount_excl_tax")); } catch (Exception ignored) {}
+        try { m.put("headerDiscountType", t.get("header_discount_type")); } catch (Exception ignored) {}
+        try { m.put("headerDiscountValue", t.get("header_discount_value")); } catch (Exception ignored) {}
+        try { m.put("erpError", t.get("erp_error")); } catch (Exception ignored) {}
         try { m.put("expectedDate", DateFmt.fmt(t.get("expected_date"))); } catch (Exception ignored) {}
         try { m.put("status", t.get("status")); } catch (Exception ignored) {}
+        try { m.put("erpStatus", t.get("erp_status")); } catch (Exception ignored) {}
         try { m.put("remark", t.get("remark")); } catch (Exception ignored) {}
         try { m.put("createdAt", DateFmt.fmt(t.get("created_at"))); } catch (Exception ignored) {}
         try { m.put("submittedAt", DateFmt.fmt(t.get("submitted_at"))); } catch (Exception ignored) {}
         try { m.put("approvedAt", DateFmt.fmt(t.get("approved_at"))); } catch (Exception ignored) {}
         try { m.put("completedAt", DateFmt.fmt(t.get("completed_at"))); } catch (Exception ignored) {}
+        try { m.put("shippedQty", t.get("shipped_qty")); } catch (Exception ignored) {}
         return m;
     }
 
@@ -534,15 +484,14 @@ public class SalesOrderController {
 
     private List<Map<String, Object>> allowedActions(String status) {
         List<Map<String, Object>> actions = new ArrayList<>();
-        if ("DRAFT".equals(status)) {
+        if ("DRAFT".equals(status) || "REJECTED".equals(status)) {
             actions.add(action("edit", "编辑", "primary", "PUT", ""));
             actions.add(action("submit", "提交审批", "warning", "POST", "/submit"));
-            actions.add(action("cancel", "取消", "danger", "POST", "/cancel"));
-        } else if ("SUBMITTED".equals(status)) {
+        } else if ("PENDING_APPROVAL".equals(status) || "SUBMITTED".equals(status)) {
             actions.add(action("approve", "审批通过", "success", "POST", "/approve"));
             actions.add(action("reject", "驳回", "danger", "POST", "/reject"));
         } else if ("APPROVED".equals(status)) {
-            actions.add(action("cancel", "取消", "warning", "POST", "/cancel"));
+            actions.add(action("simulateShip", "生成销售出库", "primary", "POST", "/simulate-ship"));
         }
         return actions;
     }
@@ -590,3 +539,5 @@ public class SalesOrderController {
         return s.isEmpty() ? def : s;
     }
 }
+
+

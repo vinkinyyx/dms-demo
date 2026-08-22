@@ -1,4 +1,4 @@
-﻿import { createApp } from 'vue'
+import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
@@ -41,5 +41,6 @@ app.use(router)
 app.use(ElementPlus, { locale: zhCn })
 app.use(Vant)
 app.use(hasDirective)
+app.config.errorHandler = (err, instance, info) => { console.error('全局未捕获错误:', err, info) }
 initTheme()
 app.mount('#app')

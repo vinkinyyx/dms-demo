@@ -16,17 +16,17 @@
       <template #header><el-icon><Document /></el-icon>采退信息</template>
       <el-form label-width="110px" size="default" :disabled="readonly">
         <el-row :gutter="16">
-          <el-col :span="8">
+          <el-col :xs="24" :sm="12" :md="8" :lg="8">
             <el-form-item label="供应商" required>
               <ResourcePicker resource="suppliers" v-model="form.supplierId" :display-value="form.supplierName" @pick="onPickSupplier" placeholder="选择供应商" />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :xs="24" :sm="12" :md="8" :lg="8">
             <el-form-item label="出库仓库" required>
               <ResourcePicker resource="warehouses" v-model="form.warehouseId" :display-value="form.warehouseName" @pick="onPickWarehouse" placeholder="选择出库仓库" />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :xs="24" :sm="12" :md="8" :lg="8">
             <el-form-item label="期望日期">
               <el-date-picker v-model="form.expectedDate" type="date" value-format="YYYY-MM-DD" style="width:100%" />
             </el-form-item>
@@ -92,6 +92,19 @@
         <el-descriptions-item label="剩余">{{ totals.remaining }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
+
+    <el-card v-if="readonly && logs.length" shadow="never" style="margin-top:14px">
+      <template #header><el-icon><Tickets /></el-icon>操作日志</template>
+      <el-timeline>
+        <el-timeline-item v-for="(log, idx) in logs" :key="idx" :timestamp="log.atTime || log.createdAt" placement="top">
+          <div class="log-head">
+            <el-tag size="small">{{ log.username || log.operator || log.operatorName || '系统' }}</el-tag>
+            <span class="log-action">{{ log.action }}</span>
+          </div>
+          <div class="log-changes" v-if="log.changes || log.remark">{{ log.changes || log.remark }}</div>
+        </el-timeline-item>
+      </el-timeline>
+    </el-card>
   </div>
 </template>
 
@@ -99,9 +112,10 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, Check, Document, Goods, Plus } from '@element-plus/icons-vue'
+import { ArrowLeft, Check, Document, Goods, Plus, Tickets } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import ResourcePicker from '@/components/ResourcePicker.vue'
+import { getOperationLogs } from '@/api/crud'
 
 const route = useRoute(); const router = useRouter()
 const id = route.params.id
@@ -110,6 +124,7 @@ const readonly = computed(() => id && id !== 'new')
 const form = reactive({ supplierId:null, supplierName:'', warehouseId:null, warehouseName:'', returnReason:'', remark:'', expectedDate:'', lines:[] })
 const saving = ref(false); const acting = ref(false)
 const doc = ref({})
+const logs = ref([])
 const canSubmit = computed(() => doc.value.status === 'DRAFT')
 const canApprove = computed(() => doc.value.status === 'SUBMITTED')
 const canReject = computed(() => doc.value.status === 'SUBMITTED')
@@ -166,6 +181,16 @@ async function load(){
     returnReason:d.returnReason||'', remark:d.remark||'', expectedDate:d.expectedDate||'',
     lines:(d.lines||[]).map(l=>({ ...l, qty:Number(l.qty), unitPrice:Number(l.unitPrice||0), taxRate:Number(l.taxRate||0.13) }))
   })
+  try {
+    const lr = await getOperationLogs('purchase_return', id, 'purchaseReturn')
+    logs.value = Array.isArray(lr?.data) ? lr.data : []
+  } catch { logs.value = [] }
 }
 onMounted(()=>{ if(readonly.value) load() })
 </script>
+
+<style scoped>
+.log-head { display: flex; gap: 8px; align-items: center; }
+.log-action { color: var(--el-text-color-regular); }
+.log-changes { color: var(--el-text-color-secondary); font-size: 13px; margin-top: 4px; white-space: pre-wrap; }
+</style>

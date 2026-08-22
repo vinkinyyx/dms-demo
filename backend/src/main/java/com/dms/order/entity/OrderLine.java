@@ -39,6 +39,18 @@ public class OrderLine {
     @Column(name = "sub_total", nullable = false, precision = 18, scale = 2)
     private BigDecimal subTotal;
 
+    @Column(name = "line_discount_type", length = 16)
+    private String lineDiscountType;
+
+    @Column(name = "line_discount_value", precision = 18, scale = 4)
+    private BigDecimal lineDiscountValue;
+
+    @Column(name = "line_discount_amount", precision = 18, scale = 2)
+    private BigDecimal lineDiscountAmount;
+
+    @Column(name = "header_discount_amount", precision = 18, scale = 2)
+    private BigDecimal headerDiscountAmount;
+
     @Column(name = "is_gift")
     private Boolean isGift;
 

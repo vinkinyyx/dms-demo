@@ -26,8 +26,13 @@ public class ProductBundleController {
 
     @GetMapping
     public ApiResponse<PageResult<ProductBundle>> list(@Valid PageQuery pageQuery,
+                                                       @RequestParam(required = false) String keyword,
+                                                       @RequestParam(required = false) String code,
+                                                       @RequestParam(required = false) String name,
+                                                       @RequestParam(required = false) String status,
+                                                       @RequestParam(required = false) String versionStatus,
                                                        @RequestParam(required = false) Map<String, String> allParams) {
-        return ApiResponse.ok(service.list(pageQuery));
+        return ApiResponse.ok(service.list(pageQuery, keyword, code, name, status, versionStatus));
     }
 
     @GetMapping("/{id}")
@@ -35,6 +40,22 @@ public class ProductBundleController {
         return ApiResponse.ok(service.get(id));
     }
 
+    @GetMapping("/product/{productId}/active")
+    public ApiResponse<ProductBundle> activeByProduct(@PathVariable Long productId) {
+        return ApiResponse.ok(service.activeByProduct(productId));
+    }
+
+    @PostMapping("/{id}/new-version")
+    @OperationLog(businessType = "productBundle", action = OperationAction.CREATE, remark = "BOM-新建版本")
+    public ApiResponse<ProductBundle> newVersion(@PathVariable Long id) {
+        return ApiResponse.ok(service.createNewVersion(id));
+    }
+
+    @PostMapping("/{id}/activate")
+    @OperationLog(businessType = "productBundle", action = OperationAction.UPDATE, remark = "BOM-发布草稿版本")
+    public ApiResponse<ProductBundle> activate(@PathVariable Long id) {
+        return ApiResponse.ok(service.activateDraft(id));
+    }
     @GetMapping("/by-product/{productId}")
     public ApiResponse<List<ProductBundle>> listByProduct(@PathVariable Long productId) {
         return ApiResponse.ok(service.listByProduct(productId));

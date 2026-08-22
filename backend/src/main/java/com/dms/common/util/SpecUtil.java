@@ -32,17 +32,21 @@ public final class SpecUtil {
                 String keyword = params.get("keyword");
                 if (keyword == null || keyword.isBlank()) keyword = params.get("kw");
                 if (keyword != null && !keyword.isBlank()) {
-                    String kw = "%" + keyword.trim().toLowerCase() + "%";
-                    List<Predicate> ors = new ArrayList<>();
-                    for (String fld : new String[]{"code", "name", "nameCn", "nameEn", "spec"}) {
-                        try {
-                            var p = root.get(fld);
-                            if (p.getJavaType() == String.class) {
-                                ors.add(cb.like(cb.lower(p.as(String.class)), kw));
-                            }
-                        } catch (Exception ignored) {}
+                    String[] tokens = keyword.trim().split("[\s,，]+");
+                    for (String token : tokens) {
+                        if (token == null || token.isBlank()) continue;
+                        String kw = "%" + token.trim().toLowerCase() + "%";
+                        List<Predicate> ors = new ArrayList<>();
+                        for (String fld : new String[]{"code", "name", "nameCn", "nameEn", "spec"}) {
+                            try {
+                                var p = root.get(fld);
+                                if (p.getJavaType() == String.class) {
+                                    ors.add(cb.like(cb.lower(p.as(String.class)), kw));
+                                }
+                            } catch (Exception ignored) {}
+                        }
+                        if (!ors.isEmpty()) ps.add(cb.or(ors.toArray(new Predicate[0])));
                     }
-                    if (!ors.isEmpty()) ps.add(cb.or(ors.toArray(new Predicate[0])));
                 }
                 for (Map.Entry<String, String> e : params.entrySet()) {
                     String key = e.getKey();

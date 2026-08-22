@@ -94,6 +94,9 @@ public class Promotion {
     @Transient
     private java.util.List<java.util.Map<String, Object>> applicableDealers;
 
+    @Transient
+    private java.util.List<PromotionRule> rules;
+
     public void ensureMaps() {
         if (dealerScope == null) dealerScope = new HashMap<>();
         if (productScope == null) productScope = new HashMap<>();

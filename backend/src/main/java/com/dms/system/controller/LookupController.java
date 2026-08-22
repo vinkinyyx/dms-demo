@@ -47,11 +47,12 @@ public class LookupController {
             @RequestParam(required = false) Long dealerId,
             @RequestParam(defaultValue = "500") int limit,
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false, defaultValue = "false") boolean excludeBundle) {
         UUID tid = TenantContext.getTenantId();
         boolean paged = page != null && size != null && size > 0;
         int pageSize = paged ? size : limit;
-        int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = paged ? (safePage - 1) * safeSize : 0;
+        int safePage = PagingUtil.normalizePage(page == null ? 1 : page); int safeSize = PagingUtil.normalizeSize(size == null ? limit : size); int offset = paged ? (safePage - 1) * safeSize : 0;
         // v3.7.9: 模糊搜索增加规格 spec；支持分页 page/size 返回 {total,list}；默认上限 500
         StringBuilder from = new StringBuilder(" FROM products p ");
         boolean withDealer = dealerId != null;
@@ -69,13 +70,14 @@ public class LookupController {
                     "  ) ");
         }
         String where = "WHERE p.tenant_id = :tid AND p.deleted_at IS NULL " +
-                ((keyword != null && !keyword.isBlank())
-                        ? " AND (p.code ILIKE :kw OR p.name_cn ILIKE :kw OR p.spec ILIKE :kw) " : "");
+                ((keyword != null && !keyword.isBlank()) ? " AND (p.code ILIKE :kw OR p.name_cn ILIKE :kw OR p.spec ILIKE :kw) " : "")
+                + (excludeBundle ? " AND NOT EXISTS(SELECT 1 FROM product_bundles pb WHERE pb.tenant_id = p.tenant_id AND pb.product_id = p.id AND pb.version_status = 'active' AND pb.deleted_at IS NULL) " : "");
         String selectCols = "DISTINCT p.id, p.code, p.name_cn AS name, p.spec, p.unit, p.unit_type, " +
                 "p.current_price AS price, " +
                 "(SELECT sales_price FROM product_prices pp WHERE pp.product_id = p.id AND pp.partner_type='GLOBAL' " +
                 " AND pp.tenant_id = p.tenant_id LIMIT 1) AS price_retail, " +
-                "p.is_serial_managed, p.status";
+                "p.is_serial_managed, p.status, " +
+                "EXISTS(SELECT 1 FROM product_bundles pb WHERE pb.tenant_id = p.tenant_id AND pb.product_id = p.id AND pb.version_status = 'active' AND pb.deleted_at IS NULL LIMIT 1) AS is_bom";
 
         long total = 0;
         if (paged) {
@@ -106,6 +108,7 @@ public class LookupController {
             m.put("priceRetail", r.get("price_retail"));
             m.put("isSerialManaged", r.get("is_serial_managed"));
             m.put("status", r.get("status"));
+            m.put("isBom", Boolean.TRUE.equals(r.get("is_bom")));
             m.put("value", r.get("id"));
             m.put("label", String.valueOf(r.get("code")) + " 路 " + String.valueOf(r.get("name")));
             out.add(m);
@@ -192,6 +195,19 @@ public class LookupController {
                 keyword, limit, true, true));
     }
 
+    /** 产品层次 lookup */
+    @GetMapping("/product-lines")
+    @Transactional(readOnly = true)
+    public ApiResponse<List<Map<String, Object>>> productLines(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "200") int limit) {
+        return ApiResponse.ok(genericLookup(
+                "SELECT id, code, name, level, status FROM product_lines",
+                "code", "name",
+                new String[]{"id", "code", "name", "level", "status"},
+                keyword, limit, true, true));
+    }
+
     /** 区域 lookup */
     @GetMapping("/regions")
     @Transactional(readOnly = true)
@@ -229,6 +245,113 @@ public class LookupController {
                 "code", "code",
                 new String[]{"id", "code", "type", "status", "amount"},
                 keyword, limit, true));
+    }
+
+    /** 发货单 lookup（供销退单选择原发货单，支持按时间范围/经销商/批号多维搜索） */
+    @GetMapping("/sales-outs")
+    @Transactional(readOnly = true)
+    public ApiResponse<?> salesOuts(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long dealerId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String dateFrom,
+            @RequestParam(required = false) String dateTo,
+            @RequestParam(required = false) String batchNo,
+            @RequestParam(required = false) String productCode,
+            @RequestParam(defaultValue = "50") int limit,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        UUID tid = TenantContext.getTenantId();
+        boolean paged = page != null && size != null && size > 0;
+        int pageSize = paged ? size : limit;
+        int safePage = page == null || page < 1 ? 1 : page;
+        int offset = paged ? (safePage - 1) * pageSize : 0;
+
+        boolean hasBatch = batchNo != null && !batchNo.isBlank();
+        boolean hasProduct = productCode != null && !productCode.isBlank();
+        boolean hasLineFilter = hasBatch || hasProduct;
+
+        StringBuilder from = new StringBuilder(
+                "FROM sales_outs so LEFT JOIN dealers d ON d.id = so.dealer_id " +
+                "LEFT JOIN warehouses w ON w.id = so.warehouse_id ");
+        if (hasLineFilter) {
+            from.append("LEFT JOIN sales_out_batches sob ON sob.sales_out_id = so.id AND COALESCE(sob.status,'CONFIRMED') <> 'CANCELLED' ");
+            from.append("LEFT JOIN sales_out_batch_lines sol ON sol.batch_id = sob.id ");
+            if (hasProduct) {
+                from.append("LEFT JOIN products p ON p.id = sol.product_id ");
+            }
+        }
+
+        StringBuilder where = new StringBuilder("WHERE so.tenant_id = :tid AND COALESCE(so.is_red,false) = false AND so.deleted_at IS NULL ");
+        if (status != null && !status.isBlank()) {
+            where.append(" AND so.status = :status ");
+        } else {
+            where.append(" AND so.status IN ('COMPLETED','PARTIAL_SHIPPED','SHIPPED') ");
+        }
+        if (dealerId != null) where.append(" AND so.dealer_id = :dealer ");
+        if (dateFrom != null && !dateFrom.isBlank()) where.append(" AND so.shipped_at >= :df ");
+        if (dateTo != null && !dateTo.isBlank()) where.append(" AND so.shipped_at < (:dt)::date + INTERVAL '1 day' ");
+        if (keyword != null && !keyword.isBlank()) where.append(" AND (so.code ILIKE :kw OR d.name ILIKE :kw) ");
+        if (hasBatch) where.append(" AND sol.batch_no ILIKE :bno ");
+        if (hasProduct) where.append(" AND (p.code ILIKE :pcode OR p.name_cn ILIKE :pcode) ");
+
+        long total = 0;
+        if (paged) {
+            String countSql = "SELECT COUNT(DISTINCT so.id) " + from + where;
+            var cq = em.createNativeQuery(countSql);
+            cq.setParameter("tid", tid);
+            if (status != null && !status.isBlank()) cq.setParameter("status", status);
+            if (dealerId != null) cq.setParameter("dealer", dealerId);
+            if (dateFrom != null && !dateFrom.isBlank()) cq.setParameter("df", java.sql.Date.valueOf(dateFrom));
+            if (dateTo != null && !dateTo.isBlank()) cq.setParameter("dt", java.sql.Date.valueOf(dateTo));
+            if (keyword != null && !keyword.isBlank()) cq.setParameter("kw", "%" + keyword + "%");
+            if (hasBatch) cq.setParameter("bno", "%" + batchNo + "%");
+            if (hasProduct) cq.setParameter("pcode", "%" + productCode + "%");
+            total = ((Number) cq.getSingleResult()).longValue();
+        }
+
+        String sql = "SELECT DISTINCT so.id, so.code, so.status, so.business_type, so.dealer_id, d.name AS dealer_name, " +
+                "so.warehouse_id, w.name AS warehouse_name, so.amount_incl_tax AS amount, so.shipped_at, so.created_at " +
+                from + where + " ORDER BY so.id DESC LIMIT :lim OFFSET :off";
+        var q = em.createNativeQuery(sql, Tuple.class);
+        q.setParameter("tid", tid).setParameter("lim", pageSize).setParameter("off", offset);
+        if (status != null && !status.isBlank()) q.setParameter("status", status);
+        if (dealerId != null) q.setParameter("dealer", dealerId);
+        if (dateFrom != null && !dateFrom.isBlank()) q.setParameter("df", java.sql.Date.valueOf(dateFrom));
+        if (dateTo != null && !dateTo.isBlank()) q.setParameter("dt", java.sql.Date.valueOf(dateTo));
+        if (keyword != null && !keyword.isBlank()) q.setParameter("kw", "%" + keyword + "%");
+        if (hasBatch) q.setParameter("bno", "%" + batchNo + "%");
+        if (hasProduct) q.setParameter("pcode", "%" + productCode + "%");
+
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Tuple r : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", r.get("id"));
+            m.put("code", r.get("code"));
+            m.put("status", r.get("status"));
+            m.put("businessType", r.get("business_type"));
+            m.put("dealerId", r.get("dealer_id"));
+            m.put("dealerName", r.get("dealer_name"));
+            m.put("warehouseId", r.get("warehouse_id"));
+            m.put("warehouseName", r.get("warehouse_name"));
+            m.put("amount", r.get("amount"));
+            m.put("shippedAt", r.get("shipped_at"));
+            m.put("createdAt", r.get("created_at"));
+            m.put("value", r.get("id"));
+            m.put("label", r.get("code") + " · " + (r.get("dealer_name") == null ? "" : r.get("dealer_name")));
+            out.add(m);
+        }
+        if (paged) {
+            Map<String, Object> pg = new LinkedHashMap<>();
+            pg.put("total", total);
+            pg.put("page", safePage);
+            pg.put("size", pageSize);
+            pg.put("list", out);
+            return ApiResponse.ok(pg);
+        }
+        return ApiResponse.ok(out);
     }
 
     /** 组织单元 lookup */
@@ -300,3 +423,5 @@ public class LookupController {
         return list;
     }
 }
+
+

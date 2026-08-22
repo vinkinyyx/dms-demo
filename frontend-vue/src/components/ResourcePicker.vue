@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <el-input v-model="displayText" readonly :placeholder="'点击选择 · ' + placeholder" @click="open">
+  <div class="resource-picker">
+    <el-input v-model="displayText" readonly :disabled="disabled" :placeholder="(disabled ? '' : '点击选择 · ') + placeholder" @click="disabled ? null : open()">
       <template #suffix>
         <el-icon v-if="modelValue" class="clear-btn" @click.stop="clear"><CircleClose /></el-icon>
         <el-icon v-else><Search /></el-icon>
@@ -16,7 +16,8 @@
       <el-table :data="list" v-loading="loading" height="360" @row-click="onPick" highlight-current-row>
         <el-table-column v-for="c in meta.cols" :key="c.k" :prop="c.k" :label="c.l">
           <template #default="{ row }">
-            <el-tag v-if="c.k === 'status'" :type="statusTagType(row[c.k])" size="small">{{ statusText(row[c.k]) }}</el-tag>
+            <el-tag v-if="c.k === 'isBom' && (row.isBom||row.isBundle)" size="small" type="warning" effect="plain">BOM组套</el-tag>
+            <el-tag v-else-if="c.k === 'status'" :type="statusTagType(row[c.k])" size="small">{{ statusText(row[c.k]) }}</el-tag>
             <span v-else>{{ fmt(row[c.k], c.k) }}</span>
           </template>
         </el-table-column>
@@ -39,23 +40,25 @@ const props = defineProps({
   displayValue: { type: String, default: '' },
   resource: { type: String, required: true },
   placeholder: { type: String, default: '' },
-  extraParams: { type: Object, default: () => ({}) }
+  extraParams: { type: Object, default: () => ({}) },
+  disabled: { type: Boolean, default: false }
 })
 const emit = defineEmits(['update:modelValue', 'pick'])
 
 const PICKER_META = {
-  dealers: { title: '选择经销商', cols: [{ k: 'code', l: '编码' }, { k: 'name', l: '名称' }, { k: 'level', l: '级别' }, { k: 'status', l: '状态' }] },
-  products: { title: '选择产品', cols: [{ k: 'code', l: '编码' }, { k: 'name', l: '名称' }, { k: 'spec', l: '规格' }, { k: 'unit', l: '单位' }, { k: 'price', l: '单价' }] },
-  hospitals: { title: '选择医院/终端', cols: [{ k: 'code', l: '编码' }, { k: 'name', l: '名称' }, { k: 'level', l: '等级' }] },
-  suppliers: { title: "选择供应商", cols: [{ k: "code", l: "编码" }, { k: "name", l: "名称" }, { k: "contactPerson", l: "联系人" }, { k: "status", l: "状态" }] },
-  warehouses: { title: '选择仓库', cols: [{ k: 'code', l: '编码' }, { k: 'name', l: '名称' }, { k: 'type', l: '类型' }] },
-  categories: { title: '选择分类', cols: [{ k: 'code', l: '编码' }, { k: 'name', l: '名称' }] },
-  regions: { title: '选择区域', cols: [{ k: 'code', l: '编码' }, { k: 'name', l: '名称' }, { k: 'level', l: '级别' }] },
-  contracts: { title: '选择合同', cols: [{ k: 'code', l: '编号' }, { k: 'category', l: '分类' }, { k: 'status', l: '状态' }] },
-  orders: { title: '选择订单', cols: [{ k: 'code', l: '订单号' }, { k: 'type', l: '类型' }, { k: 'amount', l: '金额' }, { k: 'status', l: '状态' }] },
-  'purchase-orders': { title: '选择采购单', cols: [{ k: 'code', l: '采购单号' }, { k: 'status', l: '状态' }] }
+  dealers: { title: '\u9009\u62e9\u7ecf\u9500\u5546', cols: [{ k: 'code', l: '\u7f16\u7801' }, { k: 'name', l: '\u540d\u79f0' }, { k: 'level', l: '\u7b49\u7ea7' }, { k: 'status', l: '\u72b6\u6001' }] },
+  products: { title: '\u9009\u62e9\u4ea7\u54c1', cols: [{ k: 'code', l: '\u7f16\u7801' }, { k: 'nameCn', l: '\u540d\u79f0' }, { k: 'spec', l: '\u89c4\u683c' }, { k: 'unit', l: '\u5355\u4f4d' }, { k: 'currentPrice', l: '\u4ef7\u683c' }, { k: 'isBom', l: '\u7c7b\u578b' }] },
+  'product-lines': { title: '\u9009\u62e9\u4ea7\u54c1\u5c42\u6b21', cols: [{ k: 'code', l: '\u7f16\u7801' }, { k: 'name', l: '\u540d\u79f0' }, { k: 'level', l: '\u5c42\u7ea7' }, { k: 'status', l: '\u72b6\u6001' }] },
+  hospitals: { title: '\u9009\u62e9\u533b\u9662/\u79d1\u5ba4', cols: [{ k: 'code', l: '\u7f16\u7801' }, { k: 'name', l: '\u540d\u79f0' }, { k: 'level', l: '\u7c7b\u578b' }] },
+  suppliers: { title: '\u9009\u62e9\u4f9b\u5e94\u5546', cols: [{ k: 'code', l: '\u7f16\u7801' }, { k: 'name', l: '\u540d\u79f0' }, { k: 'contactPerson', l: '\u8054\u7cfb\u4eba' }, { k: 'status', l: '\u72b6\u6001' }] },
+  warehouses: { title: '\u9009\u62e9\u4ed3\u5e93', cols: [{ k: 'code', l: '\u7f16\u7801' }, { k: 'name', l: '\u540d\u79f0' }, { k: 'type', l: '\u7c7b\u578b' }] },
+  categories: { title: '\u9009\u62e9\u5206\u7c7b', cols: [{ k: 'code', l: '\u7f16\u7801' }, { k: 'name', l: '\u540d\u79f0' }] },
+  regions: { title: '\u9009\u62e9\u533a\u57df', cols: [{ k: 'code', l: '\u7f16\u7801' }, { k: 'name', l: '\u540d\u79f0' }, { k: 'level', l: '\u7b49\u7ea7' }] },
+  contracts: { title: '\u9009\u62e9\u5408\u540c', cols: [{ k: 'code', l: '\u7f16\u7801' }, { k: 'category', l: '\u7c7b\u578b' }, { k: 'status', l: '\u72b6\u6001' }] },
+  orders: { title: '\u9009\u62e9\u8ba2\u5355', cols: [{ k: 'code', l: '\u5355\u636e\u53f7' }, { k: 'type', l: '\u7c7b\u578b' }, { k: 'amount', l: '\u91d1\u989d' }, { k: 'status', l: '\u72b6\u6001' }] },
+  'sales-outs': { title: '\u9009\u62e9\u539f\u53d1\u8d27\u5355', cols: [{ k: 'code', l: '\u53d1\u8d27\u5355\u53f7' }, { k: 'dealerName', l: '\u7ecf\u9500\u5546' }, { k: 'warehouseName', l: '\u4ed3\u5e93' }, { k: 'amount', l: '\u91d1\u989d' }, { k: 'status', l: '\u72b6\u6001' }] },
+  'purchase-orders': { title: '\u9009\u62e9\u91c7\u8d2d\u8ba2\u5355', cols: [{ k: 'code', l: '\u91c7\u8d2d\u5355\u53f7' }, { k: 'status', l: '\u72b6\u6001' }] }
 }
-
 const visible = ref(false)
 const loading = ref(false)
 const keyword = ref('')
@@ -69,6 +72,10 @@ const total = ref(0)
 let timer = null
 
 watch(() => props.displayValue, (v) => { displayText.value = v || '' })
+// 当父组件清空 modelValue（如新建表单 reset）时，同步清空输入框显示，避免残留旧名称
+watch(() => props.modelValue, (v) => {
+  if (v === '' || v === null || v === undefined) displayText.value = ''
+})
 
 function open() {
   visible.value = true
@@ -120,7 +127,9 @@ const meta = PICKER_META[props.resource] || { title: '选择', cols: [{ k: 'code
 </script>
 
 <style scoped>
+.resource-picker { width: 100%; }
 .picker-search { margin-bottom: 12px; }
 .clear-btn { cursor: pointer; }
 .picker-pager { margin-top: 10px; display: flex; justify-content: flex-end; }
 </style>
+

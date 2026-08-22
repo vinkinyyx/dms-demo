@@ -148,7 +148,7 @@
           <el-input-number v-model="form.sortOrder" :min="0" controls-position="right" />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="form.status">
+          <el-select v-model="form.status" style="width:100%">
             <el-option label="启用" value="active" />
             <el-option label="停用" value="inactive" />
           </el-select>

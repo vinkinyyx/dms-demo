@@ -1,102 +1,128 @@
 <template>
-  <div>
+  <div class="area-page order-detail-page"><div class="area-scroll">
     <el-card shadow="never" class="od-head">
-      <el-button :icon="ArrowLeft" link @click="$router.back()">返回</el-button>
-      <el-button style="float:right" @click="printOrder">打印</el-button>
-      <span v-if="info" class="od-title">订单 {{ info.code }} 详情</span>
-      <span v-else class="od-title">订单详情</span>
+      <div class="head-left">
+        <el-button :icon="ArrowLeft" link @click="goOrders">返回</el-button>
+        <span v-if="info" class="od-title">销售订单 {{ info.code }}</span>
+      </div>
+      <div class="head-right">
+        <el-button v-if="canSimulate" type="primary" :loading="acting" @click="simulateShip">生成销售出库</el-button>
+      </div>
     </el-card>
 
-    <el-row :gutter="12" v-if="info">
-      <el-col :span="8">
-        <el-card shadow="never" class="od-side">
-          <div class="side-row"><span class="lbl">订单号</span><span>{{ info.code }}</span></div>
-          <div class="side-row"><span class="lbl">类型</span><el-tag size="small">{{ info.orderType || info.order_type }}</el-tag></div>
-          <div class="side-row"><span class="lbl">状态</span><el-tag size="small" :type="statusType(info.status)">{{ statusLabel(info.status) }}</el-tag></div>
-          <div class="side-row"><span class="lbl">经销商</span><span>{{ info.dealerName || info.dealer_name || '-' }}</span></div>
-          <div class="side-row"><span class="lbl">金额</span><span>¥ {{ Number(info.amount_incl_tax || info.totalAmount || 0).toFixed(2) }}</span></div>
-          <div class="side-row"><span class="lbl">下单时间</span><span>{{ formatDateTime(info.created_at || info.orderDate) }}</span></div>
-          <div class="side-row"><span class="lbl">审批时间</span><span>{{ formatDateTime(info.approved_at || info.approvedAt) }}</span></div>
-          <div class="side-row"><span class="lbl">发货时间</span><span>{{ formatDateTime(info.shipped_at || info.shippedAt) }}</span></div>
-          <div class="side-row"><span class="lbl">收货时间</span><span>{{ formatDateTime(info.received_at || info.receivedAt) }}</span></div>
+    <el-row :gutter="12" v-loading="loading.info">
+      <el-col :span="18">
+        <el-card shadow="never">
+          <el-descriptions :column="3" border size="small">
+            <el-descriptions-item label="订单号">{{ info?.code }}</el-descriptions-item>
+            <el-descriptions-item label="经销商">{{ info?.dealerName }}</el-descriptions-item>
+            <el-descriptions-item label="状态"><el-tag size="small">{{ info?.status }}</el-tag></el-descriptions-item>
+            <el-descriptions-item label="订单类型">{{ info?.orderType }}</el-descriptions-item>
+            <el-descriptions-item label="期望日期">{{ info?.expectedDate }}</el-descriptions-item>
+            <el-descriptions-item label="最终金额">¥{{ Number(info?.finalAmount || 0).toFixed(2) }}</el-descriptions-item>
+            <el-descriptions-item label="备注" :span="3">{{ info?.remark || '-' }}</el-descriptions-item>
+          </el-descriptions>
         </el-card>
       </el-col>
-      <el-col :span="16">
-        <el-tabs v-model="tab">
-          <el-tab-pane label="订单行" name="lines" />
-          <el-tab-pane label="状态历史" name="history" />
-        </el-tabs>
-        <div v-if="tab === 'lines'">
-          <el-table :data="lineRows" v-loading="loading.lines" border stripe size="small">
-            <el-table-column prop="productCode" label="产品编码" width="140" />
-            <el-table-column prop="productName" label="产品名" />
-            <el-table-column prop="qty" label="数量" width="100" align="right" />
-            <el-table-column prop="unitPrice" label="单价" width="120" align="right" />
-            <el-table-column prop="subTotal" label="小计" width="140" align="right" />
-          </el-table>
-          <el-empty v-if="!loading.lines && lineRows.length === 0" description="暂无订单行" />
-        </div>
-        <div v-else>
-          <el-timeline>
-            <el-timeline-item v-for="h in historyRows" :key="h.id || h.at_time" :timestamp="formatDateTime(h.at_time)" :type="historyType(h.to_status)">
-              {{ h.from_status || '初始' }} → <b>{{ h.to_status }}</b>
-            </el-timeline-item>
-            <el-empty v-if="!loading.history && historyRows.length === 0" description="暂无状态变更" />
-          </el-timeline>
-        </div>
+      <el-col :span="6">
+        <el-card shadow="never">
+          <div class="side-row"><span class="lbl">创建时间</span><span>{{ formatDateTime(info?.createdAt) }}</span></div>
+          <div class="side-row"><span class="lbl">提交时间</span><span>{{ formatDateTime(info?.submittedAt) }}</span></div>
+          <div class="side-row"><span class="lbl">审批时间</span><span>{{ formatDateTime(info?.approvedAt) }}</span></div>
+        </el-card>
       </el-col>
     </el-row>
-    <el-empty v-else-if="!loading.info" description="未找到该订单" />
+
+    <el-card shadow="never" class="lines-card order-lines-card">
+      <template #header>订单明细</template>
+      <el-table :data="lineTree" border size="small" row-key="id" default-expand-all :tree-props="treeProps">
+        <el-table-column prop="seq" label="行号" width="70" align="center" />
+        <el-table-column label="产品" min-width="240">
+          <template #default="{ row }">
+            {{ row.productCode }} {{ row.productName }}
+            <el-tag v-if="row.lineLevel === 'PARENT'" size="small" type="warning" style="margin-left:6px">BOM母件</el-tag>
+            <el-tag v-if="row.isGift" size="small" type="danger" style="margin-left:6px">赠品</el-tag>
+            <el-tag v-for="t in promoNames(row)" :key="t" size="small" type="success" style="margin-left:6px">{{ t }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="productSpec" label="规格" width="140" show-overflow-tooltip />
+        <el-table-column label="单位" width="70" align="center"><template #default="{ row }">{{ row.unit || '-' }}</template></el-table-column>
+        <el-table-column prop="qty" label="数量" width="90" align="right" />
+        <el-table-column label="含税单价" width="115" align="right"><template #default="{ row }">¥{{ money(row.standardPriceInclTax || row.unitPrice || 0) }}</template></el-table-column>
+        <el-table-column label="标准金额" width="120" align="right"><template #default="{ row }">¥{{ money(row.standardAmount) }}</template></el-table-column>
+        <el-table-column label="行折扣" width="100" align="right"><template #default="{ row }">¥{{ money(row.lineDiscountAmount) }}</template></el-table-column>
+        <el-table-column label="促销折扣" width="105" align="right"><template #default="{ row }">¥{{ money(row.promoDiscountAmount) }}</template></el-table-column>
+        <el-table-column label="整单折扣" width="105" align="right"><template #default="{ row }">¥{{ money(row.headerDiscountAmount) }}</template></el-table-column>
+        <el-table-column label="最终金额" width="125" align="right"><template #default="{ row }"><b>¥{{ money(row.finalAmount) }}</b></template></el-table-column>
+      </el-table>
+      <div v-if="lineTree.length" class="lines-summary">
+        <span>明细行数：{{ lineTree.length }}</span>
+        <span>订单总金额：<b class="amount-text">¥{{ Number(info?.finalAmount || 0).toFixed(2) }}</b></span>
+      </div>
+    </el-card>
+
+    <el-card shadow="never" class="logs-card">
+      <template #header>操作日志</template>
+      <el-timeline v-if="logs.length">
+        <el-timeline-item v-for="h in logs" :key="h.id || h.atTime" :timestamp="formatDateTime(h.atTime || h.at_time)">
+          <el-tag size="small">{{ h.username || h.operator || '系统' }}</el-tag>
+          <b>{{ h.action }}</b>
+          <div class="muted">{{ h.changes || h.remark || '' }}</div>
+        </el-timeline-item>
+      </el-timeline>
+      <el-empty v-else description="暂无操作日志" />
+    </el-card>
+    </div>
   </div>
 </template>
-
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import { getOperationLogs } from '@/api/crud'
 import { formatDateTime } from '@/utils/format'
 
 const route = useRoute()
+const router = useRouter()
 const orderId = () => route.params.id
-function printOrder(){ window.open('/print/salesOrder/'+route.params.id, '_blank') }
 const info = ref(null)
-const tab = ref('lines')
-const lineRows = ref([])
-const historyRows = ref([])
-const loading = reactive({ info: false, lines: false, history: false })
-
+const logs = ref([])
+const acting = ref(false)
+const loading = reactive({ info: false })
+const treeProps = { children: 'children' }
+const lineTree = computed(() => {
+  const lines = info.value?.lines || []
+  return lines.filter(l => !l.bomParentLineId).map(l => ({ ...l, children: lines.filter(c => String(c.bomParentLineId) === String(l.id)) }))
+})
+const canSimulate = computed(() => ['APPROVED', 'PARTIAL_OUTBOUND'].includes(info.value?.status))
+function money(v) { return Number(v || 0).toFixed(2) }
+function goOrders() { router.push('/m/orders') }
+function promoNames(row) {
+  const names = row.promoNames || row.priceSnapshot?.promoNames
+  return names ? String(names).split(',').filter(Boolean) : []
+}
 async function loadInfo() {
   loading.info = true
   try {
-    const res = await request({ url: `/api/orders/${orderId()}`, method: 'get' })
+    const res = await request({ url: `/api/sales-orders/${orderId()}`, method: 'get' })
     info.value = res?.data || null
-  } catch (e) { info.value = null } finally { loading.info = false }
+    const lr = await getOperationLogs('sales_order', orderId(), 'salesOrder').catch(() => null)
+    logs.value = Array.isArray(lr?.data) ? lr.data : []
+  } finally { loading.info = false }
 }
-async function loadLines() {
-  loading.lines = true
+async function simulateShip() {
+  await ElMessageBox.confirm('确认生成销售出库？', '提示', { type: 'warning' })
+  acting.value = true
   try {
-    const data = info.value
-    lineRows.value = data?.lines || data?.orderLines || []
-  } catch (e) { lineRows.value = [] } finally { loading.lines = false }
+    await request({ url: `/api/sales-orders/${orderId()}/simulate-ship`, method: 'post' })
+    ElMessage.success('销售出库草稿已生成')
+    await loadInfo()
+  } finally { acting.value = false }
 }
-async function loadHistory() {
-  loading.history = true
-  try {
-    const res = await request({ url: `/api/orders/${orderId()}/status-history`, method: 'get' }).catch(() => null)
-    historyRows.value = res?.data || []
-  } catch (e) { historyRows.value = [] } finally { loading.history = false }
-}
-watch(tab, (v) => { if (v === 'lines') loadLines(); else if (v === 'history') loadHistory() })
-function statusLabel(s) { return { DRAFT: '草稿', SUBMITTED: '已提交', APPROVED: '已审批', SHIPPING: '发货中', COMPLETED: '已完成', REJECTED: '已拒绝', CANCELLED: '已取消' }[s] || s || '-' }
-function statusType(s) { return { APPROVED: 'success', COMPLETED: 'success', SHIPPING: 'warning', DRAFT: 'info', SUBMITTED: 'primary', REJECTED: 'danger', CANCELLED: 'danger' }[s] || '' }
-function historyType(s) { return statusType(s) || 'primary' }
-onMounted(() => { loadInfo(); loadLines() })
+onMounted(loadInfo)
 </script>
-
 <style scoped>
-.od-head { margin-bottom: 12px; }
-.od-title { font-size: 18px; font-weight: 600; margin-left: 8px; }
-.od-side .side-row { display: flex; padding: 6px 0; font-size: 14px; }
-.od-side .lbl { width: 100px; color: var(--dms-text-4); }
+.order-detail-page .area-scroll{padding:0;display:flex;flex-direction:column;gap:12px}.od-head{flex:0 0 auto}.od-head :deep(.el-card__body){display:flex;justify-content:space-between;align-items:center}.head-left{display:flex;gap:10px;align-items:center}.od-title{font-size:18px;font-weight:600}.side-row{display:flex;justify-content:space-between;padding:7px 0}.side-row .lbl{color:var(--dms-text-4)}.lines-summary{display:flex;justify-content:flex-end;gap:32px;padding:12px 0 4px;color:#606266}.amount-text{color:#f56c6c;font-size:15px}.muted{color:var(--dms-text-4);font-size:12px;margin-top:4px}
 </style>

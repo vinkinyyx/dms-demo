@@ -7,7 +7,12 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint:static": "node tools/lint-static.js",
+    "test:api": "python automation_test/api_smoke.py",
+    "test:smoke": "node tools/smoke-test.cjs",
+    "test:e2e": "node automation_test/e2e/run-all.js",
+    "test:all": "node tools/run-tests.js"
   },
   "repository": {
     "type": "git",

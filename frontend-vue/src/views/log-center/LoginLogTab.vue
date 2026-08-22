@@ -7,7 +7,7 @@
         <el-option label="失败" :value="false" />
       </el-select>
       <el-input v-model="query.loginType" placeholder="登录类型" clearable style="width:140px" />
-      <el-date-picker v-model="dateRange" type="datetimerange" value-format="YYYY-MM-DDTHH:mm:ss" start-placeholder="开始" end-placeholder="结束" />
+      <el-date-picker v-model="dateRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" start-placeholder="开始" end-placeholder="结束" />
       <el-button type="primary" @click="reload(1)">查询</el-button>
       <el-button @click="reset">重置</el-button>
     </div>

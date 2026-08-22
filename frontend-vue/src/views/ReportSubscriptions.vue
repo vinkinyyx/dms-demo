@@ -25,12 +25,19 @@
             <el-tag v-if="row.lastStatus" size="small" :type="row.lastStatus==='SUCCESS'?'success':'danger'">{{ row.lastStatus==='SUCCESS'?'成功':'失败' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="runNow(row)">立即发送</el-button>
-            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button link :type="row.active?'warning':'success'" @click="toggle(row)">{{ row.active?'停用':'启用' }}</el-button>
-            <el-button link type="danger" @click="remove(row)">删除</el-button>
+            <div class="row-actions">
+              <template v-for="(a, idx) in rowActions(row)" :key="a.key">
+                <el-button v-if="idx < 2" link :type="a.type" @click="a.on(row)">{{ a.label }}</el-button>
+              </template>
+              <el-dropdown v-if="rowActions(row).length > 2" trigger="click" @command="(cmd)=>cmd.on(row)">
+                <el-button link type="primary">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+                <template #dropdown><el-dropdown-menu>
+                  <el-dropdown-item v-for="a in rowActions(row).slice(2)" :key="a.key" :command="a">{{ a.label }}</el-dropdown-item>
+                </el-dropdown-menu></template>
+              </el-dropdown>
+            </div>
           </template>
         </el-table-column>
         <template #empty>暂无订阅，点击右上角新建</template>
@@ -66,6 +73,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { formatDateTime } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const rows = ref([]), loading = ref(false)
@@ -103,10 +111,19 @@ async function runNow(row) {
   await request({ url: `/api/report-subscriptions/${row.id}/run-now`, method: 'post' })
   ElMessage.success('已触发发送'); setTimeout(reload, 1500)
 }
+function rowActions(row){
+  return [
+    {key:'run',label:'立即发送',type:'primary',on:(r)=>runNow(r)},
+    {key:'edit',label:'编辑',type:'primary',on:(r)=>openEdit(r)},
+    {key:'toggle',label:row.active?'停用':'启用',type:row.active?'warning':'success',on:(r)=>toggle(r)},
+    {key:'del',label:'删除',type:'danger',on:(r)=>remove(r)}
+  ]
+}
 onMounted(reload)
 </script>
 
 <style scoped>
 .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.row-actions { display: flex; gap: 6px; align-items: center; }
 .title { font-size: 16px; font-weight: 600; }
 </style>

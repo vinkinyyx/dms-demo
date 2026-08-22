@@ -45,7 +45,7 @@ export async function ensurePermissions() {
     permissionReady = Promise.resolve(store.fetchPermissions ? store.fetchPermissions() : [])
     await permissionReady
   } catch {
-    // ????????????????????????
+// Permission directive: missing or failed permission checks hide elements.
   } finally {
     permissionReady = null
   }

@@ -204,6 +204,16 @@ public class OperationLogAspect {
             else if ("salesOut".equals(businessType)) tableName = "sales_outs";
             else if ("receipt".equals(businessType)) tableName = "receipts";
             else if ("purchaseOrder".equals(businessType)) tableName = "purchase_orders";
+            else if ("salesReturn".equals(businessType)) tableName = "orders";
+            else if ("purchaseReturn".equals(businessType)) tableName = "purchase_orders";
+            else if ("authorization".equals(businessType)) tableName = "authorizations";
+            else if ("stockMove".equals(businessType)) tableName = "stock_moves";
+            else if ("inventoryAdjustment".equals(businessType)) tableName = "inventory_adjustments";
+            else if ("surgeryReport".equals(businessType)) tableName = "surgery_reports";
+            else if ("productLine".equals(businessType)) tableName = "product_lines";
+            else if ("productBundle".equals(businessType) || "product_bundle".equals(businessType)) tableName = "product_bundles";
+            else if ("productPrice".equals(businessType) || "product_price".equals(businessType)) tableName = "product_prices";
+            else if ("promotion".equals(businessType)) tableName = "promotions";
             else if ("region".equals(businessType)) tableName = "regions";
 
             var q = em.createNativeQuery(

@@ -108,3 +108,9 @@ backend/src/main/resources/application-local.yml
 
 # pytest html reports
 automation_test/reports/
+
+# ============ v4 临时/产物 ============
+scripts/tmp_*.py
+automation_test/v4-api-results/
+automation_test/v4-browser-results/
+automation_test/frontend-dist.zip
