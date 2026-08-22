@@ -6,14 +6,15 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none
     properties:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
       hibernate.jdbc.time_zone: Asia/Shanghai
       hibernate.format_sql: false
     show-sql: false
   flyway:
-    enabled: false
+    enabled: true
+    clean-disabled: false
   data:
     redis:
       host: ${REDIS_HOST:localhost}

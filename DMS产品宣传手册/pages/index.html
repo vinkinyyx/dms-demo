@@ -233,6 +233,28 @@
     background: linear-gradient(120deg, var(--brand) 0%, #0a3fc0 100%);
   }
 
+  .changelog-item {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--brand);
+    border-radius: 12px;
+    padding: 24px 28px;
+  }
+  .changelog-version {
+    display: inline-flex;
+    align-items: center;
+    background: var(--brand);
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 4px 14px;
+    border-radius: 8px;
+  }
+  .changelog-date {
+    color: var(--muted, #64748b);
+    font-size: 14px;
+  }
+
   @media (max-width: 768px) {
     .kpi-num { font-size: 34px; }
     .flow-arrow { transform: rotate(90deg); }
@@ -252,6 +274,7 @@
       <a href="#mobile" class="hover:text-brand transition">移动办公</a>
       <a href="#admin" class="hover:text-brand transition">平台后台</a>
       <a href="#value" class="hover:text-brand transition">客户价值</a>
+      <a href="#changelog" class="hover:text-brand transition">更新日志</a>
       <a href="#contact" class="hover:text-brand transition">联系我们</a>
     </nav>
     <a href="#contact" class="hidden md:inline-flex items-center gap-2 bg-brand text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-dark transition">
@@ -880,6 +903,102 @@
   </div>
 </section>
 
+<section id="changelog" class="py-20 md:py-28 bg-white border-y border-slate-100">
+  <div class="max-w-4xl mx-auto px-5 md:px-8">
+    <div class="text-center max-w-2xl mx-auto">
+      <span class="section-num">05</span>
+      <h2 class="mt-4 text-3xl md:text-4xl font-extrabold tracking-tight">版本更新日志</h2>
+      <p class="mt-3 text-slate-600">持续迭代，让每一条渠道都清晰可见。</p>
+    </div>
+    <div class="mt-14 space-y-10">
+      <div class="changelog-item">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="changelog-version">v4.1.0</span>
+          <span class="changelog-date">2026-08-22</span>
+        </div>
+        <ul class="space-y-2 text-sm text-slate-700 leading-relaxed">
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>BOM 价格双轨维护：单品价与 BOM 子件价独立管理，同一 SKU 可同时维护两套价格</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>行折扣优先级最高：先算行折扣再分摊整单折扣和促销满减，计价口径统一</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>促销赠品手动刷新机制：幂等锁定，不再每次数量变动时自动累加</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>销退金额以持久化数据为准，展示平摊单价与汇总退货金额</span></li>
+        </ul>
+      </div>
+      <div class="changelog-item">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="changelog-version">v4.0.0</span>
+          <span class="changelog-date">2026-08-17</span>
+        </div>
+        <ul class="space-y-2 text-sm text-slate-700 leading-relaxed">
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>租户能力开关：可按租户启用/关闭进销存模块，关闭后菜单与 API 双重隐藏</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>ERP 集成框架：销售订单/销退审批后推送 ERP，支持回调出库结果与幂等防重</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>价格体系重构：一 SKU 一采购价，销售价按经销商区分含税/不含税双口径</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>BOM 支持：固定 BOM 版本管理，母件不参与出库计价，子件按配比展开</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>促销规则：满 A 赠 B、满 A 减钱，支持产品层次与 BOM 子件展开</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>手术报台解绑库存限制，只做植入/使用登记，不扣减库存</span></li>
+        </ul>
+      </div>
+      <div class="changelog-item">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="changelog-version">v3.12</span>
+          <span class="changelog-date">2026-08-13</span>
+        </div>
+        <ul class="space-y-2 text-sm text-slate-700 leading-relaxed">
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>P0 交付：消息中心、铃铛通知、PC 命令面板，全量业务菜单只读/编辑分离</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>P2 增强：MFA/TOTP、登录限流、库存盘点、报表订阅、效期预警、序列号追溯</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>性能修复：采购订单提交 51s 降至 0.67s（邮件异步化 + 超时隔离）</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>全量回归 548 passed / 0 failed，三端深度 E2E 全部通过</span></li>
+        </ul>
+      </div>
+      <div class="changelog-item">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="changelog-version">v3.11</span>
+          <span class="changelog-date">2026-08-09</span>
+        </div>
+        <ul class="space-y-2 text-sm text-slate-700 leading-relaxed">
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>合同模块重构：模板驱动 + 统一工作台，一条记录贯穿草稿→审批→生效→到期全生命周期</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>Word 模板自动识别占位符生成可填字段，Apache POI 回填生成成稿供下载</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>合同到期定时任务，每日自动将过期合同置为 expired</span></li>
+        </ul>
+      </div>
+      <div class="changelog-item">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="changelog-version">v3.10</span>
+          <span class="changelog-date">2026-08-09</span>
+        </div>
+        <ul class="space-y-2 text-slate-700 leading-relaxed">
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>审批流引擎：模板/节点/策略/委托/抄送/监控，支持 ANY/ALL 多人规则与前后加签</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>站内信 + 邮件通知：待办/抄送/结果/超时提醒全程自动推送</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>6 类业务单据接入审批流：销售订单、采购订单、销售退货、采购退货、合同、授权</span></li>
+        </ul>
+      </div>
+      <div class="changelog-item">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="changelog-version">v3.9</span>
+          <span class="changelog-date">2026-08-05</span>
+        </div>
+        <ul class="space-y-2 text-slate-700 leading-relaxed">
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>报表体系大改版：13 张报表（销售排行、TOP10、库存周转、手术统计、应收账龄等）+ 可拖拽仪表盘</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>导入/导出全量修复：14 个导出接口 + 12 个模板 + 11 个模块真实导入，统一 upsert</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>移动端精简：聚焦销售场景，TabBar 从 5 项精简为 4 项（首页/订单/报台/我的）</span></li>
+        </ul>
+      </div>
+      <div class="changelog-item">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="changelog-version">v3.8</span>
+          <span class="changelog-date">2026-08-01</span>
+        </div>
+        <ul class="space-y-2 text-slate-700 leading-relaxed">
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>销退/采退全流程：关联发货单、可退数量校验、审批自动生成出入库草稿</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>接口调用日志模块：入站/出站统一记录，异步写库不阻塞主链路</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>对外开放接口：HMAC-SHA256 签名鉴权，外部系统可创建销售/采购订单</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>列表页布局统一规范：ListPageLayout 组件 + v-has 按钮级权限指令 + 平台/租户双层覆盖</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>批量导入"存在即更新"：按编码判重，7 个基础数据模块支持 upsert</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="contact" class="cta-band py-20 md:py-24 text-white">
   <div class="max-w-6xl mx-auto px-5 md:px-8 grid md:grid-cols-2 gap-12 items-center">
     <div>
@@ -937,6 +1056,7 @@
         <li><a href="#mobile" class="hover:text-white">移动办公</a></li>
         <li><a href="#admin" class="hover:text-white">平台后台</a></li>
         <li><a href="#value" class="hover:text-white">客户价值</a></li>
+        <li><a href="#changelog" class="hover:text-white">更新日志</a></li>
       </ul>
     </div>
     <div>

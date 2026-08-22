@@ -1,0 +1,8 @@
+DMS v4.1.7 backup snapshot
+Built: 2026-08-22 20:56:29 +08:00
+Git HEAD: f666ccb0dd69362ecffe9f154cf0437b22fd936c
+Uncommitted changes at build: 78 files
+
+SHA256 dms-backend.jar = D5DA2CF5755ED6A18D42C5C85259D2A1594E2212EE1BBD143CBC7B10B3DEF454
+SHA256 frontend tree   = d9179fd49b7e9603a9b585db4fffe54f59c59c91dfeba2f29e9966ae51a87891
+SHA256 admin tree      = 94204f824cde74b006d34cc3b57fbd46cae7ff11d75344846e29110b4baac1b7

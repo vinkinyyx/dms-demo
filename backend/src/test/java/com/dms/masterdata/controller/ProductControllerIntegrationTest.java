@@ -32,6 +32,7 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
                 .name(name)
                 .level(1)
                 .status("active")
+                .sortOrder(0)
                 .build();
         return categoryRepository.saveAndFlush(c).getId();
     }

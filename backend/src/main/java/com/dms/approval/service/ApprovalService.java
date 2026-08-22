@@ -511,6 +511,7 @@ public class ApprovalService {
     }
 
     private boolean matchSingleRule(Map<String, Object> rule, Map<String, Object> snapshot) {
+        if (snapshot == null) return true;
         String field = String.valueOf(rule.get("field"));
         String operator = String.valueOf(rule.getOrDefault("operator", "EQ")).toUpperCase(Locale.ROOT);
         Object expected = rule.get("value");

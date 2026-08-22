@@ -1,6 +1,6 @@
 {
   "name": "dms",
-  "version": "1.0.0",
+  "version": "4.2.1",
   "description": "**当前版本**: v3.12.4 **最后更新**: 2026-08-16 **正式环境**: 业务前台/PC http://8.133.193.238/dms/ ｜ 移动端 http://8.133.193.238/dms/mobile/login ｜ 平台后台 http://8.133.193.238/dms/admin/ **测试环境**: 业务前台/PC http://43.128.145.141/ ｜ 移动端 http://43.128.145.141/mobile/login ｜ 平台后台 http://43.128.145.141/admin/",
   "main": "index.js",
   "directories": {
@@ -12,7 +12,9 @@
     "test:api": "python automation_test/api_smoke.py",
     "test:smoke": "node tools/smoke-test.cjs",
     "test:e2e": "node automation_test/e2e/run-all.js",
-    "test:all": "node tools/run-tests.js"
+    "test:all": "node tools/run-tests.js",
+    "test:frontend": "cd frontend-vue && npm test",
+    "test:backend": "cd backend && mvn test"
   },
   "repository": {
     "type": "git",

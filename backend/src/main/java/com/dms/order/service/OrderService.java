@@ -172,8 +172,8 @@ public class OrderService {
                     .updatedAt(OffsetDateTime.now())
                     .build();
             le.setLineDiscountType(l.getLineDiscountType());
-            le.setLineDiscountValue(l.getLineDiscountValue());
-            le.setLineDiscountAmount(lineDiscount);
+            le.setLineDiscountValue(l.getLineDiscountValue() == null ? BigDecimal.ZERO : l.getLineDiscountValue());
+            le.setLineDiscountAmount(lineDiscount == null ? BigDecimal.ZERO : lineDiscount);
             le.setHeaderDiscountAmount(BigDecimal.ZERO);
             lineEntities.add(le);
             promoLines.add(new PromotionLine(l.getProductId(), l.getQty(), unitPrice, subTotal));

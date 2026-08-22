@@ -328,6 +328,20 @@
     font-size:10.5px;color:#94a3b8;border:1px solid rgba(255,255,255,.12);
     border-radius:6px;padding:3px 8px;letter-spacing:.3px;
   }
+
+  .cl-item{
+    background:#fff;border:1px solid var(--line);border-left:3px solid var(--brand);
+    border-radius:12px;padding:20px 18px;margin-bottom:16px;
+  }
+  .cl-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .cl-ver{
+    display:inline-flex;align-items:center;background:var(--brand);color:#fff;
+    font-weight:700;font-size:13px;padding:3px 12px;border-radius:6px;
+  }
+  .cl-date{color:var(--muted);font-size:12.5px;}
+  .cl-list{list-style:none;margin:0;padding:0;display:grid;gap:9px;}
+  .cl-list li{display:flex;gap:8px;font-size:13.5px;line-height:1.65;color:#334155;}
+  .cl-list li .dot{width:6px;height:6px;border-radius:50%;background:var(--brand);flex-shrink:0;margin-top:8px;}
 </style>
 </head>
 <body>
@@ -899,6 +913,77 @@
     </div>
     <h3>全量日志审计</h3>
     <p>API 调用、登录、操作、邮件等日志完整记录，支持按时间、用户、接口检索，满足合规审计与问题追溯。</p>
+  </div>
+</section>
+
+<!-- ===== 13.5 版本更新日志 ===== -->
+<section class="bg-cream" id="changelog">
+  <span class="eyebrow center">CHANGELOG</span>
+  <h2 class="section-title center">版本更新日志</h2>
+  <p class="section-desc center">持续迭代，让每一条渠道都清晰可见。</p>
+  <div style="margin-top:24px;">
+    <div class="cl-item">
+      <div class="cl-head"><span class="cl-ver">v4.1.0</span><span class="cl-date">2026-08-22</span></div>
+      <ul class="cl-list">
+        <li><span class="dot"></span>BOM 价格双轨维护：单品价与 BOM 子件价独立管理</li>
+        <li><span class="dot"></span>行折扣优先级最高，先算行折扣再分摊整单折扣和促销满减</li>
+        <li><span class="dot"></span>促销赠品手动刷新机制：幂等锁定，不再自动累加</li>
+        <li><span class="dot"></span>销退金额以持久化数据为准，展示平摊单价与汇总退货金额</li>
+      </ul>
+    </div>
+    <div class="cl-item">
+      <div class="cl-head"><span class="cl-ver">v4.0.0</span><span class="cl-date">2026-08-17</span></div>
+      <ul class="cl-list">
+        <li><span class="dot"></span>租户能力开关：可按租户启用/关闭进销存模块</li>
+        <li><span class="dot"></span>ERP 集成框架：审批后推送，支持回调出库结果与幂等防重</li>
+        <li><span class="dot"></span>价格体系重构：一 SKU 一采购价，销售价按经销商区分</li>
+        <li><span class="dot"></span>BOM 支持：固定版本管理，母件不参与出库计价</li>
+        <li><span class="dot"></span>促销规则：满 A 赠 B、满 A 减钱</li>
+        <li><span class="dot"></span>手术报台解绑库存限制，只做植入/使用登记</li>
+      </ul>
+    </div>
+    <div class="cl-item">
+      <div class="cl-head"><span class="cl-ver">v3.12</span><span class="cl-date">2026-08-13</span></div>
+      <ul class="cl-list">
+        <li><span class="dot"></span>P0 交付：消息中心、铃铛通知、PC 命令面板</li>
+        <li><span class="dot"></span>P2 增强：MFA、登录限流、库存盘点、报表订阅、效期预警</li>
+        <li><span class="dot"></span>性能修复：采购订单提交 51s 降至 0.67s</li>
+        <li><span class="dot"></span>全量回归 548 passed / 0 failed，三端深度 E2E 全部通过</li>
+      </ul>
+    </div>
+    <div class="cl-item">
+      <div class="cl-head"><span class="cl-ver">v3.11</span><span class="cl-date">2026-08-09</span></div>
+      <ul class="cl-list">
+        <li><span class="dot"></span>合同模块重构：模板驱动 + 统一工作台，全生命周期管理</li>
+        <li><span class="dot"></span>Word 模板自动识别占位符，POI 回填生成成稿</li>
+        <li><span class="dot"></span>合同到期定时任务自动过期</li>
+      </ul>
+    </div>
+    <div class="cl-item">
+      <div class="cl-head"><span class="cl-ver">v3.10</span><span class="cl-date">2026-08-09</span></div>
+      <ul class="cl-list">
+        <li><span class="dot"></span>审批流引擎：模板/节点/策略/委托/抄送/监控</li>
+        <li><span class="dot"></span>站内信 + 邮件通知全程自动推送</li>
+        <li><span class="dot"></span>6 类业务单据接入审批流</li>
+      </ul>
+    </div>
+    <div class="cl-item">
+      <div class="cl-head"><span class="cl-ver">v3.9</span><span class="cl-date">2026-08-05</span></div>
+      <ul class="cl-list">
+        <li><span class="dot"></span>报表体系大改版：13 张报表 + 可拖拽仪表盘</li>
+        <li><span class="dot"></span>导入/导出全量修复：14 导出 + 12 模板 + 11 模块导入</li>
+        <li><span class="dot"></span>移动端精简：聚焦销售场景，TabBar 5→4</li>
+      </ul>
+    </div>
+    <div class="cl-item">
+      <div class="cl-head"><span class="cl-ver">v3.8</span><span class="cl-date">2026-08-01</span></div>
+      <ul class="cl-list">
+        <li><span class="dot"></span>销退/采退全流程：关联发货、可退校验、自动出入库</li>
+        <li><span class="dot"></span>接口调用日志模块 + 对外开放接口（HMAC 签名）</li>
+        <li><span class="dot"></span>列表页统一规范：ListPageLayout + 按钮级权限</li>
+        <li><span class="dot"></span>批量导入"存在即更新"（upsert by code）</li>
+      </ul>
+    </div>
   </div>
 </section>
 

@@ -1,5 +1,6 @@
 /*
- * 鏉冮檺鏌ヨ鏈嶅姟锛岃礋璐ｉ€掑綊瑙ｆ瀽鐢ㄦ埛鎷ユ湁鐨勮祫婧愭潈闄愰泦鍚堛€? */
+ * 权限查询服务：负责递归解析用户拥有的资源权限集合。
+ */
 package com.dms.rbac.service;
 
 import com.dms.rbac.entity.Resource;
@@ -19,7 +20,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 鏉冮檺鏌ヨ鏈嶅姟锛歶ser -> roles -> strategies -> resources 閫掑綊瑙ｆ瀽銆? */
+ * 权限查询服务：user -> roles -> strategies -> resources 递归解析。
+ */
 @Service
 @RequiredArgsConstructor
 public class PermissionQueryService {
@@ -30,7 +32,8 @@ public class PermissionQueryService {
     private final ResourceRepository resourceRepository;
 
     /**
-     * 鍔犺浇鐢ㄦ埛鎷ユ湁鐨勮祫婧?code 闆嗗悎锛屼緵鏉冮檺鏍￠獙銆佽彍鍗曟覆鏌撲娇鐢ㄣ€?     */
+     * 加载用户拥有的资源 code 集合，供权限校验、菜单筛选使用。
+     */
     @Transactional(readOnly = true)
     public Set<String> loadPermissionsForUser(Long userId) {
         Set<String> result = new HashSet<>();
@@ -123,4 +126,3 @@ public class PermissionQueryService {
         }
     }
 }
-

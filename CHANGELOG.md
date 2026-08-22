@@ -1,3 +1,187 @@
+## v4.2.1 (2026-08-22) - 冒烟脚本 element-plus overlay 适配 / 覆盖层残留重置
+
+> PATCH 版本。修复 v4.2.0 部署后冒烟测试中 3 个页面 "create btn" 失败，与 4.2.0 业务代码无关，纯工具脚本缺陷。
+
+### 修复
+- **`forceCloseOverlays` 选不中新版 element-plus 的 overlay 容器**：v2.4+ 的 el-dialog / el-drawer / el-message-box 不再以 `__wrapper` 为外层（`.el-dialog__wrapper` / `.el-drawer__wrapper` 等已废弃），而是统一挂在 `.el-overlay` 容器下。原脚本只匹配老 wrapper，导致 row action 触发的 drawer 关不掉，残留遮挡后续 "新增" 按钮 click。新版选择器同时覆盖 `.el-dialog__wrapper:visible, .el-drawer__wrapper:visible, .el-message-box__wrapper:visible, .el-overlay-dialog:visible`（旧）与 `.el-overlay:visible .el-dialog, .el-overlay:visible .el-drawer, .el-overlay:visible .el-message-box`（新），并加 `.van-popup/.van-dialog/.van-action-sheet` 兼容移动端。`force:true` 强制点 closeBtn，失败时降级到蒙层 `mouse.click(8,8)` / `Escape`，最多 8 轮。
+- **`processOnePage` row action 与 create 按钮之间不再共享 DOM 状态**：`clickFirstRowAction` 后增加 `page.goto(BASE + p.path)` 重访当前路径（DOMContentLoaded + sleep 800ms），清掉 drawer / overlay / 路由过渡动画与可能的防连点锁，再做 `clickCreateButton`。彻底消除"row action drawer 已视觉关闭但 element-plus 内部状态残留"导致的 "clicked no dialog" 误报。
+- **`clickCreateButton` 选择器收紧**：原循环用 `container.locator(".el-button--primary, .el-button--success, .el-button")` 深度搜索整张卡片/工具区，会把表格内行内按钮（编辑/发布/更多）和主题切换 chip 都纳入候选，依赖内层文本正则命中。新版先在工具区可见容器（`.el-card .toolbar, .toolbar, .crud-toolbar, .list-toolbar, .page-header, .el-card`）内按文本找 "新建/新增/创建/添加/Create/Add" 按钮，找不到再 fallback 到全页可见 `button/a`（排除 `.el-table__body-wrapper` 内），排除"更多"按钮防止误点。click 用 `force:true` 跳过 actionability check。
+
+### 验证
+- `--module=approval`：**25/25 PASS**（含原 3 个失败项中的 `PC-approval-templates`）。
+- `--module=admin`：**42/42 PASS**（含 `ADM-manufacturers`、`ADM-dealers`）。
+- `--module=tenants`：**12/12 PASS**。
+- 全量 PC 段（221 项）0 FAIL，无回归。
+- 前端 vitest **36/36** 通过；后端 134/134 仍绿（未触及）。
+- 测试环境 actuator/health 200，无停机。
+
+### 部署
+- 仅工具脚本变更，无需重启后端；理论上无需重新部署（脚本是测试环境外的 node 进程直接执行）。
+- 如需对齐发布版本：发布包 v4.2.1 含 `dms-backend.jar`（与 4.2.0 同）+ PC/admin dist（与 4.2.0 同）+ `tools/smoke-test.cjs` 修复版。
+## v4.2.0 (2026-08-22) - 胖 Controller 下沉 / Schema 漂移修复 / 测试加固
+
+> MINOR 版本，已由用户明确授权升级。包含 fat controller 重构、email_logs/price_scope 等 schema 漂移修复、Supplier 主键对齐，以及下单→审批→出库→库存扣减主链路相关测试加固。
+
+### 重构（胖 Controller 瘦身，行为保持）
+- 将业务逻辑从 Controller 下沉到 Service，Controller 只做参数接收与委托：
+  - `SalesReturnController` → `SalesReturnService`（+ `SalesReturnLineSupport`）
+  - `PurchaseOrderController` → `PurchaseOrderService`
+  - `SalesOrderController` → `SalesOrderService`
+  - `SalesPositionController` → `SalesPositionService`（`PositionResolver` 由 `org.controller` 迁至 `org.service`）
+  - `BusinessReportController` → `BusinessReportService`
+  - `BizDocDetailController` → `BizDocDetailService`
+  - `SurgeryReportController` → `SurgeryReportService`
+  - `OrderApprovalExecutionController` → `OrderApprovalExecutionService`
+  - `ProductPriceController` → `ProductPriceService`
+  - `CompatAliasController` → `CompatAliasService`
+- 抽出可复用组件：`SqlValueSupport`（SQL 空值/类型安全）、`ApprovalResponseSupport`（审批响应统一）、`ActionButtonSupport`（行内动作按钮状态）。
+- 所有 HTTP 路径与接口契约保持不变；后端 134 测试全绿保证回归。
+
+### 修复
+- **下单 500（折扣字段为 NULL）**：`OrderLine` 折扣字段设为 nullable=false，`OrderService` 默认 `ZERO`，避免折扣空值导致下单异常。
+- **email_logs.duration_ms 类型漂移**：V95 误建为 INT，实体为 Long，V110 对齐为 BIGINT（Hibernate validate 不再报 wrong column type）。
+- **product_prices.price_scope 默认值漂移**：默认值仍为旧 'SALES'，不显式指定的新写入落回旧值导致计价漏匹配；V110 改为 'SALE'，V112 幂等归一化历史脏值（'SALES'/'GLOBAL'/'DEALER' → 'SALE'，'PUR'/'SUPPLIER' → 'PURCHASE'）。
+- **period_yyyymm 列类型漂移**：stocktakes / rebate_previews / rebate_settlements / dealer_kpi_snapshots 由 CHAR(6) 改 VARCHAR(6)，消除尾补空格导致的比较/唯一约束不一致（V111）。
+- **Supplier 主键类型对齐**：Supplier UUID→Long，对齐真实 BIGSERIAL 主键及 Repository。
+- **PermissionQueryService**：修复乱码注释（不影响逻辑）。
+
+### 测试
+- 后端测试由 130 增至 **134**，0 failures / 0 errors / 0 skipped。
+- 新增：`SalesReturnLineSupportTest`(10)、`ApprovalResponseSupportTest`(3)、`ActionButtonSupportTest`(1)、`SqlValueSupportTest`(3)，以及下单/审批/出库/促销/BOM 链路相关测试（`com.dms.chain`、`com.dms.core`、`V4CalculatorPromotionTest`、`SalesReturnLockingIntegrationTest` 等）。
+- 前端 vitest **36/36** 通过（auth/format/has 指令/dict）。
+- 修复 `tools/smoke-test.cjs` 长会话挂起：增加步骤级 `withTimeout`、`forceCloseOverlays` 兜底关闭 dialog/drawer/messagebox、全局 8 分钟进程级超时；PC/Admin 单页 60s、Mobile 30s 上限。dashboard/order 模块实测 30s 内干净退出。
+
+### 部署
+- 测试环境：http://43.128.145.141/
+- 新增 Flyway 迁移 V110/V111/V112（均幂等），部署前需确认测试库 `flyway_schema_history` 无同版本记录，详见 `docs/02_设计/reviews/v4.2.0-deploy-conflict-report.md`。
+- 回滚备份：`releases/v4.1.7-backup-20260822-205600/`。
+## v4.1.7 (2026-08-22) - 销退选单带出实物赠品（口径同步）
+
+### 修复
+- **销退「选择发货单」漏带赠品行**：v4.1.6 把实物赠品（`is_gift=true`）放进了 `sales_out_lines`，但 `SalesReturnService.shippedOutLines()` 仍沿用「跳过赠品 + 用 final_amount 推算单价」的旧逻辑，结果选择发货单接口只回 4 行而不是 5 行，赠品行在 UI 上凭空消失。赠品是物理件，必须与付费行一样可被选择退货。
+- **去掉赠品跳过**：移除 `if (lineIsGift || "PARENT".equals(lineLevel)) continue;` 中对赠品的过滤，只保留对 BOM 母件（`PARENT`、无实物）的过滤。
+- **单价改用出库行 `unit_price`**：原代码 `lineSupport.toBd(l.get("final_amount")).divide(shipped, 4, HALF_UP)` 在赠品 `final_amount=0` 时计算失真；改为直接读 `unit_price`（赠品 = 0.00，精确）。
+
+### 工程 / 测试
+- 新增 `SalesReturnLockingIntegrationTest.shippedOutLines_includesGiftLine`：直接造一个 COMPLETED 的 sales-out（1 行付费 + 1 行赠品），调 `SalesReturnService.shippedOutLines()`，断言返回 2 行且赠品行 `qty=2`、`unitPrice=0`、`returnableQty=2`。
+- 测试中显式 `TenantContext.setTenantId(tenant.getId())` 模拟 TenantInterceptor 行为——这是直接调 service 层（非 controller 路径）所必需的。
+- 销退锁测试 + 赠品带出测试 全绿（2/2）。
+
+### 验证（测试环境）
+- 出库单 `GI-20260822-00012` 含 5 行（含 1 行实物赠品 PRD-J004 单价 0）。
+- 销退「选择发货单」接口确认返回 5 行（PRD-J004 数量 5、单价 0、可退 5）。
+- 用户在销退新建页选 GI-20260822-00012 应能带出 5 行明细，赠品行可正常参与退货。
+
+## v4.1.6 (2026-08-22) - 实物赠品应当出库（一致性修复）
+
+### 修复
+- **实物赠品被错误地不出库**：v4.1.3 / v4.1.4 在出库生成逻辑里把 `is_gift=true` 的订单行一并跳过。但骨科植入物类促销赠品（接骨螺钉/钢板等）本身就是实物，必须随订单一起出库；"不参与总价/不参与折扣/不出库"是错误的过度修正。
+- **`V4ErpService.simulateShip` / `receiveOutbound` / `AutoDocGenerator.createSalesOutForOrder`**：去掉对 `is_gift` 的无差别跳过；只保留对 BOM 母件（`line_level=PARENT`，无实物）的跳过。赠品行按 0 元正常进入 `sales_out_lines` 和 CONFIRMED `sales_out_batch_lines`。
+- **`V4ErpService.refreshOrderStatus` 订单完成判定**：移除 `AND is_gift=false` 过滤，赠品（实物）出库后订单应能 COMPLETED；与出库侧"赠品要发"口径一致。
+
+### 工程 / 测试
+- `SalesOrderApprovalOutboundChainTest.orderWithGiftLine_completesAfterShipment_notPartial`：恢复并加强——下单→提交→注入赠品 order_line→simulateShip→回读订单 COMPLETED，**并断言赠品行出现在 sales_out_lines**。
+- 新增 `physicalGift_isShippedBySimulateShip`：断言赠品同时在 `sales_out_lines` 和 `sales_out_batch_lines`（CONFIRMED 批次子单）里。
+- 链式测试 4/4 全绿；测试环境冒烟 272/272 通过。
+
+### 验证（测试环境）
+- 建促销：买 PRD-J002 ≥1 赠 PRD-J004 ×2；预览带 `gift=true` 的 PRD-J004 行。
+- 下单 → 自动审批 → simulateShip → GI-20260822-00011：含 2 行（PRD-J002 实物 2 个单价 400 + PRD-J004 实物赠品 2 个单价 0），batch 全部 CONFIRMED，订单 COMPLETED。
+
+## v4.1.5 (2026-08-22) - 销退可退数量提交即锁定 / 驳回不双重释放
+
+### 修复
+- **销退提交后可退数量未正确扣减（草稿仍显示全额可退）**：前端 `SalesReturnEdit.returnableQty` 只减了已退数（returnedQty），漏减其他审批中销退单的占用锁（lockedQty/otherLockedQty），导致一张销退单提交后，另一张在它之前建好的草稿仍显示并尝试提交全额。现可退数量 = 已发 - 已退 - 其他单占用锁；加载草稿时把超过当前可退量的陈旧数量自动收敛到可退上限。
+- **销退详情把本单自己的锁也减掉**：详情接口原来用出库行总 `return_locked_qty` 算可退，已提交单自己持有的锁也被减掉，自己的行显示可退 0。现新增 `other_locked_qty`（总锁 - 当前单各自行占用），只扣其他单的锁；前端优先使用 `otherLockedQty`。
+- **驳回销退导致锁被双重释放**：`SalesReturnService.reject()` 在 `approvalService.rejectBusiness()`（其回调 `onRejected` 已释放锁）之后又显式调一次 `lockReturnLines(unlock=true)`，把 `return_locked_qty` 重复扣减，可退数量错乱。移除冗余释放，锁只由审批回调释放一次（通过/驳回/撤回/退回各一次）。
+- **提交前逐行预检可退量**：`submit` 新增 `checkReturnableBeforeSubmit`，按出库行聚合并回读当前可退量，超额时返回含产品编码/名称、当前可退、本单需退的业务提示，而非模糊的「可能已被其他销退单锁定」。
+- **审批模板条件匹配健壮性**：`ApprovalService.matchSingleRule` 在 snapshot 为 null 时直接放行，避免无快照/无条件模板触发 NPE 500。
+
+### 工程 / 测试
+- 新增 `SalesReturnLockingIntegrationTest`：同一出库行两张销退单，第一张提交加锁（6）、第二张超额创建被拒（40001）且锁不变、第二张在剩余额度内可提交（锁=10）、驳回第一张只释放自身 6（锁=4，不双重释放、不为负）。
+- 覆盖审批中（MANUAL 模板 PENDING_APPROVAL）持锁、驳回释放、超额拦截全链路；销退锁测试 + 出库链测试全绿。
+
+## v4.1.4 (2026-08-22) - 含赠品订单出库后状态修复
+
+### 修复
+- **含促销赠品的订单全部出库后仍显示「部分发货」**：`V4ErpService.refreshOrderStatus` 回算订单状态时只排除了 BOM 母件（`line_level<>PARENT`），没有排除促销赠品（`is_gift=true`）。赠品是 0 元非实物行、从不生成出库，于是被当成「未发完」，导致订单停在 PARTIAL_OUTBOUND 并提示母件/赠品数量未发。现查询同时过滤 `COALESCE(is_gift,false)=false`，只按实物行判定是否发完；与出库/销退过滤口径一致。
+- 历史数据已在测试库幂等校正（只统计非母件非赠品实物行），受影响的 SO-20260822-00010 等 3 张订单已纠正为 COMPLETED。
+
+### 工程 / 测试
+- `SalesOrderApprovalOutboundChainTest` 新增回归用例 `orderWithGiftLine_completesAfterShipment_notPartial`：下单→提交自动审批→注入赠品 order_line→simulateShip→回读订单状态必须为 COMPLETED，不被赠品拖成 PARTIAL_OUTBOUND（3 个链式测试全绿）。
+
+## v4.1.3 (2026-08-22) - 出库明细/行号、单据页缓存、满减周期
+
+### 修复
+- **ERP/模拟出库未回写发货子单（出库单详情无明细、无批序号/行号）**：`V4ErpService.receiveOutbound` 原来只写 `sales_out_lines`，不写 `sales_out_batches`/`sales_out_batch_lines`，导致销售出库详情页「发货子单」为空、销退选单无法带出行号。现 ERP 回写的已完成出库单会创建一张 CONFIRMED 发货子单，并为每个出库行写入 `batch_lines`（含 expected_line_seq/ship_line_no、batch_no、serial_no、unit_price）；出库行 `seq` 从 1 递增。
+- **ERP/模拟出库把促销赠品也出库**：`receiveOutbound`/`simulateShip` 行循环新增 `is_gift` 跳过，与 `AutoDocGenerator` 保持一致（赠品 0 元无实物，不出库/不可退）。
+- **销退新建残留上一单内容 / 离开销退页后弹「销退订单不存在」**：根因是 layout 的 `<keep-alive>` 缓存了单据编辑组件，`onMounted` 不再触发、被缓存实例的异步/定时器仍在请求旧 id。现给所有单据编辑/新建路由加 `meta.noCache`，layout 对这些页禁用 keep-alive；`SalesReturnEdit` 卸载时清理 `dealerTimer`。
+- **满A减钱缺少「减免周期（仅一次/每满N循环）」**：前端 `modules.js` 周期/每满N列对 GIFT 和 FULL_REDUCTION 都显示；后端 `PromotionService.replaceRules` 对满减也校验 cycle（ONCE/EVERY_N）及 everyN>0；`V4Calculator.applyReduction` 按周期计算减免次数，循环减免 = 单次减免 × 次数（封顶不超过命中行折后金额）。
+
+### 工程 / 测试
+- `LinesEditor.colTitle` 支持函数型列标题。
+- 路由 noCache 覆盖：合同/合同模板、销售/采购订单、收货入库、库存移动、销售出库、销退/采退新建与编辑。
+
+## v4.1.2 (2026-08-22) - 促销规则保存校验 / 满赠周期语义 / 计价 price_scope 根因修复
+
+### 修复
+- **满A减钱保存误报「赠品SKU不能为空」**：`CrudView` 明细行必填校验原来只遍历 required 列、不看列显隐，导致满A减钱时隐藏的「赠品SKU/赠品数量」列仍被校验。现改为用 `{...formData, ...row}` 上下文执行 `showIf/showWhen`，隐藏列跳过；`modules.js` 给「命中SKU/命中产品层次/每满N数量」补上受显隐控制的 required。
+- **满赠「赠送周期」语义修正**：`V4Calculator.applyGift` 现把 `thresholdQty` 作为起赠门槛 A、`everyN` 作为循环步长。仅赠一次：`hit>=A` 赠 1；每满N循环：`1 + floor((hit-A)/everyN)`（旧实现用 `floor(hit/threshold)` 把 A 当除数，与「每满N」列语义冲突）。
+- **促销校验补强**：`PromotionService.replaceRules` 增加 `targetType` 枚举校验（SKU/LINE）、GIFT 的 `cycle` 校验（ONCE/EVERY_N）、EVERY_N 时校验 `everyN>0`；满A减钱不要求赠品字段。
+- **计价「没有维护有效单品销售价格」根因修复**：重置演示数据时灌入的 `product_prices.price_scope` 是旧值 `SALES`，而计价查询按 `SALE` 过滤，导致有价格却解析为空。新增 Flyway `V112__normalize_price_scope_legacy.sql` 幂等归一化历史脏值；重新生成的 `ortho_demo_data_reset.sql` 已统一为 `SALE`。
+
+### 工程 / 测试
+- 新增 E2E `automation_test/e2e/specs/14-promo-target-cycle.spec.js`：覆盖满A减钱选SKU/产品层次保存、ONCE/EVERY_N 周期持久化、负向校验、preview 端到端计价（满减 5600→5100、EVERY_N 赠 3、产品线隔离、ONCE+EVERY_N 叠加 4、低于门槛不赠）、浏览器实点列表/新建弹窗与 Console 错误。
+- `V4CalculatorPromotionTest` 新增「门槛A vs 每满N步长」用例，锁定新语义防止回归（共 7 个单测全绿）。
+- 修复测试环境平台后台白屏：admin 构建默认用生产基路径 `/dms/admin/`，但测试以 `/admin/` 提供，资源 404。`deploy_test.py` 增加资源前缀校验，测试环境须用 `VITE_BASE=/admin/` 构建；冒烟测试 238→272 全绿。
+
+## UNRELEASED - 测试体系补强 / 版本与文档卫生
+
+### 新增
+- 新增 SalesOrderApprovalOutboundChainTest（2 个深度集成测试）：用真实 Spring 栈 + 嵌入式 PG，完整走「下单 DRAFT → 提交自动审批 APPROVED（无模板 AUTO_APPROVED，回读 approval_instances）→ 出库 COMPLETED → 库存 100 扣到 95 + 写 SALES_OUT 事务」，并回读订单状态/金额/库存数量；反向用例验证库存不足返回 400/40006 且库存不变。
+- 后端测试可零外部依赖运行：新增嵌入式 PostgreSQL（io.zonky:embedded-postgres）+ JUnit LauncherSessionListener，测试 profile 启用 Flyway 真实 schema（ddl-auto=none），无需 Docker 或本地安装数据库。
+- 修复 BaseIntegrationTest：补全 Redisson RRateLimiter mock，登录限流器不再 NPE，大量原本无法在本地运行的集成测试恢复通过。
+- 新增 V4CalculatorPromotionTest（6 个单元测试）：覆盖 MOQ 满赠、EVERY_N 每 N 赠、整单满减按行分摊、BOM 母件不计总价/不参与促销、数量非法、赠品幂等等 BOM+促销+下单核心计价规则。
+- 新增 CoreDomainEndpointTest（7 个参数化集成测试）：覆盖销售订单、销售出库、库存移动、审批、采购订单、收货、销退 7 条核心链路的端点存在性与鉴权（匿名 401/403，登录后不 404/5xx）。
+- 前端引入 Vitest + @vue/test-utils + jsdom 测试体系，新增 36 个单元/组件测试：时间格式化（format）、状态/枚举中文映射（dict）、token/权限本地存储（auth）、v-has 权限指令 DOM 移除（has-directive）。
+- 新增根脚本 test:backend 与 test:frontend。
+
+### 文档
+- 新增三份评审报告：docs/02_设计/reviews/01-fat-controllers.md、02-orm-boundary.md、03-flyway-governance.md。
+- 新增 .memory/requirement-closure.md 需求执行闭环流程，并在 AGENTS.md 阶段 B 强制引用，解决"提到的问题没执行"。
+- 同步版本元数据到 v4.1.1（package.json、frontend-vue/package.json、AGENTS.md、layer5-context.md）；修复 README v3.8.10 历史乱码与失效文档链接。
+
+### 重构（第四轮）：Service 重复逻辑收敛
+- 新增 ApprovalResponseSupport：统一 submit/approve/reject 后返回的 id/newStatus/approvalInstanceId/autoApproved 结构，SalesOrder/PurchaseOrder/SalesReturn 共用。
+- 新增 ActionButtonSupport：统一 allowedActions 按钮描述结构，消除三个订单类 Service 的 action() 重复实现。
+- 新增 SqlValueSupport：统一语义一致的宽松 toLong/toBdZero/strOr 转换；SalesOrder 与 OrderApprovalExecution 已接入。PurchaseOrder 的严格 ID 校验、SurgeryReport 的 null BigDecimal 语义不同，保留原实现以避免行为漂移。
+- 新增 ApprovalResponseSupportTest、ActionButtonSupportTest、SqlValueSupportTest，共 7 个单元测试；后端测试总数提升到 130。
+- 对测试环境执行分段深度冒烟：采购、销退、销售订单、价格、审批、报表、销售岗位、手术报台、收货以及后台菜单/字典/API日志/审计日志/角色模板/经销商/厂商全部通过；一次性全量跑会在后台多页连续切换后挂起，单独分页均通过，判定为脚本长会话稳定性问题。
+
+### 重构（第三轮）：全量胖 Controller 下沉
+- 把评审报告中全部 10 个胖 Controller（SalesReturn/PurchaseOrder/SalesPosition/BusinessReport/SalesOrder/BizDocDetail/SurgeryReport/OrderApprovalExecution/ProductPrice/CompatAlias）的业务逻辑整体下沉到对应 Service，Controller 只保留路由注解 + 参数委托；Controller 上的 @Transactional 全部移到 Service。
+- 逻辑/SQL/请求响应结构保持不变，仅搬运归属；OperationLog 切面切点已覆盖 service 包，操作日志继续生效。
+- PositionResolver 从 controller 包移到 org.service 包以配合下沉。
+- 回归：后端 mvn test 123 个测试全绿。
+
+### 修复（第二轮）
+- **胖 Controller 重构试点**：从 SalesReturnController 下沉纯行逻辑到 SalesReturnLineSupport（行解析/数量聚合/单价与金额计算），Controller 瘦身为委托调用；新增 SalesReturnLineSupportTest 10 个毫秒级单测守护。
+- **修复订单创建真实 bug**：order_lines.line_discount_value/line_discount_amount/header_discount_amount 为 NOT NULL，但 OrderService 在无折扣时插入 null 导致 500，补全默认 ZERO；实体列约束对齐为 nullable=false。
+- **修复供应商实体 schema 漂移**：Supplier 实体错误声明 UUID id（实际表为 BIGSERIAL），周边采购/收货/退货均用 Long；对齐为 Long id + IdType.AUTO、level/status 改 String、移除不存在的 attrs 列；同步 Repository/Service/ReferenceCheckService 类型。
+- **修复 schema 漂移**：V110 对齐 email_logs.duration_ms 为 BIGINT、product_prices.price_scope 默认值 SALE；V111 把 stocktakes/rebate_previews/rebate_settlements/dealer_kpi_snapshots 的 period_yyyymm 从 CHAR(6) 改为 VARCHAR(6)。
+- **9 个陈旧测试全部修复转绿**：Product 测试补 sortOrder；Order 测试因上述 null 折扣 bug 修复而通过；Promotion 测试断言对齐现行规则（GIFT/FULL_REDUCTION 可创建，MOQ/BUNDLE/未知返回 40001）。
+- 修复 PermissionQueryService 三处中文注释乱码。
+
+## v4.1.1 (2026-08-22) - 销退金额一致性 / 赠品与 BOM 母件出库过滤 / 出库行号
+
+### 修复
+- **销退单表头金额与明细汇总不一致**：只读页 `lineTotal()` 用 `min(退货数, 当前可退数)` 计算行总价，单据审批后可退数归零，导致已保存的退货行被错误显示为 ¥0。只读态改为直接取持久化的 `finalAmount`，明细汇总恒等于表头；`el-input-number` 的 `max` 在只读态不再裁剪已保存数量。
+- **促销赠品/BOM 母件流入出库与退货**：销售出库草稿生成（AutoDocGenerator）现在跳过 is_gift=true 的赠品行和 line_level='PARENT' 的 BOM 母件行（无实物、0 元），并写入 source_order_line_id；销退「选择发货单」接口同步过滤这些行，从源头杜绝退赠品。
+- **销退明细带出行号**：可退明细与销退详情新增「发货行」（出库行 seq）和「订单行」（销售订单行 seq），便于核对退货来源与原始出库价。
+
+### 测试
+- 新增 E2E 回归 13-rma-amount-lineno.spec.js：校验可退明细过滤赠品、携带行号、新建销退单表头金额等于明细 finalAmount 之和。
+
 ## v4.1.0 (2026-08-22) - BOM 价格双轨 / 行折扣优先级 / 促销计价口径统一
 
 ### 新增

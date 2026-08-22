@@ -1128,10 +1128,21 @@ async function saveForm(silent) {
         return false
       }
       const rows = Array.isArray(formData[f.key]) ? formData[f.key] : []
-      const requiredCols = (f.cols || []).filter((c) => c.required)
+      const allCols = f.cols || []
       for (let i = 0; i < rows.length; i++) {
-        for (const c of requiredCols) {
-          const v = rows[i][c.k]
+        const row = rows[i] || {}
+        const ctx = { ...formData, ...row }
+        for (const c of allCols) {
+          if (!c.required) continue
+          if (typeof c.showIf === 'function') {
+            let visible = true
+            try { visible = c.showIf(ctx) } catch (_) { visible = true }
+            if (!visible) continue
+          }
+          if (Array.isArray(c.showWhen) && c.showWhen.length === 2) {
+            if (ctx[c.showWhen[0]] !== c.showWhen[1]) continue
+          }
+          const v = row[c.k]
           if (v === '' || v == null || (typeof v === 'number' && isNaN(v))) {
             ElMessage.warning('第 ' + (i + 1) + ' 行' + c.l + '不能为空')
             return false

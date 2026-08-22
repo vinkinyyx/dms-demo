@@ -97,3 +97,70 @@
 - BOM 主数据维护
 - 所有只读页/编辑页无裸 ID
 - Console 无红色错误，网络无 500/非预期 4xx
+
+---
+
+## v4.1.1 销退金额一致性与赠品过滤（2026-08-22）
+
+### 缺陷复现
+- 销退单 `RS-20260822-00002`：表头退货金额 ¥253.93，明细页汇总仅 ¥61.08，对不上。
+- 根因：只读页 `lineTotal()` 用 `min(本次退货数, 当前可退数)` 计算行总价；单据审批后 `returned_qty` 已累计，可退数归零，导致已保存的退货行被错误显示为 ¥0；`el-input-number` 的 `:max` 也把已保存的退货数显示成 0。
+
+### 修复点
+1. 只读态行总价直接取持久化的 `finalAmount`（兜底 `subtotal`/`qty*unitPrice`），明细汇总恒等于表头 `final_amount`。
+2. 只读态 `el-input-number` 的 `max` 不再用剩余可退数裁剪已保存数量。
+3. 销售出库草稿生成（`AutoDocGenerator`）跳过 `is_gift=true` 赠品和 `line_level='PARENT'` BOM 母件，并写 `source_order_line_id`。
+4. 销退「选择发货单」`/shipped-outs/{id}/lines` 过滤赠品/母件行。
+5. 销退可退明细与详情新增「发货行」`lineNo`、「订单行」`orderLineNo`。
+
+### 验证用例（E2E `13-rma-amount-lineno.spec.js`）
+- `rma-lines-exclude-gift`：GI-20260822-00002 的赠品 PRD-J003（sourceOutLineId=190）不出现在可退明细。
+- `rma-lines-carry-lineno`：所有可退明细带 `lineNo`。
+- `rma-header-equals-line-sum`：新建销退单 `SUM(finalAmount) == header.finalAmount`（验证 48.22=48.22）。
+- `rma-detail-has-lineno`：详情行带 `lineNo`/`orderLineNo`。
+
+### 数据修复说明
+- 已存在的销退单数据本身正确（header=253.93，三行 finalAmount=61.07+192.86+0），仅前端显示错误，无需数据迁移。
+- 历史出库单中已生成的赠品行保留（金额为 0，不影响金额），新建/重生成出库单不再包含赠品/母件行。
+
+
+---
+
+## 附录：v4.1.2 测试场景（2026-08-22）
+
+### E2E：14-promo-target-cycle.spec.js
+| 用例 | 预期 |
+|------|------|
+| 满A减钱选SKU保存/回读 | 保存成功，ruleDetail 含 targetProductId/reduceAmount，无 giftProductId |
+| 满A减钱选产品层次保存 | 保存成功，targetProductLineId 正确 |
+| 满赠 LINE + EVERY_N 保存/回读 | cycle=EVERY_N、everyN、giftProductId、targetProductLineId 正确持久化 |
+| 负向校验 | 缺赠品 / 缺everyN / 满减缺金额 均返回 4xx |
+| preview 满减 SKU | product1(2800)×2 减免500 → final=5100，消息含「减免」 |
+| preview 满赠 EVERY_N | 创伤线 product1×8 → 赠 product3×3，赠品行 final=0 |
+| preview 产品线隔离 | 脊柱 product7×8 不触发创伤线赠品 |
+| preview ONCE+EVERY_N 叠加 | product1×8 → 共4件赠品 |
+| preview 低于门槛 | qty=1 不赠 |
+| 浏览器实点 | 促销列表渲染、新建弹窗打开、Console 无红错 |
+
+### 单元：V4CalculatorPromotionTest（7 个全绿）
+新增「门槛A vs 每满N步长」用例锁定 `1+floor((hit-A)/everyN)` 语义。
+
+### 修复验证
+- 计价：preview 普通单品正常返回价格（不再报未维护价格）。
+- 环境：V112 迁移成功；测试环境 admin 登录页资源以 /admin/ 加载且为 application/javascript；冒烟 272/272。
+
+---
+
+## 附录：v4.1.3 测试场景（2026-08-22）
+
+| 编号 | 场景 | 预期 |
+|------|------|------|
+| T-v4.1.3-1 | 销售订单提交自动审批 → 模拟出库 | 出库单详情存在 CONFIRMED 发货子单，batch_lines 行号从1递增、含批号/序列号/单价，BOM 母件不在其中 |
+| T-v4.1.3-2 | 含促销赠品的订单模拟出库 | 赠品行（is_gift）不生成出库行/批次行 |
+| T-v4.1.3-3 | 打开已存在销退单 → 点新建 | 原发货单信息、经销商、明细全部清空 |
+| T-v4.1.3-4 | 在销退编辑页 → 跳促销规则详情 | Network 无对旧销退单的后续请求，Console 无红错，不弹「销退订单不存在」 |
+| T-v4.1.3-5 | 满A减钱=仅一次，命中数≥A | 整单只减一次固定金额 |
+| T-v4.1.3-6 | 满A减钱=每满N循环，qty=6, A=2, N=2 | 减免 3 次（1+floor((6-2)/2)），提示文案含「每满2循环」 |
+| T-v4.1.3-7 | 满减规则选每满N循环但不填N | 保存被拒绝并提示填写每满N数量 |
+
+自动化：新增 `automation_test/e2e/specs/15-outbound-batch-rma-cache.spec.js`；冒烟 272/272，E2E 13/14/15 全绿。

@@ -278,13 +278,13 @@ const promotions = {
     { key: 'status', label: '状态', type: 'select', value: 'draft', group: '其他', options: [{ value: 'draft', label: '草稿' }, { value: 'active', label: '启用' }, { value: 'inactive', label: '停用' }] },
     { key: 'rules', type: 'lines', label: '规则明细', required: true, group: '规则明细', cols: [
       { k: 'targetType', l: '命中对象类型', type: 'select', required: true, value: 'SKU', options: [{ value: 'SKU', label: 'SKU' }, { value: 'LINE', label: '产品层次' }] },
-      { k: 'targetProductId', l: '命中SKU', type: 'picker', picker: 'products', displayKey: 'targetProductName', showIf: (ctx) => ctx.targetType === 'SKU' },
-      { k: 'targetProductLineId', l: '命中产品层次', type: 'picker', picker: 'product-lines', displayKey: 'targetProductLineName', showIf: (ctx) => ctx.targetType === 'LINE' },
+      { k: 'targetProductId', l: '命中SKU', type: 'picker', picker: 'products', displayKey: 'targetProductName', required: true, showIf: (ctx) => ctx.targetType === 'SKU' },
+      { k: 'targetProductLineId', l: '命中产品层次', type: 'picker', picker: 'product-lines', displayKey: 'targetProductLineName', required: true, showIf: (ctx) => ctx.targetType === 'LINE' },
       { k: 'thresholdQty', l: '门槛数量A', type: 'number', required: true },
       { k: 'giftProductId', l: '赠品SKU', type: 'picker', picker: 'products', displayKey: 'giftProductName', required: true, showIf: (ctx) => ctx.promoType === 'GIFT' },
       { k: 'giftQty', l: '赠品数量', type: 'number', required: true, showIf: (ctx) => ctx.promoType === 'GIFT' },
-      { k: 'cycle', l: '赠送周期', type: 'select', value: 'ONCE', showIf: (ctx) => ctx.promoType === 'GIFT', options: [{ value: 'ONCE', label: '仅赠一次' }, { value: 'EVERY_N', label: '每满N循环' }] },
-      { k: 'everyN', l: '每满N数量', type: 'number', showIf: (ctx) => ctx.promoType === 'GIFT' && ctx.cycle === 'EVERY_N' },
+      { k: 'cycle', l: '周期', type: 'select', value: 'ONCE', showIf: (ctx) => ctx.promoType === 'GIFT' || ctx.promoType === 'FULL_REDUCTION', options: [{ value: 'ONCE', label: '仅一次' }, { value: 'EVERY_N', label: '每满N循环' }] },
+      { k: 'everyN', l: '每满N数量', type: 'number', required: true, showIf: (ctx) => (ctx.promoType === 'GIFT' || ctx.promoType === 'FULL_REDUCTION') && ctx.cycle === 'EVERY_N' },
       { k: 'reduceAmount', l: '减免金额', type: 'number', required: true, showIf: (ctx) => ctx.promoType === 'FULL_REDUCTION' }
     ] }
   ]

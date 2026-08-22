@@ -64,9 +64,10 @@
       </el-header>
       <el-main class="main">
         <router-view v-slot="{ Component, route: viewRoute }">
-          <keep-alive :max="10">
+          <keep-alive :max="10" v-if="!viewRoute.meta.noCache">
             <component :is="Component" :key="viewRoute.fullPath" />
           </keep-alive>
+          <component :is="Component" v-else :key="viewRoute.fullPath" />
         </router-view>
       </el-main>
     </el-container>

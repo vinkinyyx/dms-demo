@@ -84,7 +84,7 @@ public class AutoDocGenerator {
             try {
                 String lineLevel = l.get("line_level") == null ? "NORMAL" : String.valueOf(l.get("line_level"));
                 boolean isGift = Boolean.TRUE.equals(l.get("is_gift"));
-                if ("PARENT".equals(lineLevel) || isGift) continue;
+                if ("PARENT".equals(lineLevel)) continue;
                 em.createNativeQuery(
                         "INSERT INTO sales_out_lines (sales_out_id, seq, product_id, warehouse_id, source_order_line_id, expected_qty, shipped_qty, qty, " +
                         "unit_price, tax_rate, subtotal, created_at) " +

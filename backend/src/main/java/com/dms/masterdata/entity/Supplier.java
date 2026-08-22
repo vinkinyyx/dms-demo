@@ -6,16 +6,13 @@ package com.dms.masterdata.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.dms.common.jpa.JsonMapConverter;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
 
 import java.time.OffsetDateTime;
-import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -25,9 +22,9 @@ import java.util.UUID;
 public class Supplier {
 
     @Id
-    @TableId(type = IdType.ASSIGN_UUID)
+    @TableId(type = IdType.AUTO)
     @Column(name = "id")
-    private UUID id;
+    private Long id;
 
     @Column(name = "tenant_id")
     private UUID tenantId;
@@ -52,13 +49,9 @@ public class Supplier {
 
     private String remark;
 
-    private Integer level;
+    private String level;
 
-    private Integer status;
-
-    @Convert(converter = JsonMapConverter.class)
-    @Column(name = "attrs", columnDefinition = "jsonb")
-    private Map<String, Object> attrs;
+    private String status;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -67,7 +60,7 @@ public class Supplier {
     private OffsetDateTime updatedAt;
 
     public void ensureAttrs() {
-        if (status == null) status = 1;
+        if (status == null) status = "active";
         if (createdAt == null) createdAt = OffsetDateTime.now();
         updatedAt = OffsetDateTime.now();
     }

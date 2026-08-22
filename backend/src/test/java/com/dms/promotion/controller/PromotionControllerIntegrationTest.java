@@ -1,6 +1,7 @@
 /*
- * 测试目标：验证 /api/promotions 促销 CRUD 与 V1 白名单校验。
- * 覆盖用户故事：US-6.4（GIFT/BUNDLE 被拒绝，返回 V1 未启用）、US-6.3（MOQ / FULL_REDUCTION 可创建）。
+ * 测试目标：验证 /api/promotions 促销 CRUD 与 promoType 白名单校验。
+ * 现行规则：CRUD 仅接受 GIFT（满A赠B）与 FULL_REDUCTION（满A减钱）；
+ * MOQ/BUNDLE/未知类型一律返回 40001 参数非法。
  */
 package com.dms.promotion.controller;
 
@@ -38,17 +39,17 @@ class PromotionControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("正常流程：创建 MOQ 促销成功")
-    void should_createMoqPromotion_when_typeValid() throws Exception {
-        String token = setupTenantAndLogin("T-PROMO-MOQ");
+    @DisplayName("正常流程：创建 GIFT 促销成功")
+    void should_createGiftPromotion_when_typeValid() throws Exception {
+        String token = setupTenantAndLogin("T-PROMO-GIFT");
 
         mockMvc.perform(post("/api/promotions")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(promoBody("MOQ", "MOQ活动"))))
+                        .content(objectMapper.writeValueAsString(promoBody("GIFT", "赠品活动"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.promoType").value("MOQ"))
+                .andExpect(jsonPath("$.data.promoType").value("GIFT"))
                 .andExpect(jsonPath("$.data.id").isNumber());
     }
 
@@ -66,19 +67,19 @@ class PromotionControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("异常分支：GIFT 类型 V1 未启用，返回 40006")
-    void should_reject_when_promoTypeIsGift() throws Exception {
-        String token = setupTenantAndLogin("T-PROMO-GIFT");
+    @DisplayName("异常分支：MOQ 类型不在 CRUD 白名单，返回 40001")
+    void should_reject_when_promoTypeIsMoq() throws Exception {
+        String token = setupTenantAndLogin("T-PROMO-MOQ");
 
         mockMvc.perform(post("/api/promotions")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(promoBody("GIFT", "赠品活动"))))
-                .andExpect(jsonPath("$.code").value(40006));
+                        .content(objectMapper.writeValueAsString(promoBody("MOQ", "起订量活动"))))
+                .andExpect(jsonPath("$.code").value(40001));
     }
 
     @Test
-    @DisplayName("异常分支：BUNDLE 类型 V1 未启用，返回 40006")
+    @DisplayName("异常分支：BUNDLE 类型不支持，返回 40001")
     void should_reject_when_promoTypeIsBundle() throws Exception {
         String token = setupTenantAndLogin("T-PROMO-BND");
 
@@ -86,7 +87,7 @@ class PromotionControllerIntegrationTest extends BaseIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(promoBody("BUNDLE", "捆绑活动"))))
-                .andExpect(jsonPath("$.code").value(40006));
+                .andExpect(jsonPath("$.code").value(40001));
     }
 
     @Test

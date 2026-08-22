@@ -1,3 +1,24 @@
+## v4.2.1（2026-08-22）- 冒烟脚本 element-plus overlay 适配 / 覆盖层残留重置
+
+- 修复 	ools/smoke-test.cjs 在新版 element-plus 下选不中 overlay 容器（l-dialog/l-drawer/l-message-box 已统一挂在 .el-overlay 下），选择器同时覆盖老 wrapper 与新 .el-overlay:visible .el-dialog/.el-drawer/.el-message-box，并兼容 Vant 移动端组件。
+- orceCloseOverlays orce:true 强制点 closeBtn，失败时降级为蒙层 mouse.click(8,8) / Escape，最多 8 轮。
+- processOnePage 在 row action 与 create 按钮之间增加 page.goto 重访清空 drawer/overlay 路由过渡与防连点锁；clickCreateButton 选择器收紧到工具区可见容器，文本限定"新建/新增/创建/添加/Create/Add"，orce:true 跳过 actionability check。
+- 验证：--module=approval 25/25、--module=admin 42/42、--module=tenants 12/12，全量 PC 段 221 项 0 FAIL；前端 vitest 36/36，后端 134/134 仍绿。
+- 纯工具脚本变更，业务代码与 4.2.0 完全相同，无需重启后端。
+
+## v4.2.0（2026-08-22）- 胖 Controller 下沉 / Schema 漂移修复 / 测试加固
+
+- **胖 Controller 瘦身**：将 10 个 Controller 的业务逻辑下沉到同名 Service（SalesReturnService、PurchaseOrderService、SalesOrderService、SalesPositionService、BusinessReportService、BizDocDetailService、SurgeryReportService、OrderApprovalExecutionService、ProductPriceService、CompatAliasService），HTTP 路径与接口契约保持不变；后端 134 测试全绿保证回归。
+- **可复用组件**：SqlValueSupport（SQL 空值/类型安全）、ApprovalResponseSupport（审批响应统一）、ActionButtonSupport（行内动作按钮状态）。
+- **修复**：
+  - 下单 500（折扣字段为 NULL）：OrderLine 折扣字段 
+ullable=false，默认 ZERO。
+  - mail_logs.duration_ms 类型漂移：V95 INT 改 BIGINT（V110）。
+  - product_prices.price_scope 默认值漂移：V110 改为 SALE，V112 幂等归一化历史脏值。
+  - period_yyyymm 列类型漂移：V111 改 VARCHAR(6)，消除尾补空格导致的比较/唯一约束不一致。
+  - Supplier 主键 UUID→Long，对齐 BIGSERIAL 主键及 Repository。
+- **测试**：后端 130 → 134（含 SalesReturnLineSupportTest 等新增），前端 vitest 36/36；smoke-test.cjs 加步骤级 withTimeout、orceCloseOverlays 兜底、全局 8 分钟进程级超时。
+- 部署：测试环境 http://43.128.145.141/，新增 Flyway V110/V111/V112（均幂等）。
 ## v4.1.0（2026-08-22）- BOM 价格双轨 / 行折扣优先级 / 促销计价口径统一
 
 - BOM 子件价与单品价双轨维护：product_prices 新增 price_context（STANDALONE/BOM_HEADER/BOM_COMPONENT）与 om_parent_product_id，同一 SKU 可分别维护单品价和作为某 BOM 子件的价格；BOM 母件价保存为 1 条 0 元 BOM_HEADER + N 条 BOM_COMPONENT，子件价不再覆盖母件。
@@ -26,7 +47,7 @@
 - 前端「审批中心」：我的审批、审批流配置、审批委托、审批监控。
 - 通知：站内信 + 邮件（163 SMTP）；账号创建强制手机号 + 邮箱。
 - Flyway V72（审批表）、V73（审批权限资源）；后端 Maven package、前端 Vite build 通过，测试环境已部署。
-- 详见 `docs/13_审批流/01_审批流设计.md` 与 CHANGELOG v3.10.0。
+- 详见 `docs/02_设计/审批流设计.md` 与 CHANGELOG v3.10.0。
 
 ## v3.8.11（2026-08-08）
 
@@ -36,17 +57,15 @@
 - 新增 V69/V70 数据迁移，修复历史中文按钮和字典标签。
 - 测试环境已完成部署，并通过 E2E 与关键接口 smoke。
 
-## v3.8.10 ?????2026-08-07?
+## v3.8.10（2026-08-07）- 权限资源与接口路径热修复（历史条目，原始编码损坏已重写）
 
-- ?????????????????????????????????Flyway ???? V67?
-- ???????????????????????? KPI?????????????? 5 ? Tab?
-- ?????????? token ????? `/api/api-call-logs`??? `api_log:view` ??????
-- ???????????????/??????????????? 1 ?????? ?????
-- ?????????? `tools/_e2e_v389_final.py`?
-
+- 修复权限码 permissionCode 与 resources.code 不匹配导致的菜单/按钮鉴权问题；Flyway V67 修正 dashboard:view、products:view 等资源。
+- ApiCallLogController 列表接口由 /api/api-call-logs 收口到 /api/admin/api-call-logs，受 api_log:view 权限保护。
+- 前端权限指令 directives/has.js 与布局 layout/index.vue 改从 /api/me/permissions 拉取并应用权限集。
+- 回归工具 tools/_e2e_v389_final.py。
 # 通用 DMS 经销商管理系统 — 项目入口
 
-**当前版本**: v4.1.0
+**当前版本**: v4.2.1
 **最后更新**: 2026-08-22
 **正式环境**: 业务前台/PC http://8.133.193.238/dms/ ｜ 移动端 http://8.133.193.238/dms/mobile/login ｜ 平台后台 http://8.133.193.238/dms/admin/ ｜ 健康检查 http://8.133.193.238/actuator/health
 **测试环境**: 业务前台 http://43.128.145.141/ ｜ PC 工作台 http://43.128.145.141/ ｜ 移动端 http://43.128.145.141/mobile/login ｜ 平台后台 http://43.128.145.141/admin/
@@ -71,7 +90,7 @@
 - 单号生成：DocNoGenerator 遇到历史/并发撞号时自动顺延，避免 500。
 - 测试：后端 84 个单元/集成测试全部通过，核心 API 冒烟 0 个 500，前端生产构建通过。
 
-详见：[CHANGELOG](CHANGELOG.md) v3.8.0 章节，需求以 `docs/03_需求文档/需求总览.md` 为准。
+详见：[CHANGELOG](CHANGELOG.md) v3.8.0 章节，需求以 `docs/01_需求/DMS需求文档_汇总版.md` 为准。
 
 ## v3.8.7 列表页布局统一规范 + 平台/租户按钮配置（2026-08-06 / D13）
 - 增量：V61/V62/V63 迁移脚本灌种 16 个 pageKey 120 条按钮 + 128 条 button 资源；admin 权限码 20 → 148；ApiCallLog/ProductMappings 重构为 ListPageLayout；trigger 自动关联新 button 资源到 strategy 1。
@@ -134,7 +153,7 @@ v3.7.0 迭代中反复出现4个问题（下拉选择、弹窗、删除报500、
 | 4 | DELETE /api/products/4 | 200 ✅（业务错误码40904，非500） |
 | 5 | Nginx proxy_pass 验证 | ✅ 指向 8082 |
 
-详见：[测试报告](docs/09_测试报告/测试报告.md) `v3.7.1` 章节
+详见：[测试报告](docs/03_测试/) `v3.7.1` 章节
 
 ---
 
@@ -153,7 +172,7 @@ v3.7.0 迭代中反复出现4个问题（下拉选择、弹窗、删除报500、
 - 3 个新增集成测试类
 - 5 份文档同步（需求/数据库/测试 + 增量 README）
 
-详见：[需求文档](docs/03_需求文档/需求文档.md) `v3.7.0` 章节、[数据库设计](docs/05_数据库设计/数据库设计.md)、[测试报告](docs/09_测试报告/测试报告.md)
+详见：[需求文档](docs/01_需求/DMS需求文档_汇总版.md) `v3.7.0` 章节、[数据库设计](docs/02_设计/数据库设计.md)、[测试报告](docs/03_测试/)
 
 ---
 
@@ -169,7 +188,7 @@ v3.7.0 迭代中反复出现4个问题（下拉选择、弹窗、删除报500、
 - 异步队列：避免日志记录阻塞主业务流程
 - 管理后台下载：`GET /api/admin/op-logs/download?date=YYYY-MM-DD`，仅 admin 可访问
 
-**验收结果**：7/7 ✅ 全部通过，详见 [测试报告](docs/09_测试报告/测试报告.md) `v3.6.2` 章节
+**验收结果**：7/7 ✅ 全部通过，详见 [测试报告](docs/03_测试/) `v3.6.2` 章节
 
 ### 二、4个产品模块 BUG 修复 + 部署缺陷修复
 **采用JAR直投模式 3.7分钟部署完成，通过Playwright浏览器模拟操作验证**：
@@ -183,7 +202,7 @@ v3.7.0 迭代中反复出现4个问题（下拉选择、弹窗、删除报500、
 
 **Playwright 浏览器端到端验证**：✅12 通过 | ⚠️2 数据限制（生产种子无 DRAFT 状态）| ❌0 失败
 
-完整验证报告：详见 [测试报告](docs/09_测试报告/测试报告.md) `v3.6.2 (2026-07-24)` 章节。
+完整验证报告：详见 [测试报告](docs/03_测试/) `v3.6.2 (2026-07-24)` 章节。
 
 > ⚠️ 查看 [CHANGELOG.md](./CHANGELOG.md) 了解全部版本历史 | [DMS 登录信息手册](./docs/DMS登录信息手册.md) 与 [服务器迁移复刻清单](./docs/07_部署方案/服务器迁移复刻清单.md) 查看访问与部署详情
 

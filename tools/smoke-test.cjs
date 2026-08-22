@@ -30,6 +30,12 @@ function check(name, ok, detail) {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function withTimeout(promise, ms, label) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("step timeout " + ms + "ms: " + label)), ms);
+    promise.then(v => { clearTimeout(timer); resolve(v); }, e => { clearTimeout(timer); reject(e); });
+  });
+}
 
 function attachListeners(page, label) {
   page.on("console", msg => {
@@ -108,6 +114,19 @@ async function loginMobile(page) {
   await page.waitForURL(u => !u.pathname.includes("/login"), { timeout: 15000 }).catch(()=>{});
   await sleep(3000);
   return !page.url().includes("/mobile/login");
+}
+
+// ---------- per page step ----------
+async function processOnePage(page, p) {
+  const ok = await visitPage(page, p.path, p.label);
+  if (ok) {
+    await clickFirstRowAction(page, p.label);
+    // 重新访问路径以清掉 row action 残留的 drawer / overlay / 路由状态，
+    // 避免影响 clickCreateButton 的"新增"按钮 click 与表单弹窗可见性判断。
+    await page.goto(BASE + p.path, { waitUntil: "domcontentloaded", timeout: 25000 }).catch(()=>{});
+    await sleep(800);
+    await clickCreateButton(page, p.label);
+  }
 }
 
 // ---------- visit page ----------
@@ -194,10 +213,37 @@ async function clickFirstRowAction(page, label) {
   if (errs.serverErrors.length) check(label + " - row network", false, errs.serverErrors.map(e=>e.status+" "+e.url).join("; ").slice(0,200));
 
   // close dialogs
-  await page.keyboard.press("Escape").catch(()=>{});
-  const closeBtn = page.locator(".el-dialog__headerbtn:visible, .el-drawer__close-btn:visible, .el-message-box__headerbtn:visible").first();
-  if (await closeBtn.count()) { await closeBtn.click().catch(()=>{}); }
-  await sleep(500);
+  await forceCloseOverlays(page);
+}
+
+async function forceCloseOverlays(page) {
+  // 同时兼容 element-plus 新版（el-overlay 容器下挂 dialog/drawer/message-box）
+  // 和旧版（直接挂 __wrapper），以及 vant。
+  const oldWrappers = ".el-dialog__wrapper:visible, .el-drawer__wrapper:visible, .el-message-box__wrapper:visible, .el-overlay-dialog:visible";
+  const newPanels    = ".el-overlay:visible .el-dialog, .el-overlay:visible .el-drawer, .el-overlay:visible .el-message-box";
+  const vantPanels   = ".van-popup:visible, .van-dialog:visible, .van-action-sheet:visible";
+  const closeBtnSel  = ".el-dialog__headerbtn, .el-drawer__close-btn, .el-message-box__headerbtn, .van-popup__close-icon, .van-dialog__close-icon, .van-action-sheet__close-icon";
+  try {
+    for (let i = 0; i < 8; i++) {
+      const sels = [oldWrappers, newPanels, vantPanels].join(",");
+      const panels = page.locator(sels);
+      const cnt = await panels.count();
+      if (cnt === 0) break;
+      let closed = false;
+      const closeBtn = panels.first().locator(closeBtnSel).first();
+      if (await closeBtn.count()) {
+        try { await closeBtn.click({ timeout: 2000, force: true }); closed = true; } catch(e) {}
+      }
+      if (!closed) {
+        // 兜底：直接点 overlay 蒙层点击关闭（点击非 panel 区域）
+        try { await page.mouse.click(8, 8); } catch(e) {}
+      }
+      if (!closed) {
+        try { await page.keyboard.press("Escape"); } catch(e) {}
+      }
+      await sleep(350);
+    }
+  } catch(e) {}
 }
 
 // ---------- click create button ----------
@@ -206,25 +252,48 @@ async function clickCreateButton(page, label) {
   attachListeners(page, createLabel);
   await sleep(500);
 
-  const toolbarSelectors = [".el-card", ".toolbar", ".page-header", ".crud-toolbar", ".list-toolbar"];
+  // 1) 先尝试在工具区容器内按文本定位（更稳，不混入表格行内按钮）
+  const toolbarSelectors = [".el-card .toolbar", ".toolbar", ".crud-toolbar", ".list-toolbar", ".page-header", ".el-card"];
   let createBtn = null;
+  const createRe = /\u65b0\u589e|\u65b0\u5efa|\u6dfb\u52a0|\u521b\u5efa|\u521b\u5efa\u6a21\u677f|\u65b0\u5efa\u5ba1\u6279\u6d41|\u65b0\u5efa\u9001\u8d27\u5355|\u65b0\u5efa\u8ba2\u5355|\u65b0\u5efa\u91c7\u8d2d|\u65b0\u5efa\u4ea7\u54c1|\u65b0\u5efa\u5ba2\u6237|\u65b0\u5efa\u4f9b\u5e94\u5546|Create|Add/;
   for (const containerSel of toolbarSelectors) {
-    const container = page.locator(containerSel).first();
-    if (!(await container.count())) continue;
-    const btns = container.locator(".el-button--primary, .el-button--success, .el-button");
-    const cnt = await btns.count();
-    for (let i = 0; i < cnt; i++) {
-      const b = btns.nth(i);
-      let text = "";
-      try { text = (await b.innerText()).trim(); } catch(e) {}
-      if (/\u65b0\u589e|\u6dfb\u52a0|\u521b\u5efa|\u65b0\u5efa|Create|Add/.test(text)) { createBtn = b; break; }
+    const containers = page.locator(containerSel);
+    const cc = await containers.count();
+    for (let k = 0; k < cc; k++) {
+      const container = containers.nth(k);
+      if (!(await container.isVisible().catch(()=>false))) continue;
+      const btns = container.locator("button.el-button--primary, button.el-button--success, button.el-button");
+      const cnt = await btns.count();
+      for (let i = 0; i < cnt; i++) {
+        const b = btns.nth(i);
+        const text = (await b.innerText().catch(()=>"")).trim();
+        // 必须是工具区按钮（不在表格行内、文本里含"新/创/添"等）
+        if (createRe.test(text) && !text.includes("\u66f4\u591a")) { createBtn = b; break; }
+      }
+      if (createBtn) break;
     }
     if (createBtn) break;
   }
 
+  // 2) Fallback：在整个页面（除表格行）按文本找
+  if (!createBtn) {
+    const candidates = page.locator("button:visible, a:visible");
+    const cnt = await candidates.count();
+    for (let i = 0; i < cnt; i++) {
+      const b = candidates.nth(i);
+      // 排除表格行内
+      const inRow = await b.evaluate(el => !!el.closest(".el-table__body-wrapper")).catch(()=>false);
+      if (inRow) continue;
+      const text = (await b.innerText().catch(()=>"")).trim();
+      if (createRe.test(text) && !text.includes("\u66f4\u591a")) { createBtn = b; break; }
+    }
+  }
+
   if (!createBtn) { check(label + " - create btn", true, "no create button"); return; }
-  try { await createBtn.click({ timeout: 5000 }); } catch(e) { check(label + " - create btn", false, e.message.slice(0,100)); return; }
-  await sleep(2000);
+  let clickOk = false;
+  try { await withTimeout(createBtn.click({ timeout: 5000, force: true }), 8000, label + " create-click"); clickOk = true; } catch(e) { check(label + " - create btn", false, e.message.slice(0,120)); }
+  if (!clickOk) return;
+  await sleep(1500);
 
   const dlg = page.locator(".el-dialog:visible, .el-drawer:visible").first();
   const form = page.locator(".el-form:visible").first();
@@ -307,6 +376,13 @@ const MOBILE_PAGES = [
 ];
 
 // ---------- main ----------
+const PROCESS_TIMEOUT_MS = 8 * 60 * 1000;
+const PROCESS_TIMER = setTimeout(() => {
+  console.error("FATAL: process exceeded " + PROCESS_TIMEOUT_MS + "ms, force-exiting");
+  process.exit(2);
+}, PROCESS_TIMEOUT_MS);
+PROCESS_TIMER.unref();
+
 (async () => {
   console.log("=== DMS Deep Smoke Test ===");
   console.log("Base:", BASE);
@@ -324,11 +400,9 @@ const MOBILE_PAGES = [
   if (pcLoginOk) {
     for (const p of PC_PAGES) {
       if (ONLY_MODULE && !p.path.includes(ONLY_MODULE) && !p.label.toLowerCase().includes(ONLY_MODULE.toLowerCase())) continue;
-      const ok = await visitPage(pcPage, p.path, p.label);
-      if (ok) {
-        await clickFirstRowAction(pcPage, p.label);
-        await clickCreateButton(pcPage, p.label);
-      }
+      try { await withTimeout(processOnePage(pcPage, p), 60000, p.label); }
+      catch(e) { check(p.label + " - step", false, e.message.slice(0,150)); }
+      await forceCloseOverlays(pcPage);
     }
   }
 
@@ -340,11 +414,9 @@ const MOBILE_PAGES = [
   if (adLoginOk) {
     for (const p of ADMIN_PAGES) {
       if (ONLY_MODULE && !p.path.includes(ONLY_MODULE)) continue;
-      const ok = await visitPage(adPage, p.path, p.label);
-      if (ok) {
-        await clickFirstRowAction(adPage, p.label);
-        await clickCreateButton(adPage, p.label);
-      }
+      try { await withTimeout(processOnePage(adPage, p), 60000, p.label); }
+      catch(e) { check(p.label + " - step", false, e.message.slice(0,150)); }
+      await forceCloseOverlays(adPage);
     }
   }
 
@@ -362,7 +434,8 @@ const MOBILE_PAGES = [
   if (mLoginOk) {
     for (const p of MOBILE_PAGES) {
       if (ONLY_MODULE && !p.path.includes(ONLY_MODULE)) continue;
-      await visitPage(mPage, p.path, p.label);
+      try { await withTimeout(visitPage(mPage, p.path, p.label), 30000, p.label); }
+      catch(e) { check(p.label + " - step", false, e.message.slice(0,150)); }
     }
   }
 

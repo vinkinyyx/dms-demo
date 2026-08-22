@@ -1,7 +1,7 @@
 /*
  * 销售岗位递归解析工具
  */
-package com.dms.org.controller;
+package com.dms.org.service;
 
 import jakarta.persistence.EntityManager;
 

@@ -225,7 +225,15 @@ public class V4Calculator {
         if (threshold.signum() <= 0 || giftProductId == null || giftQty.signum() <= 0) return;
         if (pricing.isBom(tid, giftProductId)) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "赠品不能是BOM母件");
         BigDecimal hit = hitQty(tid, lines, detail.get("targetProductId"), detail.get("targetProductLineId"));
-        BigDecimal times = cyclic ? hit.divide(threshold, 0, RoundingMode.FLOOR) : (hit.compareTo(threshold) >= 0 ? BigDecimal.ONE : BigDecimal.ZERO);
+        BigDecimal times;
+        if (cyclic) {
+            // 每满N循环：达到起赠门槛 threshold(A) 后，每满 step 个再赠一次。step 取 everyN，缺省回退到 threshold。
+            BigDecimal step = firstPositive(bd(detail.get("everyN")), threshold);
+            if (hit.compareTo(threshold) < 0) times = BigDecimal.ZERO;
+            else times = BigDecimal.ONE.add(hit.subtract(threshold).divide(step, 0, RoundingMode.FLOOR));
+        } else {
+            times = hit.compareTo(threshold) >= 0 ? BigDecimal.ONE : BigDecimal.ZERO;
+        }
         if (times.signum() <= 0) return;
         BigDecimal totalGift = giftQty.multiply(times);
         giftQtys.merge(giftProductId, totalGift, BigDecimal::add);
@@ -254,10 +262,23 @@ public class V4Calculator {
         BigDecimal value = firstPositive(bd(detail.get("reduceAmount")), bd(detail.get("discountValue")));
         if (value.signum() <= 0) return BigDecimal.ZERO;
         String mode = str(detail.get("discountType"), "AMOUNT");
-        BigDecimal discount = ("RATE".equalsIgnoreCase(mode) || "PERCENT".equalsIgnoreCase(mode)) ? base.multiply(value.min(BigDecimal.ONE)) : value.min(base);
-        discount = money(discount);
+        boolean rate = "RATE".equalsIgnoreCase(mode) || "PERCENT".equalsIgnoreCase(mode);
+        String cycle = str(firstNonNull(detail.get("cycle"), detail.get("cyclic")), "ONCE");
+        boolean cyclic = "EVERY_N".equalsIgnoreCase(cycle) || Boolean.TRUE.equals(detail.get("cyclic"));
+        BigDecimal times;
+        if (cyclic) {
+            BigDecimal step = firstPositive(bd(detail.get("everyN")), threshold);
+            if (hit.compareTo(threshold) < 0) times = BigDecimal.ZERO;
+            else times = BigDecimal.ONE.add(hit.subtract(threshold).divide(step, 0, RoundingMode.FLOOR));
+        } else {
+            times = hit.compareTo(threshold) >= 0 ? BigDecimal.ONE : BigDecimal.ZERO;
+        }
+        if (times.signum() <= 0) return BigDecimal.ZERO;
+        BigDecimal once = rate ? base.multiply(value.min(BigDecimal.ONE)) : value;
+        BigDecimal discount = money(once.multiply(times).min(base));
         if (discount.signum() <= 0) return BigDecimal.ZERO;
-        messages.add(String.format("本单因满足【%s】，整单减免 ¥%s", promoName, discount.setScale(2, RoundingMode.HALF_UP).toPlainString()));
+        String cycleText = cyclic ? "（每满" + firstPositive(bd(detail.get("everyN")), threshold).stripTrailingZeros().toPlainString() + "循环）" : "";
+        messages.add(String.format("本单因满足【%s】%s，整单减免 ¥%s", promoName, cycleText, discount.setScale(2, RoundingMode.HALF_UP).toPlainString()));
         return discount;
     }
 

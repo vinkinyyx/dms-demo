@@ -43,7 +43,7 @@ public class SupplierService {
     }
 
     @Transactional(readOnly = true)
-    public Supplier get(UUID id) {
+    public Supplier get(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "供应商不存在"));
     }
@@ -59,7 +59,7 @@ public class SupplierService {
         }
         entity.setId(null);
         entity.setTenantId(tenantId);
-        if (entity.getStatus() == null) entity.setStatus(1);
+        if (entity.getStatus() == null) entity.setStatus("active");
         entity.setUpdatedAt(OffsetDateTime.now());
         entity.ensureAttrs();
         Supplier saved = repository.save(entity);
@@ -68,7 +68,7 @@ public class SupplierService {
     }
 
     @Transactional
-    public Supplier update(UUID id, Supplier patch) {
+    public Supplier update(Long id, Supplier patch) {
         Supplier old = get(id);
         if (patch.getCode() != null && !patch.getCode().equals(old.getCode())) {
             if (repository.existsByTenantIdAndCode(old.getTenantId(), patch.getCode())) {
@@ -83,8 +83,8 @@ public class SupplierService {
         if (patch.getBankAccount() != null) old.setBankAccount(patch.getBankAccount());
         if (patch.getTaxNo() != null) old.setTaxNo(patch.getTaxNo());
         if (patch.getRemark() != null) old.setRemark(patch.getRemark());
+        if (patch.getLevel() != null) old.setLevel(patch.getLevel());
         if (patch.getStatus() != null) old.setStatus(patch.getStatus());
-        if (patch.getAttrs() != null) old.setAttrs(patch.getAttrs());
         old.setUpdatedAt(OffsetDateTime.now());
         Supplier saved = repository.save(old);
         opLog.log("supplier", id, "UPDATE", "编辑供应商 " + saved.getCode());
@@ -110,7 +110,7 @@ public class SupplierService {
     }
 
     @Transactional
-    public void deleteById(UUID id) {
+    public void deleteById(Long id) {
         Supplier entity = get(id);
         var refs = referenceCheckService.supplierReferences(id);
         long total = referenceCheckService.totalRefs(refs);
@@ -131,10 +131,10 @@ public class SupplierService {
     }
 
     @Transactional
-    public void deactivate(UUID id) {
+    public void deactivate(Long id) {
         Supplier entity = get(id);
         log.info("停用供应商: id={} code={}（引用检查已完成）", id, entity.getCode());
-        entity.setStatus(0);
+        entity.setStatus("inactive");
         entity.setUpdatedAt(OffsetDateTime.now());
         repository.save(entity);
         opLog.log("supplier", id, "DEACTIVATE", "停用供应商 " + entity.getCode());

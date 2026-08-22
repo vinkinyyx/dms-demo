@@ -125,6 +125,8 @@ public class PromotionService {
             Map<String,Object> detail = r.getRuleDetail() == null ? new HashMap<>() : new HashMap<>(r.getRuleDetail());
             normalizeNumbers(detail, "thresholdQty", "giftQty", "everyN", "reduceAmount");
             String targetType = str(detail.get("targetType"), "SKU");
+            if (!"SKU".equalsIgnoreCase(targetType) && !"LINE".equalsIgnoreCase(targetType))
+                throw new BusinessException(ErrorCode.PARAM_INVALID, "命中对象类型只能是 SKU 或 产品层次");
             Object targetProductId = "LINE".equalsIgnoreCase(targetType) ? null : detail.get("targetProductId");
             Object targetProductLineId = "LINE".equalsIgnoreCase(targetType) ? detail.get("targetProductLineId") : null;
             if (targetProductId == null && targetProductLineId == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "请选择目标SKU或产品层次");
@@ -133,11 +135,27 @@ public class PromotionService {
                 if (giftProductId == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "请选择赠品");
                 detail.put("giftProductId", giftProductId);
                 if (isBom(giftProductId)) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "赠品不能是BOM母件");
+                String cycle = str(detail.get("cycle"), "ONCE");
+                if (!"ONCE".equalsIgnoreCase(cycle) && !"EVERY_N".equalsIgnoreCase(cycle))
+                    throw new BusinessException(ErrorCode.PARAM_INVALID, "赠送周期只能是 仅赠一次 或 每满N循环");
+                detail.put("cycle", cycle.toUpperCase());
+                if ("EVERY_N".equalsIgnoreCase(cycle)) {
+                    BigDecimal everyN = toBd(detail.get("everyN"));
+                    if (everyN.signum() <= 0) throw new BusinessException(ErrorCode.PARAM_MISSING, "请填写每满N数量");
+                }
             } else {
                  BigDecimal reduceAmount = toBd(detail.get("reduceAmount"));
                  BigDecimal discountValue = toBd(detail.get("discountValue"));
                  if (reduceAmount.signum() <= 0 && discountValue.signum() <= 0) {
                      throw new BusinessException(ErrorCode.PARAM_MISSING, "请填写满减优惠金额");
+                 }
+                 String cycle = str(detail.get("cycle"), "ONCE");
+                 if (!"ONCE".equalsIgnoreCase(cycle) && !"EVERY_N".equalsIgnoreCase(cycle))
+                     throw new BusinessException(ErrorCode.PARAM_INVALID, "减免周期只能是 仅一次 或 每满N循环");
+                 detail.put("cycle", cycle.toUpperCase());
+                 if ("EVERY_N".equalsIgnoreCase(cycle)) {
+                     BigDecimal everyN = toBd(detail.get("everyN"));
+                     if (everyN.signum() <= 0) throw new BusinessException(ErrorCode.PARAM_MISSING, "请填写每满N数量");
                  }
             }
             PromotionRule saved = PromotionRule.builder().promotionId(promotion.getId()).seq(seq++).ruleDetail(detail).createdAt(OffsetDateTime.now()).updatedAt(OffsetDateTime.now()).build();

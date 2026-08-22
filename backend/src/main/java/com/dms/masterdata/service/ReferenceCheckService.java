@@ -59,7 +59,7 @@ public class ReferenceCheckService {
     }
 
     /** 检查供应商引用 */
-    public Map<String, Long> supplierReferences(UUID supplierId) {
+    public Map<String, Long> supplierReferences(Long supplierId) {
         UUID tid = TenantContext.getTenantId();
         Map<String, Long> refs = new LinkedHashMap<>();
         refs.put("采购订单", countByCol("purchase_orders", "supplier_id", supplierId, tid));

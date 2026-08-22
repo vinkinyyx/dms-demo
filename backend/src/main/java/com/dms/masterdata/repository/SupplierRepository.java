@@ -9,8 +9,8 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 @Repository
-public interface SupplierRepository extends JpaRepository<Supplier, UUID>, JpaSpecificationExecutor<Supplier> {
+public interface SupplierRepository extends JpaRepository<Supplier, Long>, JpaSpecificationExecutor<Supplier> {
 
     boolean existsByTenantIdAndCode(UUID tenantId, String code);
-    java.util.Optional<Supplier> findByTenantIdAndCode(UUID tenantId, String code);
+    Optional<Supplier> findByTenantIdAndCode(UUID tenantId, String code);
 }

@@ -130,3 +130,35 @@ expand():
 - 本次升级到 v4.1.0（MINOR），因为包含 BOM 价格双轨的数据结构变更。
 - 今后每次小修复（bugfix）自动升 PATCH（如 4.1.0 → 4.1.1）。
 - MINOR（4.1 → 4.2）和 MAJOR（4.x → 5.0）升级由用户决定，Codex 不自动升。
+
+---
+
+## v4.1.1 补充设计（2026-08-22）
+
+- `AutoDocGenerator.createSalesOutForOrder`：从 `order_lines` 读取时增加 `line_level`、`is_gift`，跳过 `PARENT`/赠品；插入 `sales_out_lines` 时回填 `source_order_line_id`。
+- `SalesReturnController.shippedOutLines`：LEFT JOIN `order_lines`（按 `source_order_line_id`），过滤 `is_gift=true` 或 `line_level='PARENT'` 的出库行；返回 `lineNo`（sol.seq）与 `orderLineNo`（ol.seq）。
+- `SalesReturnController.get`：详情行返回 `source_line_no`（出库行 seq）与 `order_line_no`（订单行 seq）。
+- 前端 `SalesReturnEdit.vue`：新增「发货行/订单行」列；只读态 `lineTotal()` 取持久化 `finalAmount`；只读态 `el-input-number` 的 `max` 不裁剪已保存 `qty`。
+- 金额口径：`orders.final_amount = SUM(order_lines.final_amount)`，由后端 `calcTotal/insertLines` 保证；前端只读汇总与之对齐。
+
+
+---
+
+## 附录：v4.1.2 设计变更（2026-08-22）
+
+- **CrudView 明细行校验**：必填校验以 `{...formData,...row}` 为上下文执行列 `showIf/showWhen`，隐藏列跳过。modules.js 给命中SKU/命中产品层次/每满N数量补 required。
+- **V4Calculator.applyGift**：thresholdQty=起赠门槛A，everyN=循环步长；ONCE 命中即赠1，EVERY_N 为 `1+floor((hit-A)/everyN)`；满减不涉及赠品字段。
+- **PromotionService.replaceRules**：新增 targetType(SKU/LINE)、cycle(ONCE/EVERY_N)、EVERY_N 时 everyN>0 的后端校验。
+- **price_scope 归一化**：新增 Flyway V112，幂等把 product_prices.price_scope 旧值 SALES/GLOBAL/DEALER 归一化为 SALE；reset 种子 SQL 统一输出 SALE。
+- **测试环境 admin 基路径**：admin 测试构建必须用 `VITE_BASE=/admin/`（生产用默认 /dms/admin/），deploy_test.py 增加资源前缀校验。
+
+---
+
+## 附录：v4.1.3 技术变更（2026-08-22）
+
+- `V4ErpService.receiveOutbound`：为每个出库行写递增 `seq`，出库完成后创建一张 `CONFIRMED` 的 `sales_out_batches`（code=GI-xxx-1）并逐行写 `sales_out_batch_lines`（expected_line_id/seq、ship_line_no、product_id、warehouse_id、qty、batch_no、serial_no、unit_price）；行循环跳过 BOM 母件（line_level=PARENT）和促销赠品（is_gift）。`warehouse_id` 按 body → 订单仓库 → 默认仓库兜底。
+- `layout/index.vue` + 路由 `meta.noCache`：所有单据编辑/新建页禁用 `<keep-alive>`，组件每次进入重新挂载，避免新建残留和被缓存实例的定时器/watch 发起跨页泄漏请求。
+- `SalesReturnEdit.vue`：`onBeforeUnmount` 清理 `dealerTimer`。
+- `PromotionService.replaceRules`：FULL_REDUCTION 也校验 `cycle`（ONCE/EVERY_N）及 EVERY_N 时 `everyN>0`。
+- `V4Calculator.applyReduction`：ONCE 达门槛减一次；EVERY_N 次数 = `1 + floor((hit - A)/everyN)`，单次减免（固定金额或比例）× 次数后以命中行折后金额封顶。
+- `LinesEditor.colTitle` 支持函数型列标题；`modules.js` 周期/每满N列对 GIFT 与 FULL_REDUCTION 都显示。

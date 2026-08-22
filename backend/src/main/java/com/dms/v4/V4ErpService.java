@@ -78,9 +78,15 @@ public class V4ErpService {
         Long dealerId = toLong(body.get("dealerId"));
         if (dealerId == null) dealerId = toLong(order.get("dealer_id"));
         var ins = em.createNativeQuery("INSERT INTO sales_outs (tenant_id,code,dealer_id,business_type,is_red,source_order_id,warehouse_id,sales_date,status,amount_incl_tax,erp_outbound_no,idempotency_key,callback_payload,shipped_at,completed_at,created_at,updated_at) VALUES (?1,?2,?3,'ERP',?4,?5,?6,CAST(?10 AS date),'COMPLETED',0,?7,?8,CAST(?9 AS jsonb),now(),now(),now(),now()) RETURNING id");
-        Long soId = toLong(ins.setParameter(1,tid).setParameter(2,code).setParameter(3,dealerId).setParameter(4,red).setParameter(5,orderId).setParameter(6,toLong(body.get("warehouseId"))).setParameter(7,body.get("erpOutboundNo")).setParameter(8,idem).setParameter(9,json(body)).setParameter(10, body.getOrDefault("salesDate", java.time.LocalDate.now())).getSingleResult());
+        Long whId = toLong(body.get("warehouseId"));
+        if (whId == null) whId = toLong(order.get("warehouse_id"));
+        if (whId == null) whId = firstWarehouse(tid);
+        if (whId == null) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "出库单未指定仓库，且无默认仓库");
+        Long soId = toLong(ins.setParameter(1,tid).setParameter(2,code).setParameter(3,dealerId).setParameter(4,red).setParameter(5,orderId).setParameter(6,whId).setParameter(7,body.get("erpOutboundNo")).setParameter(8,idem).setParameter(9,json(body)).setParameter(10, body.getOrDefault("salesDate", java.time.LocalDate.now())).getSingleResult());
         @SuppressWarnings("unchecked") List<Map<String,Object>> lines = (List<Map<String,Object>>) body.getOrDefault("lines", List.of());
         BigDecimal total = BigDecimal.ZERO;
+        int lineSeq = 0;
+        List<Map<String,Object>> shippedRows = new ArrayList<>();
         for (Map<String,Object> row : lines) {
             Long orderLineId = toLong(row.get("orderLineId"));
             Tuple ol = orderLine(orderLineId);
@@ -95,14 +101,38 @@ public class V4ErpService {
             BigDecimal taxRate = ol == null ? bd(row.get("taxRate")) : bd(ol.get("tax_rate"));
             BigDecimal amount = V4Money.money(price.multiply(qty));
             var tax = V4Money.splitTax(amount, taxRate);
-            em.createNativeQuery("INSERT INTO sales_out_lines (sales_out_id,warehouse_id,source_order_line_id,product_id,batch_no,serial_no,expected_qty,shipped_qty,qty,unit_price,tax_rate,subtotal,final_amount,amount_excl_tax,tax_amount,bom_parent_product_id,bom_version,bom_group_no,component_qty,returned_qty,return_locked_qty,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?7,?7,?8,?9,?10,?10,?11,?12,?13,?14,?15,?16,0,0,now())")
-                    .setParameter(1,soId).setParameter(2,toLong(row.get("warehouseId"))).setParameter(3,orderLineId).setParameter(4, first(row.get("productId"), ol==null?null:ol.get("product_id")))
+            int currentSeq = ++lineSeq;
+            var lineIns = em.createNativeQuery("INSERT INTO sales_out_lines (sales_out_id,warehouse_id,source_order_line_id,product_id,batch_no,serial_no,expected_qty,shipped_qty,qty,unit_price,tax_rate,subtotal,final_amount,amount_excl_tax,tax_amount,bom_parent_product_id,bom_version,bom_group_no,component_qty,returned_qty,return_locked_qty,seq,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?7,?7,?8,?9,?10,?10,?11,?12,?13,?14,?15,?16,0,0,?17,now()) RETURNING id");
+            Long outLineId = toLong(lineIns
+                    .setParameter(1,soId).setParameter(2, toLong(first(row.get("warehouseId"), whId))).setParameter(3,orderLineId).setParameter(4, first(row.get("productId"), ol==null?null:ol.get("product_id")))
                     .setParameter(5,row.get("batchNo")).setParameter(6,row.get("serialNo")).setParameter(7,qty).setParameter(8,price).setParameter(9,taxRate).setParameter(10,amount)
-                    .setParameter(11,tax.get("excl")).setParameter(12,tax.get("tax")).setParameter(13, ol==null?null:ol.get("bom_parent_product_id")).setParameter(14, ol==null?null:ol.get("bom_version")).setParameter(15, ol==null?null:ol.get("bom_group_no")).setParameter(16, ol==null?BigDecimal.ONE:bd(ol.get("component_qty"))).executeUpdate();
+                    .setParameter(11,tax.get("excl")).setParameter(12,tax.get("tax")).setParameter(13, ol==null?null:ol.get("bom_parent_product_id")).setParameter(14, ol==null?null:ol.get("bom_version")).setParameter(15, ol==null?null:ol.get("bom_group_no")).setParameter(16, ol==null?BigDecimal.ONE:bd(ol.get("component_qty")))
+                    .setParameter(17,currentSeq).getSingleResult());
+            Map<String,Object> shipped = new LinkedHashMap<>();
+            shipped.put("outLineId", outLineId);
+            shipped.put("seq", currentSeq);
+            shipped.put("productId", first(row.get("productId"), ol==null?null:ol.get("product_id")));
+            shipped.put("warehouseId", toLong(first(row.get("warehouseId"), whId)));
+            shipped.put("qty", qty);
+            shipped.put("batchNo", row.get("batchNo"));
+            shipped.put("serialNo", row.get("serialNo"));
+            shipped.put("unitPrice", price);
+            shippedRows.add(shipped);
             total = total.add(amount);
             if (red) applyRedReceipt(orderId, row, qty);
         }
         em.createNativeQuery("UPDATE sales_outs SET amount_incl_tax=?1 WHERE id=?2").setParameter(1,total).setParameter(2,soId).executeUpdate();
+        if (!shippedRows.isEmpty()) {
+            String batchCode = code + "-1";
+            var batchIns = em.createNativeQuery("INSERT INTO sales_out_batches (tenant_id,sales_out_id,code,seq,status,created_at,updated_at,confirmed_at,created_by) VALUES (?1,?2,?3,1,'CONFIRMED',now(),now(),now(),?4) RETURNING id");
+            Long batchId = toLong(batchIns.setParameter(1,tid).setParameter(2,soId).setParameter(3,batchCode).setParameter(4, com.dms.common.util.TenantContext.getUserId()).getSingleResult());
+            for (Map<String,Object> srow : shippedRows) {
+                em.createNativeQuery("INSERT INTO sales_out_batch_lines (batch_id,expected_line_id,expected_line_seq,ship_line_no,product_id,warehouse_id,qty,batch_no,serial_no,unit_price,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,now())")
+                        .setParameter(1,batchId).setParameter(2,srow.get("outLineId")).setParameter(3,srow.get("seq")).setParameter(4,srow.get("seq"))
+                        .setParameter(5,srow.get("productId")).setParameter(6,srow.get("warehouseId")).setParameter(7,srow.get("qty"))
+                        .setParameter(8,srow.get("batchNo")).setParameter(9,srow.get("serialNo")).setParameter(10,srow.get("unitPrice")).executeUpdate();
+            }
+        }
         em.createNativeQuery("INSERT INTO erp_outbound_callbacks (tenant_id,idempotency_key,direction,source_order_id,sales_out_id,erp_outbound_no,process_status,raw_payload) VALUES (?1,?2,?3,?4,?5,?6,'PROCESSED',CAST(?7 AS jsonb))").setParameter(1,tid).setParameter(2,idem).setParameter(3,red?"RED":"FORWARD").setParameter(4,orderId).setParameter(5,soId).setParameter(6,body.get("erpOutboundNo")).setParameter(7,json(body)).executeUpdate();
         refreshOrderStatus(orderId, tid, red);
         return Map.of("id", soId, "code", code, "amount", total, "direction", red ? "RED" : "FORWARD");

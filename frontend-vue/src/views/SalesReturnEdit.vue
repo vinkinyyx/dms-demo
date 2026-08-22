@@ -254,7 +254,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Link, Document, Goods, Search, RefreshLeft } from '@element-plus/icons-vue'
@@ -350,7 +350,12 @@ function onReasonCodeChange(code) {
 function returnableQty(row) {
   const shipped = Number(row.shippedQty || row.qty || 0)
   const returned = Number(row.returnedQty || 0)
-  const r = shipped - returned
+  // otherLockedQty = quantity held by OTHER submitted/pending-approval RMAs on the same out line
+  // (backend excludes this RMA's own lines). Fall back to lockedQty for picker-provided rows.
+  // It must be deducted so a stale draft opened after another RMA was submitted cannot show
+  // or submit the full quantity.
+  const locked = Number(row.otherLockedQty != null ? row.otherLockedQty : (row.lockedQty || 0))
+  const r = shipped - returned - locked
   return r > 0 ? r : 0
 }
 function lineTotal(row) {
@@ -476,6 +481,7 @@ async function loadShippedOutLines(row) {
       qty: Number(l.returnableQty || l.qty || 0),
       shippedQty: Number(l.shippedQty || 0),
       returnedQty: Number(l.returnedQty || 0),
+      lockedQty: Number(l.lockedQty || 0),
       unitPrice: Number(l.unitPrice || 0),
       taxRate: l.taxRate != null ? Number(l.taxRate) : 0.13
     })).filter(l => l.qty > 0)
@@ -590,7 +596,16 @@ async function loadForEdit() {
       reasonCode: normalizeReasonCode(d.reasonCode) || (d.returnReason ? reasonOptions.find(r => r.label === d.returnReason)?.value || '' : ''),
       reason: d.reason || d.returnReason || '', remark: d.remark || '',
       finalAmount: Number(d.finalAmount || 0), amountInclTax: Number(d.amountInclTax || d.finalAmount || 0),
-      lines: Array.isArray(d.lines) ? d.lines.map(l => ({ ...l, unitPrice: Number(l.unitPrice || 0), finalAmount: Number(l.finalAmount || l.subtotal || 0), batchNo: l.batchNo || '', serialNo: l.serialNo || '' })) : []
+      lines: Array.isArray(d.lines) ? d.lines.map(l => {
+        const row = { ...l, unitPrice: Number(l.unitPrice || 0), finalAmount: Number(l.finalAmount || l.subtotal || 0), batchNo: l.batchNo || '', serialNo: l.serialNo || '', lockedQty: Number(l.lockedQty || 0) }
+        // Clamp stale draft quantities to the current returnable amount so a draft created
+        // before another RMA locked the line does not retain the old (now over-limit) qty.
+        if (!isReadonly.value) {
+          const avail = Number(row.shippedQty || 0) - Number(row.returnedQty || 0) - Number(row.lockedQty || 0)
+          if (avail > 0 && Number(row.qty || 0) > avail) row.qty = avail
+        }
+        return row
+      }) : []
     })
     if (form.sourceSalesOutId) {
       sourceSalesOut.value = {
@@ -637,6 +652,7 @@ function resetForm() {
 }
 
 onMounted(() => { if (isEdit.value) loadForEdit(); else resetForm() })
+onBeforeUnmount(() => { if (dealerTimer) { clearTimeout(dealerTimer); dealerTimer = null } })
 // When navigating between edit/new without unmounting, reset or reload accordingly
 watch(() => route.params.id, (newId) => {
   if (newId) loadForEdit()

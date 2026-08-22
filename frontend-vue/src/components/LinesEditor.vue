@@ -118,7 +118,10 @@ const visibleCols = computed(() => {
 const internalSync = ref(false)
 
 function colField(c) { return c.field || c.k || c.prop }
-function colTitle(c) { return c.title || c.label || c.l || '' }
+function colTitle(c) {
+  const t = c.title || c.label || c.l || ''
+  return typeof t === 'function' ? t(props.context || {}) : t
+}
 function colType(c) { return c.type || (c.picker ? 'picker' : 'text') }
 function colKey(c, idx) { return c.field || c.k || c.prop || ('col-' + idx) }
 

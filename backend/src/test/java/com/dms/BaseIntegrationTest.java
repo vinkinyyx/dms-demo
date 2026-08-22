@@ -103,6 +103,12 @@ public abstract class BaseIntegrationTest {
         Mockito.doReturn(bucket).when(redissonClient).getBucket(Mockito.anyString());
         Mockito.when(bucket.get()).thenReturn(null);
         Mockito.when(bucket.isExists()).thenReturn(false);
+        // RateLimitInterceptor uses a Redisson RRateLimiter on login/mfa/forgot paths.
+        // Stub it permissively so integration tests can authenticate without a live Redis.
+        org.redisson.api.RRateLimiter rateLimiter = Mockito.mock(org.redisson.api.RRateLimiter.class);
+        Mockito.lenient().doReturn(rateLimiter).when(redissonClient).getRateLimiter(Mockito.anyString());
+        Mockito.lenient().when(rateLimiter.trySetRate(Mockito.any(), Mockito.anyLong(), Mockito.anyLong(), Mockito.any())).thenReturn(true);
+        Mockito.lenient().when(rateLimiter.tryAcquire(Mockito.anyLong())).thenReturn(true);
         Mockito.when(minioStorageService.bucket()).thenReturn("dms-test");
         Mockito.doReturn(new ByteArrayInputStream(new byte[0])).when(minioStorageService).get(Mockito.anyString());
     }

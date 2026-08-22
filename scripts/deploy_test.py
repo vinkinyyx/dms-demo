@@ -22,6 +22,14 @@ for path in (JAR, FRONT / "index.html", ADMIN / "index.html"):
     if not path.exists():
         raise SystemExit(f"Missing build artifact: {path}")
 
+# Guard: 测试环境 admin 以 /admin/ 提供，资源前缀必须匹配（生产才是 /dms/admin/）。
+admin_index = (ADMIN / "index.html").read_text(encoding="utf-8")
+if 'src="/admin/' not in admin_index and 'href="/admin/' not in admin_index:
+    raise SystemExit(
+        "admin 构建的资源基路径不是 /admin/（测试环境要求）。"
+        "请用 VITE_BASE=/admin/ 重新构建 admin-vue（生产才用默认 /dms/admin/）。"
+    )
+
 client = paramiko.SSHClient()
 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 client.connect(HOST, port=22, username=USER, password=PASSWORD, timeout=20, banner_timeout=30, auth_timeout=20, allow_agent=False, look_for_keys=False)
