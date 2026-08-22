@@ -1,0 +1,220 @@
+{
+  "version": "4.2.2",
+  "description": "DMS 业务范围→资源映射。test-scope.cjs 据此输出待测清单。维护：新增/删除模块时同步更新。",
+  "coreFlows": [
+    {
+      "id": "F1",
+      "name": "下单→审批→出库→库存扣减",
+      "modules": ["order", "approval", "inventory", "v4"],
+      "uiPaths": [
+        {"env": "pc", "path": "/m/orders", "name": "MOrders"},
+        {"env": "pc", "path": "/m/sales-outs", "name": "MSalesOuts"},
+        {"env": "pc", "path": "/m/inventory", "name": "MInventory"},
+        {"env": "mobile", "path": "/mobile/orders", "name": "MOrders"},
+        {"env": "mobile", "path": "/mobile/orders/create", "name": "MOrderCreate"}
+      ],
+      "apiEndpoints": [
+        "POST /api/orders",
+        "GET  /api/orders/{id}",
+        "POST /api/orders/{id}/submit",
+        "POST /api/approvals/{id}/approve",
+        "POST /api/approvals/{id}/reject",
+        "POST /api/sales-outs",
+        "GET  /api/sales-outs/{id}",
+        "GET  /api/inventory?productId={id}"
+      ],
+      "dbTables": ["orders", "order_lines", "approval_instances", "approval_node_assignees", "sales_outs", "sales_out_lines", "inventory", "stock_moves"],
+      "e2eSpecs": ["02-orders.spec.js", "12-orders-promo-bom-return.spec.js"]
+    },
+    {
+      "id": "F2",
+      "name": "销退→选发货单→可退量锁定→回写",
+      "modules": ["order", "inventory"],
+      "uiPaths": [
+        {"env": "pc", "path": "/m/sales-returns", "name": "MSalesReturns"}
+      ],
+      "apiEndpoints": [
+        "POST /api/sales-returns",
+        "GET  /api/sales-returns/{id}",
+        "POST /api/sales-returns/{id}/submit",
+        "POST /api/sales-returns/{id}/approve",
+        "POST /api/sales-returns/{id}/reject",
+        "GET  /api/sales-outs?orderId={id}"
+      ],
+      "dbTables": ["sales_returns", "sales_return_lines", "sales_outs", "sales_out_lines"],
+      "e2eSpecs": ["10-bugfix-pricing-returns.spec.js", "13-rma-amount-lineno.spec.js"]
+    },
+    {
+      "id": "F3",
+      "name": "采购→收货→入库",
+      "modules": ["order", "inventory"],
+      "uiPaths": [
+        {"env": "pc", "path": "/m/purchase-orders", "name": "MPurchaseOrders"},
+        {"env": "pc", "path": "/m/receipts", "name": "MReceipts"}
+      ],
+      "apiEndpoints": [
+        "POST /api/purchase-orders",
+        "POST /api/purchase-orders/{id}/submit",
+        "POST /api/purchase-orders/{id}/approve",
+        "POST /api/receipts",
+        "GET  /api/inventory?productId={id}"
+      ],
+      "dbTables": ["purchase_orders", "purchase_order_lines", "receipts", "receipt_lines", "inventory"],
+      "e2eSpecs": ["02-orders.spec.js"]
+    },
+    {
+      "id": "F4",
+      "name": "BOM + 促销 + 下单计价",
+      "modules": ["order", "promotion", "v4"],
+      "uiPaths": [
+        {"env": "pc", "path": "/m/orders", "name": "MOrders"},
+        {"env": "pc", "path": "/m/promotions", "name": "MPromotions"},
+        {"env": "pc", "path": "/m/product-bundles", "name": "MProductBundles"}
+      ],
+      "apiEndpoints": [
+        "GET  /api/promotions?productId={id}",
+        "POST /api/orders/preview",
+        "POST /api/orders",
+        "GET  /api/product-bundles/{id}"
+      ],
+      "dbTables": ["orders", "order_lines", "promotions", "promotion_rules", "product_bundles", "product_bundle_lines", "product_prices"],
+      "e2eSpecs": ["12-orders-promo-bom-return.spec.js", "14-promo-target-cycle.spec.js"]
+    },
+    {
+      "id": "F5",
+      "name": "审批流：提交→通过/驳回→状态",
+      "modules": ["approval", "execution"],
+      "uiPaths": [
+        {"env": "pc", "path": "/approval/todo", "name": "ApprovalTodo"},
+        {"env": "pc", "path": "/approval/templates", "name": "ApprovalTemplates"},
+        {"env": "pc", "path": "/approval/admin", "name": "ApprovalAdmin"},
+        {"env": "mobile", "path": "/mobile/approvals", "name": "MApprovals"}
+      ],
+      "apiEndpoints": [
+        "GET  /api/approval/tasks/my-todo",
+        "POST /api/approvals/{id}/approve",
+        "POST /api/approvals/{id}/reject",
+        "POST /api/approvals/{id}/delegate",
+        "GET  /api/approval/templates"
+      ],
+      "dbTables": ["approval_instances", "approval_node_assignees", "approval_templates", "approval_template_nodes", "approval_logs"],
+      "e2eSpecs": ["06-reports-dashboard.spec.js"]
+    }
+  ],
+  "modules": {
+    "order": {
+      "name": "订单域（销售/采购/销退/出库/收货/库存移动）",
+      "uiPaths": ["/m/orders", "/m/purchase-orders", "/m/sales-returns", "/m/sales-outs", "/m/receipts", "/m/stock-moves", "/m/inventory"],
+      "services": ["OrderService", "PurchaseOrderService", "SalesReturnService", "SalesReturnLineSupport", "ReceiptService", "StockMoveService", "V4ErpService"],
+      "controllers": ["SalesOrderController", "PurchaseOrderController", "SalesReturnController", "ReceiptController", "StockMoveController"],
+      "dbTables": ["orders", "order_lines", "purchase_orders", "purchase_order_lines", "sales_outs", "sales_out_lines", "sales_out_batch_lines", "sales_returns", "sales_return_lines", "receipts", "receipt_lines", "stock_moves", "inventory"]
+    },
+    "approval": {
+      "name": "审批域",
+      "uiPaths": ["/approval/todo", "/approval/templates", "/approval/delegations", "/approval/admin"],
+      "services": ["ApprovalService", "OrderApprovalExecutionService", "ApprovalResponseSupport"],
+      "controllers": ["ApprovalController", "OrderApprovalExecutionController"],
+      "dbTables": ["approval_instances", "approval_node_assignees", "approval_templates", "approval_template_nodes", "approval_logs", "approval_delegations"]
+    },
+    "inventory": {
+      "name": "库存域",
+      "uiPaths": ["/m/inventory", "/m/stock-moves", "/stocktakes", "/expiry-alerts"],
+      "services": ["InventoryService", "StocktakeService"],
+      "controllers": ["InventoryController"],
+      "dbTables": ["inventory", "stock_moves", "stocktakes", "stocktake_lines", "batch_inventory", "period_yyyymm"]
+    },
+    "masterdata": {
+      "name": "主数据（产品/客户/供应商/价格/分类/层次）",
+      "uiPaths": ["/m/products", "/m/dealers", "/m/suppliers", "/m/product-prices", "/m/categories", "/m/product-lines", "/m/warehouses"],
+      "services": ["ProductService", "DealerService", "SupplierService", "ProductPriceService", "ProductBundleService", "WarehouseService", "ReferenceCheckService"],
+      "controllers": ["ProductController", "DealerController", "SupplierController", "ProductPriceController"],
+      "dbTables": ["products", "dealers", "suppliers", "product_prices", "product_categories", "product_lines", "product_bundles", "product_bundle_lines", "warehouses"]
+    },
+    "promotion": {
+      "name": "促销域",
+      "uiPaths": ["/m/promotions", "/m/rebates"],
+      "services": ["PromotionService", "RebateService", "V4Calculator"],
+      "controllers": ["PromotionController", "RebateController"],
+      "dbTables": ["promotions", "promotion_rules", "promotion_targets", "rebate_previews", "rebate_settlements"]
+    },
+    "report": {
+      "name": "报表域",
+      "uiPaths": ["/reports", "/report-subscriptions", "/business-reports", "/surgery-reports"],
+      "services": ["BusinessReportService", "ReportService", "SurgeryReportService", "ReportSubscriptionService"],
+      "controllers": ["BusinessReportController", "ReportController", "SurgeryReportController"],
+      "dbTables": ["business_reports", "report_subscriptions", "surgery_reports", "surgery_report_lines"]
+    },
+    "auth": {
+      "name": "认证 / 用户 / 角色",
+      "uiPaths": ["/m/users", "/roles-manage", "/profile"],
+      "services": ["AuthService", "UserService", "RoleService", "JwtService", "LoginLogService"],
+      "controllers": ["AuthController", "UserController", "RoleController"],
+      "dbTables": ["users", "user_roles", "roles", "login_logs"]
+    },
+    "rbac": {
+      "name": "权限 / 菜单 / 页面配置",
+      "uiPaths": ["/tenant-page-configs"],
+      "services": ["PermissionQueryService", "MenuService", "PageConfigService"],
+      "controllers": ["PermissionController", "MenuController", "PageConfigController"],
+      "dbTables": ["permissions", "role_permissions", "menus", "page_configs", "tenant_page_configs"]
+    },
+    "contract": {
+      "name": "合同 / 授权",
+      "uiPaths": ["/contracts", "/contracts/templates", "/m/authorizations"],
+      "services": ["ContractService", "AuthorizationService"],
+      "controllers": ["ContractController", "AuthorizationController"],
+      "dbTables": ["contracts", "contract_templates", "authorizations"]
+    },
+    "org": {
+      "name": "组织（销售岗位/区域）",
+      "uiPaths": ["/positions", "/m/regions"],
+      "services": ["SalesPositionService", "RegionService", "PositionResolver"],
+      "controllers": ["SalesPositionController", "RegionController"],
+      "dbTables": ["sales_positions", "regions"]
+    },
+    "v4": {
+      "name": "V4 计算引擎（促销计价/口径）",
+      "uiPaths": [],
+      "services": ["V4Calculator", "V4ErpService"],
+      "controllers": [],
+      "dbTables": []
+    },
+    "compat": {
+      "name": "兼容层（别名接口）",
+      "uiPaths": [],
+      "services": ["CompatAliasService"],
+      "controllers": ["CompatAliasController"],
+      "dbTables": []
+    },
+    "execution": {
+      "name": "执行业务（单据详情/审批执行）",
+      "uiPaths": [],
+      "services": ["BizDocDetailService", "OrderApprovalExecutionService", "AutoDocGenerator"],
+      "controllers": ["BizDocDetailController"],
+      "dbTables": []
+    }
+  },
+  "moduleToFlows": {
+    "order": ["F1", "F2", "F3", "F4"],
+    "approval": ["F1", "F5"],
+    "inventory": ["F1", "F2", "F3"],
+    "promotion": ["F1", "F4"],
+    "v4": ["F1", "F4"],
+    "masterdata": ["F1", "F3", "F4"],
+    "report": [],
+    "auth": [],
+    "rbac": [],
+    "contract": [],
+    "org": [],
+    "compat": [],
+    "execution": ["F1", "F5"]
+  },
+  "riskHints": {
+    "order": "P0：牵动 F1/F2/F3/F4 全部，PATCH 改动必须 5 维全测 + 5 条核心流基线",
+    "approval": "P0：牵动 F1/F5，PATCH 改动需查 approval_instances 状态机",
+    "promotion": "P1：影响下单计价口径，F1/F4 必须跑",
+    "v4": "P1：影响所有订单计价结果，F1/F4 必须跑",
+    "masterdata": "P1：Supplier UUID→Long 类型变更在 4.2.0 已做，后续改动需关注主键类型",
+    "inventory": "P0：库存/批次/可退量，PATCH 改动 F1/F2/F3 必测"
+  }
+}

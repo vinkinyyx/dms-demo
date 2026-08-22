@@ -1,7 +1,26 @@
+## v4.2.2 (2026-08-23) - 测试分层策略（PATCH 范围测试）
+> PATCH 版本。优化发布期测试效率：小版本发布不再跑全量回归，只测改动涉及的流程。
+
+### 新增
+- docs/02_设计/test-strategy.md：测试分层策略（PATCH/MINOR/MAJOR 三层） + 5 条核心业务流 F1-F5 基线 + 手动 scope 契约
+- 	ools/scope-map.json：5 条核心流 + 13 个业务模块映射（UI 路径 + API + DB 表 + E2E spec）
+- 	ools/test-scope.cjs：范围测试调度器（dry-run / --module= / --scope= / --include= / --core-flows= 四种组合）
+
+### 改进
+- AGENTS.md §5.0：新增“测试分层（按发布版本）”章节：
+  - PATCH：	ools/test-scope.cjs 范围测试（只跑改动涉及的模块 / 流）
+  - MINOR：	ools/smoke-test.cjs 全量员工测试
+  - MAJOR：MINOR + 兼容性 + 性能
+- 5 条核心流基线 F1-F5 必跑：下单→审批→出库 的发货流等
+- 5 次元测试结构：UI / API / DB 表 / 业务规则 / 异常分支
+
+### 契约
+- 每次 PATCH 补丁前 Codex 必须反问涉及的业务流（不允许自动推断）
+- 用户不明确时禁止自动推断 scope；必须明确指定 模块 / 流号 / include 后才跑测试
+
 ## v4.2.1 (2026-08-22) - 冒烟脚本 element-plus overlay 适配 / 覆盖层残留重置
-
 > PATCH 版本。修复 v4.2.0 部署后冒烟测试中 3 个页面 "create btn" 失败，与 4.2.0 业务代码无关，纯工具脚本缺陷。
-
+> **2026-08-22 23:19 已部署到生产** http://8.133.193.238/dms/（root@8.133.193.238，部署目录 /opt/dms/prod/，Flyway V109→V112 已自动应用，业务冒烟 43/43 PASS）。详见 `docs/02_设计/prod-deploy-report-v4.2.1.md`。
 ### 修复
 - **`forceCloseOverlays` 选不中新版 element-plus 的 overlay 容器**：v2.4+ 的 el-dialog / el-drawer / el-message-box 不再以 `__wrapper` 为外层（`.el-dialog__wrapper` / `.el-drawer__wrapper` 等已废弃），而是统一挂在 `.el-overlay` 容器下。原脚本只匹配老 wrapper，导致 row action 触发的 drawer 关不掉，残留遮挡后续 "新增" 按钮 click。新版选择器同时覆盖 `.el-dialog__wrapper:visible, .el-drawer__wrapper:visible, .el-message-box__wrapper:visible, .el-overlay-dialog:visible`（旧）与 `.el-overlay:visible .el-dialog, .el-overlay:visible .el-drawer, .el-overlay:visible .el-message-box`（新），并加 `.van-popup/.van-dialog/.van-action-sheet` 兼容移动端。`force:true` 强制点 closeBtn，失败时降级到蒙层 `mouse.click(8,8)` / `Escape`，最多 8 轮。
 - **`processOnePage` row action 与 create 按钮之间不再共享 DOM 状态**：`clickFirstRowAction` 后增加 `page.goto(BASE + p.path)` 重访当前路径（DOMContentLoaded + sleep 800ms），清掉 drawer / overlay / 路由过渡动画与可能的防连点锁，再做 `clickCreateButton`。彻底消除"row action drawer 已视觉关闭但 element-plus 内部状态残留"导致的 "clicked no dialog" 误报。
