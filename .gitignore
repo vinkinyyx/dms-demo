@@ -114,3 +114,6 @@ scripts/tmp_*.py
 automation_test/v4-api-results/
 automation_test/v4-browser-results/
 automation_test/frontend-dist.zip
+
+# ============ 发布备份/打包产物 ============
+releases/*-backup-*/
