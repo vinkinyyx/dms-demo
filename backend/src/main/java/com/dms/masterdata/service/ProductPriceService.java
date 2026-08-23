@@ -46,7 +46,11 @@ public class ProductPriceService {
             String keyword,
             String productCode,
             String validFrom,
-            String validTo) {
+            String validTo,
+            String validFromFrom,
+            String validFromTo,
+            String validToFrom,
+            String validToTo) {
         UUID tid = TenantContext.getTenantId();
         int safePage = PagingUtil.normalizePage(page);
         int safeSize = PagingUtil.normalizeSize(size);
@@ -83,6 +87,10 @@ public class ProductPriceService {
         if (productCode != null && !productCode.isBlank()) { where.append(" AND p.code ILIKE ?").append(idx++); params.add("%" + productCode.trim() + "%"); }
         if (validFrom != null && !validFrom.isBlank()) { where.append(" AND pp.valid_from >= ?").append(idx++); params.add(java.sql.Date.valueOf(validFrom)); }
         if (validTo != null && !validTo.isBlank()) { where.append(" AND pp.valid_to <= ?").append(idx++); params.add(java.sql.Date.valueOf(validTo)); }
+        if (validFromFrom != null && !validFromFrom.isBlank()) { where.append(" AND pp.valid_from >= ?").append(idx++); params.add(java.sql.Date.valueOf(validFromFrom)); }
+        if (validFromTo != null && !validFromTo.isBlank()) { where.append(" AND pp.valid_from < ?").append(idx++); params.add(java.sql.Date.valueOf(java.time.LocalDate.parse(validFromTo).plusDays(1))); }
+        if (validToFrom != null && !validToFrom.isBlank()) { where.append(" AND pp.valid_to >= ?").append(idx++); params.add(java.sql.Date.valueOf(validToFrom)); }
+        if (validToTo != null && !validToTo.isBlank()) { where.append(" AND pp.valid_to < ?").append(idx++); params.add(java.sql.Date.valueOf(java.time.LocalDate.parse(validToTo).plusDays(1))); }
         if (keyword != null && !keyword.isBlank()) {
             String[] tokens = keyword.trim().split("[\\s,，]+");
             where.append(" AND (");

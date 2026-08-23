@@ -923,6 +923,15 @@
   <p class="section-desc center">持续迭代，让每一条渠道都清晰可见。</p>
   <div style="margin-top:24px;">
     <div class="cl-item">
+      <div class="cl-head"><span class="cl-ver">v4.2</span><span class="cl-date">2026-08-22</span></div>
+      <ul class="cl-list">
+        <li><span class="dot"></span>胖 Controller 下沉：10 个业务模块逻辑全部下沉 Service</li>
+        <li><span class="dot"></span>Schema 漂移修复：email_logs / price_scope / period / Supplier 主键全部对齐</li>
+        <li><span class="dot"></span>传输接口：库存查询 + 销售/采购订单对外传输</li>
+        <li><span class="dot"></span>测试加固：130→134 测试全绿，主链路集成测试上线</li>
+      </ul>
+    </div>
+    <div class="cl-item">
       <div class="cl-head"><span class="cl-ver">v4.1.0</span><span class="cl-date">2026-08-22</span></div>
       <ul class="cl-list">
         <li><span class="dot"></span>BOM 价格双轨维护：单品价与 BOM 子件价独立管理</li>
@@ -982,6 +991,15 @@
         <li><span class="dot"></span>接口调用日志模块 + 对外开放接口（HMAC 签名）</li>
         <li><span class="dot"></span>列表页统一规范：ListPageLayout + 按钮级权限</li>
         <li><span class="dot"></span>批量导入"存在即更新"（upsert by code）</li>
+      </ul>
+    </div>
+    <div class="cl-item">
+      <div class="cl-head"><span class="cl-ver">v3.7</span><span class="cl-date">2026-07-31</span></div>
+      <ul class="cl-list">
+        <li><span class="dot"></span>销售订单/出库完整重构：状态机 + 审批自动生成出库草稿</li>
+        <li><span class="dot"></span>销售出库子单模型：按批次/序列号发货，独立保存/确认</li>
+        <li><span class="dot"></span>采购/收货三次优化：单号、状态机同步、取消级联</li>
+        <li><span class="dot"></span>库存移动：仓内状态调整 + 跨仓移动</li>
       </ul>
     </div>
   </div>

@@ -44,7 +44,15 @@ public class PurchaseReturnController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long supplierId,
-            @RequestParam(required = false) Long warehouseId) {
+            @RequestParam(required = false) Long warehouseId,
+            @RequestParam(required = false) Long productId,
+            @RequestParam(required = false) String createdAtFrom,
+            @RequestParam(required = false) String createdAtTo,
+            @RequestParam(required = false) String updatedAtFrom,
+            @RequestParam(required = false) String updatedAtTo,
+            @RequestParam(required = false) String finalAmountFrom,
+            @RequestParam(required = false) String finalAmountTo,
+            @RequestParam(required = false) String sort) {
         UUID tid = TenantContext.getTenantId();
         int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
         StringBuilder where = new StringBuilder(" WHERE po.tenant_id = ?1 AND po.deleted_at IS NULL AND COALESCE(po.is_red,false) = true");
@@ -54,20 +62,41 @@ public class PurchaseReturnController {
         if (status != null && !status.isBlank()) { where.append(" AND po.status = ?").append(idx++); params.add(status); }
         if (supplierId != null) { where.append(" AND po.supplier_id = ?").append(idx++); params.add(supplierId); }
         if (warehouseId != null) { where.append(" AND po.warehouse_id = ?").append(idx++); params.add(warehouseId); }
+        if (productId != null) { where.append(" AND EXISTS (SELECT 1 FROM purchase_order_lines pl WHERE pl.po_id = po.id AND pl.product_id = ?)").append(idx++); params.add(productId); }
+        if (createdAtFrom != null && !createdAtFrom.isBlank()) { java.sql.Timestamp __t = com.dms.common.util.SpecUtil.rangeBound(createdAtFrom, true); if (__t != null) { where.append(" AND po.created_at >= ?").append(idx++); params.add(__t); } }
+        if (createdAtTo != null && !createdAtTo.isBlank()) { java.sql.Timestamp __t = com.dms.common.util.SpecUtil.rangeBound(createdAtTo, false); if (__t != null) { where.append(com.dms.common.util.SpecUtil.hasTime(createdAtTo) ? " AND po.created_at <= ?" : " AND po.created_at < ?").append(idx++); params.add(__t); } }
+        if (updatedAtFrom != null && !updatedAtFrom.isBlank()) { java.sql.Timestamp __t = com.dms.common.util.SpecUtil.rangeBound(updatedAtFrom, true); if (__t != null) { where.append(" AND po.updated_at >= ?").append(idx++); params.add(__t); } }
+        if (updatedAtTo != null && !updatedAtTo.isBlank()) { java.sql.Timestamp __t = com.dms.common.util.SpecUtil.rangeBound(updatedAtTo, false); if (__t != null) { where.append(com.dms.common.util.SpecUtil.hasTime(updatedAtTo) ? " AND po.updated_at <= ?" : " AND po.updated_at < ?").append(idx++); params.add(__t); } }
+        if (finalAmountFrom != null && !finalAmountFrom.isBlank()) { where.append(" AND po.final_amount >= ?").append(idx++); params.add(new java.math.BigDecimal(finalAmountFrom)); }
+        if (finalAmountTo != null && !finalAmountTo.isBlank()) { where.append(" AND po.final_amount <= ?").append(idx++); params.add(new java.math.BigDecimal(finalAmountTo)); }
 
         var qCnt = em.createNativeQuery("SELECT COUNT(*) FROM purchase_orders po " + where);
         for (int i = 0; i < params.size(); i++) qCnt.setParameter(i + 1, params.get(i));
         long total = ((Number) qCnt.getSingleResult()).longValue();
 
+        String orderSql = " ORDER BY po.created_at DESC";
+        if (sort != null && !sort.isBlank()) {
+            String[] sp = sort.split(",");
+            String f = sp[0].trim();
+            String dir = sp.length > 1 && "asc".equalsIgnoreCase(sp[1].trim()) ? "ASC" : "DESC";
+            switch (f) {
+                case "updatedAt" -> orderSql = " ORDER BY po.updated_at " + dir;
+                case "createdAt" -> orderSql = " ORDER BY po.created_at " + dir;
+                case "finalAmount" -> orderSql = " ORDER BY po.final_amount " + dir;
+                case "amountInclTax" -> orderSql = " ORDER BY po.amount_incl_tax " + dir;
+                case "code" -> orderSql = " ORDER BY po.code " + dir;
+                default -> { }
+            }
+        }
         String limitParam = "?" + idx++;
         String offsetParam = "?" + idx++;
         var q = em.createNativeQuery(
                 "SELECT po.id, po.code, po.order_type, po.supplier_id, COALESCE(NULLIF(po.supplier_name,''), s.name) AS supplier_name, " +
                 "po.warehouse_id, w.name AS warehouse_name, po.return_reason, po.amount_incl_tax, po.final_amount, " +
-                "po.expected_date, po.status, po.approved_at, u.name AS audit_user_name, po.created_at " +
+                "po.expected_date, po.status, po.approved_at, u.name AS audit_user_name, po.created_at, po.updated_at " +
                 "FROM purchase_orders po LEFT JOIN suppliers s ON s.id=po.supplier_id " +
                 "LEFT JOIN warehouses w ON w.id=po.warehouse_id LEFT JOIN users u ON u.id=po.approved_by " +
-                where + " ORDER BY po.created_at DESC LIMIT " + limitParam + " OFFSET " + offsetParam, Tuple.class);
+                where + orderSql + " LIMIT " + limitParam + " OFFSET " + offsetParam, Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
         q.setParameter(params.size() + 1, safeSize);
         q.setParameter(params.size() + 2, offset);

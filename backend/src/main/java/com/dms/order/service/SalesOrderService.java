@@ -50,8 +50,15 @@ public class SalesOrderService {
             String createdFrom,
             String createdTo,
             String createdAt,
+            String createdAtFrom,
+            String createdAtTo,
+            String updatedAtFrom,
+            String updatedAtTo,
+            String finalAmountFrom,
+            String finalAmountTo,
             String code,
-            String keyword) {
+            String keyword,
+            String sort) {
         UUID tid = TenantContext.getTenantId();
         int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
 
@@ -72,6 +79,12 @@ public class SalesOrderService {
             if (!toPart.isEmpty()) { where.append(" AND o.created_at < ?").append(idx++); params.add(java.sql.Timestamp.valueOf(java.time.LocalDate.parse(toPart).plusDays(1).atStartOfDay())); }
             else if (!fromPart.isEmpty() && parts.length == 1) { where.append(" AND o.created_at < ?").append(idx++); params.add(java.sql.Timestamp.valueOf(java.time.LocalDate.parse(fromPart).plusDays(1).atStartOfDay())); }
         }
+        if (createdAtFrom != null && !createdAtFrom.isBlank()) { java.sql.Timestamp __t = com.dms.common.util.SpecUtil.rangeBound(createdAtFrom, true); if (__t != null) { where.append(" AND o.created_at >= ?").append(idx++); params.add(__t); } }
+        if (createdAtTo != null && !createdAtTo.isBlank()) { java.sql.Timestamp __t = com.dms.common.util.SpecUtil.rangeBound(createdAtTo, false); if (__t != null) { where.append(com.dms.common.util.SpecUtil.hasTime(createdAtTo) ? " AND o.created_at <= ?" : " AND o.created_at < ?").append(idx++); params.add(__t); } }
+        if (updatedAtFrom != null && !updatedAtFrom.isBlank()) { java.sql.Timestamp __t = com.dms.common.util.SpecUtil.rangeBound(updatedAtFrom, true); if (__t != null) { where.append(" AND o.updated_at >= ?").append(idx++); params.add(__t); } }
+        if (updatedAtTo != null && !updatedAtTo.isBlank()) { java.sql.Timestamp __t = com.dms.common.util.SpecUtil.rangeBound(updatedAtTo, false); if (__t != null) { where.append(com.dms.common.util.SpecUtil.hasTime(updatedAtTo) ? " AND o.updated_at <= ?" : " AND o.updated_at < ?").append(idx++); params.add(__t); } }
+        if (finalAmountFrom != null && !finalAmountFrom.isBlank()) { where.append(" AND o.final_amount >= ?").append(idx++); params.add(new java.math.BigDecimal(finalAmountFrom)); }
+        if (finalAmountTo != null && !finalAmountTo.isBlank()) { where.append(" AND o.final_amount <= ?").append(idx++); params.add(new java.math.BigDecimal(finalAmountTo)); }
         if (code != null && !code.isBlank()) { where.append(" AND o.code ILIKE ?").append(idx++); params.add("%" + code.trim() + "%"); }
         if (keyword != null && !keyword.isBlank()) {
             where.append(" AND (");
@@ -91,6 +104,20 @@ public class SalesOrderService {
         for (int i = 0; i < params.size(); i++) qCnt.setParameter(i + 1, params.get(i));
         long total = ((Number) qCnt.getSingleResult()).longValue();
 
+        String orderSql = " ORDER BY o.created_at DESC";
+        if (sort != null && !sort.isBlank()) {
+            String[] sp = sort.split(",");
+            String f = sp[0].trim();
+            String dir = sp.length > 1 && "asc".equalsIgnoreCase(sp[1].trim()) ? "ASC" : "DESC";
+            switch (f) {
+                case "updatedAt" -> orderSql = " ORDER BY o.updated_at " + dir;
+                case "createdAt" -> orderSql = " ORDER BY o.created_at " + dir;
+                case "finalAmount" -> orderSql = " ORDER BY o.final_amount " + dir;
+                case "amountInclTax" -> orderSql = " ORDER BY o.amount_incl_tax " + dir;
+                case "code" -> orderSql = " ORDER BY o.code " + dir;
+                default -> { }
+            }
+        }
         String limitParam = "?" + idx++;
         String offsetParam = "?" + idx++;
         var q = em.createNativeQuery(
@@ -98,14 +125,14 @@ public class SalesOrderService {
                 "COALESCE(NULLIF(CAST(o.ship_snapshot AS jsonb)->>'dealerName',''), d.name) AS dealer_name, " +
                 "o.warehouse_id, w.name AS warehouse_name, u.name AS audit_user_name, o.approved_at AS audit_at, " +
                 "o.amount_incl_tax, o.discount_amount, o.final_amount, o.tax_amount, o.expected_date, " +
-                "o.status, o.extra, o.created_at, " +
+                "o.status, o.extra, o.created_at, o.updated_at, " +
                 "COALESCE((SELECT SUM(sol.qty) FROM sales_out_lines sol JOIN sales_outs so ON so.id=sol.sales_out_id WHERE so.source_order_id=o.id AND so.tenant_id=o.tenant_id AND COALESCE(so.is_red,false)=false AND so.deleted_at IS NULL),0) AS shipped_qty " +
                 "FROM orders o " +
                 "LEFT JOIN dealers d ON d.id = o.dealer_id " +
                 "LEFT JOIN warehouses w ON w.id = o.warehouse_id " +
                 "LEFT JOIN users u ON u.id = o.approved_by " +
                 where +
-                " ORDER BY o.created_at DESC LIMIT " + limitParam + " OFFSET " + offsetParam,
+                orderSql + " LIMIT " + limitParam + " OFFSET " + offsetParam,
                 Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
         q.setParameter(params.size() + 1, safeSize);
@@ -403,6 +430,7 @@ public class SalesOrderService {
         try { m.put("erpStatus", t.get("erp_status")); } catch (Exception ignored) {}
         try { m.put("remark", t.get("remark")); } catch (Exception ignored) {}
         try { m.put("createdAt", DateFmt.fmt(t.get("created_at"))); } catch (Exception ignored) {}
+        try { m.put("updatedAt", DateFmt.fmt(t.get("updated_at"))); } catch (Exception ignored) {}
         try { m.put("submittedAt", DateFmt.fmt(t.get("submitted_at"))); } catch (Exception ignored) {}
         try { m.put("approvedAt", DateFmt.fmt(t.get("approved_at"))); } catch (Exception ignored) {}
         try { m.put("completedAt", DateFmt.fmt(t.get("completed_at"))); } catch (Exception ignored) {}

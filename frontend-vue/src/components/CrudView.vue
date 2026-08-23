@@ -17,7 +17,7 @@
           :placeholder="f.placeholder || f.label"
           :multiple="!!f.multiple"
           clearable
-          style="width: 160px"
+          style="width: 200px"
           @change="reload"
         >
           <el-option v-for="o in filterOptions(f)" :key="o.value" :label="o.label" :value="o.value" />
@@ -29,7 +29,7 @@
           value-format="YYYY-MM-DD"
           :placeholder="f.placeholder || f.label"
           clearable
-          style="width: 160px"
+          style="width: 200px"
           @change="reload"
         />
         <el-date-picker
@@ -50,7 +50,7 @@
       </el-input>
       <template v-for="f in legacyFilterFields" :key="f.k">
         <el-select v-if="f.filter.type === 'select'" v-model="colFilters[f.k]" :placeholder="f.l" clearable
-          filterable style="width: 160px" @change="reload">
+          filterable style="width: 200px" @change="reload">
           <el-option v-for="o in selectFilterOptions(f)" :key="o.value" :label="o.label" :value="o.value" />
         </el-select>
         <ResourcePicker
@@ -59,36 +59,56 @@
           :resource="f.filter.resource"
           :placeholder="f.l"
           :clearable="true"
-          style="width: 180px"
+          style="width: 200px"
           @pick="reload"
         />
         <el-date-picker v-else-if="f.filter.type === 'date'" v-model="colFilters[f.k]" type="date" value-format="YYYY-MM-DD"
-          :placeholder="f.l" clearable style="width: 150px" @change="reload" />
+          :placeholder="f.l" clearable style="width: 200px" @change="reload" />
         <el-input v-else-if="f.filter.type === 'text'" v-model="colFilters[f.k]" :placeholder="f.l" clearable
-          style="width: 180px" @keyup.enter="reload" />
+          style="width: 200px" @keyup.enter="reload" />
         <el-input-number v-else-if="f.filter.type === 'number'" v-model="colFilters[f.k]" :placeholder="f.l" controls-position="right"
-          :min="0" style="width: 130px" @change="reload" />
+          :min="0" style="width: 200px" @change="reload" />
       </template>
 
-      <el-button type="primary" @click="reload"><el-icon><Search /></el-icon>查询</el-button>
+            <el-button type="primary" @click="reload"><el-icon><Search /></el-icon>查询</el-button>
       <el-button @click="onResetForm"><el-icon><RefreshLeft /></el-icon>重置</el-button>
-      <el-button v-if="canExport" @click="handleExport"><el-icon><Download /></el-icon>导出</el-button>
       <div class="spacer" />
       <slot name="extra-actions" />
-      <el-button v-if="canBatchDelete" type="danger" plain :disabled="!selectedRows.length" @click="onBatchDelete">批量删除{{ selectedRows.length ? `（${selectedRows.length}）` : '' }}</el-button>
       <el-button v-if="canImport" type="primary" plain @click="importVisible = true"><el-icon><Upload /></el-icon>导入</el-button>
+      <el-button v-if="canExport" type="primary" plain @click="handleExport"><el-icon><Download /></el-icon>导出</el-button>
       <el-button v-if="canCreate" type="primary" @click="onCreate"><el-icon><Plus /></el-icon>新增</el-button>
+      <el-popover
+        v-model:visible="columnSettingVisible"
+        placement="bottom-end"
+        :width="240"
+        :show-arrow="false"
+        popper-class="crud-col-popover"
+        @show="openColumnSetting"
+      >
+        <template #reference>
+          <el-button :icon="Setting" title="列设置">列设置</el-button>
+        </template>
+        <div style="margin-bottom:6px;color:var(--dms-text-2);font-size:12px">拖拽调整显示顺序（按账号保存）</div>
+        <ul ref="columnSettingRef" class="crud-col-list">
+          <li v-for="c in displayCols" :key="c.k" :data-col-key="c.k" class="crud-col-item">
+            <el-icon class="col-handle"><Rank /></el-icon>
+            <span class="crud-col-label">{{ c.l }}</span>
+          </li>
+        </ul>
+        <div style="margin-top:8px;text-align:right">
+          <el-button size="small" link @click="resetColumnOrder">重置默认</el-button>
+        </div>
+      </el-popover>
       <template v-for="b in visibleExtraToolbarButtons" :key="b.buttonKey">
         <el-button
           :type="b.buttonType || 'default'"
           v-has="b.permissionCode"
           @click="onToolbarButtonClick(b)"
-        >{{ b.label }}</el-button>
-      </template>
+        >{{ b.label }}</el-button></template>
     </div>
 
-    <el-table :data="rows" v-loading="loading" border stripe size="small" @sort-change="onSortChange" :default-sort="{ prop: 'updatedAt', order: 'descending' }">
-      <el-table-column v-for="c in config.cols" :key="c.k" :prop="c.k" :label="c.l"
+    <el-table ref="tableRef" :data="rows" v-loading="loading" border stripe size="small" @sort-change="onSortChange" :default-sort="{ prop: 'updatedAt', order: 'descending' }">
+      <el-table-column v-for="c in displayCols" :key="c.k" :prop="c.k" :label="c.l"
         :width="c.fixedWidth || (c.minWidth == null && c.w != null && c.w <= 90 ? c.w : undefined)"
         :min-width="c.minWidth != null ? c.minWidth : (c.w != null && c.w > 90 ? Math.max(c.w, 120) : 120)"
         :sortable="c.sortable === false ? false : 'custom'" show-overflow-tooltip>
@@ -100,14 +120,12 @@
         </template>
         <template #default="{ row }">
           <el-tag v-if="c.isStatus || c.k === 'status'" :type="statusTagType(row[c.k])" size="small">{{ statusText(row[c.k]) }}</el-tag>
-          <el-tag v-else-if="typeof c.tag === 'function'" :type="(c.tag(row) || {}).type || 'info'" size="small">{{ (c.tag(row) || {}).text || displayCell(c, row[c.k]) }}</el-tag>
-          <el-link v-else-if="c.link && row[c.link.valueKey] != null" type="primary"
-            @click="goLink(c.link, row)">{{ linkLabel(c, row) }}</el-link>
-          <el-link v-else-if="isLinkCol(c) && config.detailable" type="primary" @click="openRowView(row)">{{ row[c.k] }}</el-link>
-          <span v-else>{{ displayCell(c, row[c.k]) }}</span>
+          <el-tag v-else-if="typeof c.tag === 'function'" :type="(c.tag(row) || {}).type || 'info'" size="small">{{ (c.tag(row) || {}).text || displayCellValue(c, row) }}</el-tag>
+          <el-link v-else-if="c.link && row[c.link.valueKey] != null" type="primary" @click="goLink(c.link, row)">{{ linkLabel(c, row) }}</el-link>
+          <span v-else>{{ displayCellValue(c, row) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" fixed="right" :width="operationWidth">
+      <el-table-column label="操作" :fixed="tableOverflowX ? false : 'right'" :width="operationWidth">
         <template #default="{ row }">
           <div class="row-actions">
             <template v-for="(b, idx) in visibleFlatRowButtons(row)" :key="b.buttonKey + '_' + idx">
@@ -142,31 +160,105 @@
       </el-table-column>
     </el-table>
 
-    <!-- 漏斗过滤 popover（单例 + virtualRef，绑定到当前激活的表头漏斗图标） -->
+    <!-- v4.2.4 漏斗过滤 popover：支持 text / number(-range) / date(-range) / select / resource / dict -->
     <el-popover
       ref="filterPopoverRef"
       :virtual-ref="filterTriggerRef"
       virtual-triggering
       :show-arrow="false"
       placement="bottom-start"
-      :width="220"
+      :width="filterPopoverWidth"
       :visible="filterPopoverVisible"
       :teleported="false"
-      @update:visible="(v) => { if (!v) filterPopoverVisible = false }"
       popper-class="crud-filter-popover"
     >
-      <div v-if="currentFilterCol">
-        <div style="margin-bottom: 8px; color: var(--dms-text-2); font-weight: 600;">{{ currentFilterCol.l }} 过滤</div>
-        <el-select v-if="currentFilterCol.filter?.type === 'select'" v-model="colFilters[currentFilterCol.k]"
-          style="width:100%" clearable size="small" @click.stop>
-          <el-option v-for="o in currentFilterCol.filter.options" :key="o.value" :label="o.label" :value="o.value" />
-        </el-select>
-        <el-date-picker v-else-if="currentFilterCol.filter?.type === 'date'" v-model="colFilters[currentFilterCol.k]"
-          type="date" value-format="YYYY-MM-DD" style="width:100%" size="small" />
-        <el-input v-else v-model="colFilters[currentFilterCol.k]" placeholder="输入过滤值" clearable size="small" />
-        <div style="margin-top: 10px; text-align: right;">
-          <el-button size="small" link @click="clearCurrentFilter">清除</el-button>
-          <el-button size="small" type="primary" @click="applyFilter">应用</el-button>
+      <div v-if="currentFilterCol" class="filter-pop-body">
+        <div class="filter-pop-title">{{ currentFilterCol.l }} 过滤</div>
+
+        <!-- 文本：模糊搜索（后端已默认 ILIKE） -->
+        <el-input
+          v-if="currentFilterCol.filter?.type === 'text'"
+          v-model="colFilters[currentFilterCol.k]"
+          placeholder="模糊搜索（支持部分匹配）"
+          clearable
+          @click.stop
+          @keyup.enter="applyFilter"
+        >
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+
+        <!-- 数字：单值或范围 -->
+        <template v-else-if="currentFilterCol.filter?.type === 'number'">
+          <el-input-number
+            v-if="currentFilterCol.filter?.range !== true"
+            v-model="colFilters[currentFilterCol.k]"
+            :placeholder="'输入' + currentFilterCol.l"
+            :min="0"
+            controls-position="right"
+            style="width: 100%"
+            @click.stop
+          />
+          <div v-else class="filter-range-row" @click.stop>
+            <el-input-number v-model="colRangeFilters[currentFilterCol.k + 'From']" placeholder="最小值" :min="0" controls-position="right" style="width: 48%" />
+            <span class="filter-range-sep">~</span>
+            <el-input-number v-model="colRangeFilters[currentFilterCol.k + 'To']" placeholder="最大值" :min="0" controls-position="right" style="width: 48%" />
+          </div>
+        </template>
+
+        <!-- 日期/日期时间：单值或范围（datetime 支持选到时分秒） -->
+        <template v-else-if="currentFilterCol.filter?.type === 'date' || currentFilterCol.filter?.type === 'datetime'">
+          <el-date-picker
+            v-if="currentFilterCol.filter?.range !== true"
+            v-model="colFilters[currentFilterCol.k]"
+            :type="currentFilterCol.filter?.type === 'datetime' ? 'datetime' : 'date'"
+            :value-format="currentFilterCol.filter?.type === 'datetime' ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD'"
+            :placeholder="'选择' + currentFilterCol.l"
+            :teleported="false"
+            style="width: 100%"
+            @click.stop
+          />
+          <el-date-picker
+            v-else
+            v-model="colRangeFilters[currentFilterCol.k]"
+            :type="currentFilterCol.filter?.type === 'datetime' ? 'datetimerange' : 'daterange'"
+            :value-format="currentFilterCol.filter?.type === 'datetime' ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD'"
+            range-separator="~"
+            :start-placeholder="currentFilterCol.l + '开始'"
+            :end-placeholder="currentFilterCol.l + '结束'"
+            :teleported="false"
+            style="width: 100%"
+            @click.stop
+          />
+        </template>
+
+        <!-- select / dict / remote / resource：统一走 selectFilterOptions 解析数据源 -->
+        <template v-else-if="currentFilterCol.filter?.type === 'select' || currentFilterCol.filter?.type === 'dict' || currentFilterCol.filter?.remote || currentFilterCol.filter?.resource">
+          <el-select
+            v-model="colFilters[currentFilterCol.filter.paramKey || currentFilterCol.k]"
+            :placeholder="'选择' + currentFilterCol.l"
+            clearable
+            filterable
+            :teleported="false"
+            style="width: 100%"
+            @click.stop
+          >
+            <el-option v-for="o in currentFilterOptions" :key="o.value" :label="o.label" :value="o.value" />
+          </el-select>
+        </template>
+
+        <!-- 兜底：text -->
+        <el-input
+          v-else
+          v-model="colFilters[currentFilterCol.k]"
+          :placeholder="'输入' + (currentFilterCol.l || currentFilterCol.k)"
+          clearable
+          @click.stop
+          @keyup.enter="applyFilter"
+        />
+
+        <div class="filter-pop-actions">
+          <el-button link @click="clearCurrentFilter">清除</el-button>
+          <el-button type="primary" @click="applyFilter">应用筛选</el-button>
         </div>
       </div>
     </el-popover>
@@ -279,17 +371,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onBeforeUnmount, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Upload, Download, Filter, Search, Plus, ArrowDown, RefreshLeft } from '@element-plus/icons-vue'
+import { Upload, Download, Filter, Search, Plus, ArrowDown, RefreshLeft, Setting, Rank } from '@element-plus/icons-vue'
+import Sortable from 'sortablejs'
 import ResourcePicker from '@/components/ResourcePicker.vue'
 import MultiSelectPicker from '@/components/MultiSelectPicker.vue'
 import LinesEditor from '@/components/LinesEditor.vue'
 import AttachmentUploader from '@/components/AttachmentUploader.vue'
 import { listResource, createResource, updateResource, deleteResource, getDetail, actionResource, getOperationLogs, httpGet } from '@/api/crud'
 import { statusText, statusTagType, fmt, labelOf, reloadDicts, loadDict, getDictOptions } from '@/utils/dict'
-import { getToken } from '@/utils/auth'
+import { getToken, getUser } from '@/utils/auth'
 import { formatAuto, formatDateTime } from '@/utils/format'
 import { usePageLayout, invalidatePageLayoutCache } from '@/composables/usePageLayout'
 
@@ -306,6 +399,55 @@ function dictLabel(col, v) {
 const props = defineProps({ config: { type: Object, required: true } })
 const router = useRouter()
 const route = useRoute()
+// === 列表本地持久化：按用户账号 + config.key 隔离 ===
+function currentAccountKey() {
+  try {
+    const u = getUser() || {}
+    return u.username || u.account || u.loginName || 'guest'
+  } catch (_) { return 'guest' }
+}
+function listStateKey() {
+  return `dms:listState:${currentAccountKey()}:${(props.config && props.config.key) || 'unknown'}`
+}
+function colOrderKey() {
+  return `dms:colOrder:${currentAccountKey()}:${(props.config && props.config.key) || 'unknown'}`
+}
+function loadListState() {
+  try {
+    const raw = localStorage.getItem(listStateKey())
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch (_) { return null }
+}
+function saveListState(patch) {
+  try {
+    const cur = loadListState() || {}
+    const next = { ...cur, ...patch }
+    localStorage.setItem(listStateKey(), JSON.stringify(next))
+  } catch (_) { /* localStorage disabled, ignore */ }
+}
+function loadColOrder() {
+  try {
+    const raw = localStorage.getItem(colOrderKey())
+    if (!raw) return null
+    const arr = JSON.parse(raw)
+    return Array.isArray(arr) ? arr : null
+  } catch (_) { return null }
+}
+function saveColOrder(order) {
+  try { localStorage.setItem(colOrderKey(), JSON.stringify(order || [])) } catch (_) {}
+}
+function isDateColKey(k) {
+  return /At$|Time$|Date$|(From|To)$/i.test(String(k || ''))
+}
+function displayCellValue(c, row) {
+  const v = row[c.k]
+  if (v === null || v === undefined || v === '') return '-'
+  if (typeof v === 'number' && /price|amount|Price|Amount/i.test(c.k || '')) return Number(v).toFixed(2)
+  if (typeof v === 'string' && isDateColKey(c.k) && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(v)) return formatDateTime(v)
+  return displayCell(c, v)
+}
+
 const sidebarCollapsed = ref(localStorage.getItem('dms:sidebar:collapsed') === '1')
 const drawerSize = computed(() => 'calc(100vw - ' + (sidebarCollapsed.value ? '64px' : '230px') + ')')
 if (typeof window !== 'undefined') {
@@ -373,19 +515,71 @@ function effectiveRowButtons() {
   return merged.sort((a, b) => (a.sortOrder || 100) - (b.sortOrder || 100))
 }
 const visibleRowButtons = computed(() => effectiveRowButtons())
+// === 列顺序：本地优先 + 自动补 createdAt/updatedAt ===
+const colOrder = ref(loadColOrder() || [])
+watch(colOrder, (v) => saveColOrder(v), { deep: true })
+const columnSettingVisible = ref(false)
+const columnSettingRef = ref(null)
+let _colSortable = null
+const baseCols = computed(() => (props.config && props.config.cols) || [])
+function ensureTimeCols(cols) {
+  const has = (k) => cols.some((c) => c.k === k)
+  const out = cols.slice()
+  if (!has('createdAt')) out.push({ k: 'createdAt', l: '创建时间', w: 160, sortable: true })
+  if (!has('updatedAt')) out.push({ k: 'updatedAt', l: '更新时间', w: 160, sortable: true })
+  return out
+}
+const displayCols = computed(() => {
+  const merged = ensureTimeCols(baseCols.value)
+  if (!colOrder.value || !colOrder.value.length) return merged
+  const byKey = new Map(merged.map((c) => [c.k, c]))
+  const known = new Set(merged.map((c) => c.k))
+  const ordered = []
+  colOrder.value.forEach((k) => {
+    if (known.has(k)) { ordered.push(byKey.get(k)); byKey.delete(k) }
+  })
+  byKey.forEach((c) => ordered.push(c))
+  return ordered
+})
+function openColumnSetting() {
+  columnSettingVisible.value = true
+  nextTick(() => {
+    const el = columnSettingRef.value
+    if (!el) return
+    if (_colSortable) { _colSortable.destroy(); _colSortable = null }
+    _colSortable = Sortable.create(el, {
+      animation: 150,
+      handle: '.col-handle',
+      ghostClass: 'col-ghost',
+      onEnd: () => {
+        const next = Array.from(el.querySelectorAll('[data-col-key]')).map((n) => n.getAttribute('data-col-key'))
+        colOrder.value = next
+      }
+    })
+  })
+}
+function resetColumnOrder() {
+  colOrder.value = []
+  ElMessage.success('列顺序已重置')
+}
+onBeforeUnmount(() => { if (_colSortable) { _colSortable.destroy(); _colSortable = null } })
 function isCancelableOrder(row) { return props.config.key === 'orders' && row && row.status === 'APPROVED' && Number(row.shippedQty || 0) === 0 }
 
 const rows = ref([])
 const loading = ref(false)
 const keyword = ref('')
 const colFilters = reactive({})
+const colRangeFilters = reactive({})
 const layoutFilters = reactive({})
 const layoutRangeFilters = reactive({})
-const page = ref(1)
-const size = ref(20)
+// 从本地恢复分页状态（按用户+config.key 隔离）
+const _restoredState = loadListState()
+const page = ref(Number(_restoredState && _restoredState.page) > 0 ? Number(_restoredState.page) : 1)
+const size = ref([10, 20, 50, 100].includes(Number(_restoredState && _restoredState.size)) ? Number(_restoredState.size) : 20)
 const total = ref(0)
-const sortField = ref('updatedAt')
-const sortOrder = ref('desc')
+const sortField = ref((_restoredState && _restoredState.sortField) || 'updatedAt')
+const sortOrder = ref((_restoredState && _restoredState.sortOrder) || 'descending')
+watch([page, size, sortField, sortOrder], () => { saveListState({ page: page.value, size: size.value, sortField: sortField.value, sortOrder: sortOrder.value }) }); saveListState({ page: page.value, size: size.value, sortField: sortField.value, sortOrder: sortOrder.value })
 
 const formVisible = ref(false)
 const editing = ref(false)
@@ -514,8 +708,56 @@ const operationLoading = ref(false)
 
 const filterPopoverVisible = ref(false)
 const currentFilterCol = ref(null)
+// v4.2.4: popover 内下拉统一解析 options，支持 select/dict/remote/resource
+const currentFilterOptions = computed(() => {
+  if (!currentFilterCol.value) return []
+  return selectFilterOptions({ k: currentFilterCol.value.k, l: currentFilterCol.value.l, filter: currentFilterCol.value.filter }) || []
+})
 const filterTriggerRef = ref(null)
 const filterPopoverRef = ref(null)
+// v4.2.7: 弹层改为受控模式（去掉 @update:visible），hover/失焦不再触发关闭；
+// 仅通过外部 mousedown（不在弹层与触发图标内）关闭，避免选完结束日期后弹层自动消失。
+function onDocPointerDown(e) {
+  if (!filterPopoverVisible.value) return
+  const trig = filterTriggerRef.value
+  if (trig && trig.contains(e.target)) return
+  const popEl = document.querySelector('.crud-filter-popover')
+  if (popEl && popEl.contains(e.target)) return
+  filterPopoverVisible.value = false
+}
+onMounted(() => document.addEventListener('mousedown', onDocPointerDown, true))
+onBeforeUnmount(() => document.removeEventListener('mousedown', onDocPointerDown, true))
+
+// v4.2.7: date/datetime 面板宽度大于默认 popover 宽度，按筛选列类型动态适配
+const filterPopoverWidth = computed(() => {
+  const f = currentFilterCol.value?.filter
+  if (f?.type === 'datetime') return f.range ? 800 : 400
+  if (f?.type === 'date') return f.range ? 640 : 340
+  return 280
+})
+
+// v4.2.7: 表格总列宽超出容器出现横向滚动时，固定右列（操作列）会悬浮覆盖最后一列
+// 表头的筛选漏斗图标，导致无法点击；此时自动取消操作列固定，恢复筛选可用；不溢出时保留固定。
+const tableRef = ref(null)
+const tableOverflowX = ref(false)
+function measureTableOverflow() {
+  const root = tableRef.value?.$el || tableRef.value
+  if (!root || !root.classList) return
+  // el-table 自身通过该 class 标记横向滚动（列总宽超出容器），以它为准
+  tableOverflowX.value = root.classList.contains('el-table--scrollable-x')
+}
+function scheduleOverflowMeasure() {
+  nextTick(() => {
+    measureTableOverflow()
+    setTimeout(measureTableOverflow, 200)
+  })
+}
+onMounted(() => {
+  scheduleOverflowMeasure()
+  window.addEventListener('resize', scheduleOverflowMeasure)
+})
+onBeforeUnmount(() => window.removeEventListener('resize', scheduleOverflowMeasure))
+watch(() => [rows.value.length, props.config?.key], () => scheduleOverflowMeasure())
 
 const importVisible = ref(false)
 const uploadRef = ref(null)
@@ -710,11 +952,9 @@ function overflowRowButtons(row) {
   if (flat.length <= maxFlatRowButtons.value) return []
   return flat.slice(maxFlatRowButtons.value)
 }
-function isLinkCol(c) {
-  if (!c || c.link || c.noLink) return false
-  if (c.isStatus || c.k === 'status' || typeof c.tag === 'function') return false
-  return c.k === 'code' || c.k === 'id' || c.k === '编号' || c.l === '编号'
-}
+// R1.5：行内已有 查看/编辑/删除 等操作，编号/SKU 字段不再渲染链接，保留纯文本。
+// 业务列如需自定义跳转，在 c.link 中显式声明即可。
+function isLinkCol(c) { return false }
 function rowActionVisible(b, row) {
   if (props.config.rowButtonKeys && !props.config.rowButtonKeys.includes(b.buttonKey)) return false
   if (props.config.rowButtonPermissions && typeof props.config.rowButtonPermissions[b.buttonKey] === 'function' && !props.config.rowButtonPermissions[b.buttonKey](row)) return false
@@ -850,13 +1090,18 @@ function selectFilterOptions(f) {
     loadDict(dt).catch(() => {})
     return d
   }
-  const key = f?.filter?.remote
-  return key ? remoteFilterOptions[key] || [] : []
+  const key = f?.filter?.remote || f?.filter?.resource
+  if (!key) return []
+  if (!remoteFilterOptions[key]) ensureRemoteFilterOptions().catch(() => {})
+  return remoteFilterOptions[key] || []
 }
 
 async function ensureRemoteFilterOptions() {
   const remotes = new Set()
-  ;(props.config.cols || []).forEach((c) => { if (c.filter && c.filter.remote) remotes.add(c.filter.remote) })
+  ;(props.config.cols || []).forEach((c) => {
+    if (c.filter && c.filter.remote) remotes.add(c.filter.remote)
+    if (c.filter && c.filter.resource) remotes.add(c.filter.resource)
+  })
   ;(pageLayout.filters || []).forEach((f) => {
     if (f.dictType === 'dealer') remotes.add('dealers')
     if (f.dictType === 'supplier') remotes.add('suppliers')
@@ -867,9 +1112,13 @@ async function ensureRemoteFilterOptions() {
   const endpoints = {
     categories: { url: '/api/product-categories', label: 'name' },
     dealers: { url: '/api/lookups/dealers', label: 'name' },
-    suppliers: { url: '/api/suppliers', label: 'name' },
+    suppliers: { url: '/api/lookups/suppliers', label: 'name' },
     regions: { url: '/api/regions', label: 'name' },
-    warehouses: { url: '/api/warehouses', label: 'name' }
+    warehouses: { url: '/api/lookups/warehouses', label: 'name' },
+    hospitals: { url: '/api/lookups/hospitals', label: 'name' },
+    products: { url: '/api/lookups/products', label: 'name' },
+    'product-lines': { url: '/api/lookups/product-lines', label: 'name' },
+    contracts: { url: '/api/lookups/contracts', label: 'name' }
   }
   await Promise.all([...remotes].map(async (key) => {
     if (remoteFilterOptions[key]) return
@@ -878,7 +1127,10 @@ async function ensureRemoteFilterOptions() {
     try {
       const res = await httpGet(ep.url, { size: 500 })
       const list = res?.data?.list || res?.data?.records || res?.data || []
-      remoteFilterOptions[key] = list.map((x) => ({ value: x.id, label: x[ep.label] }))
+      remoteFilterOptions[key] = list.map((x) => ({
+        value: x.value != null ? x.value : x.id,
+        label: x.label || x[ep.label] || x.name || x.code || String(x.value != null ? x.value : (x.id || ''))
+      }))
     } catch (e) { remoteFilterOptions[key] = [] }
   }))
 }
@@ -984,9 +1236,35 @@ async function fetchData() {
       if (Array.isArray(v) && v.length === 2) {
         params[k + 'From'] = v[0]
         params[k + 'To'] = v[1]
+      } else if (k.endsWith('From') || k.endsWith('To')) {
+        if (v !== "" && v != null) params[k] = v
       }
     })
     Object.keys(colFilters).forEach((k) => { if (colFilters[k] !== '' && colFilters[k] != null) params[k] = colFilters[k] })
+    // Range filter supports two shapes:
+    //   A) colRangeFilters[base] = [from, to]        -- el-date-picker daterange direct v-model
+    //   B) colRangeFilters[base+'From'] / base+'To'  -- two el-input-number with separate v-model
+    const rangeFrom = {}
+    const rangeTo = {}
+    Object.keys(colRangeFilters).forEach((k) => {
+      const v = colRangeFilters[k]
+      if (k.endsWith('From') || k.endsWith('To')) {
+        const base = k.endsWith('From') ? k.slice(0, -4) : k.slice(0, -2)
+        if (k.endsWith('From')) rangeFrom[base] = v
+        else rangeTo[base] = v
+      } else if (Array.isArray(v) && v.length === 2) {
+        rangeFrom[k] = v[0]
+        rangeTo[k] = v[1]
+      }
+    })
+    const rangeBases = new Set([...Object.keys(rangeFrom), ...Object.keys(rangeTo)])
+    rangeBases.forEach((b) => {
+      const f = rangeFrom[b]
+      const t = rangeTo[b]
+      const has = (x) => x !== "" && x != null && !(Array.isArray(x) && x.length === 0)
+      if (has(f)) params[b + 'From'] = f
+      if (has(t)) params[b + 'To'] = t
+    })
     if (sortField.value) params.sort = sortField.value + ',' + (sortOrder.value === 'ascending' ? 'asc' : 'desc')
     if (props.config.extraParams) Object.assign(params, props.config.extraParams)
     const res = await listResource(props.config.api, params)
@@ -1379,6 +1657,7 @@ function formatChangeJson(json) {
 function openFilter(col, event) {
   currentFilterCol.value = col
   filterTriggerRef.value = event && event.currentTarget ? event.currentTarget : null
+  ensureRemoteFilterOptions().catch(() => {})
   filterPopoverVisible.value = !filterPopoverVisible.value
 }
 
@@ -1389,7 +1668,12 @@ function applyFilter() {
 
 function clearCurrentFilter() {
   if (currentFilterCol.value) {
-    colFilters[currentFilterCol.value.k] = ''
+    const k = currentFilterCol.value.k
+    colFilters[k] = ''
+    colFilters[currentFilterCol.value.filter?.paramKey || k] = ''
+    colRangeFilters[k] = null
+    colRangeFilters[k + 'From'] = null
+    colRangeFilters[k + 'To'] = null
   }
   filterPopoverVisible.value = false
   reload()
@@ -1649,4 +1933,20 @@ function onImportError(err, file) {
   border-top: 1px solid var(--el-border-color-lighter);
   padding: 12px 20px;
 }
+
+/* v4.2.4 列表工具栏 / 筛选 popover 样式 */
+.crud-container .page-toolbar { flex-wrap: wrap; }
+.crud-container .page-toolbar .el-input,
+.crud-container .page-toolbar .el-select,
+.crud-container .page-toolbar .el-date-editor,
+.crud-container .page-toolbar .el-input-number { width: 200px; }
+.crud-container .page-toolbar .el-button { padding: 6px 14px; }
+.crud-container .page-toolbar .el-button + .el-button { margin-left: 4px; }
+.crud-container .filter-icon { font-size: 16px; padding: 0 4px; }
+ .crud-filter-popover { padding: 12px !important; min-width: 280px; overflow: visible; }
+.crud-filter-popover .filter-pop-body { display: flex; flex-direction: column; gap: 10px; }
+.crud-filter-popover .filter-pop-title { font-weight: 600; color: var(--dms-text-2); }
+.crud-filter-popover .filter-range-row { display: flex; align-items: center; gap: 6px; }
+.crud-filter-popover .filter-range-sep { color: var(--dms-text-2); }
+.crud-filter-popover .filter-pop-actions { display: flex; justify-content: flex-end; gap: 4px; margin-top: 2px; }
 </style>

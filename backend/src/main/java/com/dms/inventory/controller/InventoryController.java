@@ -33,6 +33,8 @@ public class InventoryController {
             @RequestParam(required = false) String serialNo,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String stockStatus,
+            @RequestParam(required = false) String qtyFrom,
+            @RequestParam(required = false) String qtyTo,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sort) {
@@ -55,6 +57,8 @@ public class InventoryController {
             params.add("%" + keyword.trim() + "%");
         }
         if (stockStatus != null && !stockStatus.isBlank()) { where.append(" AND inv.stock_status = ?").append(idx++); params.add(stockStatus); }
+        if (qtyFrom != null && !qtyFrom.isBlank()) { where.append(" AND inv.qty >= ?").append(idx++); params.add(new java.math.BigDecimal(qtyFrom)); }
+        if (qtyTo != null && !qtyTo.isBlank()) { where.append(" AND inv.qty <= ?").append(idx++); params.add(new java.math.BigDecimal(qtyTo)); }
 
         // 总数
         String cntSql = "SELECT COUNT(*) FROM inventory inv " + where;

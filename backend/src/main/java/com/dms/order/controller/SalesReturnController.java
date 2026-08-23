@@ -24,8 +24,8 @@ public class SalesReturnController {
     private final SalesReturnService service;
 
     @GetMapping
-    public ApiResponse<Map<String, Object>> list( @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(required = false) String status, @RequestParam(required = false) Long dealerId, @RequestParam(required = false) Long warehouseId) {
-        return service.list(page, size, status, dealerId, warehouseId);
+    public ApiResponse<Map<String, Object>> list( @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(required = false) String status, @RequestParam(required = false) Long dealerId, @RequestParam(required = false) Long warehouseId, @RequestParam(required = false) String createdAtFrom, @RequestParam(required = false) String createdAtTo, @RequestParam(required = false) String updatedAtFrom, @RequestParam(required = false) String updatedAtTo, @RequestParam(required = false) String finalAmountFrom, @RequestParam(required = false) String finalAmountTo, @RequestParam(required = false) String sort) {
+        return service.list(page, size, status, dealerId, warehouseId, createdAtFrom, createdAtTo, updatedAtFrom, updatedAtTo, finalAmountFrom, finalAmountTo, sort);
     }
 
     @GetMapping("/actions/export")

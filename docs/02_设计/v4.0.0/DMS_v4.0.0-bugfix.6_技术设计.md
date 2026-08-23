@@ -26,4 +26,4 @@
 ## 4. 部署
 - 后端：`mvn -o package -DskipTests`，部署容器 `dms-test-backend`。
 - 前端：`npm run build`，部署容器 `dms-test-nginx`。
-- 不部署生产环境；生产和测试 SSH 密码均以 `docs/00_环境/环境与部署说明.md` 为准。
+- 不部署生产环境；生产和测试 SSH 密码均以 `docs/DMS登录信息手册.md` 为准。

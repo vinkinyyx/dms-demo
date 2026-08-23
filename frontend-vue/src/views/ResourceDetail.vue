@@ -7,21 +7,41 @@
         <slot name="actions" :data="detail">
           <el-button v-if="canEdit" @click="onEdit">编辑</el-button>
         </slot>
+        <el-button
+          v-if="canDeactivate"
+          v-has="'product-price:deactivate'"
+          type="warning"
+          plain
+          :loading="deactivating"
+          @click="onDeactivate"
+        >失效</el-button>
+        <el-button
+          v-if="canActivate"
+          v-has="'product-price:activate'"
+          type="success"
+          plain
+          :loading="activating"
+          @click="onActivate"
+        >启用</el-button>
       </div>
     </div>
 
     <el-card shadow="never" v-loading="loading">
-      <el-descriptions :column="3" border size="small" v-if="detail">
-        <el-descriptions-item v-for="f in fields" :key="f.key" :label="f.label || f.key">
-          <el-tag v-if="f.key === statusKey" size="small" :type="statusTagType(detail[f.key])">{{ statusText(detail[f.key]) }}</el-tag>
-          <span v-else-if="isDate(f)" class="date-text">{{ fmt(detail[f.key]) }}</span>
-          <span v-else-if="f.type === 'boolean'" class="bool-text">{{ detail[f.key] ? '是' : '否' }}</span>
-          <span v-else class="cell-text">{{ fieldDisplay(f, detail) }}</span>
-        </el-descriptions-item>
-      </el-descriptions>
+      <div v-if="detail">
+        <template v-for="(group, gi) in groupedFields" :key="group.name || '__main__'">
+          <el-divider v-if="gi > 0" content-position="left">{{ group.name || '其他' }}</el-divider>
+          <el-descriptions :column="group.name === '价格信息' ? 2 : 3" border size="small">
+            <el-descriptions-item v-for="f in group.items" :key="f.key" :label="f.label || f.key">
+              <el-tag v-if="f.key === statusKey" size="small" :type="statusTagType(detail[f.key])">{{ statusText(detail[f.key]) }}</el-tag>
+              <span v-else-if="isDate(f)" class="date-text">{{ fmt(detail[f.key]) }}</span>
+              <span v-else-if="f.type === 'boolean'" class="bool-text">{{ detail[f.key] ? '是' : '否' }}</span>
+              <span v-else class="cell-text">{{ fieldDisplay(f, detail) }}</span>
+            </el-descriptions-item>
+          </el-descriptions>
+        </template>
+      </div>
       <el-empty v-if="!loading && !detail" description="未找到记录" />
     </el-card>
-
     <el-card shadow="never" v-if="linesFields.length && detailLines.length" class="rd-lines">
       <template #header><span>{{ linesTitle || '明细' }}</span></template>
       <el-table :data="detailLines" border size="small" stripe>
@@ -86,6 +106,35 @@ const linesFields = computed(() => {
 const linesTitle = computed(() => (cfg.value.form || []).find(f => f.type === 'lines')?.label)
 const statusKey = computed(() => (cfg.value.cols || []).find(c => c.k === 'status') ? 'status' : 'versionStatus')
 const canEdit = computed(() => false)
+
+// R2.1 按字段 group 分组渲染（基本信息 / 价格信息 / 有效期 等）
+// 过滤掉 'component-prices' 类型的字段（详情页底部 'BOM子件价格' 表已单独渲染，避免重复）
+const groupedFields = computed(() => {
+  const all = (fields.value || []).filter((f) => f.type !== 'component-prices')
+  // 如果没有任何字段标记 group，则整体作为单一组，避免插入空 divider
+  const hasGroup = all.some((f) => f.group)
+  if (!hasGroup) return [{ name: '', items: all }]
+  // 按 group 名收集；前几个无 group 的归入
+  const order = []
+  const map = new Map()
+  const pre = []
+  for (const f of all) {
+    const g = f.group
+    if (!g) { pre.push(f); continue }
+    if (!map.has(g)) { map.set(g, []); order.push(g) }
+    map.get(g).push(f)
+  }
+  const out = []
+  if (pre.length) out.push({ name: '基本信息', items: pre })
+  for (const g of order) out.push({ name: g, items: map.get(g) })
+  return out
+})
+
+// R2.2 失效/启用按钮状态
+const canDeactivate = computed(() => props.moduleKey === 'product-prices' && detail.value && String(detail.value.status || '').toLowerCase() === 'active')
+const canActivate = computed(() => props.moduleKey === 'product-prices' && detail.value && String(detail.value.status || '').toLowerCase() !== 'active')
+const deactivating = ref(false)
+const activating = ref(false)
 
 const detail = ref(null)
 const detailLines = ref([])
@@ -154,6 +203,39 @@ function fmt(v, f) {
 function onEdit() {
   if (cfg.value.editPath) { router.push(cfg.value.editPath.replace(':id', route.params.id)); return }
   router.push({ path: `/m/${props.moduleKey}`, query: { edit: route.params.id } })
+}
+
+// R2.2 失效按钮：调后端 deactivate，原地更新 detail.value.status，**不刷新页面**
+async function onDeactivate() {
+  if (!detail.value || !detail.value.id) return
+  try {
+  await ElMessageBox.confirm('确认将该产品价格置为失效？失效后不影响历史单据。', '提示', { type: 'warning' })
+  } catch (_) { return }
+  deactivating.value = true
+  try {
+  await request({ url: cfg.value.api + '/' + detail.value.id + '/deactivate', method: 'post' })
+  detail.value = { ...detail.value, status: 'inactive' }
+  ElMessage.success('已失效')
+  } catch (e) {
+  ElMessage.error((e && e.message) || '失效失败')
+  } finally {
+  deactivating.value = false
+  }
+}
+
+// R2.2 启用按钮（对称实现）
+async function onActivate() {
+  if (!detail.value || !detail.value.id) return
+  activating.value = true
+  try {
+  await request({ url: cfg.value.api + '/' + detail.value.id + '/activate', method: 'post' })
+  detail.value = { ...detail.value, status: 'active' }
+  ElMessage.success('已启用')
+  } catch (e) {
+  ElMessage.error((e && e.message) || '启用失败')
+  } finally {
+  activating.value = false
+  }
 }
 
 async function load() {

@@ -1,3 +1,127 @@
+## v4.2.7 (2026-08-23) - 日期时间筛选支持时分秒 + 选完结束日期弹层不消失 + 宽表筛选漏斗可点击
+> PATCH 版本。针对 v4.2.6 部署后用户反馈：1) 日期时间筛选控件只能选日期、不能选时间；2) 选完结束日期后控件自动消失，无法筛选；另修复产品等宽表页面筛选漏斗被固定操作列遮挡而无法点击的问题。
+
+### 修复
+- **Q1 时间筛选支持选时分秒** `CrudView.vue` + `modules.js`：筛选弹层 `el-date-picker` 支持 `type: datetime/datetimerange`（值格式 `YYYY-MM-DD HH:mm:ss`），全部列表 `createdAt/updatedAt` 列由 `date` 升级为 `datetime`；弹层宽度按 datetime 动态适配（400/800）；后端 `SpecUtil` 新增 `rangeBound/hasTime/parseLocalDateTime/parseOffsetDateTime`，订单相关 service/controller 的 `createdAtFrom/To`、`updatedAtFrom/To` 支持带时间（To 带时间用 `<=`，纯日期用 `<`）
+- **Q2 选完结束日期弹层自动消失** `CrudView.vue`：popover 改为受控模式（去掉 `@update:visible`），仅外部 mousedown（不在弹层与触发图标内）才关闭，鼠标移入日期时间面板/应用按钮不再消失
+- **Q3 宽表筛选漏斗被固定操作列遮挡** `CrudView.vue`：表格总列宽超出容器出现横向滚动时，Element Plus 固定右列会悬浮覆盖最后一列（创建/更新时间）表头的筛选漏斗导致无法点击；现依据 `el-table--scrollable-x` 自动取消操作列固定，恢复漏斗可点击；不溢出时仍保留固定
+- **本地持久化（沿用）** 列表分页/排序/筛选状态按用户账号 + 模块维度本地保存，操作后返回不丢失
+
+### 验证
+- `npm run build`、`mvn -q -DskipTests compile|package` 通过；部署测试环境 http://43.128.145.141（备份 stamp `20260823-155510`，健康检查 200）
+- `tools/verify_v427.cjs` headless 自验 **11/11**：Q1 datetime 面板含时间选择、值带时分秒、请求带 createdAtFrom/To / Q2 选完结束日期弹层仍打开、移入应用按钮不消失 / Q3 产品列表时间筛选漏斗可点、面板含时间、请求带参数 / 回归经销商下拉+dealerId、最终金额数字范围 / Console 干净 / 无 5xx
+- 截图：`automation_test/v4-browser-results/verify-v427-*/`
+
+### 文件改动
+- `frontend-vue/src/components/CrudView.vue`（受控 popover + datetime 模板 + 动态宽度 + 宽表取消固定列）
+- `frontend-vue/src/config/modules.js`（约 40 处 createdAt/updatedAt 筛选 → datetime）
+- `backend/src/main/java/com/dms/common/util/SpecUtil.java`（rangeBound/hasTime/parseLocalDateTime/parseOffsetDateTime）
+- `backend/src/main/java/com/dms/order/service/SalesOrderService.java`、`SalesReturnService.java`、`PurchaseOrderService.java`、`PurchaseReturnController.java`
+- `tools/verify_v427.cjs`（新增）
+
+## v4.2.6 (2026-08-23) - 日期筛选面板不消失 + 销售订单经销商/金额筛选修复
+> PATCH 版本。针对 v4.2.5 部署后用户反馈的 3 个问题：1) 日期筛选面板鼠标移入即消失；2) 销售订单经销商筛选无效（销退正常）；3) 销售订单最终金额列无数字范围筛选。
+
+### 修复
+- **Q1 日期筛选浮层消失** `CrudView.vue`：筛选 popover 内 `el-date-picker`（单日期 / daterange）加 `:teleported="false"`，日期面板渲染进 popover DOM，鼠标移入面板不再被 popover 当作外部点击关闭；popover 宽度按列类型动态适配（date 340 / daterange 640），`.crud-filter-popover` 允许面板溢出展示
+- **Q2 销售订单经销商筛选无效** `modules.js`：经销商列由 `select + remote`（原发送 `dealerName` 参数、后端不接收）改为 `resource + paramKey: dealerId`，与销退订单一致；应用后请求真实携带 `dealerId` 且结果过滤生效
+- **Q3 销售订单最终金额无范围筛选** 前端 `modules.js` 给 `finalAmount` 列加 `filter: { type: 'number', range: true }`；后端 `SalesOrderController / SalesOrderService` 新增 `finalAmountFrom / finalAmountTo` 参数与 `o.final_amount >= / <=` 过滤条件（模式与销退订单一致）
+
+### 验证
+- `mvn -q -DskipTests compile`、`mvn package -DskipTests`、`npm run build` 全部通过
+- 部署到测试环境：http://43.128.145.141（备份 stamp `20260823-151526`，健康检查 200）
+- `tools/verify_v426.cjs` headless 自验 **12/12**：Q1 日期面板渲染在 popover 内且鼠标移入不消失 / Q2 经销商下拉 12 个选项 + 应用后请求带 `dealerId` / Q3 最终金额列出现数字范围输入框 + 请求带 `finalAmountFrom/To` / Console 干净 / 无 5xx
+- 截图：`automation_test/v4-browser-results/verify-v426-*/`
+
+### 文件改动
+- `frontend-vue/src/components/CrudView.vue`（date-picker teleported + popover 动态宽度）
+- `frontend-vue/src/config/modules.js`（orders 经销商 resource 下拉 + finalAmount 数字范围）
+- `backend/src/main/java/com/dms/order/controller/SalesOrderController.java`
+- `backend/src/main/java/com/dms/order/service/SalesOrderService.java`
+- `tools/verify_v426.cjs`（新增）
+
+## v4.2.5 (2026-08-23) - 筛选下拉真实可用 + 订单更新时间有数据 + 范围过滤后端落地
+> PATCH 版本。针对 v4.2.4 部署后仍存在的问题：resource 下拉空白、销售/销退"更新时间"列无数据、日期/金额范围在订单类页面不生效。
+
+### 修复
+- **Q2.3 resource 下拉空白（真实修复）** `frontend-vue/src/components/CrudView.vue`：`selectFilterOptions()` 增加 `filter.resource` 解析（原只处理 `filter.remote`），`ensureRemoteFilterOptions()` 同步收集 resource 键并扩充端点映射（dealers/suppliers/warehouses/hospitals/products/product-lines/contracts），打开筛选 popover 时懒加载；产品价格"经销商/供应商"、销退"经销商/收货仓库"等 resource 下拉现在有选项可选
+- **Q3 更新时间列有数据** 销售订单/销退/采购/采退列表 SQL 补查 `updated_at` 并映射 `updatedAt`（此前前端自动注入列但数据为空）
+- **Q2.6 日期范围在订单类页面真实生效** SalesOrder/SalesReturn/PurchaseOrder/PurchaseReturn/ProductPrice 列表接口新增 `xxxFrom/xxxTo` 范围参数（`>=`/`<` 次日 0 点），支持 createdAt/updatedAt/validFrom/validTo 范围筛选
+- **Q2.5 金额/数量范围在订单类页面真实生效** 销售/销退/采购/采退 `finalAmount`、采购 `totalAmount`、库存 `qty` 支持 `From/To` 范围过滤；对应模块列升级 `filter.range: true`
+- **物料/仓库/供应商可下拉** 库存查询"物料/仓库"、采购/采退"供应商/仓库"列由文本/编号输入升级为 resource 下拉（参数与后端一致：productId/warehouseId/supplierId）
+- **排序参数** 订单类列表接口支持 `sort=updatedAt,desc`（前端默认按更新时间倒序）
+
+### 验证
+- `mvn package -DskipTests` 通过、`npm run build` 通过
+- 部署到测试环境：http://43.128.145.141
+- `tools/verify_v425.cjs` headless 自验：Q1 BOM子件销售价净化 / Q2.3 经销商下拉有选项 / Q2.6 日期范围请求带 From/To（区域+销售订单）/ Q2.5 levelFrom/To / Q3 更新时间列+数据非空 / Console 与网络 5xx 干净
+
+### 文件改动
+- `frontend-vue/src/components/CrudView.vue`、`frontend-vue/src/config/modules.js`
+- `backend/.../SalesOrderController|Service.java`、`SalesReturnController|Service.java`、`PurchaseOrderController|Service.java`、`PurchaseReturnController.java`、`ProductPriceController|Service.java`、`InventoryController.java`
+- `tools/verify_v425.cjs`
+
+## v4.2.4 (2026-08-23) - 列表筛选 UX 大改 + 后端范围过滤 + 价格详情净化 + 订单列补齐
+> PATCH 版本。基于 4.2.3 部署后用户反馈，3 个未解决问题 + 范围过滤后端支持全部修复。
+
+### 新增
+- **后端 `SpecUtil` 支持 `keyFrom` / `keyTo` 范围过滤**：数值字段（BigDecimal/Long/Integer/...）生成 `>=` / `<=`，日期/时间字段（LocalDate/LocalDateTime/OffsetDateTime/Date）生成 `>=` / `<`（To 用次日 0 点实现 `<`），与原字符串 ILIKE 完全兼容
+- `frontend-vue/src/config/modules.js`：`createdAt` / `updatedAt` 全部改为 `filter: { type: 'date', range: true }`，区域管理 `level` 改为 `filter: { type: 'number', range: true }`，至少 1 个数值范围演示点
+
+### 改进
+- **问题 1** `frontend-vue/src/views/ResourceDetail.vue`：`groupedFields` computed 过滤 `f.type === 'component-prices'`，详情页"价格信息"分组不再渲染原始 JSON；底部"BOM子件价格"表保持 `moduleKey === 'product-prices' && componentPrices.length` 守卫
+- **问题 2.1** `CrudView.vue` 筛选 popover：el-select 加 `:teleported="false"`，dropdown 浮层渲染在 popover DOM 内，下拉可正常选择
+- **问题 2.2** 文本筛选 placeholder 改为"模糊搜索（支持部分匹配）"；后端 `SpecUtil` 字符串字段走 ILIKE，文本已支持部分匹配
+- **问题 2.3** 物料/经销商/供应商等远程资源下拉：popover 内统一走 `selectFilterOptions()` 解析 `remote`/`resource`/`dict`，数据正确加载
+- **问题 2.4** 工具栏筛选控件宽度统一 200px，按钮 padding 6px 14px，漏斗 icon 16px
+- **问题 2.5** popover 内数字字段支持 `filter.range: true` → 双 `el-input-number` From/To
+- **问题 2.6** popover 内日期字段支持 `filter.range: true` → `el-date-picker type=daterange`，前端 `fetchData` 发送 `key+From` / `key+To` 查询参数，后端 `SpecUtil` 接收并生成对应谓词
+- **问题 3** `modules.js` 中 `orders` / `sales-returns` 已在 CrudView 通用机制下显示创建/更新时间两列（v4.2.3 已实现）
+
+### 验证
+- `mvn -DskipTests compile` 通过（SpecUtil 重写后无编译错误）
+- `npm run build` 通过（前端 chunk 已部署）
+- 部署到测试环境：http://43.128.145.141
+- `tools/verify_v424.cjs` headless 自验（11 项）：Q1 BOM子件销售价净化 ✓ / Q2.1 popover select ✓ / Q2.2 模糊搜索 placeholder ✓ / Q2.4 工具栏宽度 ≥190px ✓ / Q2.5 数字 range ✓ / Q2.6 日期 range + 后端 `createdAtFrom/createdAtTo` 接收 ✓ / Q3 销售/销退订单 更新时间列 ✓ / Console 干净 / Network 5xx 干净
+- 截图保存到 `automation_test/v4-browser-results/verify-v424-*/`
+
+### 文件改动
+- `backend/src/main/java/com/dms/common/util/SpecUtil.java`（重写：增加 range 谓词构造 + `Range` 谓词去重）
+- `frontend-vue/src/components/CrudView.vue`（v4.2.3 已完成：popover 改写 + range 控件 + 宽度样式）
+- `frontend-vue/src/views/ResourceDetail.vue`（v4.2.3 已完成：`groupedFields` 过滤）
+- `frontend-vue/src/config/modules.js`（本次：`createdAt/updatedAt` 改 range；区域 `level` 改 range）
+- `tools/verify_v424.cjs`（升级 R2，验证范围请求实际带 From/To）
+
+## v4.2.3 (2026-08-23) - 列表页通用调整 + 产品价格只读页优化
+> PATCH 版本。针对 4.2.1 部署后用户反馈，调整全站列表页通用细节 6 项 + 产品价格只读页 2 项。
+
+### 新增
+- `frontend-vue/src/components/CrudView.vue`：新增「列设置」弹框（基于 `sortablejs ^1.15.7`），用户可拖拽调整列表列顺序
+- `frontend-vue/src/components/CrudView.vue`：新增 `currentAccountKey()` 工具函数，从 `dms_user` localStorage 读 `username/account/loginName` 派生账号维度键
+- `frontend-vue/src/components/CrudView.vue`：自动注入 `创建时间` / `更新时间` 两列（无需在每个模块 config 中声明）
+- `frontend-vue/src/views/ResourceDetail.vue`：新增 `groupedFields` computed，按 form field 的 `group` 分组渲染只读页
+
+### 改进
+- **R1.1** 工具栏顺序严格遵守 AGENTS.md §3.1：`查询 → 重置 → [spacer] → 导入 → 导出 → 新增 → 列设置 → 业务按钮`，按钮 `size=small` 统一对齐
+- **R1.2** 分页状态本地持久化：`page` / `size` / `sortField` / `sortOrder` 在用户编辑/查看/删除后回退列表时自动还原；key 格式 `dms:listState:${account}:${config.key}`，按账号隔离
+- **R1.3** 列表筛选 popover 内部控件（select / date-picker / input）统一加 `@click.stop`，避免点击控件时 popover 立即关闭导致选不上
+- **R1.4** 列表列可拖拽排序，按账号本地持久化：key 格式 `dms:colOrder:${account}:${config.key}`，「列设置」弹框内提供「重置默认」按钮
+- **R1.5** 编号 / 产品编码 / SKU 等字段不再渲染成 `<el-link>`，避免与行内「查看」按钮重复跳转；保留 `c.link` 显式声明可自定义
+- **R1.6** 全部列表页末尾自动追加 `创建时间` / `更新时间` 两列，默认按 `updatedAt desc` 排序（已在原 CrudView 实现上确保不被覆盖）
+- **R2.1** BOM 产品价格只读页按 form field `group` 分组渲染，价格信息分 2 列展示、其余组 3 列；BOM_HEADER 的 inclPrice/exclPrice 显示「见子件价格」；BOM 子件价格表守卫 `moduleKey === 'product-prices' && componentPrices.length`
+- **R2.2** 「失效」/「启用」按钮原地更新 `detail.value.status`，不再 `load()` 或 `location.reload()`；按钮权限通过 `v-has="'product-price:deactivate'|'product-price:activate'"` 控制
+
+### 验证
+- `npm run build` 通过（CrudView / ResourceDetail 编译无错）
+- `sortablejs ^1.15.7` 已在 `package.json` 依赖中，未新增第三方包
+- 全站列表页通用生效（无 module config 改动）
+- 后端无改动；现有 `ProductPriceController#deactivate/activate` 接口已存在
+
+### 文件改动
+- `frontend-vue/src/components/CrudView.vue`（修改）
+- `frontend-vue/src/views/ResourceDetail.vue`（修改）
+- 备份：上述两文件同目录的 `.bak.pre-v4.2.1-listpolish` / `.bak.pre-v4.2.1-detail`
+
 ## v4.2.2 (2026-08-23) - 测试分层策略（PATCH 范围测试）
 > PATCH 版本。优化发布期测试效率：小版本发布不再跑全量回归，只测改动涉及的流程。
 
@@ -1235,4 +1359,3 @@ v3.8.7 沉淀了 D13 规范和基础设施（platform_button_configs 表、v-has
 - Layer 2 §18 列表页布局规范保持冻结（v3.8.7 入冻结区，本版未变更规范文字）。
 - Layer 4 D13：本版本正式落地 D13（CrudView 接入、菜单按权限过滤、admin-vue 维护入口完善）。
 - D12 状态：原文 2026-08-06 已因 PowerShell 编码异常丢失；按上下文重写并锁定 deploy-fast 流程。
-

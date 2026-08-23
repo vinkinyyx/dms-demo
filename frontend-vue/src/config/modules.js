@@ -21,8 +21,8 @@ const products = {
     { k: 'udiRequired', l: 'UDI追溯', w: 80, filter: { type: 'select', options: [{ value: true, label: '是' }, { value: false, label: '否' }] } },
     { k: 'isSerialManaged', l: '序列号管理', w: 90, filter: { type: 'select', options: [{ value: true, label: '是' }, { value: false, label: '否' }] } },
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } }, 
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   form: [
     { key: 'code', label: '产品编码', required: true, group: '基本信息', placeholder: '如 PROD-XXXXX' },
@@ -50,8 +50,8 @@ const categories = {
     { k: 'name', l: '分类名称', filter: { type: 'text' } }, 
     { k: 'sortOrder', l: '排序', w: 80, filter: { type: 'number' } }, 
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } }, 
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   form: [
     { key: 'code', label: '分类编码', required: true, group: '基本信息' },
@@ -73,8 +73,8 @@ const dealers = {
     { k: 'contactPhone', l: '联系电话', w: 120, filter: { type: 'text' } }, 
     { k: 'gspStatus', l: 'GSP资质', w: 90, filter: { type: 'select', options: [{ value: 'active', label: '有效' }, { value: 'expired', label: '已过期' }, { value: 'none', label: '无' }] } }, 
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE_BLOCK } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } }, 
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   form: [
     { key: 'code', label: '经销商编码', required: true, group: '基本信息' },
@@ -104,8 +104,8 @@ const hospitals = {
     { k: 'level', l: '等级', w: 90, filter: { type: 'select', options: [{ value: '三甲', label: '三级甲等' }, { value: '三乙', label: '三级乙等' }, { value: '二甲', label: '二级甲等' }, { value: '二乙', label: '二级乙等' }, { value: '一级', label: '一级' }, { value: '未定', label: '未定级' }] } }, 
     { k: 'phone', l: '联系电话', w: 120, filter: { type: 'text' } }, 
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } }, 
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   form: [
     { key: 'code', label: '医院编码', required: true, group: '基本信息' },
@@ -127,8 +127,8 @@ const warehouses = {
     { k: 'name', l: '仓库名称', filter: { type: 'text' } }, 
     { k: 'type', l: '类型', w: 100, filter: { type: 'select', options: getDictOptions('warehouse_type') } }, 
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } }, 
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],  form: [
     { key: 'code', label: '仓库编码', required: true, group: '基本信息' },
     { key: 'name', label: '仓库名称', required: true, group: '基本信息' },
@@ -146,10 +146,10 @@ const regions = {
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '区域编码', w: 140, filter: { type: 'text' } }, 
     { k: 'name', l: '区域名称', filter: { type: 'text' } }, 
-    { k: 'level', l: '级别', w: 80, filter: { type: 'number' } }, 
+    { k: 'level', l: '级别', w: 80, filter: { type: 'number', range: true } }, 
     { k: 'sortOrder', l: '排序', w: 80, filter: { type: 'number' } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } }, 
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   form: [
     { key: 'code', label: '区域编码', required: true, group: '基本信息' },
@@ -171,8 +171,8 @@ const suppliers = {
     { k: 'phone', l: '联系电话', w: 120, filter: { type: 'text' } }, 
     { k: 'taxNo', l: '税号', w: 160, filter: { type: 'text' } }, 
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE_BLOCK } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } }, 
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   form: [
     { key: 'code', label: '供应商编码', required: true },
@@ -205,8 +205,8 @@ const productPrices = {
     { k: 'inclPrice', l: '含税价', w: 110 },
     { k: 'exclPrice', l: '不含税价', w: 120 },
     { k: 'taxRate', l: '税率', w: 80 },
-    { k: 'validFrom', l: '生效开始', w: 120, filter: { type: 'date' } },
-    { k: 'validTo', l: '生效结束', w: 120, filter: { type: 'date' } },
+    { k: 'validFrom', l: '生效开始', w: 120, filter: { type: 'date', range: true } },
+    { k: 'validTo', l: '生效结束', w: 120, filter: { type: 'date', range: true } },
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } }
   ],
   form: [
@@ -229,11 +229,11 @@ const authorizations = {
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '授权编号', w: 160, filter: { type: 'text' } }, 
     { k: 'dealerName', l: '经销商', filter: { type: 'text' } }, 
-    { k: 'validFrom', l: '生效', w: 110, filter: { type: 'date' } }, 
-    { k: 'validTo', l: '截止', w: 110, filter: { type: 'date' } }, 
+    { k: 'validFrom', l: '生效', w: 110, filter: { type: 'date', range: true } }, 
+    { k: 'validTo', l: '截止', w: 110, filter: { type: 'date', range: true } }, 
     { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'active', label: '启用' }, { value: 'suspended', label: '挂起' }, { value: 'expired', label: '已过期' }] } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } }, 
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   form: [
     { key: 'dealerId', label: '经销商', required: true, type: 'picker', picker: 'dealers', group: '授权主体' },
@@ -299,10 +299,11 @@ const orders = {
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '销售订单号', w: 170, filter: { type: 'text' } },
-    { k: 'dealerName', l: '经销商', w: 200, filter: { type: 'select', remote: 'dealers' } },
-    { k: 'finalAmount', l: '最终金额', w: 120 },
+    { k: 'dealerName', l: '经销商', w: 200, filter: { type: 'resource', resource: 'dealers', paramKey: 'dealerId' } },
+    { k: 'finalAmount', l: '最终金额', w: 120, filter: { type: 'number', range: true } },
     { k: 'status', l: '状态', w: 110, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'PENDING_APPROVAL', label: '审批中' }, { value: 'APPROVED', label: '已审批' }, { value: 'SHIPPING', label: '发货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } },
-    { k: 'createdAt', l: '创建时间', w: 170, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 170, filter: { type: 'datetime', range: true } },
+    { k: 'updatedAt', l: '更新时间', w: 170, filter: { type: 'datetime', range: true } }
   ]
 }
 
@@ -332,12 +333,13 @@ const salesReturns = {
       { value: 'DAMAGED', label: '运输破损' },
       { value: 'OTHER', label: '其他' }
     ] } },
-    { k: 'finalAmount', l: '金额', w: 110, filter: { type: 'number' } },
+    { k: 'finalAmount', l: '金额', w: 110, filter: { type: 'number', range: true } },
     { k: 'status', l: '状态', w: 100, tag: (r) => {
       const map = { DRAFT: 'info', PENDING_APPROVAL: 'warning', APPROVED: 'primary', RECEIVING: 'primary', COMPLETED: 'success', CANCELLED: 'info', REJECTED: 'danger' }
       return { type: map[r.status] || 'info' }
     }, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'PENDING_APPROVAL', label: '审批中' }, { value: 'APPROVED', label: '已审批' }, { value: 'RECEIVING', label: '收货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } },
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ]
 }
 const PURCHASE_LINE_COLS = [
@@ -359,14 +361,14 @@ const purchaseOrders = {
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '采购单号', w: 170, filter: { type: 'text' } }, 
     { k: 'orderType', l: '类型', w: 90, filter: { type: 'select', options: [{ value: 'NORMAL', label: '常规采购' }, { value: 'URGENT', label: '紧急采购' }] } }, 
-    { k: 'supplierName', l: '供应商', filter: { type: 'text' } }, 
-    { k: 'warehouseName', l: '入库仓库', w: 120, filter: { type: 'text' } }, 
-    { k: 'totalAmount', l: '总金额', w: 120, filter: { type: 'number' } }, 
-    { k: 'finalAmount', l: '实付金额', w: 120, filter: { type: 'number' } }, 
+    { k: 'supplierName', l: '供应商', filter: { type: 'resource', resource: 'suppliers', paramKey: 'supplierId' } }, 
+    { k: 'warehouseName', l: '入库仓库', w: 120, filter: { type: 'resource', resource: 'warehouses', paramKey: 'warehouseId' } }, 
+    { k: 'totalAmount', l: '总金额', w: 120, filter: { type: 'number', range: true } }, 
+    { k: 'finalAmount', l: '实付金额', w: 120, filter: { type: 'number', range: true } }, 
     { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'PENDING_APPROVAL', label: '审批中' }, { value: 'APPROVED', label: '已审批' }, { value: 'RECEIVING', label: '收货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } }, 
     { k: 'auditUserName', l: '审核人', w: 90, filter: { type: 'text' } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } }, 
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   form: [
     { key: 'orderType', label: '采购类型', type: 'select', required: true, value: 'NORMAL', group: '采购信息', options: [{ value: 'NORMAL', label: '常规采购' }, { value: 'URGENT', label: '紧急采购' }] },
@@ -389,26 +391,26 @@ const purchaseReturns = {
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '采退单号', w: 170, filter: { type: 'text' } },
-    { k: 'supplierName', l: '供应商', filter: { type: 'text' } },
-    { k: 'warehouseName', l: '出库仓库', w: 120, filter: { type: 'text' } },
-    { k: 'finalAmount', l: '金额', w: 110, filter: { type: 'number' } },
+    { k: 'supplierName', l: '供应商', filter: { type: 'resource', resource: 'suppliers', paramKey: 'supplierId' } },
+    { k: 'warehouseName', l: '出库仓库', w: 120, filter: { type: 'resource', resource: 'warehouses', paramKey: 'warehouseId' } },
+    { k: 'finalAmount', l: '金额', w: 110, filter: { type: 'number', range: true } },
     { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'PENDING_APPROVAL', label: '审批中' }, { value: 'APPROVED', label: '已审批' }, { value: 'SHIPPING', label: '发货中' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }, { value: 'REJECTED', label: '已驳回' }] } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } }
   ]
 }
 const inventory = {
   key: 'inventory', title: '库存查询', api: '/api/inventory', readonly: true,
   cols: [
-    { k: 'productId', l: '产品ID', w: 80, filter: { type: 'number' } }, 
+    { k: 'productId', l: '物料', w: 110, filter: { type: 'resource', resource: 'products', paramKey: 'productId' } }, 
     { k: 'productCode', l: '产品编码', w: 130, filter: { type: 'text' } }, 
     { k: 'productName', l: '产品名称', filter: { type: 'text' } }, 
-    { k: 'warehouseId', l: '仓库ID', w: 80, filter: { type: 'number' } }, 
-    { k: 'warehouseName', l: '仓库', w: 120, filter: { type: 'text' } }, 
+    { k: 'warehouseId', l: '仓库', w: 120, filter: { type: 'resource', resource: 'warehouses', paramKey: 'warehouseId' } }, 
+    { k: 'warehouseName', l: '仓库名称', w: 120, filter: { type: 'text' } }, 
     { k: 'batchNo', l: '批次号', w: 120, filter: { type: 'text' } }, 
     { k: 'serialNo', l: '序列号', w: 130, filter: { type: 'text' } }, 
     { k: 'stockStatus', l: '库存状态', w: 90, filter: { type: 'select', options: [{ value: 'QUALIFIED', label: '合格' },{ value: 'PENDING', label: '待检' },{ value: 'DEFECTIVE', label: '不合格' },{ value: 'QUARANTINED', label: '冻结' }] } }, 
-    { k: 'qty', l: '数量', w: 90, filter: { type: 'number' } }, 
-    { k: 'expDate', l: '到期日', w: 110, filter: { type: 'date' } }, 
+    { k: 'qty', l: '数量', w: 90, filter: { type: 'number', range: true } }, 
+    { k: 'expDate', l: '到期日', w: 110, filter: { type: 'date', range: true } }, 
     { k: 'inSource', l: '入库来源', w: 110, filter: { type: 'text' } }
   ]
 }
@@ -428,8 +430,8 @@ const salesOuts = {
       { value: 'COMPLETED', label: '已完成' },
       { value: 'CANCELLED', label: '已取消' }
     ] } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } },
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   statusActions: {
     DRAFT: [{ key: 'open', label: '打开', path: '/sales-out-edit', type: 'primary', isRoute: true }],
@@ -454,8 +456,8 @@ const receipts = {
       { value: 'COMPLETED', label: '已完成' },
       { value: 'CANCELLED', label: '已取消' }
     ] } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } },
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   statusActions: {
     DRAFT: [
@@ -502,8 +504,8 @@ const stockMoves = {
     { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [
       { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }
     ] } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } },
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   statusActions: {
     COMPLETED: [{ key: 'open', label: '查看', path: '/stock-move-edit', type: 'primary', isRoute: true }],
@@ -529,8 +531,8 @@ const inventoryAdjustments = {
     { k: 'category', l: '调整方向', w: 90, filter: { type: 'select', options: [{ value: 'IN', label: '盘盈(增加)' }, { value: 'OUT', label: '盘亏(扣减)' }] } }, 
     { k: 'type', l: '调整类型', w: 110, filter: { type: 'select', options: [{ value: 'STOCKTAKE', label: '盘点差异' }, { value: 'DAMAGE', label: '报损' }, { value: 'CORRECT', label: '数据修正' }, { value: 'OTHER', label: '其他' }] } }, 
     { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'CONFIRMED', label: '已确认' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }] } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } }, 
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   form: [
     { key: 'warehouseId', label: '仓库', required: true, picker: 'warehouses', group: '调整信息' },
@@ -550,12 +552,12 @@ const surgeryReports = {
     { k: 'code', l: '报台单号', w: 160, filter: { type: 'text' } },
     { k: 'dealerName', l: '经销商', w: 120, filter: { type: 'text' } },
     { k: 'terminalName', l: '医院', w: 120, filter: { type: 'text' } },
-    { k: 'surgeryDate', l: '手术日期', w: 110, filter: { type: 'date' } },
+    { k: 'surgeryDate', l: '手术日期', w: 110, filter: { type: 'date', range: true } },
     { k: 'doctorName', l: '主刀医生', w: 90, filter: { type: 'text' } },
     { k: 'attachmentName', l: '附件', w: 160, filter: { type: 'text' } },
     { k: 'status', l: '状态', w: 90, filter: { type: 'select', options: [{ value: 'DRAFT', label: '草稿' }, { value: 'CONFIRMED', label: '已确认' }, { value: 'COMPLETED', label: '已完成' }, { value: 'CANCELLED', label: '已取消' }] } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } },
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   form: [
     { key: 'dealerId', label: '经销商', required: true, picker: 'dealers', group: '手术信息' },
@@ -587,8 +589,8 @@ const users = {
     { k: 'email', l: '邮箱', filter: { type: 'text' } },
     { k: 'phone', l: '手机号', w: 130 },
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: [{ value: 'active', label: '启用' }, { value: 'inactive', label: '停用' }, { value: 'locked', label: '锁定' }] } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } },
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   form: [
     { key: 'username', label: '账号', required: true, group: '基本信息' },
@@ -613,8 +615,8 @@ const positions = {
     { k: 'parentId', l: '上级岗位', w: 120 },
     { k: 'level', l: '级别', w: 80, filter: { type: 'text' } },
     { k: 'status', l: '状态', w: 80, filter: { type: 'select', options: S_ACTIVE } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } },
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   form: [
     { key: 'code', label: '岗位编码', required: true, group: '基本信息' },
@@ -634,8 +636,8 @@ const roles = {
     { k: 'name', l: '名称', filter: { type: 'text' } }, 
     { k: 'type', l: '类型', w: 90, filter: { type: 'select', options: [{ value: 'system', label: '系统角色' }, { value: 'custom', label: '自定义角色' }] } }, 
     { k: 'description', l: '描述', filter: { type: 'text' } }, 
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } }, 
-    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } }, 
+    { k: 'updatedAt', l: '更新时间', w: 160, filter: { type: 'datetime', range: true } }
   ],
   form: [
     { key: 'code', label: '角色编码', required: true, group: '基本信息' },
@@ -655,7 +657,7 @@ const reportSalesRanking = { ...reportBase, key: 'report-sales-ranking', title: 
     { k: 'orderCount', l: '订单数', w: 80, filter: { type: 'number' } }, 
     { k: 'totalQty', l: '总数量', w: 90, filter: { type: 'number' } }, 
     { k: 'totalAmount', l: '销售总额', w: 130, filter: { type: 'number' } }, 
-    { k: 'lastOrderAt', l: '最近下单', w: 130, filter: { type: 'date' } }
+    { k: 'lastOrderAt', l: '最近下单', w: 130, filter: { type: 'date', range: true } }
   ]
 }
 const reportProductTop10 = { ...reportBase, key: 'report-product-top10', title: '产品销售 TOP10', api: '/api/reports/product-top10',
@@ -690,7 +692,7 @@ const reportSurgeryStats = { ...reportBase, key: 'report-surgery-stats', title: 
     { k: 'city', l: '城市', w: 90, filter: { type: 'text' } }, 
     { k: 'surgeryCount', l: '手术数', w: 80, filter: { type: 'number' } }, 
     { k: 'totalImplants', l: '植入件数', w: 100, filter: { type: 'number' } }, 
-    { k: 'lastSurgeryAt', l: '最近手术', w: 130, filter: { type: 'date' } }
+    { k: 'lastSurgeryAt', l: '最近手术', w: 130, filter: { type: 'date', range: true } }
   ]
 }
 const reportReceivables = { ...reportBase, key: 'report-receivables', title: '应收账款', api: '/api/reports/receivables',
@@ -718,10 +720,10 @@ const reportOrderTrace = { ...reportBase, key: 'report-order-trace', title: '订
       { value: 'CANCELLED', label: '已取消' }
     ] } },
     { k: 'totalAmount', l: '订单金额', w: 120, filter: { type: 'number' } },
-    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'date' } },
-    { k: 'approvedAt', l: '审批时间', w: 160, filter: { type: 'date' } },
-    { k: 'shippedAt', l: '发货时间', w: 160, filter: { type: 'date' } },
-    { k: 'completedAt', l: '完成时间', w: 160, filter: { type: 'date' } }
+    { k: 'createdAt', l: '创建时间', w: 160, filter: { type: 'datetime', range: true } },
+    { k: 'approvedAt', l: '审批时间', w: 160, filter: { type: 'date', range: true } },
+    { k: 'shippedAt', l: '发货时间', w: 160, filter: { type: 'date', range: true } },
+    { k: 'completedAt', l: '完成时间', w: 160, filter: { type: 'date', range: true } }
   ]
 }
 
@@ -814,4 +816,3 @@ export const MODULE_CONFIGS = {
   'report-inventory-turnover': reportInventoryTurnover, 'report-surgery-stats': reportSurgeryStats,
   'report-receivables': reportReceivables, 'report-order-trace': reportOrderTrace
 }
-

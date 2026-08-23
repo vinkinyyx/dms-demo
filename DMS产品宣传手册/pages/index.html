@@ -913,6 +913,18 @@
     <div class="mt-14 space-y-10">
       <div class="changelog-item">
         <div class="flex items-center gap-4 mb-4">
+          <span class="changelog-version">v4.2</span>
+          <span class="changelog-date">2026-08-22</span>
+        </div>
+        <ul class="space-y-2 text-sm text-slate-700 leading-relaxed">
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>胖 Controller 下沉：10 个业务 Controller 逻辑下沉到 Service，行为保持不变</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>Schema 漂移修复：email_logs.duration_ms、product_prices.price_scope、period_yyyymm、Supplier 主键类型全部对齐</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>测试加固：后端测试 130→134 全绿，新增下单→审批→出库→库存扣减主链路集成测试</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>传输接口：库存查询 + 销售/采购订单传输，统一接入接口日志体系（biz_key/biz_action）</span></li>
+        </ul>
+      </div>
+      <div class="changelog-item">
+        <div class="flex items-center gap-4 mb-4">
           <span class="changelog-version">v4.1.0</span>
           <span class="changelog-date">2026-08-22</span>
         </div>
@@ -993,6 +1005,18 @@
           <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>对外开放接口：HMAC-SHA256 签名鉴权，外部系统可创建销售/采购订单</span></li>
           <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>列表页布局统一规范：ListPageLayout 组件 + v-has 按钮级权限指令 + 平台/租户双层覆盖</span></li>
           <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>批量导入"存在即更新"：按编码判重，7 个基础数据模块支持 upsert</span></li>
+        </ul>
+      </div>
+      <div class="changelog-item">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="changelog-version">v3.7</span>
+          <span class="changelog-date">2026-07-31</span>
+        </div>
+        <ul class="space-y-2 text-slate-700 leading-relaxed">
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>销售订单/销售出库完整重构：状态机（DRAFT→APPROVED→SHIPPING→COMPLETED），审批自动生成出库草稿</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>销售出库子单模型：按批次/序列号发货，每张子单独立保存/确认/取消，对齐收货入库</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>采购订单/收货入库三次优化：单号 GR-YYYYMMDD-N、状态机同步、取消级联关闭</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>库存移动：仓内状态调整 + 跨仓移动两种模式，支持隔离/合格/待检四状态</span></li>
         </ul>
       </div>
     </div>
