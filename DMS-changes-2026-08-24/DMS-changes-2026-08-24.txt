@@ -1,0 +1,61 @@
+DMS 项目 2026-08-24 改动文件清单
+========================================================================
+
+共 42 个文件（已排除临时调试脚本、备份和构建产物）
+
+## 产品宣传手册（7 个文件）
+
+  [15:05:21]  380.6 KB  DMS产品宣传手册\assets\41-pc-api-logs-new.png
+  [15:05:07]  274.2 KB  DMS产品宣传手册\assets\42-pc-bom-new.png
+  [15:05:13]  447.3 KB  DMS产品宣传手册\assets\43-pc-promotions-new.png
+  [15:05:26]  200.1 KB  DMS产品宣传手册\assets\44-pc-page-config-new.png
+  [15:15:03]   69.9 KB  DMS产品宣传手册\pages\index.html
+  [15:17:28]   75.6 KB  DMS产品宣传手册\pages\mobile.html
+  [15:24:29]   62.3 KB  DMS产品宣传手册\pages\print.html
+
+## 前端业务前台（5 个文件）
+
+  [11:58:53]   89.5 KB  frontend-vue\src\components\CrudView.vue
+  [11:56:18]   60.8 KB  frontend-vue\src\config\modules.js
+  [13:01:15]   14.2 KB  frontend-vue\src\utils\dict.js
+  [12:46:09]   16.5 KB  frontend-vue\src\views\ResourceDetail.vue
+  [11:57:37]    8.0 KB  frontend-vue\src\views\order\OrderDetail.vue
+
+## 工具脚本（25 个文件）
+
+  [12:16:29]     762 B  tools\check_lookups.sh
+  [12:16:49]     549 B  tools\check_lookups2.sh
+  [12:17:08]     379 B  tools\check_lookups3.sh
+  [12:18:54]     775 B  tools\check_lookups4.sh
+  [12:19:13]     460 B  tools\check_lookups5.sh
+  [12:19:35]     844 B  tools\check_lookups6.sh
+  [11:03:45]   17.8 KB  tools\deep-audit.cjs
+  [12:12:57]     804 B  tools\deploy_fe.sh
+  [12:09:58]     771 B  tools\extract_fe.py
+  [12:14:41]    1.4 KB  tools\inspect_data.sh
+  [12:15:25]     784 B  tools\inspect_data2.sh
+  [12:36:15]    1.4 KB  tools\patch_build_deploy.sh
+  [12:46:39]    1.5 KB  tools\patch_build_deploy_c.sh
+  [12:53:46]    1.2 KB  tools\patch_build_deploy_d.sh
+  [12:56:48]    1.2 KB  tools\patch_build_deploy_e.sh
+  [11:15:36]    3.2 KB  tools\probe-api-token.cjs
+  [11:09:08]   40.3 KB  tools\probe-mobile-after.png
+  [11:09:05]   41.6 KB  tools\probe-mobile-before-click.png
+  [11:08:49]    2.2 KB  tools\probe-mobile.cjs
+  [11:14:27]    1.5 KB  tools\probe-mobile2.cjs
+  [12:19:47]     340 B  tools\rebuild.sh
+  [12:21:30]     638 B  tools\redeploy.sh
+  [11:17:24]    8.4 KB  tools\ux-evidence.cjs
+  [12:14:15]    1.5 KB  tools\verify_fe.sh
+  [00:55:16]    4.2 KB  tools\verify_skills.py
+
+## 文档（3 个文件）
+
+  [00:06:46]    2.9 KB  docs\02_设计\v4.0.0\DMS_v4.0.0-bugfix.6_技术设计.md
+  [00:06:46]    5.4 KB  docs\04_接管运维\七天接管计划.md
+  [00:06:46]    4.8 KB  docs\文档索引.md
+
+## 根目录（2 个文件）
+
+  [00:51:24]   17.0 KB  AGENTS.md
+  [00:51:24]  128.1 KB  CHANGELOG.md

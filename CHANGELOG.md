@@ -1,3 +1,36 @@
+## v4.2.8 (2026-08-25) - 演示前 RBAC 修复、部署脚本修复、移动端 UX 收尾
+
+### 修复
+- **部署脚本致命错误** `scripts/deploy_test.py`：前端构建 base 路径错误（业务前台需 `VITE_BASE=/dms/`，admin 为 `/dms/admin/`），且解压目标路径与 nginx alias 不一致，导致部署后整站 500。重写脚本：前端解压到 `/opt/dms/test/frontend/dms/`，后台到 `dms/admin/`，landing 页保留到根
+- **RBAC 权限码不匹配** 业务角色被授予 `products:view`（带 s），而 `ProductController` 的 `@PreAuthorize` 要求 `product:view`（不带 s），导致销售/客服/商务/财务/合同无法查看产品；V114 还过度回收了促销查看权限。新增 V116/V117/V118 迁移，统一补授 `product:view/search`、`promotion:view/search`、`product_price:view/search` 给业务角色
+- **经销商越权查看价格/促销** 多角色共享同一组策略，DB 层无法隔离；在 `PermissionChecker` 新增 `isDealer()` 方法，`ProductPriceController`/`PromotionController` 类级别加 `and !@perm.isDealer()` 条件，经销商类角色（DEALER_ADMIN/SERVICE/SALES）返回 403
+- **`ProductPriceController` 缺类级权限注解** 原本只有方法级 `@PreAuthorize`，list/detail 完全无保护，补上类级 `product_price:view/search`
+- **移动端业绩入口跳 PC 路由** `MDashboard.vue` 的 `goReport()` 跳 `/reports?key=...`（PC 路由），在移动端显示异常；改为 Toast 提示"详细报表请在 PC 端查看"
+- **移动端表单只读 picker 长文本截断** `MSurgeryReportCreate.vue` 根元素缺少 scoped class，`:deep()` 样式完全不生效；补 class 后收窄 label（60px）、缩小字号（11px）、ellipsis 截断；`MOrderCreate.vue` 同步处理
+
+### 验证
+- 三端部署至 http://43.128.145.141/ ，健康检查 UP，landing/pc/admin/mobile 均 200
+- 后台管理审计 12/12 PASS（厂家租户/经销商租户/租户管理员/角色模板/平台菜单/页面配置/全局字典/接口日志/审计日志/报表总览）
+- RBAC 矩阵 9 角色 × 8 端点全部正确：非管理员 users/roles 返回 403；dealer_admin promotions/product-prices 返回 403；业务角色 products/promotions/product-prices/sales-orders/dealers/dashboard 均 200
+- PC 业务流 29/29 PASS（报表 9 项/岗位业绩/经销商画像/合同/销退/邮件日志/手术报台/促销/BOM/审批模板 SALES_ORDER_ENABLED）
+- PC UX 14 PASS / 3 WARN（均为非缺陷：筛选 popover、导出直接下载、经销商详情为独立页面）/ 0 FAIL，Console 与网络无错误
+- 移动端深度审计 4 PASS、0 major/critical、2 minor（只读 picker 在 393px 窄屏 ellipsis 截断，不影响功能）
+## v4.2.7 (2026-08-24) - Skill 驱动的需求准入与深度 QA 流程增强
+> 流程增强（不升应用版本）。针对用户反馈“测试浮于表面、UI/UX/功能价值未真正验证、需求理解不准”，安装并固化 QA/浏览器 Skill，同时把 DMS 项目方法论凝练为专属 Skill。
+
+### 新增/固化
+- 安装 `qa-skills`、官方 `playwright`、官方 `screenshot` 到 `~/.codex/skills/`
+- 创建 DMS 专属 Skill：`dms-project`、`dms-requirement-intake`、`dms-ux-functional-audit`
+- AGENTS.md 第 10 节扩展为完整 Skill 工作流：阶段 A 强制需求准入，阶段 C 强制 UI/UX/业务功能审计
+- `.memory/layers/layer1-rules.md`、`layer4-decisions.md`、`layer5-context.md`、`index.md`、`requirement-closure.md` 同步写入新流程
+- 拉取 `obra/superpowers` 与 `genkovich/sdd` 到 `~/.codex/skill-evaluation/` 作为参考，未全量启用
+
+### 验证
+- 已校验 8 个必备 Skill 均存在 `SKILL.md`、frontmatter 完整、无 `U+FFFD` 乱码
+- 已校验 `qa-skills` 核心 UX/adversarial/mobile/validation/playwright 文件存在
+- 已校验 AGENTS 与 `.memory` 更新文件均包含新 Skill 流程且无新增乱码
+- 本次未改业务代码、未部署、未运行浏览器冒烟；后续首个业务任务将按新流程执行真实浏览器验证
+
 ## v4.2.7 (2026-08-23) - 日期时间筛选支持时分秒 + 选完结束日期弹层不消失 + 宽表筛选漏斗可点击
 > PATCH 版本。针对 v4.2.6 部署后用户反馈：1) 日期时间筛选控件只能选日期、不能选时间；2) 选完结束日期后控件自动消失，无法筛选；另修复产品等宽表页面筛选漏斗被固定操作列遮挡而无法点击的问题。
 

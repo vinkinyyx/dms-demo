@@ -1,0 +1,27 @@
+const { chromium } = require('playwright');
+const BASE='http://43.128.145.141/dms';
+(async()=>{
+ const browser=await chromium.launch({headless:true});
+ const ctx=await browser.newContext({viewport:{width:393,height:852},isMobile:true,hasTouch:true,deviceScaleFactor:2});
+ const page=await ctx.newPage();
+ const nets=[];
+ page.on('response',async r=>{const u=r.url(); if(u.includes('/api/')) nets.push({s:r.status(),m:r.request().method(),u:u.replace(BASE,''),b:(await r.text().catch(()=>'')).slice(0,500)});});
+ await page.goto(BASE+'/mobile/login',{waitUntil:'domcontentloaded'}); await page.waitForTimeout(1000);
+ await page.locator('.van-field').filter({hasText:'租户'}).locator('input').fill('default');
+ await page.locator('.van-field').filter({hasText:'账号'}).locator('input').fill('sys_admin');
+ await page.locator('input[type=password]').first().fill('Dms@123456');
+ await page.getByRole('button',{name:/登\s*录/}).click();
+ await page.waitForURL(u=>!u.pathname.includes('/login'),{timeout:15000}).catch(()=>{});
+ await page.waitForTimeout(2000);
+ await page.goto(BASE+'/mobile/orders/create',{waitUntil:'domcontentloaded'}); await page.waitForTimeout(1500);
+ await page.locator('.van-field').filter({hasText:'经销商'}).first().click(); await page.waitForTimeout(500);
+ await page.locator('.van-picker:visible .van-picker-column__item').filter({hasNotText:/^请选择/}).first().click();
+ await page.locator('.van-picker:visible .van-picker__confirm').first().click();
+ await page.waitForTimeout(500);
+ await page.locator('.van-field').filter({hasText:'产品'}).first().click();
+ await page.waitForTimeout(3000);
+ console.log('popup html',await page.locator('.van-popup:visible').first().innerHTML().catch(e=>e.message));
+ console.log('nets products', nets.filter(n=>n.u.includes('products')));
+ await page.screenshot({path:'D:/Workspace/TRAE/DMS/automation_test/v4-browser-results/probe-product.png',fullPage:true});
+ await browser.close();
+})();

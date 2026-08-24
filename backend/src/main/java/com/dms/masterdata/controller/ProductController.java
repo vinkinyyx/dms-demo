@@ -3,6 +3,8 @@
  */
 package com.dms.masterdata.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import com.dms.annotation.OperationLog;
 import com.dms.common.ApiResponse;
 import com.dms.common.BusinessException;
@@ -26,6 +28,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@PreAuthorize("@perm.hasAny('product:view','product:search')")
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
 @Validated
@@ -86,6 +89,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@perm.hasAny('product:edit')")
     @OperationLog(businessType = "product", action = OperationAction.UPDATE, remark = "产品管理-更新")
     public ApiResponse<Product> update(@PathVariable Long id, @RequestBody Product request) {
         return ApiResponse.ok(service.update(id, request));
@@ -98,6 +102,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perm.hasAny('product:delete')")
     @OperationLog(businessType = "product", action = OperationAction.DELETE, remark = "产品管理-删除")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         service.deleteById(id);
@@ -137,6 +142,7 @@ public class ProductController {
     }
 
     @PostMapping("/batch-import")
+    @PreAuthorize("@perm.hasAny('product:import')")
     @OperationLog(businessType = "product", action = OperationAction.CREATE, remark = "产品管理-批量导入")
     public ApiResponse<java.util.Map<String, Object>> batchImport(@RequestParam("file") MultipartFile file) throws Exception {
         if (file.isEmpty()) {

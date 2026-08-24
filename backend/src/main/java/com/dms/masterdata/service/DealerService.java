@@ -10,6 +10,8 @@ import com.dms.common.PageResult;
 import com.dms.common.util.TenantContext;
 import com.dms.masterdata.entity.Dealer;
 import com.dms.masterdata.repository.DealerRepository;
+import com.dms.security.DataScope;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,6 +32,7 @@ public class DealerService {
     private final DealerRepository repository;
     private final ReferenceCheckService referenceCheckService;
     private final com.dms.execution.service.AuditLogService opLog;
+    private final DataScope dataScope;
 
     @Transactional(readOnly = true)
     public PageResult<Dealer> list(PageQuery pageQuery) {
@@ -39,7 +42,19 @@ public class DealerService {
     @Transactional(readOnly = true)
     public PageResult<Dealer> list(PageQuery pageQuery, java.util.Map<String, String> filters) {
         UUID tenantId = TenantContext.getTenantId();
-        var spec = com.dms.common.util.SpecUtil.<Dealer>byTenantAndFilters(tenantId, filters);
+        var base = com.dms.common.util.SpecUtil.<Dealer>byTenantAndFilters(tenantId, filters);
+        java.util.Set<Long> allowed = dataScope.accessibleDealerIds();
+        org.springframework.data.jpa.domain.Specification<Dealer> spec = base;
+        if (allowed != null) {
+            if (allowed.isEmpty()) {
+                return PageResult.of(Page.empty(pageQuery.toPageable()));
+            }
+            spec = spec.and((root, q, cb) -> {
+                q.distinct(true);
+                Predicate p = root.get("id").in(allowed);
+                return p;
+            });
+        }
         Page<Dealer> page = repository.findAll(spec, pageQuery.toPageable());
         return PageResult.of(page);
     }

@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="m-surgery-create">
     <van-nav-bar title="手术植入报台" left-arrow @click-left="$router.back()" />
 
     <van-cell-group inset title="基本信息" style="margin-top:10px">
@@ -117,7 +117,7 @@
         </template>
       </van-nav-bar>
       <van-search v-model="productKeyword" placeholder="搜索编码 / 名称 / 规格" />
-      <van-list :loading="loadingProducts" :finished="finishedProducts" finished-text="没有更多了" @load="loadProducts">
+      <van-list :loading="loadingProducts" :finished="finishedProducts" :finished-text="productOptions.length ? '没有更多了' : '该经销商暂无授权产品'" @load="loadProducts">
         <van-cell
           v-for="p in productOptions" :key="p.value"
           :title="p.label" :label="(p.spec || '') + (p.isSerialManaged ? ' · 序列号管理' : '')"
@@ -387,5 +387,8 @@ onMounted(() => {
 .line-card:last-child { border-bottom: 0; }
 .line-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .line-no { font-size: 13px; color: var(--dms-text-4); }
-.submit-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 10px 16px; background: var(--dms-bg-container); box-shadow: 0 -2px 8px rgba(0,0,0,.05); z-index: 10; }
+.submit-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 10px 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); background: var(--dms-bg-container); box-shadow: 0 -2px 8px rgba(0,0,0,.05); z-index: 10; }
+.m-surgery-create :deep(.van-field__label) { width: 60px !important; flex: none; font-size: 13px; }
+.m-surgery-create :deep(.van-field__value) { flex: 1 1 auto !important; min-width: 0; }
+.m-surgery-create :deep(.van-field__control) { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; font-size: 11px !important; }
 </style>

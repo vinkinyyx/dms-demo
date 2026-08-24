@@ -152,6 +152,54 @@ class V4CalculatorPromotionTest {
     }
 
     @Test
+    void fullReduction_snakeCaseAmountThreshold_matchesSeededPromoShape() {
+        // 种子数据 V7 促销 rule_detail 使用下划线 + 金额门槛：
+        // {threshold_amount:10000, discount:500}
+        stubProduct(1L, "SKU1", "Item 1", new BigDecimal("0.13"), null);
+        stubStandalonePrice(1L, new BigDecimal("1000"));
+        lenient().when(pricing.isBom(any(), anyLong())).thenReturn(false);
+        Tuple promo = promo(910L, "FULL_REDUCTION", "满10000减500", null, null, null);
+        Tuple rule = rule(mapOf("threshold_amount", 10000, "discount", 500, "discount_type", "AMOUNT"));
+        when(pricing.activePromotions(TID, DEALER)).thenReturn(List.of(promo));
+        when(pricing.promotionRules(910L)).thenReturn(List.of(rule));
+
+        // 12 件 * 1000 = 12000，达到门槛，减 500
+        V4CalcResult result = calculator.expand(TID, DEALER, List.of(
+                Map.of("productId", 1L, "qty", new BigDecimal("12"))),
+                true, null, BigDecimal.ZERO);
+        List<V4Line> paid = result.getLines().stream().filter(l -> !l.isGift()).toList();
+        BigDecimal totalPromo = paid.stream().map(V4Line::getPromoDiscountAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(totalPromo.setScale(2, java.math.RoundingMode.HALF_UP)).isEqualByComparingTo("500.00");
+        BigDecimal totalFinal = paid.stream().map(V4Line::getFinalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(totalFinal).isEqualByComparingTo("11500.00");
+
+        // 6 件 = 6000，未达门槛，不减免
+        V4CalcResult below = calculator.expand(TID, DEALER, List.of(
+                Map.of("productId", 1L, "qty", new BigDecimal("6"))),
+                true, null, BigDecimal.ZERO);
+        BigDecimal belowPromo = below.getLines().stream().filter(l -> !l.isGift())
+                .map(V4Line::getPromoDiscountAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(belowPromo).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void moqGift_snakeCaseThreshold_addsGift() {
+        stubProduct(1L, "SKU1", "Item 1", new BigDecimal("0.13"), null);
+        stubProduct(999L, "GIFT", "Free Gift", new BigDecimal("0.13"), null);
+        stubStandalonePrice(1L, new BigDecimal("100"));
+        lenient().when(pricing.isBom(any(), anyLong())).thenReturn(false);
+        Tuple promo = promo(911L, "GIFT", "买10赠1", null, null, null);
+        Tuple rule = rule(mapOf("threshold_qty", 10, "gift_product_id", 999, "gift_qty", 1));
+        when(pricing.activePromotions(TID, DEALER)).thenReturn(List.of(promo));
+        when(pricing.promotionRules(911L)).thenReturn(List.of(rule));
+
+        V4CalcResult result = calculator.expand(TID, DEALER, List.of(
+                Map.of("productId", 1L, "qty", new BigDecimal("10"))),
+                true, null, BigDecimal.ZERO);
+        V4Line gift = result.getLines().stream().filter(V4Line::isGift).findFirst().orElseThrow();
+        assertThat(gift.getProductId()).isEqualTo(999L);
+    }
+    @Test
     void bomParent_isExcludedFromPromotionAndTotal() {
         when(pricing.isBom(TID, 500L)).thenReturn(true);
         when(pricing.currentBomVersion(TID, 500L)).thenReturn("1");

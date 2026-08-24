@@ -7,6 +7,7 @@ package com.dms.system.controller;
 import com.dms.common.ApiResponse;
 import com.dms.common.util.TenantContext;
 import com.dms.common.util.PagingUtil;
+import com.dms.security.DataScope;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import java.util.*;
 public class LookupController {
 
     private final EntityManager em;
+    private final DataScope dataScope;
 
     /** 经销商 lookup */
     @GetMapping("/dealers")
@@ -32,11 +34,22 @@ public class LookupController {
     public ApiResponse<List<Map<String, Object>>> dealers(
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "50") int limit) {
+        java.util.Set<Long> allowed = dataScope.accessibleDealerIds();
+        if (allowed != null && allowed.isEmpty()) {
+            return ApiResponse.ok(java.util.Collections.emptyList());
+        }
+        String baseSql = "SELECT id, code, name, level, status FROM dealers";
+        StringBuilder extra = new StringBuilder();
+        if (allowed != null) {
+            extra.append(" id IN (");
+            extra.append(String.join(",", allowed.stream().map(String::valueOf).toList()));
+            extra.append(")");
+        }
         return ApiResponse.ok(genericLookup(
-                "SELECT id, code, name, level, status FROM dealers",
+                baseSql,
                 "code", "name",
                 new String[]{"id", "code", "name", "level", "status"},
-                keyword, limit, true, true));
+                keyword, limit, true, true, extra.toString()));
     }
 
     /** 产品 lookup - 支持按经销商授权过滤（v3.4.5） */
@@ -56,6 +69,21 @@ public class LookupController {
         // v3.7.9: 模糊搜索增加规格 spec；支持分页 page/size 返回 {total,list}；默认上限 500
         StringBuilder from = new StringBuilder(" FROM products p ");
         boolean withDealer = dealerId != null;
+        // 降级：若该经销商没有任何有效 ORDER 授权记录，返回全部在售产品，避免因缺授权数据阻断下单/报台。
+        if (withDealer) {
+            var authCheck = em.createNativeQuery(
+                    "SELECT COUNT(1) FROM authorizations a WHERE a.tenant_id = :tid AND a.dealer_id = :did " +
+                    "  AND COALESCE(a.status,'active') = 'active' " +
+                    "  AND (a.auth_type IS NULL OR a.auth_type = 'ORDER') " +
+                    "  AND (a.valid_from IS NULL OR a.valid_from <= CURRENT_DATE) " +
+                    "  AND (a.valid_to IS NULL OR a.valid_to >= CURRENT_DATE)");
+            authCheck.setParameter("tid", tid);
+            authCheck.setParameter("did", dealerId);
+            long authCount = ((Number) authCheck.getSingleResult()).longValue();
+            if (authCount == 0) {
+                withDealer = false;
+            }
+        }
         if (withDealer) {
             from.append("JOIN authorizations a ON a.tenant_id = p.tenant_id AND a.dealer_id = :did " +
                     "  AND COALESCE(a.status,'active') = 'active' " +
@@ -386,6 +414,13 @@ public class LookupController {
     private List<Map<String, Object>> genericLookup(
             String baseSql, String codeCol, String nameCol,
             String[] outCols, String keyword, int limit, boolean filterTenant, boolean filterDeleted) {
+        return genericLookup(baseSql, codeCol, nameCol, outCols, keyword, limit, filterTenant, filterDeleted, null);
+    }
+
+    private List<Map<String, Object>> genericLookup(
+            String baseSql, String codeCol, String nameCol,
+            String[] outCols, String keyword, int limit, boolean filterTenant, boolean filterDeleted,
+            String extraWhere) {
         StringBuilder sql = new StringBuilder(baseSql);
         Map<String, Object> params = new HashMap<>();
         List<String> conds = new ArrayList<>();
@@ -395,6 +430,9 @@ public class LookupController {
         }
         if (filterDeleted) {
             conds.add("deleted_at IS NULL");
+        }
+        if (extraWhere != null && !extraWhere.isBlank()) {
+            conds.add("(" + extraWhere + ")");
         }
         if (keyword != null && !keyword.isBlank()) {
             conds.add("(" + codeCol + " ILIKE :kw OR " + nameCol + " ILIKE :kw)");

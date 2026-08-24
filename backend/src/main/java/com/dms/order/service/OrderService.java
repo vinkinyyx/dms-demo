@@ -28,6 +28,7 @@ import com.dms.promotion.dto.PromotionEvaluationResult;
 import com.dms.promotion.dto.PromotionHit;
 import com.dms.promotion.dto.PromotionLine;
 import com.dms.promotion.service.PromotionEngine;
+import com.dms.security.DataScope;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +58,7 @@ public class OrderService {
     private final DocNoGenerator docNoGenerator;
     private final AuthorizationService authorizationService;
     private final PromotionEngine promotionEngine;
+    private final DataScope dataScope;
 
     @PersistenceContext
     private jakarta.persistence.EntityManager em;
@@ -69,9 +71,24 @@ public class OrderService {
     @Transactional(readOnly = true)
     public PageResult<Order> list(PageQuery pageQuery) {
         UUID tenantId = TenantContext.getTenantId();
-        Page<Order> page = tenantId == null
+        java.util.Set<Long> allowed = tenantId == null ? null : dataScope.accessibleDealerIds();
+        String keyword = pageQuery.getKeyword();
+        if (allowed != null && allowed.isEmpty()) {
+            return PageResult.of(org.springframework.data.domain.Page.empty(pageQuery.toPageable()));
+        }
+        org.springframework.data.jpa.domain.Specification<Order> spec = (root, q, cb) -> {
+            var preds = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+            if (tenantId != null) preds.add(cb.equal(root.get("tenantId"), tenantId));
+            if (allowed != null) preds.add(root.get("dealerId").in(allowed));
+            if (keyword != null && !keyword.isBlank()) {
+                String kw = "%" + keyword.trim() + "%";
+                preds.add(cb.or(cb.like(root.get("code"), kw), cb.like(root.get("status"), kw)));
+            }
+            return cb.and(preds.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+        Page<Order> page = (tenantId == null && keyword == null)
                 ? orderRepository.findAll(pageQuery.toPageable())
-                : orderRepository.findByTenantId(tenantId, pageQuery.toPageable());
+                : orderRepository.findAll(spec, pageQuery.toPageable());
         page.getContent().forEach(o -> {
             if (o.getDealerId() != null) o.setDealerName(lookupName("dealers", o.getDealerId()));
             if (o.getRefOrderId() != null) o.setRefOrderCode(lookupCode("orders", o.getRefOrderId()));

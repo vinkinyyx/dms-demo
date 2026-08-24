@@ -1,5 +1,7 @@
 package com.dms.masterdata.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import com.dms.common.ApiResponse;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.dms.masterdata.service.ProductPriceService;
 
 @RequestMapping("/api/product-prices")
+@PreAuthorize("@perm.hasAny('product_price:view','product_price:search') and !@perm.isDealer()")
 @RestController
 @RequiredArgsConstructor
 @Validated
@@ -38,21 +41,25 @@ public class ProductPriceController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@perm.hasAny('product_price:edit')")
     public ApiResponse<Map<String, Object>> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         return service.update(id, body);
     }
 
     @PostMapping("/{id}/activate")
+    @PreAuthorize("@perm.hasAny('product_price:edit')")
     public ApiResponse<Map<String, Object>> activate(@PathVariable Long id) {
         return service.activate(id);
     }
 
     @PostMapping("/{id}/deactivate")
+    @PreAuthorize("@perm.hasAny('product_price:edit')")
     public ApiResponse<Map<String, Object>> deactivate(@PathVariable Long id) {
         return service.deactivate(id);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@perm.hasAny('product_price:delete')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         return service.delete(id);
     }

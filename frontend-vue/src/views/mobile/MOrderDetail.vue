@@ -2,31 +2,31 @@
   <div>
     <van-nav-bar title="订单详情" left-arrow @click-left="$router.back()" />
     <div v-if="loading" class="loading"><van-loading type="spinner" /></div>
-    <div v-else-if="!data" class="empty"><van-empty description="订单不存在" /></div>
+    <div v-else-if="!order" class="empty"><van-empty description="订单不存在" /></div>
     <div v-else class="detail-body">
-      <div class="status-bar" :class="'st-' + (data.status || '').toLowerCase()">
-        <div class="st-text">{{ statusText(data.status) }}</div>
-        <div class="st-code">{{ data.code }}</div>
+      <div class="status-bar" :class="'st-' + (order.status || '').toLowerCase()">
+        <div class="st-text">{{ statusText(order.status) }}</div>
+        <div class="st-code">{{ order.code }}</div>
       </div>
 
       <van-cell-group inset title="基本信息" style="margin-top:10px">
-        <van-cell title="单号" :value="data.code" />
+        <van-cell title="单号" :value="order.code || '-'" />
         <van-cell title="订单类型" :value="orderTypeLabel" />
-        <van-cell title="经销商" :value="data.dealerName || '-'" />
-        <van-cell title="仓库" :value="data.warehouseName || '-'" />
-        <van-cell title="订单日期" :value="(data.orderDate || data.createdAt || '').toString().substring(0, 10)" />
-        <van-cell v-if="data.expectedDate" title="期望到货" :value="data.expectedDate" />
-        <van-cell title="创建时间" :value="fmtDate(data.createdAt)" />
-        <van-cell v-if="data.remark" title="备注" :value="data.remark" />
+        <van-cell title="经销商" :value="dealerDisplay" />
+        <van-cell title="仓库" :value="order.warehouseName || '-'" />
+        <van-cell title="订单日期" :value="fmtDate(order.orderDate || order.createdAt)" />
+        <van-cell v-if="order.expectedDate" title="期望到货" :value="fmtDate(order.expectedDate)" />
+        <van-cell title="创建时间" :value="fmtDate(order.createdAt)" />
+        <van-cell v-if="order.remark" title="备注" :value="order.remark" />
       </van-cell-group>
 
       <van-cell-group inset title="产品明细" style="margin-top:10px">
         <div v-if="lines.length">
           <van-cell
             v-for="(line, idx) in lines" :key="idx"
-            :title="(line.productName || line.productCode) + (line.spec ? ' / ' + line.spec : '')"
-            :label="'数量 ' + (line.qty || 0) + ' × 单价 ¥' + (line.unitPrice || 0)"
-            :value="'¥ ' + ((line.qty || 0) * (line.unitPrice || 0)).toFixed(2)"
+            :title="lineTitle(line)"
+            :label="'数量 ' + (line.qty || 0) + ' × 单价 ¥' + Number(line.unitPrice || 0).toFixed(2)"
+            :value="'¥ ' + Number((line.qty || 0) * (line.unitPrice || 0)).toFixed(2)"
           />
           <van-cell title="合计" title-class="total-title" :value="'¥ ' + totalAmount" value-class="total-value" />
         </div>
@@ -40,21 +40,35 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getResource } from '@/api/crud'
+import request from '@/utils/request'
 import { statusText } from '@/utils/dict'
 
 const route = useRoute()
 const id = route.params.id
 const loading = ref(true)
-const data = ref(null)
+const order = ref(null)
+const lines = ref([])
+const productMap = ref({})
+const dealerName = ref('')
 
-const lines = computed(() => data.value?.lines || data.value?.items || [])
 const orderTypeLabel = computed(() => {
-  const t = data.value?.orderType
+  const t = order.value?.orderType
   if (!t) return '-'
-  const map = { NORMAL: '常规', SHORTAGE: '缺货补料', CUSTOM: '定制', EMERGENCY: '应急', URGENT: '紧急采购' }
+  const map = { SALES: '销售订单', PURCHASE: '采购订单', NORMAL: '常规', SHORTAGE: '缺货补料', CUSTOM: '定制', EMERGENCY: '应急', URGENT: '紧急采购' }
   return map[t] || t
 })
+
+const dealerDisplay = computed(() => order.value?.dealerName || dealerName.value || '-')
+
 const totalAmount = computed(() => lines.value.reduce((s, l) => s + (Number(l.qty || 0) * Number(l.unitPrice || 0)), 0).toFixed(2))
+
+function lineTitle(line) {
+  const name = line.productName || productMap.value[line.productId]?.name || line.productCode || ''
+  const code = line.productCode || productMap.value[line.productId]?.code || ''
+  const spec = line.spec || productMap.value[line.productId]?.spec || ''
+  const label = [code, name].filter(Boolean).join(' ')
+  return spec ? `${label} / ${spec}` : label
+}
 
 function fmtDate(v) {
   if (!v) return '-'
@@ -64,9 +78,31 @@ function fmtDate(v) {
 onMounted(async () => {
   try {
     const res = await getResource('/api/orders', id)
-    data.value = res.data || null
+    const payload = res.data || null
+    if (payload) {
+      order.value = payload.order || payload
+      const rawLines = payload.lines || payload.items || []
+      lines.value = rawLines
+      const dealerId = order.value?.dealerId
+      if (dealerId) {
+        try {
+          const d = await getResource('/api/dealers', dealerId)
+          dealerName.value = d.data?.name || d.data?.dealerName || ''
+        } catch (e) { /* ignore */ }
+      }
+      const productIds = [...new Set(rawLines.map(l => l.productId).filter(Boolean))]
+      if (productIds.length) {
+        try {
+          const { data } = await request({ url: '/api/lookups/products', method: 'get', params: { limit: 500 } })
+          const list = Array.isArray(data) ? data : (data?.list || [])
+          const map = {}
+          list.forEach(p => { map[p.id] = { name: p.name || p.nameCn, code: p.code, spec: p.spec } })
+          productMap.value = map
+        } catch (e) { /* ignore */ }
+      }
+    }
   } catch (e) {
-    data.value = null
+    order.value = null
   } finally {
     loading.value = false
   }

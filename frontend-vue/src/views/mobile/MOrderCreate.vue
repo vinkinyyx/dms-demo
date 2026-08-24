@@ -114,7 +114,7 @@
         </template>
       </van-nav-bar>
       <van-search v-model="productKeyword" placeholder="搜索编码 / 名称 / 规格" />
-      <van-list :loading="loadingProducts" :finished="finishedProducts" finished-text="没有更多了" @load="loadProducts">
+      <van-list :loading="loadingProducts" :finished="finishedProducts" :finished-text="productOptions.length ? '没有更多了' : '该经销商暂无授权产品'" @load="loadProducts">
         <van-cell
           v-for="p in productOptions" :key="p.value"
           :title="p.label" :label="(p.spec || '') + (p.unit ? ' / ' + p.unit : '')"
@@ -344,7 +344,12 @@ onMounted(() => {
 .line-cell { flex: 1; }
 .cell-l { font-size: 12px; color: var(--dms-text-3); margin-bottom: 4px; }
 .line-sub { display: flex; justify-content: space-between; font-size: 12px; color: var(--dms-text-4); margin-top: 6px; }
-.submit-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 10px 16px; background: var(--dms-bg-container); box-shadow: 0 -2px 8px rgba(0,0,0,.05); z-index: 10; }
+.submit-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 10px 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); background: var(--dms-bg-container); box-shadow: 0 -2px 8px rgba(0,0,0,.05); z-index: 10; }
+.m-order-create :deep(.van-field__label) { width: 60px !important; flex: none; font-size: 13px; }
+.m-order-create .line-card :deep(.van-field__label) { width: 50px !important; }
+.m-order-create :deep(.van-field__value) { flex: 1 1 auto !important; min-width: 0; overflow: hidden; }
+.m-order-create :deep(.van-field__control) { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; font-size: 11px !important; }
+.m-order-create :deep(textarea.van-field__control) { white-space: pre-wrap !important; word-break: break-all; overflow: auto !important; font-size: 13px !important; }
 .total-title { font-weight: 600; }
 .total-value { color: var(--dms-color-danger); font-weight: 700; }
 </style>

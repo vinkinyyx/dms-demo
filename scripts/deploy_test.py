@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Deploy DMS test environment without hard-coded credentials."""
+"""Deploy DMS test environment without hard-coded credentials.
+
+Layout on server (matches nginx.conf):
+  /opt/dms/test/frontend/index.html      -> landing page (root /)
+  /opt/dms/test/frontend/dms/            -> business frontend (served at /dms/)
+  /opt/dms/test/frontend/dms/admin/      -> platform admin (served at /dms/admin/)
+"""
 import io
 import os
 import tarfile
@@ -18,16 +24,21 @@ ROOT = Path(__file__).resolve().parents[1]
 JAR = ROOT / "backend/target/dms-backend.jar"
 FRONT = ROOT / "frontend-vue/dist"
 ADMIN = ROOT / "admin-vue/dist"
+LANDING = ROOT / "deploy/landing/index.html"
 for path in (JAR, FRONT / "index.html", ADMIN / "index.html"):
     if not path.exists():
         raise SystemExit(f"Missing build artifact: {path}")
 
-# Guard: 测试环境 admin 以 /admin/ 提供，资源前缀必须匹配（生产才是 /dms/admin/）。
-admin_index = (ADMIN / "index.html").read_text(encoding="utf-8")
-if 'src="/admin/' not in admin_index and 'href="/admin/' not in admin_index:
+front_index = (FRONT / "index.html").read_text(encoding="utf-8")
+if "/dms/assets/" not in front_index:
     raise SystemExit(
-        "admin 构建的资源基路径不是 /admin/（测试环境要求）。"
-        "请用 VITE_BASE=/admin/ 重新构建 admin-vue（生产才用默认 /dms/admin/）。"
+        "frontend-vue 构建的资源基路径不是 /dms/。请用 VITE_BASE=/dms/ 重新构建。"
+    )
+
+admin_index = (ADMIN / "index.html").read_text(encoding="utf-8")
+if "/dms/admin/assets/" not in admin_index:
+    raise SystemExit(
+        "admin-vue 构建的资源基路径不是 /dms/admin/。请用 VITE_BASE=/dms/admin/ 重新构建。"
     )
 
 client = paramiko.SSHClient()
@@ -56,7 +67,7 @@ def tar_bytes(path: Path) -> bytes:
     return buf.getvalue()
 
 stamp = time.strftime("%Y%m%d-%H%M%S")
-run(f"{sudo} mkdir -p /opt/dms/backups /opt/dms/test/backend /opt/dms/test/frontend/admin")
+run(f"{sudo} mkdir -p /opt/dms/backups /opt/dms/test/backend /opt/dms/test/frontend/dms/admin")
 run(f"{sudo} cp -a /opt/dms/test/backend/app.jar /opt/dms/backups/app-{stamp}.jar", check=False)
 run(f"{sudo} cp -a /opt/dms/test/frontend /opt/dms/backups/frontend-{stamp}", timeout=180, check=False)
 
@@ -71,13 +82,21 @@ try:
         with sftp.file(remote, "wb") as handle:
             handle.set_pipelined(True)
             handle.write(data)
+    if LANDING.exists():
+        print("uploading landing page", flush=True)
+        sftp.put(str(LANDING), "/home/ubuntu/dms-landing.html")
 finally:
     sftp.close()
 
-run(f"{sudo} find /opt/dms/test/frontend -mindepth 1 -maxdepth 1 ! -name admin -exec rm -rf {{}} +", timeout=180)
-run(f"{sudo} tar -xzf /home/ubuntu/dms-front.tar.gz -C /opt/dms/test/frontend", timeout=180)
-run(f"{sudo} find /opt/dms/test/frontend/admin -mindepth 1 -maxdepth 1 -exec rm -rf {{}} +", timeout=180)
-run(f"{sudo} tar -xzf /home/ubuntu/dms-admin.tar.gz -C /opt/dms/test/frontend/admin", timeout=180)
+run(f"{sudo} mkdir -p /opt/dms/test/frontend/dms", timeout=60)
+run(f"{sudo} find /opt/dms/test/frontend/dms -mindepth 1 -maxdepth 1 ! -name admin -exec rm -rf {{}} +", timeout=180)
+run(f"{sudo} tar -xzf /home/ubuntu/dms-front.tar.gz -C /opt/dms/test/frontend/dms", timeout=180)
+run(f"{sudo} mkdir -p /opt/dms/test/frontend/dms/admin", timeout=60)
+run(f"{sudo} find /opt/dms/test/frontend/dms/admin -mindepth 1 -maxdepth 1 -exec rm -rf {{}} +", timeout=180)
+run(f"{sudo} tar -xzf /home/ubuntu/dms-admin.tar.gz -C /opt/dms/test/frontend/dms/admin", timeout=180)
+if LANDING.exists():
+    run(f"{sudo} cp /home/ubuntu/dms-landing.html /opt/dms/test/frontend/index.html", timeout=60)
+    run("rm -f /home/ubuntu/dms-landing.html")
 run(f"{sudo} chown -R root:root /opt/dms/test/frontend /opt/dms/test/backend/app.jar")
 run(f"{sudo} docker compose -f /opt/dms/test/docker-compose.yml up -d --force-recreate backend-test nginx-test", timeout=240)
 

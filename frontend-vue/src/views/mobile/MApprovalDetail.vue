@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="approval-detail">
     <van-nav-bar title="审批详情" left-arrow @click-left="$router.back()" />
     <div v-if="detail" class="body">
@@ -55,4 +55,4 @@ function openComment(a){ if(!myPendingTasks.value.length)return; action=a; comme
 async function submitComment(){ const t=myPendingTasks.value[0]; if(action==='approve'){await approveTask(t.id,comment.value); showSuccessToast('已同意')} else { await rejectTask(t.id,comment.value); showSuccessToast('已驳回')} commentVisible.value=false; load() }
 onMounted(load)
 </script>
-<style scoped>.body{padding:10px 0 80px}.item{padding:10px 16px;border-bottom:1px solid #f2f3f5}.item:last-child{border:0}.name{font-weight:600}.meta{font-size:12px;color:#969799;margin-top:4px}.actions{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:10px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;box-shadow:0 -2px 8px rgba(0,0,0,.05)}</style>
+<style scoped>.body{padding:10px 0 80px}.item{padding:10px 16px;border-bottom:1px solid #f2f3f5}.item:last-child{border:0}.name{font-weight:600}.meta{font-size:12px;color:#969799;margin-top:4px}.actions{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:10px 16px;padding-bottom:calc(10px + env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr 1fr;gap:10px;box-shadow:0 -2px 8px rgba(0,0,0,.05);z-index:10}</style>

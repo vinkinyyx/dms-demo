@@ -3,6 +3,8 @@
  */
 package com.dms.promotion.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import com.dms.common.ApiResponse;
 import com.dms.common.PageQuery;
 import com.dms.common.PageResult;
@@ -14,6 +16,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@PreAuthorize("@perm.hasAny('promotion:view','promotion:search') and !@perm.isDealer()")
 @RequestMapping("/api/promotions")
 @RequiredArgsConstructor
 @Validated
@@ -37,6 +40,7 @@ public class PromotionController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@perm.hasAny('promotion:edit')")
     public ApiResponse<Promotion> update(@PathVariable Long id, @RequestBody Promotion request) {
         return ApiResponse.ok(service.update(id, request));
     }

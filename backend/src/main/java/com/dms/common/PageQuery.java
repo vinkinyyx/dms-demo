@@ -28,6 +28,9 @@ public class PageQuery {
      */
     private String sort;
 
+    /** 通用关键字搜索（编码/名称等，模糊匹配） */
+    private String keyword;
+
     public Pageable toPageable() {
         Sort s = Sort.unsorted();
         if (StringUtils.hasText(sort)) {

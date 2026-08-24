@@ -53,7 +53,7 @@
           :title="s.name"
           :value="s.value"
         />
-        <van-empty v-if="!orderFunnel.length" description="none" />
+        <van-empty v-if="!orderFunnel.length" description="暂无数据" />
       </van-cell-group>
 
       <div class="sec-title">更多报表</div>
@@ -100,7 +100,8 @@ async function loadAll() {
   try {
     const r = await getOrderFunnel({ period: 'month' })
     const d = r.data || []
-    orderFunnel.value = d.map(x => ({ name: x.name, value: x.value }))
+    const statusNameMap = { DRAFT: '草稿', SUBMITTED: '已提交', PENDING_APPROVAL: '审批中', APPROVED: '已审批', REJECTED: '已驳回', COMPLETED: '已完成', CANCELLED: '已取消', SHIPPED: '已发货', PARTIAL_SHIPPED: '部分发货' }
+orderFunnel.value = d.map(x => ({ name: statusNameMap[x.name] || x.name, value: x.value }))
   } catch (e) { /* ignore */ }
 }
 
@@ -110,7 +111,7 @@ async function onRefresh() {
   showToast('已刷新')
 }
 
-function goReport(key) { if (key) router.push({ path: '/reports', query: { key } }); else showToast('PC 端报表中心更全，请登录') }
+function goReport() { showToast('详细报表请在 PC 端查看') }
 
 onMounted(loadAll)
 </script>

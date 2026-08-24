@@ -217,9 +217,13 @@ public class V4Calculator {
     }
 
     private void applyGift(UUID tid, List<V4Line> lines, Map detail, Map<Long, BigDecimal> giftQtys, String promoName, List<String> messages) {
-        BigDecimal threshold = firstPositive(bd(detail.get("thresholdQty")), bd(detail.get("buyQty")), bd(detail.get("everyN")));
+        BigDecimal threshold = firstPositive(
+                bd(detail.get("thresholdQty")), bd(detail.get("threshold_qty")),
+                bd(detail.get("buyQty")), bd(detail.get("buy_qty")),
+                bd(detail.get("everyN")));
         Long giftProductId = toLong(firstNonNull(detail.get("giftProductId"), detail.get("gift_product_id")));
-        BigDecimal giftQty = firstPositive(bd(detail.get("giftQty")), bd(detail.get("gift_qty")));
+        BigDecimal giftQty = firstPositive(bd(detail.get("giftQty")), bd(detail.get("gift_qty")),
+                bd(detail.get("giftAmount")), bd(detail.get("gift_amount")));
         String cycle = str(firstNonNull(detail.get("cycle"), detail.get("cyclic")), "ONCE");
         boolean cyclic = "EVERY_N".equalsIgnoreCase(cycle) || Boolean.TRUE.equals(detail.get("cyclic"));
         if (threshold.signum() <= 0 || giftProductId == null || giftQty.signum() <= 0) return;
@@ -252,32 +256,60 @@ public class V4Calculator {
     }
 
     private BigDecimal applyReduction(UUID tid, List<V4Line> lines, Map detail, String promoName, List<String> messages) {
-        BigDecimal hit = hitQty(tid, lines, detail.get("targetProductId"), detail.get("targetProductLineId"));
-        BigDecimal threshold = firstPositive(bd(detail.get("thresholdQty")), bd(detail.get("buyQty")), bd(detail.get("everyN")));
-        if (threshold.signum() > 0 && hit.compareTo(threshold) < 0) return BigDecimal.ZERO;
         List<V4Line> targets = targetLines(tid, lines, detail.get("targetProductId"), detail.get("targetProductLineId"));
         if (targets.isEmpty()) return BigDecimal.ZERO;
         BigDecimal base = money(targets.stream().map(l -> l.getStandardAmount().subtract(l.getLineDiscountAmount())).reduce(BigDecimal.ZERO, BigDecimal::add));
         if (base.signum() <= 0) return BigDecimal.ZERO;
-        BigDecimal value = firstPositive(bd(detail.get("reduceAmount")), bd(detail.get("discountValue")));
+        // 门槛：优先数量，其次金额（满减）。同时兼容驼峰/下划线。
+        BigDecimal qtyThreshold = firstPositive(
+                bd(detail.get("thresholdQty")), bd(detail.get("threshold_qty")),
+                bd(detail.get("buyQty")), bd(detail.get("buy_qty")),
+                bd(detail.get("everyN")));
+        BigDecimal amountThreshold = firstPositive(
+                bd(detail.get("thresholdAmount")), bd(detail.get("threshold_amount")),
+                bd(detail.get("threshold")), bd(detail.get("minAmount")), bd(detail.get("min_amount")));
+        BigDecimal hit = hitQty(tid, lines, detail.get("targetProductId"), detail.get("targetProductLineId"));
+        if (qtyThreshold.signum() > 0 && hit.compareTo(qtyThreshold) < 0) return BigDecimal.ZERO;
+        if (amountThreshold.signum() > 0 && base.compareTo(amountThreshold) < 0) return BigDecimal.ZERO;
+        // 优惠值：金额减免 或 折扣率。
+        BigDecimal value = firstPositive(
+                bd(detail.get("reduceAmount")), bd(detail.get("reduce_amount")),
+                bd(detail.get("discountValue")), bd(detail.get("discount_value")),
+                bd(detail.get("reduction")), bd(detail.get("discount")),
+                bd(detail.get("discountAmount")), bd(detail.get("discount_amount")));
+        BigDecimal rateValue = firstPositive(
+                bd(detail.get("discountRate")), bd(detail.get("discount_rate")),
+                bd(detail.get("discount")));
+        String mode = str(firstNonNull(detail.get("discountType"), detail.get("discount_type")), "AMOUNT");
+        boolean rate = "RATE".equalsIgnoreCase(mode) || "PERCENT".equalsIgnoreCase(mode)
+                || (value.signum() <= 0 && rateValue.signum() > 0 && rateValue.compareTo(BigDecimal.ONE) < 0);
+        if (rate && rateValue.signum() > 0) value = rateValue;
         if (value.signum() <= 0) return BigDecimal.ZERO;
-        String mode = str(detail.get("discountType"), "AMOUNT");
-        boolean rate = "RATE".equalsIgnoreCase(mode) || "PERCENT".equalsIgnoreCase(mode);
         String cycle = str(firstNonNull(detail.get("cycle"), detail.get("cyclic")), "ONCE");
         boolean cyclic = "EVERY_N".equalsIgnoreCase(cycle) || Boolean.TRUE.equals(detail.get("cyclic"));
         BigDecimal times;
         if (cyclic) {
-            BigDecimal step = firstPositive(bd(detail.get("everyN")), threshold);
-            if (hit.compareTo(threshold) < 0) times = BigDecimal.ZERO;
-            else times = BigDecimal.ONE.add(hit.subtract(threshold).divide(step, 0, RoundingMode.FLOOR));
+            BigDecimal step = firstPositive(
+                    amountThreshold,
+                    bd(detail.get("everyN")), bd(detail.get("every_n")),
+                    qtyThreshold);
+            if (amountThreshold.signum() > 0) {
+                times = base.compareTo(step) < 0 ? BigDecimal.ZERO
+                        : BigDecimal.ONE.add(base.subtract(step).divide(step, 0, RoundingMode.FLOOR));
+            } else {
+                if (hit.compareTo(step) < 0) times = BigDecimal.ZERO;
+                else times = BigDecimal.ONE.add(hit.subtract(step).divide(step, 0, RoundingMode.FLOOR));
+            }
         } else {
-            times = hit.compareTo(threshold) >= 0 ? BigDecimal.ONE : BigDecimal.ZERO;
+            times = BigDecimal.ONE;
         }
         if (times.signum() <= 0) return BigDecimal.ZERO;
         BigDecimal once = rate ? base.multiply(value.min(BigDecimal.ONE)) : value;
         BigDecimal discount = money(once.multiply(times).min(base));
         if (discount.signum() <= 0) return BigDecimal.ZERO;
-        String cycleText = cyclic ? "（每满" + firstPositive(bd(detail.get("everyN")), threshold).stripTrailingZeros().toPlainString() + "循环）" : "";
+        String cycleText = cyclic ? "（每满" + firstPositive(
+                amountThreshold, bd(detail.get("everyN")), bd(detail.get("every_n")), qtyThreshold)
+                .stripTrailingZeros().toPlainString() + "循环）" : "";
         messages.add(String.format("本单因满足【%s】%s，整单减免 ¥%s", promoName, cycleText, discount.setScale(2, RoundingMode.HALF_UP).toPlainString()));
         return discount;
     }

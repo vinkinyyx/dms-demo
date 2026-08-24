@@ -17,6 +17,7 @@ import com.dms.order.service.support.ActionButtonSupport;
 import com.dms.order.service.support.ApprovalResponseSupport;
 import com.dms.execution.service.AutoDocGenerator;
 import com.dms.v4.V4ErpService;
+import com.dms.security.DataScope;
 import com.dms.v4.V4OrderService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
@@ -40,6 +41,7 @@ public class SalesOrderService {
     private final ApprovalService approvalService;
     private final V4OrderService v4OrderService;
     private final V4ErpService v4ErpService;
+    private final DataScope dataScope;
     @Transactional(readOnly = true)
     public ApiResponse<Map<String, Object>> list(
             int page,
@@ -66,6 +68,17 @@ public class SalesOrderService {
         List<Object> params = new ArrayList<>();
         params.add(tid);
         int idx = 2;
+        Set<Long> allowedDealers = dataScope.accessibleDealerIds();
+        if (allowedDealers != null) {
+            if (allowedDealers.isEmpty()) {
+                Map<String, Object> empty = new LinkedHashMap<>();
+                empty.put("total", 0L); empty.put("list", Collections.emptyList());
+                empty.put("page", safePage); empty.put("size", safeSize);
+                return ApiResponse.ok(empty);
+            }
+            where.append(" AND o.dealer_id = ANY(?").append(idx++).append(")");
+            params.add(allowedDealers.toArray(new Long[0]));
+        }
         if (status != null && !status.isBlank()) { where.append(" AND o.status = ?").append(idx++); params.add(status); }
         if (dealerId != null) { where.append(" AND o.dealer_id = ?").append(idx++); params.add(dealerId); }
         if (warehouseId != null) { where.append(" AND o.warehouse_id = ?").append(idx++); params.add(warehouseId); }
