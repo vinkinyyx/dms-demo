@@ -1,6 +1,6 @@
 ## v4.2.9 (2026-08-25) - 全量问题排查修复：后端 500、PC/移动统一、查询项生效、部署与营销页图片
 
-> PATCH 版本（42 个文件，+1633 / -417）。本批变更已先行部署测试环境并通过真实浏览器验证，本次将代码同步回仓库以保持一致。完整变更清单见 `DMS-changes-2026-08-25/清单.md`。
+> PATCH 版本（42 个文件，+1633 / -417）。本批变更已部署测试环境和生产环境并通过真实浏览器验证，代码已同步回仓库以保持一致。完整变更清单见 `DMS-changes-2026-08-25/清单.md`。
 
 ### 修复
 - **后端列表/详情 500 错误**
@@ -20,6 +20,14 @@
 - 修复 `dms-test-nginx` 容器缺失前端 bind mount 导致营销页/移动 H5/平台后台三端无法访问，重建容器
 - 补全营销页图片：从 `brochure-test/assets/` 复制 41 张 PNG 到 `/opt/dms/test/frontend/assets/`，修复 34 张图片全部 404
 - 清理本地临时脚本与测试服务器临时文件、旧容器（`brochure-test`）、旧镜像及 builder 缓存（磁盘 41% → 39%）
+
+### 生产发布与清理（2026-08-25）
+- 已发布到正式环境 `http://8.133.193.238/dms/`；后台 `http://8.133.193.238/dms/admin/`，移动端 `http://8.133.193.238/dms/mobile/login`
+- 部署前备份：数据库 `/opt/dms/backups/dms-db-pre-v429-20260825-221506.sql.gz`；旧应用 `/opt/dms/backups/app-prod-20260825-221518.jar`；旧前端 `/opt/dms/backups/frontend-prod-20260825-221518/`
+- Flyway V120 在生产执行成功；生产数据中该迁移 UPDATE 匹配 0 行，为幂等无副作用
+- 处理生产 docker-compose v1.29.2 与 Docker 29.x 的 `KeyError: 'ContainerConfig'` 兼容问题：启动 postgres/redis/minio 后，移除旧 backend 容器并用 `docker-compose ... up -d --no-deps backend` 重建
+- 生产清理：删除 8 月 22/24 的旧发布包与完整旧目录，保留本次回滚包、上一版备份和数据库备份；执行 Docker builder/container/image prune，无停止容器、无悬空镜像、无可回收构建缓存
+- 清理结果：根分区从 11G/28% 降至 9.9G/27%；运行中 DMS、webgate、brochure、ai-knowledge 容器均保持正常
 
 ### 验证
 - 后端 API：35/35 通过（登录、列表、详情、删除等核心接口）

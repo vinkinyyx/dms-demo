@@ -1,6 +1,6 @@
 # Layer 5: 当前上下文（临时）
 
-> 会话级临时记忆。最近刷新：2026-08-25（v4.2.9 全量问题排查修复，代码已从 DMS-changes-2026-08-25 同步回仓库）
+> 会话级临时记忆。最近刷新：2026-08-25（v4.2.9 全量问题排查修复已同步仓库、部署测试环境并发布生产）
 
 ---
 
@@ -8,14 +8,14 @@
 
 | 项目 | 状态 |
 |------|------|
-| 当前交付基线 | v4.2.9（PATCH，42 文件 +1633/-417；代码已同步回仓库，测试环境已部署） |
+| 当前交付基线 | v4.2.9（PATCH，42 文件 +1633/-417；代码已同步回仓库，测试环境与生产环境均已部署） |
 | 上一基线 | v4.2.8（2026-08-25，RBAC + 部署脚本 + 移动端 UX） |
 | Flyway 迁移 | 已到 V120（V120 修正 V83 资源 API path：sales-positions / contract-templates / tenant-ui） |
 | 测试环境 | http://43.128.145.141/ 健康 UP（actuator/health）；三端可访问，营销页图片已补全 |
 | 业务前台 | http://43.128.145.141/ （admin / Sh123456，租户 default；sys_admin / Dms@123456 为厂商超管） |
 | 移动端 H5 | http://43.128.145.141/mobile/login |
 | 平台后台 | http://43.128.145.141/admin/ （admin / Sh123456，token 与前台隔离） |
-| 正式环境 | http://8.133.193.238/dms/（**v4.2.1，2026-08-22 23:19 已部署**；后台 /dms/admin/，移动 /dms/mobile/login，统一 80 网关 webgate；部署目录 /opt/dms/prod/，账号 root，容器 dms-prod-{backend,postgres,redis,minio}，profile docker-test，发布归档 releases/dms-4.2.1-prod-deploy-<stamp>/） |
+| 正式环境 | http://8.133.193.238/dms/（**v4.2.9，2026-08-25 22:16 已部署**；后台 /dms/admin/，移动 /dms/mobile/login，统一 80 网关 webgate；部署目录 /opt/dms/prod/，账号 root，容器 dms-prod-{backend,postgres,redis,minio}，profile docker-test；生产报告 docs/02_设计/prod-deploy-report-v4.2.9.md） |
 | 记忆体系 | v2.0，五层结构（rules/conventions/lessons/decisions/context），2026-08-16 全面更新 |
 
 ### 必备 Skill（2026-08-24 安装/创建）
@@ -80,4 +80,13 @@
 - 本次部署因 /opt/dms/prod/docker-compose.yml 中的 docker-compose v1.29 与 Docker 29.x 不兼容，**降级为 docker start/docker restart**：先启动退出的依赖容器，再 docker restart dms-prod-backend；webgate 转发 502 时 docker exec webgate nginx -s reload 解决。
 - 本次生产发布归档：
 eleases/dms-4.2.1-prod-deploy-20260822-231940/。
+
+## v4.2.9 生产发布备注（2026-08-25）
+
+- 生产脚本：`scripts/deploy_prod.py`；部署时后端 jar 为 `backend/target/dms-backend.jar`，PC 前端使用 `VITE_BASE=/dms/`，admin 使用 `/dms/admin/`。
+- 部署前备份：`/opt/dms/backups/dms-db-pre-v429-20260825-221506.sql.gz`、`/opt/dms/backups/app-prod-20260825-221518.jar`、`/opt/dms/backups/frontend-prod-20260825-221518/`。
+- Flyway：V120 在生产执行成功；生产 `resources.path` 已为前端路由形态，因此 V120 的 UPDATE 匹配 0 行，无数据变更。
+- 兼容问题：生产 docker-compose v1.29.2 对 backend `--force-recreate` 报 `KeyError: 'ContainerConfig'`，且会停止 postgres/redis/minio；修复方式为 `docker start` 三个依赖容器，等待 healthy 后 `docker rm -f dms-prod-backend`，再执行 `docker-compose -f /opt/dms/prod/docker-compose.yml up -d --no-deps backend`。
+- 验证：`/actuator/health` 返回 UP；PC/admin/mobile 入口 200；登录态核心订单 API 200；Playwright 生产 UI 冒烟 9/9 PASS，无 Console 错误和 5xx。
+- 清理：删除 8 月 22/24 的旧 jar、旧前端目录和完整旧发布目录；保留 `221518` 与 `021234` 两套回滚备份；Docker 无停止容器、无悬空镜像、构建缓存为 0；根分区 11G/28% → 9.9G/27%。
 
