@@ -105,8 +105,8 @@
 
 | 环境 | 地址 | 用途 | 数据库 |
 |------|------|------|--------|
-| 测试环境 | `http://43.128.145.141/` | 需求开发、功能调整、验证测试（Docker Compose，统一 80 端口） | dms（容器内） |
-| 正式环境 | `http://8.133.193.238/dms/` | 生产使用（webgate/nginx 统一 80，DMS 挂 `/dms/` 子路径） | dms（容器内） |
+| 测试环境 | UI：`http://43.128.145.141/dms/`；API/health：根路径 `/api`、`/auth`、`/actuator` | 需求开发、功能调整、验证测试（Docker Compose，统一 80 端口） | `dms_test`（容器内） |
+| 正式环境 | `http://8.133.193.238/dms/` | 生产使用（webgate/nginx 统一 80，DMS 挂 `/dms/` 子路径） | `dms`（容器内） |
 
 #### 核心规则
 1. **所有需求调整和功能修改，只能先部署到测试环境验证**，禁止直接修改正式环境
@@ -413,9 +413,9 @@ LEFT JOIN shipment sh ON sh.order_id = o.id
 ### 测试环境（开发验证）
 | 用途 | URL / 命令 |
 |---|---|
-| 业务前台/PC 工作台 | http://43.128.145.141/ |
-| 移动端 H5 登录 | http://43.128.145.141/mobile/login |
-| 平台后台 | http://43.128.145.141/admin/ |
+| 业务前台/PC 工作台 | http://43.128.145.141/dms/ |
+| 移动端 H5 登录 | http://43.128.145.141/dms/mobile/login |
+| 平台后台 | http://43.128.145.141/dms/admin/ |
 | 后端健康检查 | http://43.128.145.141/actuator/health |
 | 部署脚本 | `scripts/deploy_test.py` |
 

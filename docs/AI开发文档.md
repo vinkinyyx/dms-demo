@@ -1,4 +1,4 @@
-﻿# DMS经销商管理系统 - AI开发文档
+# DMS经销商管理系统 - AI开发文档
 
 > **版本**: v1.3
 > **创建时间**: 2026-08-11
@@ -170,7 +170,7 @@ DMSdoc/
 2. **密码输入**：浏览器自动化 `browser_type({ clear:true })` 有时对密码输入框不生效，建议先点击密码框聚焦后再输入
 3. **菜单展开**：CDP模式下 `states:[collapsed/expanded]` 可能暴露不完整子菜单，建议使用 `browser_evaluate + querySelectorAll('.el-menu-item, .el-sub-menu__title')` 完整提取
 4. **token隔离**：业务前台登录 `/api/auth/login` vs 平台后台 `/api/admin/auth/login` **绝对不要混用**；401时首先查是哪套token
-5. **测试环境URL**：`http://43.128.145.141/` → 前端端口8083（Nginx），后端API端口实际由Nginx代理（可能8082），不要直接打8080或8081
+5. **测试环境URL**：`http://43.128.145.141/dms/` → 前端端口8083（Nginx），后端API端口实际由Nginx代理（可能8082），不要直接打8080或8081
 6. **删除有引用数据**：产品/经销商被订单/库存引用后删除返回 **40904 Conflict**，不是500；测试案例要覆盖
 7. **操作日志接口**：`GET /api/operation-log/list/product/{id}` 不得返回500；空数组也必须200（防回归4号Bug）
 8. **产品表单16字段**：浏览器实际验证新增产品表单字段为——产品编码、中文名称、**英文名称**、产品类型、产品分类、规格型号、单位、参考单价、税率、**需要UDI追溯(布尔)**、**序列号管理(布尔)**、**临期预警(月)默认3**、**安全库存默认10**、**最小订购量默认1**、状态（启用/停用）；写测试和接口时字段名要与这16项严格对齐
@@ -212,7 +212,7 @@ cd frontend-vue
 npm install          # 或 pnpm i
 npm run dev          # 默认 http://localhost:5173
 ```
-- `.env.development` 中 `VITE_API_BASE_URL=http://43.128.145.141`（指向测试环境Nginx，避免本地起后端）
+- `.env.development` 中 `VITE_API_BASE_URL=http://43.128.145.141`（API/health 根路径；DMS UI 入口为 `/dms/`，后台 `/dms/admin/`，移动端 `/dms/mobile/login`）
 
 ### 后端（Spring Boot）
 ```bash

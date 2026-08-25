@@ -12,7 +12,7 @@
 - **后端**：Spring Boot 3.2 + Java 17 + MyBatis-Plus + Flyway + PostgreSQL 14 + Redis 7
 - **前端**：Vue 3 + Vite 5 + Element Plus（PC）+ Vant 4（H5）+ Pinia
 - **部署**：Docker Compose + Nginx
-- **测试环境**：http://43.128.145.141/
+- **测试环境**：http://43.128.145.141/dms/（后台 http://43.128.145.141/dms/admin/，移动端 http://43.128.145.141/dms/mobile/login；API 与健康检查仍走根路径 /api、/auth、/actuator）dms/
 - **生产环境**：http://8.133.193.238/dms/ （未经用户明确指令，禁止操作）
 - **演示账号**：租户 `default` / `admin` / `Sh123456`
 

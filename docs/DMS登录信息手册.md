@@ -1,26 +1,25 @@
 # DMS 登录信息手册
 
-**更新时间**: 2026-08-20
-**当前版本**: v4.0.0-bugfix.7
-**适用范围**: 测试环境（43.128.145.141；旧测试 43.128.145.141/8082）与生产环境（8081/8080）
+**更新时间**: 2026-08-26
+**当前版本**: v4.2.9
+**适用范围**: 测试环境（43.128.145.141；UI 在 `/dms/`）与生产环境（8.133.193.238；UI 在 `/dms/`）
 
 ---
 
 ## 1. 环境总览
 
-| 环境 | 前端入口 | 后端 API | 数据库 | 用途 |
+| 环境 | UI 入口 | 后端 API | 数据库 | 用途 |
 |---|---|---|---|---|
-| 生产 | `http://8.133.193.238/dms/` | Nginx 同源 `/api`、`/auth`、`/actuator` 反代后端容器 | `dms` | 正式生产环境（v3.12.4，Docker Compose 部署，2026-08-16 上线） |
-| 新测试 | `http://43.128.145.141` | Nginx 同源 `/api` 反代内网 `8080` | `dms_test` | 最新 DMS 测试环境，Docker Compose 部署 |
-| 旧测试 | `http://43.128.145.141` | `http://43.128.145.141` | `dms_test` | 历史测试环境 |
+| 生产 | `http://8.133.193.238/dms/` | Nginx 根路径 `/api`、`/auth`、`/actuator` 反代后端容器 | `dms` | 正式生产环境（v4.2.9，Docker Compose 部署） |
+| 测试 | `http://43.128.145.141/dms/` | Nginx 根路径 `/api`、`/auth`、`/actuator` 反代后端容器 | `dms_test` | 当前 DMS 测试环境，Docker Compose 部署 |
 
-测试库已迁移到 Flyway V77。v3.11.0 合同模块重构：原「合同申请+合同」合并为「合同工作台」，新增「合同模板」菜单。测试环境与生产环境均支持业务前台、移动端 H5、平台后台三种登录方式。
+> 重要：DMS 的浏览器入口在 `/dms/` 下；API、登录接口和健康检查仍在站点根路径，不要写成 `/dms/api`。
 
 ---
 
 ## 2. 登录入口
 
-### 2.1 生产环境（v3.12.4，2026-08-16 上线）
+### 2.1 生产环境
 
 | 入口 | 地址 | 说明 |
 |---|---|---|
@@ -37,22 +36,18 @@
 **生产服务器与部署信息**：
 - SSH：`ssh root@8.133.193.238`，密码 `Welcomeyyx0616`
 - 部署目录：`/opt/dms/prod`（`docker-compose.yml` + `backend/app.jar` + `frontend/`）
-- 容器：`dms-prod-backend`、`dms-prod-postgres`、`dms-prod-redis`、`dms-prod-minio`
-- 统一入口：宿主机已有 `webgate`（nginx:80）容器，DMS 挂在 `/dms/`，API 走根路径 `/api`、`/auth`、`/actuator`
-- 配置文件：`/opt/webgate/nginx.conf`（DMS 静态文件挂载 `/opt/dms/prod/frontend:/usr/share/nginx/dms:ro`，并加入 `dms-prod` 网络反代后端）
+- 容器：`dms-prod-backend`、PostgreSQL/Redis/MinIO 容器名带 Compose 前缀（如 `a3493e36ecba_dms-prod-postgres`）
+- 统一入口：宿主机 `webgate`（nginx:80）容器，DMS 挂在 `/dms/`，API 走根路径 `/api`、`/auth`、`/actuator`
 - 数据库/缓存：容器内网络，不对外暴露端口；后端仅映射 `127.0.0.1:18080`
-- 运维命令：`cd /opt/dms/prod && docker-compose ps`、`docker-compose logs -f backend`、`docker-compose up -d`
 
 ### 2.2 测试环境
 
-#### 新测试环境（43.128.145.141，当前推荐）
-
 | 入口 | 地址 | 说明 |
 |---|---|---|
-| 业务前台登录页 | http://43.128.145.141/login | PC 登录页，租户 `default`，账号 `sys_admin`，密码 `Dms@123456`（旧账号 `admin/Sh123456` 已停用） |
-| 移动端 H5 登录页 | http://43.128.145.141/mobile/login | 手机浏览器访问，账号与 PC 业务前台相同 |
-| 业务工作台 | http://43.128.145.141/ | 最新测试 PC 工作台 |
-| 平台后台 | http://43.128.145.141/admin/ | 平台管理员账号 `admin` / `Sh123456` |
+| 业务前台/PC 工作台 | http://43.128.145.141/dms/ | PC 登录与工作台，租户 `default`，账号 `sys_admin` / `Dms@123456` 或 `admin` / `Sh123456` |
+| 移动端 H5 登录页 | http://43.128.145.141/dms/mobile/login | 手机浏览器访问，账号与 PC 业务前台相同 |
+| 平台后台 | http://43.128.145.141/dms/admin/ | 平台管理员账号 `admin` / `Sh123456` |
+| 后端 API | http://43.128.145.141/api、http://43.128.145.141/auth | API 不加 `/dms` 前缀 |
 | 健康检查 | http://43.128.145.141/actuator/health | 返回 `{"status":"UP"}` 表示正常 |
 
 **服务器登录与部署信息**：
@@ -60,40 +55,78 @@
 - SSH：`ssh ubuntu@43.128.145.141`
 - 密码：`Welcomeyyx0616`（敏感信息，仅限内部部署使用，请勿外传或提交到公开仓库）
 - 提权：`sudo`（该账号可直接执行 Docker 和部署相关命令）
-- Docker 容器：
-  - `dms-test-nginx`：Nginx 静态入口，映射 `0.0.0.0:8083->80/tcp`
-  - `dms-test-backend`：后端 API 容器
-  - `dms-test-postgres`：PostgreSQL
-  - `dms-test-redis`：Redis
-  - `dms-test-minio`：MinIO
+- Docker 容器：`dms-test-nginx`、`dms-test-backend`、`dms-test-postgres`、`dms-test-redis`、`dms-test-minio`
 - 宿主机静态目录：`/opt/dms/test/frontend`
-- 平台后台静态目录：`/opt/dms/test/frontend/admin`
-- Nginx 容器内静态目录：`/usr/share/nginx/html`（只读挂载自宿主机目录）
+- DMS PC/移动端静态目录：`/opt/dms/test/frontend/dms`
+- 平台后台静态目录：`/opt/dms/test/frontend/dms/admin`
 - Nginx 配置：`/opt/dms/test/nginx/nginx.conf`
 - UI 发布前备份目录：`/opt/dms/backups/`
 
-部署明细见 `docs/07_部署方案/DMS测试环境部署记录_43.128.145.141_20260812.md`。
+---
 
-#### 统一测试环境（43.128.145.141）
+## 3. 数据库登录
 
-| 入口 | 地址 | 说明 |
-|---|---|---|
-| 业务前台登录页 | http://43.128.145.141/login | 测试租户用户登录 |
-| 业务工作台 | http://43.128.145.141/ | 测试 PC 工作台 |
-| 移动端 H5 登录 | http://43.128.145.141/mobile/login | 测试移动端 |
-| 平台后台 | http://43.128.145.141/admin/ | 测试平台后台 |
-| 后端健康检查 | http://43.128.145.141/actuator/health | 测试后端健康检查 |
-| Swagger API | http://43.128.145.141/swagger-ui.html | 测试接口文档 |
+数据库不对外暴露端口，统一通过 SSH 登录服务器后使用 `docker exec` 进入容器。
+
+### 3.1 测试数据库
+
+```bash
+ssh ubuntu@43.128.145.141
+sudo docker exec -it dms-test-postgres psql -U dms -d dms_test
+```
+
+常用连接参数：
+
+| 参数 | 值 |
+|---|---|
+| 容器 | `dms-test-postgres` |
+| 主机 | 容器内 `localhost` / Compose 网络中的 `postgres-test` |
+| 端口 | `5432`（仅容器内网） |
+| 库名 | `dms_test` |
+| 用户名 | `dms` |
+| 密码 | `dms123456` |
+
+备份命令：
+
+```bash
+sudo docker exec dms-test-postgres pg_dump -U dms dms_test | gzip > /tmp/dms_test_$(date +%Y%m%d_%H%M%S).sql.gz
+```
+
+### 3.2 生产数据库
+
+```bash
+ssh root@8.133.193.238
+c=$(docker ps --format '{{.Names}}' | grep 'dms-prod-postgres' | head -1)
+docker exec -it "$c" psql -U dms -d dms
+```
+
+常用连接参数：
+
+| 参数 | 值 |
+|---|---|
+| 容器 | 名称带 Compose 前缀，可用 `docker ps --format '{{.Names}}' | grep dms-prod-postgres` 查找 |
+| 主机 | 容器内 `localhost` / Compose 网络中的 `postgres` |
+| 端口 | `5432`（仅容器内网） |
+| 库名 | `dms` |
+| 用户名 | `dms` |
+| 密码 | 见 `/opt/dms/prod/.env` 的 `DB_PASSWORD`，不要写入文档或公开仓库 |
+
+备份命令：
+
+```bash
+c=$(docker ps --format '{{.Names}}' | grep 'dms-prod-postgres' | head -1)
+docker exec "$c" pg_dump -U dms dms | gzip > /tmp/dms_prod_$(date +%Y%m%d_%H%M%S).sql.gz
+```
 
 ---
 
-## 3. 三种登录方式
+## 4. 三种登录方式
 
 系统提供三类登录入口，账号体系和 token 不互通。
 
-### 3.1 业务前台登录（PC + H5 共用）
+### 4.1 业务前台登录（PC + H5 共用）
 
-- 地址：`/login`（PC）、`/mobile/login`（H5）
+- 地址：测试/生产均为 `/dms/`（PC）、`/dms/mobile/login`（H5）
 - 接口：`POST /api/auth/login`
 - 请求体：
 
@@ -104,9 +137,9 @@
 - 返回 `data.accessToken`，业务前台和移动端 H5 使用同一套 token。
 - 登录成功后可调用 `GET /api/auth/me` 获取当前用户与权限码。
 
-### 3.2 平台后台登录
+### 4.2 平台后台登录
 
-- 地址：`/admin/`
+- 地址：测试/生产均为 `/dms/admin/`
 - 接口：`POST /api/admin/auth/login`
 - 请求体：
 
@@ -117,16 +150,16 @@
 - 平台登录**不需要** `tenantCode`，管理的是跨租户的平台数据。
 - 平台 token 与业务前台 token 不互通，请勿混用。
 
-### 3.3 移动端 H5
+### 4.3 移动端 H5
 
-- 与业务前台共用同一登录接口和账号，入口为 `/mobile/login`。
+- 与业务前台共用同一登录接口和账号，入口为 `/dms/mobile/login`。
 - 适合销售/经销商在手机上做订单、报台、审批等操作。
 
 ---
 
-## 4. 默认账号
+## 5. 默认账号
 
-### 4.1 业务前台
+### 5.1 业务前台
 
 | 用户名 | 密码 | 租户编码 | 角色/用途 |
 |---|---|---|---|
@@ -135,13 +168,13 @@
 | `vendor02` | `Sh123456` | `default` | 厂家用户 |
 | `dealer02` | `Sh123456` | `default` | 经销商用户 |
 
-### 4.2 平台后台
+### 5.2 平台后台
 
 | 用户名 | 密码 | 用途 |
 |---|---|---|
 | `admin` | `Sh123456` | 平台超级管理员 |
 
-### 4.3 平台租户管理员（多租户演示）
+### 5.3 平台租户管理员（多租户演示）
 
 | 用户名 | 密码 | 租户编码 | 说明 |
 |---|---|---|---|
@@ -153,7 +186,7 @@
 
 ---
 
-## 5. 测试账号（2026-08-09 重新生成，可直接使用）
+## 6. 测试账号（2026-08-09 重新生成，可直接使用）
 
 以下账号均位于测试租户 `11111111-1111-1111-1111-111111111111`（租户编码留空即可登录），统一密码 **`Dms@123456`**，首次登录**无需**改密。每个账号对应一个角色，覆盖主要权限场景，资料齐全。
 
@@ -177,11 +210,11 @@
 
 ---
 
-## 6. 基础服务地址
+## 7. 基础服务地址
 
 | 服务 | 测试（43.128.145.141） | 生产（8.133.193.238） | 账号/备注 |
 |---|---|---|---|
-| PostgreSQL | 仅容器内网 `5432` | 仅容器内网 `5432` | 生产用户/库 `dms`，密码见服务器 `/opt/dms/prod/.env`（`DB_PASSWORD`，不对外暴露、不入库）；备份用 `docker exec dms-prod-postgres pg_dump -U dms dms` |
+| PostgreSQL | 仅容器内网 `5432` | 仅容器内网 `5432` | 测试库 `dms_test`：`sudo docker exec -it dms-test-postgres psql -U dms -d dms_test`；生产库 `dms`：先 `c=$(docker ps --format '{{.Names}}' | grep dms-prod-postgres | head -1)` 再 `docker exec -it "$c" psql -U dms -d dms`，生产密码见 `/opt/dms/prod/.env` 的 `DB_PASSWORD` |
 | Redis | 仅容器内网 `6379` | 仅容器内网 `6379` | AOF 持久化，无对外端口 |
 | MinIO API | 仅容器内网 `9000` | 仅容器内网 `9000` | 访问密钥见 `.env`（`MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY`），控制台 `9001` 同样不对外暴露 |
 | MinIO 控制台 | 仅容器内网 `9001` | 仅容器内网 `9001` | 同上 |
@@ -192,12 +225,13 @@
 
 ---
 
-## 7. 已验证入口
+## 8. 已验证入口
 
 2026-08-09 测试环境冒烟通过：
 
-- `GET /`：业务前台静态入口返回 `200`
-- `GET /admin/`：平台后台静态入口返回 `200`
+- `GET /dms/`：业务前台静态入口返回 `200`
+- `GET /dms/admin/`：平台后台静态入口返回 `200`
+- `GET /dms/mobile/login`：移动端登录页返回 `200`
 - `POST /api/auth/login`：业务登录返回 `200`
 - `GET /api/auth/me`：业务当前用户返回 `200`
 - `POST /api/admin/auth/login`：平台登录返回 `200`
@@ -207,28 +241,28 @@
 
 ---
 
-## 8. 常见问题
+## 9. 常见问题
 
-### 8.1 登录返回 401
+### 9.1 登录返回 401
 
 - 业务前台确认 `tenantCode` 是否正确（测试租户可留空）。
 - 平台后台不要传 `tenantCode`。
 - 默认管理员密码为 `Sh123456`，测试演示账号密码为 `Dms@123456`，注意大小写。
 - 若账号被锁定（连续输错 9 次锁定 30 分钟），可由管理员在「账号管理 → 更多 → 解锁」处理。
 
-### 8.2 页面打开但接口 502
+### 9.2 页面打开但接口 502
 
 通常是后端容器重启窗口或前端缓存了旧后端 IP。处理顺序：
 
 1. 检查后端健康检查地址是否为 `UP`。
-2. 重启前端容器：`docker restart dms-test-frontend`（测试）或 `docker restart dms-frontend-vue`（生产）。
+2. 测试环境检查/重启 `dms-test-nginx` 与 `dms-test-backend`；生产环境检查 `webgate` 与 `dms-prod-backend`。
 3. 浏览器 Ctrl+Shift+R 强刷。
 
-### 8.3 平台后台路径说明
+### 9.3 平台后台路径说明
 
-平台后台页面入口统一使用 `/admin/`，未登录时由前端路由和平台登录接口处理认证。
+平台后台页面入口统一使用 `/dms/admin/`，未登录时由前端路由和平台登录接口处理认证。
 
-### 8.4 收不到审批邮件
+### 9.4 收不到审批邮件
 
 - 系统通过 SMTP 客户端发件，163 网页“已发送”里看不到属于正常现象。
 - 在「用户与权限 → 邮件发送日志」查看每封邮件的 `SUCCESS/FAILED`、收件人、错误信息；

@@ -1,6 +1,6 @@
 # DMS Automated Testing System
 
-> Four-layer automated test suite for DMS. Last updated: 2026-08-20.
+> Four-layer automated test suite for DMS. Last updated: 2026-08-26.
 
 ## Architecture
 
@@ -29,7 +29,7 @@ node tools/smoke-test.cjs --module=products
 node automation_test/e2e/run-all.js --module=orders
 
 # Specify a different environment
-E2E_BASE=http://43.128.145.141 npm run test:smoke
+E2E_BASE=http://43.128.145.141 npm run test:smoke  # API/health use root; UI pages use /dms, /dms/admin, /dms/mobile
 
 # Run with visible browser (for debugging)
 E2E_HEADED=1 node automation_test/e2e/specs/01-basic-data.spec.js

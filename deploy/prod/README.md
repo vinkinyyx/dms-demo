@@ -12,7 +12,7 @@
   - `/api/`、`/auth/`、`/actuator/` → 反代到 `dms-prod-backend:8080`
 - DMS 栈（docker-compose，目录 `/opt/dms/prod`，网络 `dms-prod`）：
   - `dms-prod-backend`（eclipse-temurin:17-jre-alpine，仅映射 127.0.0.1:18080）
-  - `dms-prod-postgres`（postgres:16-alpine，库 dms）
+  - PostgreSQL 容器名可能带 Compose 前缀（如 `a3493e36ecba_dms-prod-postgres`，库 `dms`）
   - `dms-prod-redis`（redis:7-alpine，AOF）
   - `dms-prod-minio`（minio，不对外暴露）
 - webgate 额外挂载 `/opt/dms/prod/frontend:/usr/share/nginx/dms:ro` 并加入 `dms-prod` 网络。
@@ -63,8 +63,12 @@ cd /opt/dms/prod
 docker-compose ps
 docker-compose logs -f backend
 docker-compose restart backend
+# 数据库登录（容器名可能带 Compose 前缀）
+c=$(docker ps --format '{{.Names}}' | grep 'dms-prod-postgres' | head -1)
+docker exec -it "$c" psql -U dms -d dms
+
 # 数据库备份
-docker exec dms-prod-postgres pg_dump -U dms dms > dms_$(date +%F).sql
+docker exec "$c" pg_dump -U dms dms > dms_$(date +%F).sql
 ```
 
 ## 注意

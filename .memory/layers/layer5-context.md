@@ -11,10 +11,10 @@
 | 当前交付基线 | v4.2.9（PATCH，42 文件 +1633/-417；代码已同步回仓库，测试环境与生产环境均已部署） |
 | 上一基线 | v4.2.8（2026-08-25，RBAC + 部署脚本 + 移动端 UX） |
 | Flyway 迁移 | 已到 V120（V120 修正 V83 资源 API path：sales-positions / contract-templates / tenant-ui） |
-| 测试环境 | http://43.128.145.141/ 健康 UP（actuator/health）；三端可访问，营销页图片已补全 |
-| 业务前台 | http://43.128.145.141/ （admin / Sh123456，租户 default；sys_admin / Dms@123456 为厂商超管） |
-| 移动端 H5 | http://43.128.145.141/mobile/login |
-| 平台后台 | http://43.128.145.141/admin/ （admin / Sh123456，token 与前台隔离） |
+| 测试环境 | http://43.128.145.141/dms/ 健康 UP（actuator/health）；三端可访问，营销页图片已补全 |
+| 业务前台 | http://43.128.145.141/dms/ （admin / Sh123456，租户 default；sys_admin / Dms@123456 为厂商超管） |
+| 移动端 H5 | http://43.128.145.141/dms/mobile/login |
+| 平台后台 | http://43.128.145.141/dms/admin/ （admin / Sh123456，token 与前台隔离） |
 | 正式环境 | http://8.133.193.238/dms/（**v4.2.9，2026-08-25 22:16 已部署**；后台 /dms/admin/，移动 /dms/mobile/login，统一 80 网关 webgate；部署目录 /opt/dms/prod/，账号 root，容器 dms-prod-{backend,postgres,redis,minio}，profile docker-test；生产报告 docs/02_设计/prod-deploy-report-v4.2.9.md） |
 | 记忆体系 | v2.0，五层结构（rules/conventions/lessons/decisions/context），2026-08-16 全面更新 |
 
@@ -64,14 +64,14 @@
 - release/：发布基线与发布说明
 
 ### 服务器信息
-- 新测试服务器：43.128.145.141，SSH ubuntu/Welcomeyyx0616，sudo 免密
+- 新测试服务器：43.128.145.141，SSH ubuntu/Welcomeyyx0616，sudo 免密；测试库登录 `sudo docker exec -it dms-test-postgres psql -U dms -d dms_test`
 - 生产服务器：8.133.193.238，SSH root/Welcomeyyx0616，部署路径 /opt/dms/prod（compose v1.29.2），后端仅 127.0.0.1:18080，对外走 webgate 80 端口
 - 部署脚本：scripts/deploy_test.py（DMS_DEPLOY_PASSWORD 环境变量）
 - 极速部署：.trae/skills/dms-deploy/（deploy-fast.ps1 + remote/*.sh）
 
 ## v4.2.1 生产部署备注（2026-08-22）
 
-- 生产主机 8.133.193.238（root），与测试 43.128.145.141（ubuntu）**用户/密码体系不同**，需分开记录凭据。
+- 生产主机 8.133.193.238（root），与测试 43.128.145.141（ubuntu）**用户/密码体系不同**，需分开记录凭据；生产库登录先查找带前缀的 `*_dms-prod-postgres` 容器再 `psql -U dms -d dms`。
 - 部署目录 /opt/dms/prod/，compose /opt/dms/prod/docker-compose.yml，容器前缀 dms-prod-。
 - 部署脚本：仓库 scripts/deploy_prod.py（scripts/deploy_test.py 仅适用于测试环境）。
 - 公共域名 /dms/（PC）、/dms/admin/（admin）、/dms/mobile/login（H5）；webgate 容器统一 80 入口，/dms/ 路径 alias 到 /opt/dms/prod/frontend。

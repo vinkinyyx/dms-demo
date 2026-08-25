@@ -661,6 +661,8 @@ DMS 对外开放一组 RESTful 接口，供外部系统以 **HMAC-SHA256 签名*
 
 #### 1.1 环境地址
 
+> 注意：浏览器访问的 DMS UI 位于 `/dms/`、`/dms/admin/`、`/dms/mobile/login`；开放 API 仍以站点根路径为 Base URL，不加 `/dms`。
+
 | 环境 | Base URL |
 |------|----------|
 | 测试环境 | `http://43.128.145.141` |
