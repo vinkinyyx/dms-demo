@@ -1,3 +1,31 @@
+## v4.2.9 (2026-08-25) - 全量问题排查修复：后端 500、PC/移动统一、查询项生效、部署与营销页图片
+
+> PATCH 版本（42 个文件，+1633 / -417）。本批变更已先行部署测试环境并通过真实浏览器验证，本次将代码同步回仓库以保持一致。完整变更清单见 `DMS-changes-2026-08-25/清单.md`。
+
+### 修复
+- **后端列表/详情 500 错误**
+  - 销售订单列表按经销商关键字搜索 500：`SalesOrderService` COUNT 查询缺少 JOIN dealers，补全关联
+  - 合同列表 500：PostgreSQL TIMESTAMPTZ 列经 Hibernate 返回 `Instant`，强转 `OffsetDateTime` 报错；改用统一 `DateFmt.fmt()` 格式化（`ContractService` 等）
+  - 经销商画像、授权、采购/销退、岗位、促销、跟台报告、用户等列表/详情的查询条件与字段映射修复（`DealerProfileService`、`AuthorizationService`、`PurchaseOrderService`、`SalesReturnService`、`SalesPositionService`、`PromotionService`、`SurgeryReportService`、`UserService` 及对应 Controller）
+- **PC 端各列表查询项生效**：经销商、产品、状态、日期等搜索条件全部接入后端查询（`BizDocListController`、`InventoryListController`、`PurchaseReturnController` 等）
+- **PC 与移动端统一**
+  - 移动端销售订单去除对授权的依赖，补齐订单类型、BOM 结构、折扣填写
+  - 移动端审批报错修复（`MApprovalDetail`、`MApprovals`）
+  - `MOrderCreate` / `MOrderDetail` 大规模重构：计价、BOM、促销、可退量逻辑对齐 PC
+  - 移动首页/看板/登录/消息/扫码收货/盘点/手术报台等页面同步修复（`MHome`、`MDashboard`、`MLogin`、`MMessages`、`MReceiveScan`、`MInventoryScan`、`MSurgeryReportCreate/Detail`、`ReceiptConfirm`）
+- **前端基础设施**：`CrudView` 通用列表组件、`dict.js` 字典、`reports.js` 报表配置、`api/order.js` 调整；`Admin.vue`、`ContractWorkspace.vue` 同步
+- **数据库迁移**：新增 `V120__fix_v83_resource_api_paths.sql`，修正 V83 写入的资源 path 与 Controller `@RequestMapping` 不一致（`position:view` → `/api/sales-positions/**`、`contract_template:manage` → `/api/contract-templates/**`、`tenant_ui_config:view` → `/api/tenant-ui/**`）
+
+### 部署与基础设施（测试环境，非仓库文件）
+- 修复 `dms-test-nginx` 容器缺失前端 bind mount 导致营销页/移动 H5/平台后台三端无法访问，重建容器
+- 补全营销页图片：从 `brochure-test/assets/` 复制 41 张 PNG 到 `/opt/dms/test/frontend/assets/`，修复 34 张图片全部 404
+- 清理本地临时脚本与测试服务器临时文件、旧容器（`brochure-test`）、旧镜像及 builder 缓存（磁盘 41% → 39%）
+
+### 验证
+- 后端 API：35/35 通过（登录、列表、详情、删除等核心接口）
+- 三端真实浏览器验证：营销页 / 移动 H5 / 平台后台均可打开、登录，Console 与网络无错误
+- 营销页 34 张图片全部 `complete=true`、无 broken
+- 后端容器 healthy
 ## v4.2.8 (2026-08-25) - 演示前 RBAC 修复、部署脚本修复、移动端 UX 收尾
 
 ### 修复
@@ -1392,3 +1420,4 @@ v3.8.7 沉淀了 D13 规范和基础设施（platform_button_configs 表、v-has
 - Layer 2 §18 列表页布局规范保持冻结（v3.8.7 入冻结区，本版未变更规范文字）。
 - Layer 4 D13：本版本正式落地 D13（CrudView 接入、菜单按权限过滤、admin-vue 维护入口完善）。
 - D12 状态：原文 2026-08-06 已因 PowerShell 编码异常丢失；按上下文重写并锁定 deploy-fast 流程。
+

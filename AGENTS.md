@@ -261,7 +261,7 @@ node tools/smoke-test.cjs
 
 ## 8. 版本号规则
 
-- 当前版本：**v4.2.7**。
+- 当前版本：**v4.2.9**。
 - PATCH（4.2.1 → 4.2.x）：每次小修复/bugfix 由 Codex 自动升，同步 CHANGELOG 和文档。
 - MINOR（4.2 → 4.3）和 MAJOR（4.x → 5.0）：必须由用户明确决定，Codex 不得自动升。
 - 每次交付在 CHANGELOG.md 顶部新增条目。
@@ -329,3 +329,4 @@ node tools/smoke-test.cjs
 ### 10.4 外部方法论评估结论
 - `obra/superpowers` 已拉取到 `~/.codex/skill-evaluation/superpowers/` 供参考，最值得吸收的是 `brainstorming`、`writing-plans`、`systematic-debugging`、`verification-before-completion`；未全量启用，避免与本项目 AGENTS.md 冲突。
 - `genkovich/sdd` 已拉取到 `~/.codex/skill-evaluation/sdd/` 供参考，最值得吸收的是 `interview`、`clarify`、`specify`、`plan-tests` 的 Socratic 提问和门禁思想；已体现在 `dms-requirement-intake`，未全量启用。
+
