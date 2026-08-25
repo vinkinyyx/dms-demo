@@ -26,6 +26,10 @@
 - 三端真实浏览器验证：营销页 / 移动 H5 / 平台后台均可打开、登录，Console 与网络无错误
 - 营销页 34 张图片全部 `complete=true`、无 broken
 - 后端容器 healthy
+
+### 清理
+- 删除旧变更快照目录 `DMS-changes-2026-08-24/`（44 个文件，此前已从磁盘删除，本次提交记录删除）
+- 按 `DMS-changes-2026-08-25/清单.md` 第四节清理本地临时文件：根目录 `zip_fe.ps1`、`sync_release.ps1`；`tools/` 下 check_lookups*.sh、inspect_data*.sh、patch_build_deploy*.sh、rebuild.sh、redeploy.sh、deploy_fe.sh、verify_fe.sh、extract_fe.py、probe-mobile-*.png、audit-mobile-deep.cjs.bak 共 20 个
 ## v4.2.8 (2026-08-25) - 演示前 RBAC 修复、部署脚本修复、移动端 UX 收尾
 
 ### 修复
