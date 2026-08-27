@@ -13,7 +13,7 @@
 - **前端**：Vue 3 + Vite 5 + Element Plus（PC）+ Vant 4（H5）+ Pinia
 - **部署**：Docker Compose + Nginx
 - **测试环境**：http://43.128.145.141/dms/（后台 http://43.128.145.141/dms/admin/，移动端 http://43.128.145.141/dms/mobile/login；API 与健康检查仍走根路径 /api、/auth、/actuator）
-  - ⚠️ **当前部署状态（2026-08-27）**：前端 vite.config.js `base=/`（未设置 VITE_BASE=/dms/），为兼容文档链接，Nginx 已对 `/dms/*`、`/dms/admin/*`、`/dms/mobile/*` 设置 302 外部重定向到对应根路径；**访问 `/dms/` 后浏览器地址栏会变为 `/`**，这是预期行为，不是错误
+  - ✅ **当前部署状态（v4.3.2，2026-08-27）**：前端已统一按 `VITE_BASE=/dms/`（admin 为 `/dms/admin/`）构建，Nginx 用 `alias + try_files` 直供：业务 SPA + 移动 H5 → `/usr/share/nginx/html/dms/`（`location /dms/`），平台后台 → `/usr/share/nginx/html/dms/admin/`（`location /dms/admin/`）；与生产 webgate 方案一致。**访问 `/dms/*` 地址栏保持 `/dms/*` 不再 302 跳根**；旧的 `/dms/* → /* 302 重定向方案（对应 VITE_BASE=/）已废弃
   - ⚠️ **铁律9强制**：每次部署后必须用真实浏览器逐个验证上述 3 个 `/dms/*` 入口 URL，**不允许只验证根路径**
 - **生产环境**：http://8.133.193.238/dms/ （未经用户明确指令，禁止操作）
 - **演示账号**：租户 `default` / `admin` / `Sh123456`
