@@ -131,3 +131,4 @@ _incoming/
 /_p*.txt
 /_edit*.py
 /_dbhelper*.py
+/_gate*.cjs
