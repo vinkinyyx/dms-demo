@@ -7,7 +7,8 @@
         <el-option label="成功" :value="true" />
         <el-option label="失败" :value="false" />
       </el-select>
-      <el-button type="primary" @click="load">查询</el-button>
+      <el-button type="primary" @click="onSearch">查询</el-button>
+      <el-button @click="onReset">重置</el-button>
     </div>
 
     <el-table :data="list" v-loading="loading" border size="small">
@@ -28,8 +29,8 @@
       </el-table-column>
     </el-table>
 
-    <el-pagination class="pager" background layout="total, prev, pager, next" :total="total"
-      :page-size="size" :current-page="page" @current-change="onPage" />
+    <el-pagination class="pager" background layout="total, sizes, prev, pager, next" :total="total"
+      :page-size="size" :current-page="page" :page-sizes="[20,50,100]" @current-change="onPage" @size-change="onSize" />
 
     <el-drawer v-model="show" title="审计日志详情" size="60%" destroy-on-close>
       <template v-if="detail">
@@ -99,10 +100,10 @@ async function load() {
   }
 }
 
-function onPage(currentPage) {
-  page.value = currentPage
-  load()
-}
+function onSearch() { page.value = 1; load() }
+function onReset() { Object.assign(query, { action: '', targetType: '', success: undefined }); page.value = 1; load() }
+function onPage(currentPage) { page.value = currentPage; load() }
+function onSize(currentSize) { size.value = currentSize; page.value = 1; load() }
 
 function open(row) {
   detail.value = row

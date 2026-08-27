@@ -37,7 +37,7 @@ public class PermissionChecker {
     }
 
     public boolean canAdminApprovals() {
-        return hasAny("approval:admin", "approval:manage", "approval:template:edit", "tenant_ui_config:view");
+        return hasAny("approval:admin", "approval:manage");
     }
 
     public boolean canManageTenantUi() {

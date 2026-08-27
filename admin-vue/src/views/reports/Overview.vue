@@ -70,9 +70,13 @@ async function load() {
   }
 }
 
+function reportsBase() {
+  const base = import.meta.env.BASE_URL || '/'
+  return base.replace(/\/admin\/?$/, '/')
+}
 function openReports() {
   if (!selectedTenant.value) return
-  const url = `/reports?tenantId=${selectedTenant.value}`
+  const url = `${reportsBase()}reports?tenantId=${selectedTenant.value}`
   window.open(url, '_blank')
 }
 

@@ -7,6 +7,7 @@ export const MENU_GROUPS = [
       { key: 'product-lines', icon: 'Connection', label: '产品线管理', permissionCode: 'product_line:view' },
       { key: 'product-bundles', icon: 'Goods', label: '产品组合', permissionCode: 'product_bundle:view' },
       { key: 'dealers', icon: 'OfficeBuilding', label: '经销商管理', permissionCode: 'dealer:view' },
+      { key: 'customer-registrations', icon: 'UserFilled', label: '客户注册审核', permissionCode: 'customer_registration:view' },
       { key: 'hospitals', icon: 'FirstAidKit', label: '医院/终端', permissionCode: 'hospital:view' },
       { key: 'warehouses', icon: 'House', label: '仓库管理', inventoryOnly: true, permissionCode: 'warehouse:view' },
       { key: 'regions', icon: 'Location', label: '区域管理', permissionCode: 'region:view' },
@@ -48,7 +49,10 @@ export const MENU_GROUPS = [
     group: '手术与营销',
     items: [
       { key: 'surgery-reports', icon: 'FirstAidKit', label: '手术植入报台', permissionCode: 'surgery_report:view' },
-      { key: 'promotions', icon: 'Present', label: '促销规则', permissionCode: 'promotion:view' }
+      { key: 'promotions', icon: 'Present', label: '促销规则', permissionCode: 'promotion:view' },
+      { key: 'product-global-discounts', icon: 'Discount', label: '产品全局折扣', permissionCode: 'product_global_discount:view' },
+      { key: 'dealer-global-discounts', icon: 'GoldMedal', label: '客户全局折扣', permissionCode: 'dealer_global_discount:view' },
+      { key: 'customer-vouchers', route: '/customer-vouchers', icon: 'Ticket', label: '代金券管理', permissionCode: 'customer_voucher:view' }
     ]
   },
   {

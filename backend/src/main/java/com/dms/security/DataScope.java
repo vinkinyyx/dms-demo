@@ -36,7 +36,7 @@ public class DataScope {
             return new CurrentUser(null, "admin", null, null);
         }
         var q = em.createNativeQuery(
-                "SELECT role, sales_user_id, dealer_id FROM users WHERE id = ?1", Tuple.class);
+                "SELECT role, user_type, sales_user_id, dealer_id FROM users WHERE id = ?1 AND deleted_at IS NULL", Tuple.class);
         q.setParameter(1, uid);
         @SuppressWarnings("unchecked")
         java.util.List<Tuple> rows = q.getResultList();
@@ -44,11 +44,19 @@ public class DataScope {
             return new CurrentUser(uid, null, null, null);
         }
         Tuple t = rows.get(0);
+        String role = t.get("role") == null ? null : String.valueOf(t.get("role"));
+        Long dealerId = t.get("dealer_id") == null ? null : ((Number) t.get("dealer_id")).longValue();
+        String userType = t.get("user_type") == null ? null : String.valueOf(t.get("user_type"));
+        // v4.3.0 R9：客户账号（user_type=customer 或 role=CUSTOMER）强制收敛为自身客户数据范围。
+        if (("customer".equalsIgnoreCase(userType) || "CUSTOMER".equalsIgnoreCase(role))
+                && role == null) {
+            role = "CUSTOMER";
+        }
         return new CurrentUser(
                 uid,
-                t.get("role") == null ? null : String.valueOf(t.get("role")),
+                role,
                 t.get("sales_user_id") == null ? null : ((Number) t.get("sales_user_id")).longValue(),
-                t.get("dealer_id") == null ? null : ((Number) t.get("dealer_id")).longValue());
+                dealerId);
     }
 
     /** 当前用户是否为平台/系统管理员（不受数据范围限制）。 */
@@ -68,8 +76,9 @@ public class DataScope {
         // 经销商类角色（DEALER_ADMIN/DEALER_SERVICE/DEALER_SALES）或绑定了 dealer_id 的账号，
         // 必须严格限定到自己绑定的经销商（即使为空也表示无权）。
         String role = u.role() == null ? "" : u.role().toUpperCase();
+        boolean isCustomer = "CUSTOMER".equals(role);
         boolean isDealerRole = role.startsWith("DEALER") || "dealer".equalsIgnoreCase(u.role())
-                || u.dealerId() != null;
+                || isCustomer || u.dealerId() != null;
         if (isDealerRole) {
             if (u.dealerId() != null) {
                 return java.util.Set.of(u.dealerId());
@@ -96,3 +105,4 @@ public class DataScope {
         return null;
     }
 }
+

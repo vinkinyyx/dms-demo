@@ -9,7 +9,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { actionResource } from '@/api/crud'
 
 const products = {
-  key: 'products', title: '产品管理', api: '/api/products', detailable: true, detailPath: '/products', businessType: 'product', importable: true, exportable: true, batchDelete: false,
+  key: 'products', title: '产品管理', api: '/api/products', detailable: true, detailPath: '/products', businessType: 'product', createPermission: 'product:create', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '产品编码', w: 130, filter: { type: 'text' } }, 
@@ -43,7 +43,7 @@ const products = {
 }
 
 const categories = {
-  key: 'categories', title: '产品分类', api: '/api/product-categories', detailable: true, detailPath: '/categories', businessType: 'productCategory', importable: true, exportable: true, batchDelete: false,
+  key: 'categories', title: '产品分类', api: '/api/product-categories', detailable: true, detailPath: '/categories', businessType: 'productCategory', createPermission: 'product_category:create', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '分类编码', w: 140, filter: { type: 'text' } }, 
@@ -63,7 +63,7 @@ const categories = {
 }
 
 const dealers = {
-  key: 'dealers', title: '经销商管理', api: '/api/dealers', detailable: true, detailPath: '/dealers', businessType: 'dealer', importable: true, exportable: true, batchDelete: false,
+  key: 'dealers', title: '经销商管理', api: '/api/dealers', detailable: true, detailPath: '/dealers', businessType: 'dealer', createPermission: 'dealer:create', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '经销商编码', w: 130, filter: { type: 'text' } }, 
@@ -96,7 +96,7 @@ const dealers = {
 }
 
 const hospitals = {
-  key: 'hospitals', title: '医院管理', api: '/api/hospitals', detailable: true, detailPath: '/hospitals', businessType: 'hospital', importable: true, exportable: true, batchDelete: false,
+  key: 'hospitals', title: '医院管理', api: '/api/hospitals', detailable: true, detailPath: '/hospitals', businessType: 'hospital', createPermission: 'hospital:create', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '医院编码', w: 130, filter: { type: 'text' } }, 
@@ -120,7 +120,7 @@ const hospitals = {
 }
 
 const warehouses = {
-  key: 'warehouses', title: '仓库管理', api: '/api/warehouses', detailable: true, detailPath: '/warehouses', businessType: 'warehouse', importable: true, exportable: true, batchDelete: false,
+  key: 'warehouses', title: '仓库管理', api: '/api/warehouses', detailable: true, detailPath: '/warehouses', businessType: 'warehouse', createPermission: 'warehouse:create', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '仓库编码', w: 130, filter: { type: 'text' } }, 
@@ -141,7 +141,7 @@ const warehouses = {
 }
 
 const regions = {
-  key: 'regions', title: '区域管理', api: '/api/regions', detailable: true, detailPath: '/regions', businessType: 'region', importable: true, exportable: true, batchDelete: false,
+  key: 'regions', title: '区域管理', api: '/api/regions', detailable: true, detailPath: '/regions', businessType: 'region', createPermission: 'region:create', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '区域编码', w: 140, filter: { type: 'text' } }, 
@@ -161,7 +161,7 @@ const regions = {
 }
 
 const suppliers = {
-  key: 'suppliers', title: '供应商管理', api: '/api/suppliers', detailable: true, detailPath: '/suppliers', businessType: 'supplier', importable: true, exportable: true, batchDelete: false,
+  key: 'suppliers', title: '供应商管理', api: '/api/suppliers', detailable: true, detailPath: '/suppliers', businessType: 'supplier', createPermission: 'supplier:create', importable: true, exportable: true, batchDelete: false,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '供应商编码', w: 130, filter: { type: 'text' } }, 
@@ -189,7 +189,7 @@ const suppliers = {
 }
 
 const productPrices = {
-  key: 'product-prices', title: '产品价格', api: '/api/product-prices', detailable: true, detailPath: '/product-prices', businessType: 'product_price', noDelete: true, noEdit: true, importable: false, exportable: true,
+  key: 'product-prices', title: '产品价格', api: '/api/product-prices', detailable: true, detailPath: '/product-prices', businessType: 'product_price', createPermission: 'product_price:create', noDelete: true, noEdit: true, importable: false, exportable: true,
   rowActions: [
     { key: 'activate', label: '生效', type: 'success', when: ['inactive'] },
     { key: 'deactivate', label: '失效', type: 'warning', when: ['active'] }
@@ -224,7 +224,7 @@ const productPrices = {
   ]
 }
 const authorizations = {
-  key: 'authorizations', title: '授权管理', api: '/api/authorizations', detailable: true, detailPath: '/authorizations', businessType: 'authorization', exportable: true,
+  key: 'authorizations', title: '授权管理', api: '/api/authorizations', detailable: true, detailPath: '/authorizations', businessType: 'authorization', createPermission: 'authorization:create', exportable: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '授权编号', w: 160, filter: { type: 'text' } }, 
@@ -290,7 +290,7 @@ const promotions = {
   ]
 }
 const orders = {
-  key: 'orders', title: '销售订单', api: '/api/sales-orders', detailable: true, detailPath: '/orders', editPath: '/order-create/sales', noDelete: false, createPath: '/order-create/sales', maxActions: 3, pageSize: 30, editableWhen: ['DRAFT', 'REJECTED'], deletableWhen: ['DRAFT', 'REJECTED'],
+  key: 'orders', title: '销售订单', api: '/api/sales-orders', detailable: true, detailPath: '/orders', editPath: '/order-create/sales', noDelete: false, createPath: '/order-create/sales', createPermission: 'sales_order:create', keywordFields: ['销售订单号', '经销商'], maxActions: 3, pageSize: 30, editableWhen: ['DRAFT', 'REJECTED'], deletableWhen: ['DRAFT', 'REJECTED'],
   rowActions: [
     { key: 'cancel', label: '取消', type: 'warning', when: ['APPROVED'], method: 'POST', path: '/cancel', confirm: '确认取消此订单？' },
     { key: 'simulateShip', label: '生成出库单', type: 'primary', when: ['APPROVED'], method: 'POST', path: '/simulate-ship', confirm: '确认根据此订单生成销售出库单？' }
@@ -308,7 +308,7 @@ const orders = {
 }
 
 const salesReturns = {
-  key: 'sales-returns', title: '销退订单', api: '/api/sales-returns', detailable: true, noDelete: false, noEdit: false, maxActions: 2, pageSize: 30, createPath: '/sales-return-edit', editPath: '/sales-return-edit', viewPath: '/sales-return-edit', readonlyQuery: true, exportable: true,
+  key: 'sales-returns', title: '销退订单', api: '/api/rma/orders/unified', detailable: true, noDelete: true, noEdit: true, maxActions: 2, pageSize: 30, createPath: '/sales-return-edit', createPermission: 'sales_return:create', keywordFields: ['销退单号', '经销商'], viewPath: '/sales-return-edit', readonlyQuery: true, exportable: false,
   editableWhen: ['DRAFT', 'REJECTED'],
   deletableWhen: ['DRAFT', 'REJECTED', 'CANCELLED'],
   statusActions: [
@@ -349,7 +349,7 @@ const PURCHASE_LINE_COLS = [
 ]
 
 const purchaseOrders = {
-  key: 'purchase-orders', title: '采购订单', api: '/api/purchase-orders', detailable: true, detailPath: '/purchase-orders', businessType: 'purchaseOrder', noDelete: true, editableWhen: ['DRAFT'], maxActions: 2, pageSize: 30,
+  key: 'purchase-orders', title: '采购订单', api: '/api/purchase-orders', detailable: true, detailPath: '/purchase-orders', businessType: 'purchaseOrder', createPermission: 'purchase_order:create', keywordFields: ['采购单号', '供应商'], noDelete: true, editableWhen: ['DRAFT'], maxActions: 2, pageSize: 30,
   importable: true, exportable: true,
   statusActions: [
     { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'primary', confirm: '确认提交此采购订单进入审批？' },
@@ -381,7 +381,7 @@ const purchaseOrders = {
 }
 
 const purchaseReturns = {
-  key: 'purchase-returns', title: '采退订单', api: '/api/purchase-returns', detailable: true, noDelete: true, maxActions: 2, pageSize: 30, createPath: '/purchase-return-edit/new', detailPath: '/purchase-return-edit',
+  key: 'purchase-returns', title: '采退订单', api: '/api/purchase-returns', detailable: true, noDelete: true, maxActions: 2, pageSize: 30, createPath: '/purchase-return-edit/new', createPermission: 'purchase_return:create', detailPath: '/purchase-return-edit',
   statusActions: [
     { label: '提交审批', when: ['DRAFT'], method: 'POST', path: '/submit', type: 'warning', confirm: '确认提交此采退订单进入审批？' },
     { label: '审批通过', when: ['PENDING_APPROVAL'], method: 'POST', path: '/approve', type: 'success', confirm: '确认审批通过此采退订单？（将自动生成采退出库草稿）' },
@@ -483,7 +483,7 @@ const receipts = {
 
 const stockMoves = {
   key: 'stock-moves', title: '库存移动', api: '/api/stock-moves', detailable: true, detailPath: '/stock-moves', businessType: 'stockMove',
-  noEdit: true, noDelete: true, importable: false, exportable: true, createPath: '/stock-move-edit/new',
+  noEdit: true, noDelete: true, importable: false, exportable: true, createPath: '/stock-move-edit/new', createPermission: 'stock_move:create',
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '移动单号', w: 170, filter: { type: 'text' } },
@@ -523,7 +523,7 @@ const STOCK_LINE_COLS = [
 ]
 
 const inventoryAdjustments = {
-  key: 'inventory-adjustments', title: '库存调整', api: '/api/inventory-adjustments', detailable: true, detailPath: '/inventory-adjustments', businessType: 'inventoryAdjustment', noEdit: true,
+  key: 'inventory-adjustments', title: '库存调整', api: '/api/inventory-adjustments', detailable: true, detailPath: '/inventory-adjustments', businessType: 'inventoryAdjustment', createPermission: 'inventory_adjustment:create', noEdit: true,
   importable: true, exportable: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
@@ -545,7 +545,7 @@ const inventoryAdjustments = {
 }
 
 const surgeryReports = {
-  key: 'surgery-reports', title: '手术植入报台', api: '/api/surgery-reports', detailable: true, detailPath: '/surgery-reports', businessType: 'surgeryReport',
+  key: 'surgery-reports', title: '手术植入报台', api: '/api/surgery-reports', detailable: true, detailPath: '/surgery-reports', businessType: 'surgeryReport', createPermission: 'surgery_report:create',
   importable: true, exportable: true,
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
@@ -579,7 +579,7 @@ const surgeryReports = {
 }
 
 const users = {
-  key: 'users', title: '账号管理', api: '/api/users',
+  key: 'users', title: '账号管理', api: '/api/users', createPermission: 'user:create',
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'username', l: '账号', w: 130, filter: { type: 'text' } },
@@ -607,7 +607,7 @@ const users = {
 }
 
 const positions = {
-  key: 'positions', title: '销售岗位', api: '/api/sales-positions',
+  key: 'positions', title: '销售岗位', api: '/api/sales-positions', createPermission: 'position:create',
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } },
     { k: 'code', l: '岗位编码', w: 130, filter: { type: 'text' } },
@@ -629,7 +629,7 @@ const positions = {
 }
 
 const roles = {
-  key: 'roles', title: '角色管理', api: '/api/roles',
+  key: 'roles', title: '角色管理', api: '/api/roles', createPermission: 'role:create',
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, 
     { k: 'code', l: '编码', filter: { type: 'text' } }, 
@@ -728,7 +728,7 @@ const reportOrderTrace = { ...reportBase, key: 'report-order-trace', title: '订
 }
 
 const productLines = {
-  key: 'product-lines', title: '产品层次', api: '/api/product-lines', detailable: true, detailPath: '/product-lines', businessType: 'productLine',
+  key: 'product-lines', title: '产品层次', api: '/api/product-lines', detailable: true, detailPath: '/product-lines', businessType: 'productLine', createPermission: 'product_line:create',
   cols: [
     { k: 'id', l: '编号', w: 60, filter: { type: 'number' } }, { k: 'code', l: '层次编码', w: 130, filter: { type: 'text' } }, { k: 'name', l: '层次名称', filter: { type: 'text' } },
     { k: 'parentName', l: '上级层次', w: 160 },
@@ -745,7 +745,7 @@ const productLines = {
 }
 
 const productBundles = {
-  noDelete: true, key: 'product-bundles', title: '产品组合(BOM)', api: '/api/product-bundles', detailable: true, detailPath: '/product-bundles', businessType: 'product_bundle',
+  noDelete: true, key: 'product-bundles', title: '产品组合(BOM)', api: '/api/product-bundles', detailable: true, detailPath: '/product-bundles', businessType: 'product_bundle', createPermission: 'product_bundle:create',
   editableWhen: ['draft'],
   rowActions: [
     { key: 'edit', label: '编辑', type: 'primary', versionStatusIn: ['draft'] },
@@ -804,6 +804,24 @@ const productBundles = {
   ]
 }
 
+import { V430_MODULES } from './v430-modules.js'
+
+export const LAYOUT_PARAM_MAPS = {
+  orders: { dealer: 'dealerId', dateFrom: 'createdFrom', dateTo: 'createdTo' },
+  'sales-returns': { dateFrom: 'createdAtFrom', dateTo: 'createdAtTo' },
+  'purchase-orders': { supplier: 'supplierId', dateFrom: 'createdAtFrom', dateTo: 'createdAtTo' },
+  'purchase-returns': { supplier: 'supplierId', dateFrom: 'createdAtFrom', dateTo: 'createdAtTo' },
+  'sales-outs': { dateFrom: 'salesDateFrom', dateTo: 'salesDateTo' },
+  receipts: { dateFrom: 'receiptDateFrom', dateTo: 'receiptDateTo' },
+  'stock-moves': { dateFrom: 'createdAtFrom', dateTo: 'createdAtTo' },
+  'surgery-reports': { dateFrom: 'surgeryDateFrom', dateTo: 'surgeryDateTo' },
+  contracts: { dateFrom: 'createdAtFrom', dateTo: 'createdAtTo' },
+  products: { category: 'categoryId' },
+  inventory: { warehouse: 'warehouseId' },
+  'dealer-profile': { region: 'regionId' },
+  'api-call-log': { dateFrom: 'startTime', dateTo: 'endTime', status: 'statusCode' }
+}
+
 export const MODULE_CONFIGS = {
   products, categories, dealers, hospitals, warehouses, regions, suppliers,
   'product-lines': productLines, 'product-bundles': productBundles,
@@ -814,5 +832,6 @@ export const MODULE_CONFIGS = {
   'surgery-reports': surgeryReports, users, positions, roles,
   'report-sales-ranking': reportSalesRanking, 'report-product-top10': reportProductTop10,
   'report-inventory-turnover': reportInventoryTurnover, 'report-surgery-stats': reportSurgeryStats,
-  'report-receivables': reportReceivables, 'report-order-trace': reportOrderTrace
+  'report-receivables': reportReceivables, 'report-order-trace': reportOrderTrace,
+  ...V430_MODULES
 }

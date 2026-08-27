@@ -56,7 +56,8 @@ public class JwtFilter extends OncePerRequestFilter {
             "/api/auth/wechat/qrcode",
             "/api/auth/wechat/callback",
             "/api/admin/auth/login",
-            "/api/admin/auth/refresh"
+            "/api/admin/auth/refresh",
+            "/api/auth/customer-register"
     );
 
     @Override
@@ -162,4 +163,5 @@ public class JwtFilter extends OncePerRequestFilter {
         return authorities;
     }
 }
+
 

@@ -11,13 +11,14 @@
         <el-radio-button label="button">按钮配置</el-radio-button>
       </el-radio-group>
       <el-button type="primary" @click="load">查询</el-button>
+      <el-button @click="onReset">重置</el-button>
       <el-button @click="refreshCache">刷新缓存</el-button>
     </div>
 
     <!-- 字段 / 筛选配置保持原样 -->
     <template v-if="tab !== 'button'">
       <el-button type="primary" style="margin-bottom:12px" @click="addRow">新增一行</el-button>
-      <el-table :data="rows" border>
+      <el-table :data="rows" border stripe size="small">
         <el-table-column :label="tab==='page'?'字段Key':'筛选Key'" width="180">
           <template #default="{ row }"><el-input v-model="row.key" /></template>
         </el-table-column>
@@ -31,7 +32,7 @@
         <el-table-column v-if="tab==='filter'" label="字典类型" width="160"><template #default="{ row }"><el-input v-model="row.dictType" /></template></el-table-column>
         <el-table-column v-if="tab==='filter'" label="多选" width="80"><template #default="{ row }"><el-switch v-model="row.multiple" /></template></el-table-column>
         <el-table-column v-if="tab==='filter'" label="排序"><template #default="{ row }"><el-input-number v-model="row.sortOrder" :min="0" style="width:100px" /></template></el-table-column>
-        <el-table-column label="操作" width="100"><template #default="{ $index }"><el-button link type="danger" @click="rows.splice($index,1)">删除</el-button></template></el-table-column>
+        <el-table-column label="操作" width="100"><template #default="{ $index }"><el-button link type="danger" @click="removeRow($index)">删除</el-button></template></el-table-column>
       </el-table>
       <el-button type="primary" style="margin-top:12px" @click="save">保存配置</el-button>
     </template>
@@ -44,7 +45,7 @@
         <el-radio-button label="TENANT_OVERRIDE">租户覆盖</el-radio-button>
       </el-radio-group>
       <el-button type="primary" style="margin-bottom:12px" @click="addButtonRow">新增按钮</el-button>
-      <el-table :data="buttonRows" border>
+      <el-table :data="buttonRows" border stripe size="small">
         <el-table-column label="作用域" width="100">
           <template #default="{ row }">
             <el-select v-model="row.scope">
@@ -74,7 +75,7 @@
         </el-table-column>
         <el-table-column label="二次确认" width="100"><template #default="{ row }"><el-switch v-model="row.confirmRequired" /></template></el-table-column>
         <el-table-column label="来源" width="100"><template #default="{ row }"><el-tag v-if="row.fromTenant" type="warning" size="small">租户覆盖</el-tag><el-tag v-else type="info" size="small">平台默认</el-tag></template></el-table-column>
-        <el-table-column label="操作" width="100"><template #default="{ $index }"><el-button link type="danger" @click="buttonRows.splice($index,1)">删除</el-button></template></el-table-column>
+        <el-table-column label="操作" width="100"><template #default="{ $index }"><el-button link type="danger" @click="removeButtonRow($index)">删除</el-button></template></el-table-column>
       </el-table>
       <el-button type="primary" style="margin-top:12px" @click="saveButtons">保存按钮配置</el-button>
     </template>
@@ -83,7 +84,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getPageConfigs, upsertPageConfigs, getFilterConfigs, upsertFilterConfigs, refreshUiCache, getButtonConfigs, upsertButtonConfigs, refreshButtonCache } from '@/api/admin'
 
 const tenantType = ref('MANUFACTURER'); const pageKey = ref('products'); const tab = ref('page'); const scopeLevel = ref('PLATFORM_DEFAULT')
@@ -130,6 +131,36 @@ async function saveButtons() {
 }
 async function refreshCache() {
   await refreshUiCache(); if (tab.value === 'button') await refreshButtonCache(); ElMessage.success('缓存已刷新')
+}
+function onReset() {
+  tenantType.value = 'MANUFACTURER'
+  pageKey.value = 'products'
+  tab.value = 'page'
+  load()
+}
+async function removeRow(index) {
+  await ElMessageBox.confirm('确定删除该配置行？', '确认', { type: 'warning', title: '确认' })
+  rows.value.splice(index, 1)
+}
+async function removeButtonRow(index) {
+  await ElMessageBox.confirm('确定删除该按钮配置？', '确认', { type: 'warning', title: '确认' })
+  buttonRows.value.splice(index, 1)
+}
+function validateRows() {
+  for (let i = 0; i < rows.value.length; i++) {
+    const r = rows.value[i]
+    if (!r.key || !r.key.trim()) { ElMessage.warning(`第 ${i + 1} 行 Key 不能为空`); return false }
+    if (!r.label || !r.label.trim()) { ElMessage.warning(`第 ${i + 1} 行标签不能为空`); return false }
+  }
+  return true
+}
+function validateButtonRows() {
+  for (let i = 0; i < buttonRows.value.length; i++) {
+    const r = buttonRows.value[i]
+    if (!r.buttonKey || !r.buttonKey.trim()) { ElMessage.warning(`第 ${i + 1} 行按钮 Key 不能为空`); return false }
+    if (!r.label || !r.label.trim()) { ElMessage.warning(`第 ${i + 1} 行显示文字不能为空`); return false }
+  }
+  return true
 }
 onMounted(load)
 </script>

@@ -72,10 +72,31 @@ const total = ref(0)
 let timer = null
 
 watch(() => props.displayValue, (v) => { displayText.value = v || '' })
-// 当父组件清空 modelValue（如新建表单 reset）时，同步清空输入框显示，避免残留旧名称
-watch(() => props.modelValue, (v) => {
-  if (v === '' || v === null || v === undefined) displayText.value = ''
-})
+let reverseReqId = 0
+let textForValue = ''
+// 当父组件清空 modelValue（如新建表单 reset）时，同步清空输入框显示，避免残留旧名称；
+// modelValue 有值但显示文本与当前值不匹配（如编辑页回显时父组件未传 displayValue）时，自动反查标签，仅显示不触发 pick
+watch(() => props.modelValue, async (v) => {
+  if (v === '' || v === null || v === undefined) {
+    reverseReqId++
+    textForValue = ''
+    displayText.value = ''
+    return
+  }
+  if (String(textForValue) === String(v) && displayText.value) return
+  textForValue = ''
+  const reqId = ++reverseReqId
+  try {
+    const res = await lookup(props.resource, { limit: 500, ...props.extraParams })
+    if (reqId !== reverseReqId) return
+    const rows = (res.data && Array.isArray(res.data.list)) ? res.data.list : (Array.isArray(res.data) ? res.data : [])
+    const hit = rows.find(r => String(r.value != null ? r.value : r.id) === String(v))
+    if (hit) {
+      textForValue = v
+      displayText.value = hit.label || ([hit.code, hit.name || hit.nameCn].filter(Boolean).join(' · ')) || String(v)
+    }
+  } catch { /* 反查失败保留空显示，不阻塞页面 */ }
+}, { immediate: true })
 
 function open() {
   visible.value = true

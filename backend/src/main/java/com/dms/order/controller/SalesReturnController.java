@@ -39,8 +39,8 @@ public class SalesReturnController {
     }
 
     @GetMapping("/shipped-outs")
-    public ApiResponse<List<Map<String, Object>>> shippedOuts( @RequestParam(required = false) Long orderId, @RequestParam(required = false) Long dealerId, @RequestParam(required = false) String startDate, @RequestParam(required = false) String endDate, @RequestParam(required = false) String keyword, @RequestParam(required = false) String batchNo, @RequestParam(required = false) String serialNo, @RequestParam(required = false) Long productId) {
-        return service.shippedOuts(orderId, dealerId, startDate, endDate, keyword, batchNo, serialNo, productId);
+    public ApiResponse<List<Map<String, Object>>> shippedOuts( @RequestParam(required = false) Long orderId, @RequestParam(required = false) Long dealerId, @RequestParam(required = false) Long warehouseId, @RequestParam(required = false) String startDate, @RequestParam(required = false) String endDate, @RequestParam(required = false) String keyword, @RequestParam(required = false) String batchNo, @RequestParam(required = false) String serialNo, @RequestParam(required = false) Long productId) {
+        return service.shippedOuts(orderId, dealerId, warehouseId, startDate, endDate, keyword, batchNo, serialNo, productId);
     }
 
     @GetMapping("/shipped-outs/{salesOutId}/lines")

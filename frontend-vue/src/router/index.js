@@ -1,5 +1,28 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getToken } from '@/utils/auth'
+import { ElMessage } from 'element-plus'
+import { getToken, getPermissions } from '@/utils/auth'
+import { useUserStore } from '@/store/user'
+import { MENU_GROUPS } from '@/config/menu'
+
+// 路由 key -> 所需权限码（来源 menu.js 的 permissionCode）
+const ROUTE_PERMISSION_MAP = (() => {
+  const m = {}
+  MENU_GROUPS.forEach(g => (g.items || []).forEach(it => {
+    if (it.permissionCode) m[it.key] = it.permissionCode
+  }))
+  return m
+})()
+
+function buildPermissionSet() {
+  const set = new Set()
+  try {
+    const store = useUserStore()
+    ;(store.permissions || []).forEach(p => set.add(p))
+    ;((store.user && store.user.permissions) || []).forEach(p => set.add(p))
+  } catch (e) { /* pinia 未就绪 */ }
+  getPermissions().forEach(p => set.add(p))
+  return set
+}
 
 const routes = [
   { path: '/error/:code', name: 'ErrorPage', component: () => import('@/views/ErrorPage.vue'), meta: { public: true } },
@@ -45,9 +68,9 @@ const routes = [
       { path: 'dealers/:id/profile', name: 'DealerProfile', component: () => import('@/views/DealerProfile.vue'), meta: { title: '经销商 360 画像' } },
       { path: 'order-create/sales/:id?', name: 'SalesOrderCreate', component: () => import('@/views/OrderCreate.vue'), meta: { noCache: true, title: '销售订单编辑' }, props: true },
       { path: 'order-create/purchase', name: 'PurchaseOrderCreate', component: () => import('@/views/OrderCreate.vue'), meta: { noCache: true, title: '新建采购订单' } },
-      { path: 'positions', name: 'Positions', component: () => import('@/views/Positions.vue'), meta: { title: '销售岗位' } },
+      { path: 'positions', name: 'Positions', component: () => import('@/views/Positions.vue'), meta: { title: '销售岗位', permission: 'position:view' } },
       { path: 'roles-manage', name: 'RolesManage', component: () => import('@/views/Roles.vue'), meta: { title: '角色权限' } },
-      { path: 'tenant-page-configs', name: 'TenantPageConfigs', component: () => import('@/views/TenantPageConfigs.vue'), meta: { title: '列表页配置' } },
+      { path: 'tenant-page-configs', name: 'TenantPageConfigs', component: () => import('@/views/TenantPageConfigs.vue'), meta: { title: '列表页配置', permission: 'tenant_ui_config:view' } },
       { path: 'receipt-edit/:id', name: 'ReceiptEdit', component: () => import('@/views/ReceiptEdit.vue'), meta: { noCache: true, title: '收货入库' } },
       { path: 'stock-move-edit/:id', name: 'StockMoveEdit', component: () => import('@/views/StockMoveEdit.vue'), meta: { noCache: true, title: '库存移动' } },
       { path: 'sales-out-edit/:id', name: 'SalesOutEdit', component: () => import('@/views/SalesOutEdit.vue'), meta: { noCache: true, title: '发货出库' } },
@@ -56,11 +79,12 @@ const routes = [
       { path: 'purchase-return-edit/:id', name: 'PurchaseReturnEdit', component: () => import('@/views/PurchaseReturnEdit.vue'), meta: { noCache: true, title: '采退订单' } },
       { path: 'm/:key', name: 'Module', component: () => import('@/views/ModuleView.vue'), meta: { title: '业务模块' } },
       { path: 'api-call-logs', name: 'ApiCallLog', component: () => import('@/views/ApiCallLog.vue'), meta: { title: '接口调用日志' } },
+      { path: 'customer-vouchers', name: 'CustomerVouchers', component: () => import('@/views/voucher/VoucherManage.vue'), meta: { title: '代金券管理' } },
       { path: 'product-mappings', name: 'ProductMappings', component: () => import('@/views/ProductMappings.vue'), meta: { title: '产品对码' } },
       { path: 'approval/todo', name: 'ApprovalTodo', component: () => import('@/views/approval/TodoCenter.vue'), meta: { title: '审批中心' } },
-      { path: 'approval/templates', name: 'ApprovalTemplates', component: () => import('@/views/approval/ApprovalTemplates.vue'), meta: { title: '审批流配置' } },
-      { path: 'approval/delegations', name: 'ApprovalDelegations', component: () => import('@/views/approval/Delegations.vue'), meta: { title: '审批委托' } },
-      { path: 'approval/admin', name: 'ApprovalAdmin', component: () => import('@/views/approval/ApprovalAdmin.vue'), meta: { title: '审批监控' } },
+      { path: 'approval/templates', name: 'ApprovalTemplates', component: () => import('@/views/approval/ApprovalTemplates.vue'), meta: { title: '审批流配置', permission: 'approval:manage' } },
+      { path: 'approval/delegations', name: 'ApprovalDelegations', component: () => import('@/views/approval/Delegations.vue'), meta: { title: '审批委托', permission: 'approval:manage' } },
+      { path: 'approval/admin', name: 'ApprovalAdmin', component: () => import('@/views/approval/ApprovalAdmin.vue'), meta: { title: '审批监控', permission: 'approval:admin' } },
       { path: 'email-logs', name: 'EmailLogs', component: () => import('@/views/EmailLogs.vue'), meta: { title: '邮件发送日志' } },
       { path: 'notifications', name: 'Notifications', component: () => import('@/views/Notifications.vue'), meta: { title: '消息中心' } },
       { path: 'report-subscriptions', name: 'ReportSubscriptions', component: () => import('@/views/ReportSubscriptions.vue'), meta: { title: '报表订阅' } },
@@ -75,6 +99,8 @@ const routes = [
     ]
   },
   { path: '/mobile/login', name: 'MLogin', component: () => import('@/views/mobile/MLogin.vue'), meta: { public: true, mobile: true } },
+  { path: '/mobile/register', name: 'MRegister', component: () => import('@/views/mobile/MCustomerRegister.vue'), meta: { public: true, mobile: true, title: '客户注册' } },
+  { path: '/m/register', redirect: '/mobile/register' },
   {
     path: '/mobile',
     component: () => import('@/views/mobile/MLayout.vue'),
@@ -105,15 +131,26 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const token = getToken()
   if (to.meta.public) {
     next()
-  } else if (!token) {
-    next(to.meta.mobile ? '/mobile/login' : '/login')
-  } else {
-    next()
+    return
   }
+  if (!token) {
+    next(to.meta.mobile ? '/mobile/login' : '/login')
+    return
+  }
+  const required = to.meta.permission || ROUTE_PERMISSION_MAP[to.name === 'Module' ? to.params.key : null]
+  if (required) {
+    const perms = buildPermissionSet()
+    if (!perms.has(required)) {
+      ElMessage.error('无权限访问该页面')
+      next('/error/403')
+      return
+    }
+  }
+  next()
 })
 
 export default router

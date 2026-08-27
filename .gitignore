@@ -121,3 +121,7 @@ releases/*-prod-deploy-*/
 
 # Local sync rollback backups
 .sync-backup-*/
+
+# Local staging for incoming change packages (not for repo)
+_incoming/
+*.tar.gz

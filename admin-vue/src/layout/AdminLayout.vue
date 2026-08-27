@@ -1,8 +1,11 @@
-﻿<template>
+<template>
   <el-container class="layout">
     <el-aside width="220px" class="aside">
       <div class="logo"><DmsLogo :size="30" class="logo-mark" inverse /><span class="logo-sub">平台后台</span></div>
       <el-menu :default-active="route.path" router background-color="var(--dms-sider-bg)" text-color="var(--dms-sider-text)" active-text-color="#ffffff">
+        <el-menu-item index="/">
+          <el-icon><DataLine /></el-icon><span>首页总览</span>
+        </el-menu-item>
         <el-sub-menu index="tenant">
           <template #title><el-icon><OfficeBuilding /></el-icon><span>租户管理</span></template>
           <el-menu-item index="/tenants/manufacturers">厂家租户</el-menu-item>
@@ -21,6 +24,9 @@
           <el-menu-item index="/logs/api">接口日志</el-menu-item>
           <el-menu-item index="/logs/audits">审计日志</el-menu-item>
         </el-sub-menu>
+        <el-menu-item index="/reports">
+          <el-icon><PieChart /></el-icon><span>报表总览</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
@@ -67,7 +73,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/store/auth'
 import { logout as logoutApi, changePassword } from '@/api/auth'
-import { Moon, Sunny } from '@element-plus/icons-vue'
+import { Moon, Sunny, DataLine, PieChart } from '@element-plus/icons-vue'
 import { THEME_PRESETS as themePresets, currentThemePreset as currentPreset, setPreset as setThemePreset, toggleMode as applyThemeMode, initTheme } from '../config/theme-runtime'
 
 const route = useRoute()

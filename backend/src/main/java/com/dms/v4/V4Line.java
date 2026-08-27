@@ -20,6 +20,7 @@ public class V4Line {
     private BigDecimal standardAmount;
     private String lineDiscountType;
     private BigDecimal lineDiscountValue;
+    private String lineDiscountDirection; // REDUCE(减)/ADD(加，高开)
     private BigDecimal lineDiscountAmount;
     private BigDecimal promoDiscountAmount;
     private BigDecimal headerDiscountAmount;
@@ -37,4 +38,17 @@ public class V4Line {
     private String lineLevel;
     private boolean groupHeader;
     private Long bomParentLineId;
+    // v4.3.0 计价扩展
+    private String priceSource;          // CONTRACT / DEALER / GLOBAL
+    private BigDecimal basePriceInclTax; // 基础含税单价（合同价>客户价>全局价）
+    private BigDecimal productDiscountRate;
+    private BigDecimal productDiscountAmount;
+    private BigDecimal dealerDiscountAmount; // 客户全局折扣分摊到行
+    private String promoType;               // QTY_DISCOUNT / QTY_REDUCE / GIFT
+    private Long promotionId;
+    private Long promoHitId;
+    private BigDecimal unitPriceInclTax;    // EA 成交含税单价（2 位，尾差吸收）
+    private boolean lineZero;               // 手动 0 金额行
+    private String lineLabel;               // 行号+SKU 错误定位
 }
+

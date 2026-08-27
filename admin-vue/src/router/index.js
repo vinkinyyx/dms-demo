@@ -15,8 +15,8 @@ const routes = [
   {
     path: '/',
     component: () => import('@/layout/AdminLayout.vue'),
-    redirect: '/tenants/manufacturers',
     children: [
+      { path: '', name: 'Overview', component: () => import('@/views/dashboard/Overview.vue'), meta: { title: '首页总览' } },
       { path: 'tenants/manufacturers', name: 'ManufacturerTenants', component: () => import('@/views/tenant/ManufacturerTenants.vue'), meta: { title: '厂家租户' } },
       { path: 'tenants/dealers', name: 'DealerTenants', component: () => import('@/views/tenant/DealerTenants.vue'), meta: { title: '经销商租户' } },
       { path: 'tenant-admins', name: 'TenantAdmins', component: () => import('@/views/tenant/TenantAdmins.vue'), meta: { title: '租户管理员' } },

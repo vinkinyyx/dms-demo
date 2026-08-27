@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.*;
 
@@ -15,6 +16,9 @@ public class V4PricingService {
     private final EntityManager em;
 
     public record Price(BigDecimal excl, BigDecimal rate, BigDecimal incl) {}
+
+    /** v4.3.0 取价：带价格来源 CONTRACT/DEALER/GLOBAL，合同价优先。 */
+    public record SourcedPrice(Price price, String source) {}
 
     public Price salesPrice(UUID tenantId, Long productId, Long dealerId) {
         return salesPrice(tenantId, productId, dealerId, PriceUse.STANDALONE, null);
@@ -36,6 +40,112 @@ public class V4PricingService {
                 "产品 [" + label + "] 没有维护有效单品销售价格，请先在「产品价格」中维护经销商价或全局价");
         }
         return p;
+    }
+
+    /**
+     * v4.3.0 基础含税单价：合同价 > 客户基础价(DEALER) > 全局价(GLOBAL)。
+     */
+    public SourcedPrice basePrice(UUID tid, Long productId, Long dealerId) {
+        Tuple cp = findContractPrice(tid, productId, dealerId);
+        if (cp != null) {
+            BigDecimal rate = bd(cp.get("tax_rate"));
+            BigDecimal incl = bd(cp.get("price_incl_tax"));
+            BigDecimal excl = bd(cp.get("price_excl_tax"));
+            if (incl.signum() == 0 && excl.signum() > 0) incl = excl.multiply(BigDecimal.ONE.add(rate));
+            if (excl.signum() == 0 && incl.signum() > 0) excl = incl.divide(BigDecimal.ONE.add(rate), 4, RoundingMode.HALF_UP);
+            if (incl.signum() > 0) return new SourcedPrice(new Price(excl, rate, incl), "CONTRACT");
+        }
+        Price dealer = findPrice(tid, productId, "DEALER", dealerId, "STANDALONE", null);
+        if (dealer != null && dealer.incl().signum() > 0) return new SourcedPrice(dealer, "DEALER");
+        Price global = findPrice(tid, productId, "GLOBAL", 0L, "STANDALONE", null);
+        if (global == null) global = findPrice(tid, productId, "GLOBAL", null, "STANDALONE", null);
+        if (global != null && global.incl().signum() > 0) return new SourcedPrice(global, "GLOBAL");
+        String label = productLabel(tid, productId);
+        throw new com.dms.common.BusinessException(com.dms.common.ErrorCode.BUSINESS_RULE_VIOLATION,
+                "产品 [" + label + "] 没有维护有效销售价格（合同价/经销商价/全局价），请先维护价格");
+    }
+
+    private Tuple findContractPrice(UUID tid, Long productId, Long dealerId) {
+        String sql = "SELECT cp.price_incl_tax, cp.price_excl_tax, cp.tax_rate FROM contract_prices cp " +
+                "JOIN contracts c ON c.id = cp.contract_id " +
+                "WHERE cp.tenant_id=?1 AND cp.product_id=?2 AND cp.deleted_at IS NULL AND cp.status='active' " +
+                "AND c.deleted_at IS NULL AND c.status='effective' " +
+                "AND (cp.dealer_id IS NULL OR cp.dealer_id=?3) " +
+                "AND (cp.valid_from IS NULL OR cp.valid_from <= CURRENT_DATE) " +
+                "AND (cp.valid_to IS NULL OR cp.valid_to >= CURRENT_DATE) " +
+                "AND (c.valid_from IS NULL OR c.valid_from <= CURRENT_DATE) " +
+                "AND (c.valid_to IS NULL OR c.valid_to >= CURRENT_DATE) " +
+                "ORDER BY (cp.dealer_id IS NOT NULL) DESC, cp.updated_at DESC LIMIT 1";
+        var rs = em.createNativeQuery(sql, Tuple.class).setParameter(1, tid).setParameter(2, productId).setParameter(3, dealerId).getResultList();
+        return rs.isEmpty() ? null : (Tuple) rs.get(0);
+    }
+
+    /** 产品全局折扣率（0~1，只减），当前日期生效；无则 0。 */
+    public BigDecimal productGlobalDiscountRate(UUID tid, Long productId) {
+        String sql = "SELECT discount_rate FROM product_global_discounts " +
+                "WHERE tenant_id=?1 AND product_id=?2 AND deleted_at IS NULL AND status='active' " +
+                "AND (valid_from IS NULL OR valid_from <= CURRENT_DATE) " +
+                "AND (valid_to IS NULL OR valid_to >= CURRENT_DATE) " +
+                "ORDER BY updated_at DESC LIMIT 1";
+        var rs = em.createNativeQuery(sql, Tuple.class).setParameter(1, tid).setParameter(2, productId).getResultList();
+        if (rs.isEmpty()) return BigDecimal.ZERO;
+        return bd(((Tuple) rs.get(0)).get("discount_rate"));
+    }
+
+    /** 客户全局折扣率（0~1，只减），当前日期生效；无则 0。 */
+    public BigDecimal dealerGlobalDiscountRate(UUID tid, Long dealerId) {
+        if (dealerId == null) return BigDecimal.ZERO;
+        String sql = "SELECT discount_rate FROM dealer_global_discounts " +
+                "WHERE tenant_id=?1 AND dealer_id=?2 AND deleted_at IS NULL AND status='active' " +
+                "AND (valid_from IS NULL OR valid_from <= CURRENT_DATE) " +
+                "AND (valid_to IS NULL OR valid_to >= CURRENT_DATE) " +
+                "ORDER BY updated_at DESC LIMIT 1";
+        var rs = em.createNativeQuery(sql, Tuple.class).setParameter(1, tid).setParameter(2, dealerId).getResultList();
+        if (rs.isEmpty()) return BigDecimal.ZERO;
+        return bd(((Tuple) rs.get(0)).get("discount_rate"));
+    }
+
+    /** 代金券（原始行）。未找到返回 null。 */
+    public Tuple voucher(UUID tid, Long voucherId) {
+        if (voucherId == null) return null;
+        String sql = "SELECT * FROM customer_vouchers WHERE id=?1 AND tenant_id=?2 AND deleted_at IS NULL";
+        var rs = em.createNativeQuery(sql, Tuple.class).setParameter(1, voucherId).setParameter(2, tid).getResultList();
+        return rs.isEmpty() ? null : (Tuple) rs.get(0);
+    }
+
+    /** 该券是否已被有效使用（非 REVERSED），可排除当前订单。 */
+    public boolean voucherInUse(UUID tid, Long voucherId, Long excludeOrderId) {
+        String sql = "SELECT 1 FROM customer_voucher_usages WHERE tenant_id=?1 AND voucher_id=?2 " +
+                "AND status<>'REVERSED' AND (COALESCE(?3, 0) = 0 OR order_id <> ?3) LIMIT 1";
+        var rs = em.createNativeQuery(sql).setParameter(1, tid).setParameter(2, voucherId)
+                .setParameter(3, excludeOrderId == null ? null : excludeOrderId).getResultList();
+        return !rs.isEmpty();
+    }
+
+    /** 展开品类/产品线为 SKU 集合（促销唯一性校验用）。 */
+    public Set<Long> expandScopeToSkus(UUID tid, Object productId, Object categoryId) {
+        Set<Long> ids = new HashSet<>();
+        Long pid = toLong(productId);
+        Long cid = toLong(categoryId);
+        if (pid != null) { ids.add(pid); return ids; }
+        if (cid == null) return ids;
+        Set<Long> lines = productLineDescendants(tid, cid);
+        if (lines.isEmpty()) return ids;
+        var rs = em.createNativeQuery("SELECT id FROM products WHERE tenant_id=?1 AND product_line_id IN (?2) AND deleted_at IS NULL", Tuple.class)
+                .setParameter(1, tid).setParameter(2, new ArrayList<>(lines)).getResultList();
+        for (Object o : rs) ids.add(((Number) ((Tuple) o).get("id")).longValue());
+        return ids;
+    }
+
+    /** 取所有促销规则（含未生效），供保存/审批做同 SKU 同时段唯一性校验。 */
+    @SuppressWarnings("unchecked")
+    public List<Tuple> allPromotionRulesForValidation(UUID tid) {
+        String sql = "SELECT pr.promotion_id AS promotion_id, p.name AS promo_name, p.promo_type AS promo_type, " +
+                "p.valid_from AS valid_from, p.valid_to AS valid_to, p.status AS status, " +
+                "pr.rule_detail AS rule_detail " +
+                "FROM promotions p JOIN promotion_rules pr ON pr.promotion_id = p.id " +
+                "WHERE p.tenant_id=?1 AND p.deleted_at IS NULL";
+        return em.createNativeQuery(sql, Tuple.class).setParameter(1, tid).getResultList();
     }
 
     public enum PriceUse { STANDALONE, BOM_COMPONENT }
@@ -77,7 +187,7 @@ public class V4PricingService {
         BigDecimal rate = bd(t.get("tax_rate"));
         BigDecimal incl = bd(t.get("sales_price"));
         if (incl.signum() == 0 && excl.signum() > 0) incl = excl.multiply(BigDecimal.ONE.add(rate));
-        if (excl.signum() == 0 && incl.signum() > 0) excl = incl.divide(BigDecimal.ONE.add(rate), 4, java.math.RoundingMode.HALF_UP);
+        if (excl.signum() == 0 && incl.signum() > 0) excl = incl.divide(BigDecimal.ONE.add(rate), 4, RoundingMode.HALF_UP);
         return new Price(excl, rate, incl);
     }
 
@@ -144,6 +254,12 @@ public class V4PricingService {
     @SuppressWarnings("unchecked")
     public List<Tuple> promotionRules(Long promotionId) {
         return em.createNativeQuery("SELECT seq,rule_detail FROM promotion_rules WHERE promotion_id=?1 ORDER BY seq,id", Tuple.class).setParameter(1, promotionId).getResultList();
+    }
+
+    private Long toLong(Object o) {
+        if (o == null) return null;
+        if (o instanceof Number n) return n.longValue();
+        try { return Long.valueOf(String.valueOf(o).trim()); } catch (Exception e) { return null; }
     }
 
     private BigDecimal bd(Object o) {

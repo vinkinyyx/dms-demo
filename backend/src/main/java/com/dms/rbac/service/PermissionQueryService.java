@@ -92,7 +92,7 @@ public class PermissionQueryService {
         }
         if (code.startsWith("api.") && path != null && path.endsWith("/**")) {
             String module = code.substring("api.".length());
-            if (module.equals("tenant") || module.equals("contract") || module.equals("inventory") || module.equals("order")) {
+            if (module.equals("tenant") || module.equals("contract") || module.equals("inventory") || module.equals("order") || module.equals("auth")) {
                 return;
             }
             result.add(module + ":view");

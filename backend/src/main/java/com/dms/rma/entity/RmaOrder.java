@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -44,6 +45,16 @@ public class RmaOrder {
 
     @Column(precision = 18, scale = 2)
     private BigDecimal amount;
+
+    @Column(name = "sales_out_count", nullable = false)
+    private Integer salesOutCount;
+
+    @Column(name = "total_qty", nullable = false)
+    private Integer totalQty;
+
+    @Convert(converter = JsonMapConverter.class)
+    @Column(name = "price_snapshot", columnDefinition = "jsonb")
+    private Map<String, Object> priceSnapshot;
 
     @Column(length = 16)
     private String status;
@@ -83,8 +94,26 @@ public class RmaOrder {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
+    @Transient
+    private List<RmaOrderRef> refs;
+
+    @Transient
+    private List<RmaOrderLine> returnLines;
+
+    @Transient
+    private List<Long> salesOutIds;
+
+    @Transient
+    private List<Map<String, Object>> outboundLines;
+
+    @Transient
+    private List<Map<String, Object>> outboundGroups;
+
     public void ensureJson() {
         if (lines == null) lines = new HashMap<>();
         if (attachments == null) attachments = new HashMap<>();
+        if (salesOutCount == null) salesOutCount = 0;
+        if (totalQty == null) totalQty = 0;
+        if (priceSnapshot == null) priceSnapshot = new HashMap<>();
     }
 }

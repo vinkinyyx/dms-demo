@@ -1,3 +1,19 @@
+## v4.3.1（2026-08-27）- 销退单返工 / 代金券审批返还 / 销售订单重开回显 修复
+
+- **当前测试环境版本**：v4.3.1（v433 镜像），Flyway 已执行至 V134。
+- **销退订单返工**：新建页字段顺序改为「经销商 → 发货仓库 → 发货单 → 退货原因」；未选经销商/仓库时「选择出库单」禁用；出库单弹窗恢复批号/序列号/仓库筛选并按发货仓库过滤 + 同仓库校验；`RmaOrderLine` 新增 serialNo（V134）。
+- **代金券审批拒绝返还（Critical）**：销售订单/销退单审批拒绝/退回/取消时，`SalesOrderApprovalCallback`/`SalesReturnApprovalCallback` 补 `voucherService.release`，券 USED→ISSUED；`@Lazy` + `backend/lombok.config` 解决循环依赖。
+- **销售订单重开回显**：`OrderCreate.vue` makeLine 产品 ID 兼容 `productId ?? id`，重开 SO-20260827-00003 经销商与价格正常回填；移动端 MOrderCreate、ResourcePicker 同步。
+- **测试成绩**：真实浏览器端到端走查（登录/销退新建/订单重开/代金券审批返还）全部通过；v4.3.0 API 层 51/51 通过。
+- **规则沉淀**：AGENTS.md 新增「页面重写功能对照规则」、project_rules.md 新增「前端部署路径与文档 URL 一致性铁律（铁律9）」。
+
+## v4.3.0（2026-08-27）- V4 计价引擎 / 代金券 / 客户注册 / 全局折扣 / 合同价格 / 销退多出库
+
+- MINOR 版本，9 个核心需求 R1–R9，Flyway V121–V133。
+- 后端新增 voucher（代金券）、user/registration（客户注册）、v4 定价引擎（V4PriceEngine）、contract ContractPrice、masterdata 联系人/地址/全局折扣、rma 多出库单、authz SalesScopeService 数据权限。
+- 前端新增 6 个 API 封装、v430-modules.js、订单计价区重构、代金券/折扣/经销商/注册维护页、合同价格 Tab、销退多选发货单；Admin 新增首页总览与报表总览；H5 新增客户注册与自助下单。
+- 设计文档：docs/02_设计/v4.3.0/总体设计.md、订单折扣与促销规则说明书.md；测试报告：docs/03_测试/测试报告_v4.3.0_20260827.md（API 51/51 通过）。
+
 ## v4.2.1（2026-08-22）- 冒烟脚本 element-plus overlay 适配 / 覆盖层残留重置
 
 - 修复 	ools/smoke-test.cjs 在新版 element-plus 下选不中 overlay 容器（l-dialog/l-drawer/l-message-box 已统一挂在 .el-overlay 下），选择器同时覆盖老 wrapper 与新 .el-overlay:visible .el-dialog/.el-drawer/.el-message-box，并兼容 Vant 移动端组件。

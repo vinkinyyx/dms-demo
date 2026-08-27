@@ -1,3 +1,90 @@
+## v4.3.1 (2026-08-27) - 销退单返工、代金券审批返还、销售订单重开回显 BUG 修复
+
+> PATCH 版本。v4.3.0 上线后真实浏览器/业务走查发现 4 个 BUG，全部修复并已部署测试环境（v433）、浏览器端到端验证通过。完整文件清单见 `CHANGES-2026-08-27.md`。
+
+### 修复
+- **销退订单（SalesReturnEdit / SalesReturnService / SalesReturnController）**
+  - 字段顺序与操作门禁返工：新建页改为「先选经销商 → 选发货仓库 → 再选发货单 → 选退货原因」；未选经销商/仓库时「选择出库单」按钮 disabled + tooltip，杜绝自由文本录入经销商
+  - 出库单弹窗恢复并强化筛选：经销商只读展示（el-tag）、仓库、批号（batchNo）、序列号（serialNo）全部接回后端查询参数，实测筛选结果集收敛
+  - 发货单按发货仓库过滤 + 同仓库校验：仅允许选择与所选发货仓库一致的出库单
+  - `RmaOrderService.enrichOrders` 补仓库信息、`RmaOrderLine` 增加 serialNo 字段；新增 Flyway `V134__rma_order_lines_serial_no.sql`
+- **代金券审批拒绝未返还（Critical）**：销售订单/销退单使用代金券后提交审批，若审批拒绝（onRejected/onReturned/onCanceled），券状态停留在 used 不返还。`SalesOrderApprovalCallback` / `SalesReturnApprovalCallback` 审批回滚路径补 `voucherService.release(businessId)`，券从 USED 恢复为 ISSUED；`SalesReturnApprovalCallback` 注入 V4OrderService 加 `@Lazy` 解决循环依赖，新增 `backend/lombok.config`（`lombok.copyableAnnotations+=@Lazy`）
+- **销售订单重开经销商为空/价格报错（SO-20260827-00003）**：`OrderCreate.vue` makeLine 产品 ID 兼容 `p.productId ?? p.id ?? null`，重开行明细正确回填产品与价格；dealerName 回显，不再因取不到 partnerId 导致价格查询失败
+- 移动端 `MOrderCreate.vue`、资源选择器 `ResourcePicker.vue`（displayValue）同步修复
+
+### 验证
+- 后端打包、前端构建通过；部署 v433；真实浏览器走查：登录 → 销退新建（经销商→仓库→出库单筛选→退货原因）→ 销售订单重开回显 → 代金券审批拒绝返还，全部通过；Flyway V134 执行成功。
+
+### 流程规则沉淀（AGENTS.md / project_rules.md）
+- 新增「页面重写/改造功能对照规则」：重写前必须盘点旧页面全部筛选/列/按钮/选择器，禁止功能减法；外键引用一律 el-select/资源弹窗禁止自由文本；后端支持的筛选参数前端必须有入口
+- 新增「前端部署路径与文档 URL 一致性铁律（铁律9）」：部署后首检必须用真实浏览器逐条验证文档中所有用户入口 URL（/dms/、/dms/admin/、/dms/mobile/login），VITE_BASE 与 Nginx 路径必须一致
+
+## v4.3.0 (2026-08-27) - 订单计价体系升级、促销扩展、客户代金券、全局折扣、客户自助注册下单、多出库销退
+
+> MINOR 版本，基线 v4.2.9。需求见 `docs/01_需求/v4.3.0/DMS_v4.3.0_需求规格.md`，设计见 `docs/02_设计/v4.3.0/总体设计.md`、`docs/02_设计/v4.3.0/订单折扣与促销规则说明书.md`，测试见 `docs/03_测试/v4.3.0/DMS_v4.3.0_测试报告.md`。前端版本号升至 4.3.0（`frontend-vue/package.json`）。已部署测试环境，三端冒烟 0 FAIL（PC 224 项 / 平台后台 / Mobile 17 项），计价 A–L 折扣场景集全部通过。
+
+### 新增功能（R1–R9）
+- **R1 一张销退单关联同经销商多张出库单**：销退可一次关联同一经销商多张销售出库单；可退量按来源出库单行维度锁定（已退+在途+本次），跨单不可挪用；混经销商拦截；审批后按来源行回写库存，退货价按 EA 快照；销退列表统一展示新 RMA 单与历史红字单（unified）
+- **R2 客户多联系人/多收货地址**：新增 `dealer_contacts`、`dealer_addresses`（V124），支持默认联系人/默认地址；PC + H5 下单选地址并写地址快照；历史 dealers 单联系人字段回填一条默认联系人兼容
+- **R3 整单一口价 / 整单 0 金额 / 行 0 金额**：一口价差额按折后行金额占比摊到各行与 EA；行 0 金额权重 0，低开/高开均不分摊；一口价、整单 0、代金券三者互斥
+- **R4 促销扩展**：新增满 N 件打折（百分比/固定单价）、满 N 件减固定金额、满赠保留（V131）；同 SKU 同时段只命中一种促销，冲突拦截并列清单；命中行禁行手动折扣、禁 0 金额；同 SKU 拆多行拦截；命中落库 `order_promotion_hits` 并在订单上方展示文案；退货跌破门槛赠品按 0 金额退回
+- **R5 客户代金券**：厂家按客户/范围批量发放，含面值、最低消费、适用范围（全部/指定 SKU/品类）、有效期（V127）；一单限用一张，整单层抵扣绝不摊行（防退货套现）；面值大于原价合计/过期/停用/他人券拦截；与一口价、整单 0、所有折扣互斥；整单未出库作废返还券，部分退货/已出库不退
+- **R6 产品全局折扣**：独立 PC 维护页，按时间段生效、历史留痕、同产品时段不可重叠（V126）；下单取客户价后乘折扣，未生效/过期不应用
+- **R7 客户全局折扣**：独立 PC 维护页，按时间段生效；下单在最终价格上打折，按各行折后金额占比摊回每行，摊后任一行 < 0 拦截
+- **R8 折扣加价方向（高开）**：行折扣与整单折扣均支持向下减/向上加，百分比与金额两种形式；加价无上限；自动折扣（产品/客户/促销）只减，加价仅手动（V132）
+- **R9 客户账号/自助注册/移动端自助下单**：客户自助注册（PC + 独立 H5 注册页，V129），审核通过自动创建客户账号 + 主数据（dealer+联系人+地址），登录名为手机号；客户角色 RBAC（V130/V133），数据范围后端强制按 dealer_id 隔离，越权 403/空；H5 自助下单全流程（选地址、选品、自动折扣、行/整单折扣、一口价、代金券、促销文案、金额实时刷新）
+
+### 计价引擎
+- 新增 V4PriceEngine 统一计价口径：含税、正整数数量（V123，销售订单 qty 与 BOM 子件用量改整型）、2 位小数、中间高精度、尾差吸收到金额最大行
+- 行价格优先级：基础客户价（合同价 > 客户价 > 全局价）→ 产品全局折扣 → 产品促销折扣 → 行手动折扣；整单折扣：客户全局折扣 → 整单手动折扣；先行后整单，整单增减按行折后总价比例摊到行再摊到 EA；0 金额行/赠品行权重 0
+- 提交时后端重算落库，不信任前端金额；拦截信息含行号/SKU/原因
+
+### 当日修复（批次 B，2026-08-27 下午）
+- 代金券审批拒绝后未返还：`SalesOrderApprovalCallback` / `SalesReturnApprovalCallback` 补返还逻辑
+- 销退单返工：新增页加发货仓库过滤、字段顺序调整为 经销商→发货仓库→发货单→退货原因；外键字段禁自由文本改选择器；恢复出库单弹窗批号/序列号筛选（`SalesReturnController/Service`、`RmaOrderService`、`SalesReturnEdit.vue`、`ResourcePicker.vue`）
+- `OrderCreate` / `MOrderCreate` 价格回显修复：`p.productId ?? p.id ?? null`、dealerName 回显
+- V134：`rma_order_lines` 增加 `serial_no` 字段
+
+### 测试期缺陷修复（详见测试报告）
+- 促销 `rule_detail` jsonb 以 String 存储未解析导致促销静默失效；满件打折文案错误；RMA unified 列表/404；注册租户/地址违约
+
+### 数据库迁移
+- V123–V134：integer_quantities、customer_contacts_addresses、rma_multi_outbound、global_discounts_contract_price、customer_vouchers、order_pricing_fields、customer_self_registration、customer_role_rbac、promo_types、line_discount_direction、v430_rbac_resources、rma_order_lines_serial_no（V121/V122 为 v4.2.9 RBAC 迁移）
+
+### 验证
+- 三端真实浏览器冒烟 0 FAIL；价格引擎 A–L 折扣场景全 PASS；R1 多出库销退、R9 客户自助注册全链路 PASS；F1–F5 核心流无回归
+
+## v4.2.9 (2026-08-26) - RBAC 越权修复、三端 UI/UX 一致性、移动端经销商锁定、平台后台补全
+
+> PATCH 版本。四端并行审计（PC/移动/平台后台/9 角色权限矩阵）后修复，已部署测试环境并通过 272 项深度冒烟 + 针对性回归。
+
+### 安全修复（Critical）
+- **RBAC 业务角色越权**：`PermissionQueryService` 将 `api.auth`（登录登出公开接口）错误派生为 `auth:create/edit/delete`，已将 `auth` 加入排除列表
+- 新增 `V121__revoke_business_role_admin_perms.sql`：回收非管理员业务角色的 `approval:admin/manage`、`auth:*`、`user/role:*`、`menu.user/role/tenant`、`tenant_ui_config:*`、`api.user/role/tenant`；经销商角色额外回收 `promotion:*`/`product_price:*`
+- 新增 `V122__grant_business_roles_price_promo_view.sql`：给非经销商业务角色补授 `promotion:view/search`、`product_price:view/search`（下单计价需要）
+- `PermissionChecker.canAdminApprovals()` 收紧为仅校验 `approval:admin`/`approval:manage`
+- 9 角色 API 矩阵验证全部符合预期
+
+### PC 端
+- 修复平台布局筛选参数与后端不一致：销售订单经销商 `dealer→dealerId`、创建/业务日期范围、采购供应商、仓库、产品分类、接口日志状态/时间等统一映射；`CrudView` 与 `ListPageLayout` 的查询/导出共用映射，合同列表补创建日期后端过滤
+- `CrudView.vue` 新增按钮绑定 `createPermission` 权限码，无权限不再渲染「新增」
+- `modules.js` 补全 20+ 模块 `createPermission`；orders/sales-returns/purchase-orders 配置 `keywordFields`，搜索框正确提示可搜经销商
+- `router/index.js` 新增 `beforeEach` 权限守卫，越权 URL 跳转 403
+- 采购订单后端补 `keyword` 参数支持按供应商名搜索；合同工作台重置过滤空参数
+
+### 移动端
+- `MOrderCreate.vue`：dealer_admin 经销商自动锁定（readonly 不可点击），回填编码+名称
+- 经销商 picker 空值校验，未选择时 Toast 提示
+
+### 平台后台
+- 新增「首页总览」统计页；根路由不再直接重定向
+- 经销商租户「所属厂家」显示名称而非 UUID，新建表单改为厂家下拉
+- 新增「报表总览」入口，修复子路径跳转
+- 11 页面统一查询/重置/分页/必填校验/二次确认/枚举中文/表格规范
+
+### 验证
+- 后端打包、三端前端构建均通过；深度冒烟 272/272，0 Console/网络错误
+
 ## v4.2.9 (2026-08-25) - 全量问题排查修复：后端 500、PC/移动统一、查询项生效、部署与营销页图片
 
 > PATCH 版本（42 个文件，+1633 / -417）。本批变更已部署测试环境和生产环境并通过真实浏览器验证，代码已同步回仓库以保持一致。完整变更清单见 `DMS-changes-2026-08-25/清单.md`。

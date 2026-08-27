@@ -71,9 +71,11 @@ public class ContractController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long dealerId,
             @RequestParam(required = false) String category,
+            @RequestParam(required = false) String createdAtFrom,
+            @RequestParam(required = false) String createdAtTo,
             @RequestParam(required = false) String sort) {
         if (page < 1) throw new com.dms.common.BusinessException(com.dms.common.ErrorCode.PARAM_INVALID, "page: 页码从 1 起");
-        return ApiResponse.ok(service.list(page, size, status, keyword, dealerId, category, sort));
+        return ApiResponse.ok(service.list(page, size, status, keyword, dealerId, category, createdAtFrom, createdAtTo, sort));
     }
 
     @GetMapping("/{id}")

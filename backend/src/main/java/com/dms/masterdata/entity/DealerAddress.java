@@ -1,13 +1,13 @@
-/*
- * 经销商收货地址实体：映射 dealer_addresses 表。
- */
 package com.dms.masterdata.entity;
 
+import com.dms.common.jpa.JsonListConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -28,6 +28,9 @@ public class DealerAddress {
 
     @Column(name = "dealer_id")
     private Long dealerId;
+
+    @Column(name = "address_name", length = 100)
+    private String addressName;
 
     @Column(name = "is_default")
     private Boolean isDefault;
@@ -52,6 +55,13 @@ public class DealerAddress {
 
     @Column(name = "postal_code", length = 16)
     private String postalCode;
+
+    @Column(length = 16, nullable = false)
+    private String status;
+
+    @Column(name = "tags", columnDefinition = "jsonb")
+    @Convert(converter = JsonListConverter.class)
+    private List<Map<String, Object>> tags;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;

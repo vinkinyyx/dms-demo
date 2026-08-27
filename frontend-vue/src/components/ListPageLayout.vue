@@ -144,6 +144,7 @@ import { loadDict, getDictOptions } from '@/utils/dict'
 import { useUserStore } from '@/store/user'
 import { getPermissions } from '@/utils/auth'
 import { formatAuto } from '@/utils/format'
+import { LAYOUT_PARAM_MAPS } from '@/config/modules'
 
 const userStore = useUserStore()
 
@@ -257,9 +258,10 @@ async function load() {
 
 function cleanFilter(source) {
   const result = {}
+  const map = LAYOUT_PARAM_MAPS[props.pageKey] || {}
   for (const [key, value] of Object.entries(source)) {
     if (value === '' || value === null || value === undefined) continue
-    result[key] = value
+    result[map[key] || key] = value
   }
   return result
 }

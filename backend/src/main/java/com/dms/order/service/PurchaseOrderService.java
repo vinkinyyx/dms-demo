@@ -60,6 +60,7 @@ public class PurchaseOrderService {
             String code,
             String orderType,
             String auditUserName,
+            String keyword,
             String sort) {
         UUID tid = TenantContext.getTenantId();
         int safePage = PagingUtil.normalizePage(page); int safeSize = PagingUtil.normalizeSize(size); int offset = (safePage - 1) * safeSize;
@@ -91,6 +92,7 @@ public class PurchaseOrderService {
         if (code != null && !code.isBlank()) { where.append(" AND po.code ILIKE ?").append(idx++); params.add("%" + code.trim() + "%"); }
         if (orderType != null && !orderType.isBlank()) { where.append(" AND po.order_type = ?").append(idx++); params.add(orderType); }
         if (auditUserName != null && !auditUserName.isBlank()) { where.append(" AND EXISTS (SELECT 1 FROM users u2 WHERE u2.id = po.approved_by AND u2.name ILIKE ?)").append(idx++); params.add("%" + auditUserName.trim() + "%"); }
+        if (keyword != null && !keyword.isBlank()) { where.append(" AND (po.code ILIKE ? OR COALESCE(NULLIF(po.supplier_name,''), s.name) ILIKE ?)").append(idx).append(idx + 1); idx += 2; String kw = "%" + keyword.trim() + "%"; params.add(kw); params.add(kw); }
 
         var qCnt = em.createNativeQuery("SELECT COUNT(*) FROM purchase_orders po " + where);
         for (int i = 0; i < params.size(); i++) qCnt.setParameter(i + 1, params.get(i));

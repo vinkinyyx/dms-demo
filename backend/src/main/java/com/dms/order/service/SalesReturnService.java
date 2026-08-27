@@ -241,6 +241,7 @@ public class SalesReturnService {
     public ApiResponse<List<Map<String, Object>>> shippedOuts(
             Long orderId,
             Long dealerId,
+            Long warehouseId,
             String startDate,
             String endDate,
             String keyword,
@@ -261,6 +262,7 @@ public class SalesReturnService {
         params.add(tid);
         if (orderId != null) { sql.append(" AND so.source_order_id = ?"); params.add(orderId); }
         if (dealerId != null) { sql.append(" AND so.dealer_id = ?"); params.add(dealerId); }
+        if (warehouseId != null) { sql.append(" AND so.warehouse_id = ?"); params.add(warehouseId); }
         if (startDate != null && !startDate.isBlank()) { sql.append(" AND COALESCE(so.sales_date, so.shipped_at, so.created_at) >= ?"); params.add(java.sql.Date.valueOf(startDate)); }
         if (endDate != null && !endDate.isBlank()) { sql.append(" AND COALESCE(so.sales_date, so.shipped_at, so.created_at) <= ?"); params.add(java.sql.Date.valueOf(endDate)); }
         if (keyword != null && !keyword.isBlank()) { sql.append(" AND (o.code ILIKE ? OR so.code ILIKE ? OR d.name ILIKE ?)"); String kw="%"+keyword+"%"; params.add(kw); params.add(kw); params.add(kw); }

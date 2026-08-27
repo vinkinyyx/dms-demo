@@ -52,7 +52,7 @@ public class ContractService {
     private String storageRoot;
 
     @Transactional(readOnly = true)
-    public Map<String, Object> list(int page, int size, String status, String keyword, Long dealerId, String category, String sort) {
+    public Map<String, Object> list(int page, int size, String status, String keyword, Long dealerId, String category, String createdAtFrom, String createdAtTo, String sort) {
         UUID tid = TenantContext.getTenantId();
         int pageNumber = Math.max(0, page - 1);
         int pageSize = Math.max(1, Math.min(200, size));
@@ -82,6 +82,21 @@ public class ContractService {
             where.append(" AND c.status = ?").append(idx++);
             params.add(status);
         }
+        if (createdAtFrom != null && !createdAtFrom.isBlank()) {
+            java.sql.Timestamp t = com.dms.common.util.SpecUtil.rangeBound(createdAtFrom, true);
+            if (t != null) {
+                where.append(" AND c.created_at >= ?").append(idx++);
+                params.add(t);
+            }
+        }
+        if (createdAtTo != null && !createdAtTo.isBlank()) {
+            java.sql.Timestamp t = com.dms.common.util.SpecUtil.rangeBound(createdAtTo, false);
+            if (t != null) {
+                where.append(com.dms.common.util.SpecUtil.hasTime(createdAtTo) ? " AND c.created_at <= ?" : " AND c.created_at < ?").append(idx++);
+                params.add(t);
+            }
+        }
+
 
         var cnt = em.createNativeQuery("SELECT COUNT(*) FROM contracts c" + where);
         for (int i = 0; i < params.size(); i++) cnt.setParameter(i + 1, params.get(i));

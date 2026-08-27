@@ -1,6 +1,3 @@
-/*
- * 经销商地址仓储接口。
- */
 package com.dms.masterdata.repository;
 
 import com.dms.masterdata.entity.DealerAddress;
@@ -17,5 +14,7 @@ public interface DealerAddressRepository extends JpaRepository<DealerAddress, Lo
 
     Page<DealerAddress> findByTenantId(UUID tenantId, Pageable pageable);
 
-    List<DealerAddress> findByTenantIdAndDealerId(UUID tenantId, Long dealerId);
+    List<DealerAddress> findByTenantIdAndDealerIdOrderByIsDefaultDescIdAsc(UUID tenantId, Long dealerId);
+
+    long countByTenantIdAndDealerId(UUID tenantId, Long dealerId);
 }

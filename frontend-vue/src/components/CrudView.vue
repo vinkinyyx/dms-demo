@@ -76,7 +76,7 @@
       <slot name="extra-actions" />
       <el-button v-if="canImport" type="primary" plain @click="importVisible = true"><el-icon><Upload /></el-icon>导入</el-button>
       <el-button v-if="canExport" type="primary" plain @click="handleExport"><el-icon><Download /></el-icon>导出</el-button>
-      <el-button v-if="canCreate" type="primary" @click="onCreate"><el-icon><Plus /></el-icon>新增</el-button>
+      <el-button v-if="canCreate" type="primary" v-has="createPermission" @click="onCreate"><el-icon><Plus /></el-icon>新增</el-button>
       <el-popover
         v-model:visible="columnSettingVisible"
         placement="bottom-end"
@@ -300,6 +300,7 @@
                   <el-input v-else-if="f.type === 'password'" v-model="formData[f.key]" type="password" show-password :placeholder="f.placeholder" />
                   <el-input v-else-if="f.type === 'textarea'" v-model="formData[f.key]" type="textarea" :rows="3" :placeholder="f.placeholder" />
                   <el-input-number v-else-if="f.type === 'number'" v-model="formData[f.key]" :controls="false" :precision="f.precision" :min="f.min != null ? f.min : undefined" :max="f.max != null ? f.max : undefined" style="width:100%" @change="() => onNumberFieldChange(f)" />
+                  <el-input-number v-else-if="f.type === 'percent'" v-model="formData[f.key]" :controls="false" :precision="f.precision || 2" :min="f.min != null ? f.min : 0" :max="f.max != null ? f.max : 100" style="width:100%" />
                   <el-date-picker v-else-if="f.type === 'date' || f.type === 'datetime'" v-model="formData[f.key]" :type="f.type === 'datetime' ? 'datetime' : 'date'" :value-format="f.type === 'datetime' ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD'" style="width:100%" />
                   <el-select v-else-if="f.type === 'select'" v-model="formData[f.key]" style="width:100%" clearable :multiple="!!f.multiple" :collapse-tags="!!f.multiple" :collapse-tags-tooltip="!!f.multiple" :teleported="false" popper-class="crud-select-popper">
                     <el-option v-for="o in selectOptions(f)" :key="o.value !== undefined ? o.value : o.label" :label="o.label" :value="o.value" />
@@ -387,9 +388,10 @@ import LinesEditor from '@/components/LinesEditor.vue'
 import AttachmentUploader from '@/components/AttachmentUploader.vue'
 import { listResource, createResource, updateResource, deleteResource, getDetail, actionResource, getOperationLogs, httpGet } from '@/api/crud'
 import { statusText, statusTagType, fmt, labelOf, reloadDicts, loadDict, getDictOptions, actionText, enhanceChanges, ENUMS } from '@/utils/dict'
-import { getToken, getUser } from '@/utils/auth'
+import { getToken, getUser, getPermissions } from '@/utils/auth'
 import { formatAuto, formatDateTime } from '@/utils/format'
 import { usePageLayout, invalidatePageLayoutCache } from '@/composables/usePageLayout'
+import { LAYOUT_PARAM_MAPS } from '@/config/modules'
 
 function dictLabel(col, v) {
   if (v == null || v === '') return '-'
@@ -426,6 +428,28 @@ function detailValue(k) {
 }
 
 const props = defineProps({ config: { type: Object, required: true } })
+
+function resolveLayoutParam(key) {
+  const map = LAYOUT_PARAM_MAPS[props.config.key] || {}
+  return map[key] || key
+}
+
+function appendLayoutFilterParams(params, filters, rangeFilters) {
+  Object.keys(filters || {}).forEach((k) => {
+    const v = filters[k]
+    if (v !== '' && v != null) params[resolveLayoutParam(k)] = v
+  })
+  Object.keys(rangeFilters || {}).forEach((k) => {
+    const v = rangeFilters[k]
+    if (Array.isArray(v) && v.length === 2) {
+      params[resolveLayoutParam(k + 'From')] = v[0]
+      params[resolveLayoutParam(k + 'To')] = v[1]
+    } else if (k.endsWith('From') || k.endsWith('To')) {
+      if (v !== '' && v != null) params[resolveLayoutParam(k)] = v
+    }
+  })
+}
+
 const router = useRouter()
 const route = useRoute()
 // === 列表本地持久化：按用户账号 + config.key 隔离 ===
@@ -803,7 +827,8 @@ const keywordPlaceholder = computed(() => {
     .slice(0, 4)
   return keys.length ? `搜索${keys.join(' / ')}（支持多值）` : '关键词搜索（支持多值）'
 })
-const canCreate = computed(() => !props.config.readonly && !props.config.noCreate)
+const createPermission = computed(() => props.config.createPermission || '')
+const canCreate = computed(() => !props.config.readonly && !props.config.noCreate && (!createPermission.value || getPermissions().includes(createPermission.value)))
 const canEdit = computed(() => !props.config.readonly)
 const remoteFilterOptions = reactive({})
 const canDelete = computed(() => !props.config.readonly && !props.config.noDelete)
@@ -1276,19 +1301,7 @@ async function fetchData() {
   try {
     const params = { page: page.value, size: size.value, limit: size.value }
     if (keyword.value.trim()) params.keyword = keyword.value.trim()
-    Object.keys(layoutFilters).forEach((k) => {
-      const v = layoutFilters[k]
-      if (v !== '' && v != null) params[k] = v
-    })
-    Object.keys(layoutRangeFilters).forEach((k) => {
-      const v = layoutRangeFilters[k]
-      if (Array.isArray(v) && v.length === 2) {
-        params[k + 'From'] = v[0]
-        params[k + 'To'] = v[1]
-      } else if (k.endsWith('From') || k.endsWith('To')) {
-        if (v !== "" && v != null) params[k] = v
-      }
-    })
+    appendLayoutFilterParams(params, layoutFilters, layoutRangeFilters)
     Object.keys(colFilters).forEach((k) => { if (colFilters[k] !== '' && colFilters[k] != null) params[k] = colFilters[k] })
     // Range filter supports two shapes:
     //   A) colRangeFilters[base] = [from, to]        -- el-date-picker daterange direct v-model
@@ -1419,6 +1432,7 @@ function openForm(row) {
     } else if (f.value !== undefined) formData[f.key] = f.value
     else if (f.type === 'lines') formData[f.key] = []
     else if (f.type === 'boolean') formData[f.key] = false
+    else if (f.type === 'percent') formData[f.key] = f.value !== undefined ? f.value : ''
     else if (f.type === 'attachment') formData[f.key] = null
     else formData[f.key] = ''
   })
@@ -1427,7 +1441,10 @@ function openForm(row) {
       const d = res.data || {}
       normalizeDetailForForm(d, props.config)
       ;(props.config.form || []).forEach((f) => {
-        if (d[f.key] !== undefined && d[f.key] !== null) formData[f.key] = d[f.key]
+        if (f.type === 'percent') {
+          const rateKey = f.rateKey || (f.key.endsWith('Percent') ? f.key.slice(0, -7) : f.key)
+          if (d[rateKey] !== undefined && d[rateKey] !== null) formData[f.key] = Math.round(Number(d[rateKey]) * 10000) / 100
+        } else if (d[f.key] !== undefined && d[f.key] !== null) formData[f.key] = d[f.key]
         if ((f.picker || f.type === 'product-picker') && d[f.key] != null) {
           const nameKey = PICKER_NAME_MAP[f.key] || (f.key.replace(/Id$/, '') + 'Name')
           if (d[nameKey]) displayMap[f.key] = d[nameKey]
@@ -1551,6 +1568,14 @@ async function saveForm(silent) {
           if (formData.promoType === 'FULL_REDUCTION') return hasTarget && Number(d.reduceAmount) > 0
           return hasTarget
         })
+        return
+      }
+      const fieldDef = fields.find((f) => f.key === k)
+      if (fieldDef && fieldDef.type === 'percent') {
+        if (v !== '' && v !== null && v !== undefined) {
+          const rateKey = fieldDef.rateKey || (k.endsWith('Percent') ? k.slice(0, -7) : k)
+          payload[rateKey] = Math.round(Number(v) * 10000) / 1000000
+        }
         return
       }
       payload[k] = v
@@ -1739,19 +1764,7 @@ function getAuthHeader() {
 function buildExportQuery() {
   const params = {}
   if (keyword.value && String(keyword.value).trim()) params.keyword = String(keyword.value).trim()
-  Object.keys(layoutFilters || {}).forEach((k) => {
-    const v = layoutFilters[k]
-    if (v !== '' && v != null) params[k] = v
-  })
-  Object.keys(layoutRangeFilters || {}).forEach((k) => {
-    const v = layoutRangeFilters[k]
-    if (Array.isArray(v) && v.length === 2) {
-      params[k + 'From'] = v[0]
-      params[k + 'To'] = v[1]
-    } else if (k.endsWith('From') || k.endsWith('To')) {
-      if (v !== '' && v != null) params[k] = v
-    }
-  })
+  appendLayoutFilterParams(params, layoutFilters, layoutRangeFilters)
   Object.keys(colFilters || {}).forEach((k) => {
     const v = colFilters[k]
     if (v === '' || v == null) return

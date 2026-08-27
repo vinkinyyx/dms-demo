@@ -2,14 +2,15 @@
   <div class="page">
     <div class="page-header">
       <div class="toolbar">
-        <el-input v-model="keyword" placeholder="编码/名称" clearable style="width:220px" @keyup.enter="load" />
-        <el-button type="primary" @click="load">查询</el-button>
+        <el-input v-model="keyword" placeholder="编码/名称" clearable style="width:220px" @keyup.enter="onSearch" />
+        <el-button type="primary" @click="onSearch">查询</el-button>
+        <el-button @click="onReset">重置</el-button>
       </div>
       <el-button type="primary" :icon="Plus" @click="openCreate">新建厂家租户</el-button>
     </div>
-    <el-table :data="list" v-loading="loading" border stripe>
+    <el-table :data="list" v-loading="loading" border stripe size="small">
       <el-table-column prop="code" label="编码" width="160" />
-      <el-table-column prop="name" label="名称" />
+      <el-table-column prop="name" label="名称" min-width="180" />
       <el-table-column prop="contactName" label="联系人" width="120" />
       <el-table-column prop="contactPhone" label="联系电话" width="150" />
       <el-table-column prop="status" label="状态" width="100">
@@ -25,17 +26,18 @@
         </template>
       </el-table-column>
     </el-table>
-    <el-pagination class="pager" background layout="total, prev, pager, next" :total="total"
-      :page-size="size" :current-page="page" @current-change="onPage" />
+    <el-pagination class="pager" background layout="total, sizes, prev, pager, next" :total="total"
+      :page-size="size" :current-page="page" :page-sizes="[20,50,100]"
+      @current-change="onPage" @size-change="onSize" />
 
     <el-dialog v-model="dialog" title="新建厂家租户" width="520px">
-      <el-form :model="form" label-width="110px">
-        <el-form-item label="租户编码"><el-input v-model="form.code" /></el-form-item>
-        <el-form-item label="租户名称"><el-input v-model="form.name" /></el-form-item>
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
+        <el-form-item label="租户编码" prop="code"><el-input v-model="form.code" /></el-form-item>
+        <el-form-item label="租户名称" prop="name"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="联系人"><el-input v-model="form.contactName" /></el-form-item>
         <el-form-item label="联系电话"><el-input v-model="form.contactPhone" /></el-form-item>
-        <el-form-item label="管理员账号"><el-input v-model="form.adminUsername" /></el-form-item>
-        <el-form-item label="管理员密码"><el-input v-model="form.adminPassword" type="password" show-password /></el-form-item>
+        <el-form-item label="管理员账号" prop="adminUsername"><el-input v-model="form.adminUsername" /></el-form-item>
+        <el-form-item label="管理员密码" prop="adminPassword"><el-input v-model="form.adminPassword" type="password" show-password /></el-form-item>
         <el-form-item label="管理员姓名"><el-input v-model="form.adminName" /></el-form-item>
         <el-form-item label="进销存/库存管理">
           <el-switch v-model="form.inventoryEnabled" />
@@ -54,13 +56,19 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { formatDateTime } from '@/utils/format'
 import { listManufacturers, createManufacturer, enableTenant, disableTenant } from '@/api/admin'
 
 const list = ref([]); const total = ref(0); const page = ref(1); const size = ref(20)
 const loading = ref(false); const keyword = ref('')
 const dialog = ref(false); const saving = ref(false)
+const formRef = ref()
 const form = reactive({ code: '', name: '', contactName: '', contactPhone: '', adminUsername: '', adminPassword: '', adminName: '', inventoryEnabled: true })
+const rules = {
+  code: [{ required: true, message: '请输入租户编码', trigger: 'blur' }],
+  name: [{ required: true, message: '请输入租户名称', trigger: 'blur' }],
+  adminUsername: [{ required: true, message: '请输入管理员账号', trigger: 'blur' }],
+  adminPassword: [{ required: true, message: '请输入管理员密码', trigger: 'blur' }]
+}
 
 async function load() {
   loading.value = true
@@ -69,13 +77,17 @@ async function load() {
     list.value = res.data.list; total.value = res.data.total
   } finally { loading.value = false }
 }
+function onSearch() { page.value = 1; load() }
+function onReset() { keyword.value = ''; page.value = 1; load() }
 function onPage(p) { page.value = p; load() }
-function inventoryEnabled(row) { return row.modulesEnabled?.inventoryEnabled !== false }
+function onSize(s) { size.value = s; page.value = 1; load() }
 function openCreate() {
   Object.assign(form, { code: '', name: '', contactName: '', contactPhone: '', adminUsername: '', adminPassword: '', adminName: '', inventoryEnabled: true })
+  formRef.value?.resetFields()
   dialog.value = true
 }
 async function save() {
+  await formRef.value.validate()
   saving.value = true
   try { await createManufacturer(form); ElMessage.success('创建成功'); dialog.value = false; load() }
   finally { saving.value = false }

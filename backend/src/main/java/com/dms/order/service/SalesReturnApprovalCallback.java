@@ -7,6 +7,7 @@ import jakarta.persistence.EntityManager;
 import com.dms.common.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 public class SalesReturnApprovalCallback implements ApprovalBusinessCallback {
     public static final String BUSINESS_TYPE = "SALES_RETURN";
     private final EntityManager em;
+    @Lazy
     private final V4OrderService v4OrderService;
 
     @Override public boolean supports(String businessType) { return BUSINESS_TYPE.equals(businessType); }

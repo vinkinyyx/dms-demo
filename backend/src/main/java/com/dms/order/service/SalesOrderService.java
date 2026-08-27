@@ -42,6 +42,7 @@ public class SalesOrderService {
     private final V4OrderService v4OrderService;
     private final V4ErpService v4ErpService;
     private final DataScope dataScope;
+    private final com.dms.authz.service.SalesScopeService salesScope;
     @Transactional(readOnly = true)
     public ApiResponse<Map<String, Object>> list(
             int page,
@@ -166,6 +167,7 @@ public class SalesOrderService {
     }
     @Transactional(readOnly = true)
     public ApiResponse<Map<String, Object>> preview(Map<String, Object> body) {
+        requireBodyDealerAccessible(body);
         return ApiResponse.ok(v4OrderService.previewSalesOrder(body));
     }
     @Transactional(readOnly = true)
@@ -173,10 +175,16 @@ public class SalesOrderService {
         UUID tid = TenantContext.getTenantId();
         Map<String, Object> data = readOne(id, tid);
         if (data == null) return ApiResponse.fail(40404, "销售订单不存在");
+        Object dealerIdRaw = data.get("dealerId") != null ? data.get("dealerId") : data.get("dealer_id");
+        if (dealerIdRaw != null) {
+            try { salesScope.requireDealerAccessible(Long.parseLong(String.valueOf(dealerIdRaw))); }
+            catch (NumberFormatException ignore) { }
+        }
 
         var q = em.createNativeQuery(
                 "SELECT ol.id, ol.seq, ol.product_id, p.code AS p_code, p.name_cn AS p_name, p.spec AS p_spec, " +
-                "ol.qty, ol.unit_price, ol.tax_rate, ol.sub_total, ol.standard_price_incl_tax, ol.line_discount_type, ol.line_discount_value, ol.line_discount_amount, ol.promo_discount_amount, ol.header_discount_amount, ol.discount_amount, ol.final_amount, ol.amount_excl_tax, ol.tax_amount AS line_tax_amount, ol.is_gift, ol.bom_parent_product_id, ol.bom_parent_line_id, ol.bom_version, ol.bom_group_no, ol.component_qty, ol.line_level, ol.is_group_header, ol.closed_qty " +
+                "ol.qty, ol.unit_price, ol.tax_rate, ol.sub_total, ol.standard_price_incl_tax, ol.line_discount_type, ol.line_discount_value, ol.line_discount_amount, ol.promo_discount_amount, ol.header_discount_amount, ol.discount_amount, ol.final_amount, ol.amount_excl_tax, ol.tax_amount AS line_tax_amount, ol.is_gift, ol.bom_parent_product_id, ol.bom_parent_line_id, ol.bom_version, ol.bom_group_no, ol.component_qty, ol.line_level, ol.is_group_header, ol.closed_qty, " +
+                "ol.base_price_incl_tax, ol.price_source, ol.product_discount_amount, ol.promo_type, ol.promotion_id, ol.unit_price_incl_tax, ol.line_zero, ol.line_discount_direction " +
                 "FROM order_lines ol LEFT JOIN products p ON p.id = ol.product_id " +
                 "WHERE ol.order_id = ?1 ORDER BY ol.seq, ol.id", Tuple.class);
         q.setParameter(1, id);
@@ -214,6 +222,14 @@ public class SalesOrderService {
             l.put("bomGroupNo", t.get("bom_group_no"));
             l.put("componentQty", t.get("component_qty"));
             l.put("closedQty", t.get("closed_qty"));
+            l.put("basePriceInclTax", t.get("base_price_incl_tax"));
+            l.put("priceSource", t.get("price_source"));
+            l.put("productDiscountAmount", t.get("product_discount_amount"));
+            l.put("promoType", t.get("promo_type"));
+            l.put("promotionId", t.get("promotion_id"));
+            l.put("unitPriceInclTax", t.get("unit_price_incl_tax"));
+            l.put("lineZero", t.get("line_zero"));
+            l.put("lineDiscountDirection", t.get("line_discount_direction"));
             lines.add(l);
         }
         data.put("lines", lines);
@@ -225,6 +241,7 @@ public class SalesOrderService {
     public ApiResponse<Map<String, Object>> create(Map<String, Object> body) {
         UUID tid = TenantContext.getTenantId();
         if (body.get("dealerId") == null) return ApiResponse.fail(40001, "经销商不能为空");
+        requireBodyDealerAccessible(body);
 
         Map<String, Object> created = v4OrderService.createSalesOrder(body);
         Long id = Long.valueOf(String.valueOf(created.get("id")));
@@ -239,7 +256,17 @@ public class SalesOrderService {
     @OperationLog(businessType = "salesOrder", action = OperationAction.UPDATE, remark = "update sales order")
     @Transactional
     public ApiResponse<Map<String, Object>> update(Long id, Map<String, Object> body) {
+        requireBodyDealerAccessible(body);
         return ApiResponse.ok(v4OrderService.updateSalesOrder(id, body));
+    }
+
+    private void requireBodyDealerAccessible(Map<String, Object> body) {
+        Object d = body == null ? null : body.get("dealerId");
+        if (d == null) return;
+        long dealerId;
+        try { dealerId = Long.parseLong(String.valueOf(d)); }
+        catch (NumberFormatException e) { return; }
+        salesScope.requireDealerAccessible(dealerId);
     }
     @OperationLog(businessType = "salesOrder", action = OperationAction.UPDATE, remark = "submit sales order")
     @Transactional
@@ -449,6 +476,12 @@ public class SalesOrderService {
         try { m.put("approvedAt", DateFmt.fmt(t.get("approved_at"))); } catch (Exception ignored) {}
         try { m.put("completedAt", DateFmt.fmt(t.get("completed_at"))); } catch (Exception ignored) {}
         try { m.put("shippedQty", t.get("shipped_qty")); } catch (Exception ignored) {}
+        try { m.put("pricingMode", t.get("pricing_mode")); } catch (Exception ignored) {}
+        try { m.put("voucherId", t.get("voucher_id")); } catch (Exception ignored) {}
+        try { m.put("voucherAmount", t.get("voucher_amount")); } catch (Exception ignored) {}
+        try { m.put("shipAddressId", t.get("ship_address_id")); } catch (Exception ignored) {}
+        try { m.put("promoMessages", t.get("promo_messages")); } catch (Exception ignored) {}
+        try { m.put("pricingSnapshot", t.get("pricing_snapshot")); } catch (Exception ignored) {}
         return m;
     }
 

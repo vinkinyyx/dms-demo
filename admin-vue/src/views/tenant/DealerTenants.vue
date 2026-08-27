@@ -2,22 +2,27 @@
   <div class="page">
     <div class="page-header">
       <div class="toolbar">
-        <el-input v-model="keyword" placeholder="编码/名称" clearable style="width:220px" @keyup.enter="load" />
-        <el-button type="primary" @click="load">查询</el-button>
+        <el-input ref="searchRef" v-model="keyword" placeholder="编码/名称" clearable style="width:220px" @keyup.enter="onSearch" />
+        <el-button type="primary" @click="onSearch">查询</el-button>
+        <el-button @click="onReset">重置</el-button>
       </div>
       <el-button type="primary" :icon="Plus" @click="openCreate">新建经销商租户</el-button>
     </div>
-    <el-table :data="list" v-loading="loading" border stripe>
+    <el-table :data="list" v-loading="loading" border stripe size="small">
       <el-table-column prop="code" label="编码" width="160" />
-      <el-table-column prop="name" label="名称" />
-      <el-table-column prop="ownerManufacturerId" label="所属厂家" width="280" />
-      <el-table-column prop="boundDealerId" label="绑定dealerId" width="130" />
+      <el-table-column prop="name" label="名称" min-width="180" />
+      <el-table-column label="所属厂家" min-width="220">
+        <template #default="{ row }">{{ manufacturerName(row.ownerManufacturerId) }}</template>
+      </el-table-column>
+      <el-table-column prop="boundDealerId" label="绑定经销商ID" width="130" />
       <el-table-column prop="contactName" label="联系人" width="120" />
+      <el-table-column prop="contactPhone" label="联系电话" width="150" />
       <el-table-column prop="status" label="状态" width="100">
         <template #default="{ row }">
           <el-tag :type="row.status === 'active' ? 'success' : 'danger'">{{ row.status === 'active' ? '启用' : '停用' }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column prop="createdAt" label="创建时间" width="180" />
       <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
           <el-button v-if="row.status !== 'active'" link type="primary" @click="toggle(row, true)">启用</el-button>
@@ -25,21 +30,24 @@
         </template>
       </el-table-column>
     </el-table>
-    <el-pagination class="pager" background layout="total, prev, pager, next" :total="total"
-      :page-size="size" :current-page="page" @current-change="onPage" />
+    <el-pagination class="pager" background layout="total, sizes, prev, pager, next" :total="total"
+      :page-size="size" :current-page="page" :page-sizes="[20,50,100]"
+      @current-change="onPage" @size-change="onSize" />
 
     <el-dialog v-model="dialog" title="新建经销商租户" width="560px">
-      <el-form :model="form" label-width="120px">
-        <el-form-item label="所属厂家租户ID">
-          <el-input v-model="form.manufacturerTenantId" placeholder="厂家租户 UUID" />
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="120px">
+        <el-form-item label="所属厂家" prop="manufacturerTenantId">
+          <el-select v-model="form.manufacturerTenantId" filterable placeholder="请选择厂家租户" style="width:100%">
+            <el-option v-for="m in manufacturers" :key="m.id" :label="m.code + ' / ' + m.name" :value="m.id" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="dealer ID"><el-input v-model.number="form.dealerId" /></el-form-item>
-        <el-form-item label="租户编码"><el-input v-model="form.code" /></el-form-item>
-        <el-form-item label="租户名称"><el-input v-model="form.name" /></el-form-item>
+        <el-form-item label="dealer ID" prop="dealerId"><el-input v-model.number="form.dealerId" /></el-form-item>
+        <el-form-item label="租户编码" prop="code"><el-input v-model="form.code" /></el-form-item>
+        <el-form-item label="租户名称" prop="name"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="联系人"><el-input v-model="form.contactName" /></el-form-item>
         <el-form-item label="联系电话"><el-input v-model="form.contactPhone" /></el-form-item>
-        <el-form-item label="管理员账号"><el-input v-model="form.adminUsername" /></el-form-item>
-        <el-form-item label="管理员密码"><el-input v-model="form.adminPassword" type="password" show-password /></el-form-item>
+        <el-form-item label="管理员账号" prop="adminUsername"><el-input v-model="form.adminUsername" /></el-form-item>
+        <el-form-item label="管理员密码" prop="adminPassword"><el-input v-model="form.adminPassword" type="password" show-password /></el-form-item>
         <el-form-item label="管理员姓名"><el-input v-model="form.adminName" /></el-form-item>
         <el-form-item label="进销存/库存管理">
           <el-switch v-model="form.inventoryEnabled" />
@@ -58,14 +66,35 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { formatDateTime } from '@/utils/format'
-import { listDealers, createDealer, enableTenant, disableTenant } from '@/api/admin'
+import { listDealers, createDealer, enableTenant, disableTenant, listManufacturers } from '@/api/admin'
 
 const list = ref([]); const total = ref(0); const page = ref(1); const size = ref(20)
 const loading = ref(false); const keyword = ref('')
 const dialog = ref(false); const saving = ref(false)
+const formRef = ref()
+const manufacturers = ref([])
+const manufacturerMap = ref({})
 const form = reactive({ manufacturerTenantId: '', dealerId: null, code: '', name: '', contactName: '', contactPhone: '', adminUsername: '', adminPassword: '', adminName: '', inventoryEnabled: true })
+const rules = {
+  manufacturerTenantId: [{ required: true, message: '请选择所属厂家', trigger: 'change' }],
+  code: [{ required: true, message: '请输入租户编码', trigger: 'blur' }],
+  name: [{ required: true, message: '请输入租户名称', trigger: 'blur' }],
+  adminUsername: [{ required: true, message: '请输入管理员账号', trigger: 'blur' }],
+  adminPassword: [{ required: true, message: '请输入管理员密码', trigger: 'blur' }]
+}
 
+function manufacturerName(id) {
+  if (!id) return '-'
+  const m = manufacturerMap.value[id]
+  return m ? `${m.code} / ${m.name}` : id
+}
+async function loadManufacturers() {
+  const res = await listManufacturers({ page: 1, size: 1000 })
+  manufacturers.value = res.data?.list || []
+  const map = {}
+  manufacturers.value.forEach(m => { map[m.id] = m })
+  manufacturerMap.value = map
+}
 async function load() {
   loading.value = true
   try {
@@ -73,13 +102,17 @@ async function load() {
     list.value = res.data.list; total.value = res.data.total
   } finally { loading.value = false }
 }
+function onSearch() { page.value = 1; load() }
+function onReset() { keyword.value = ''; page.value = 1; load() }
 function onPage(p) { page.value = p; load() }
-function inventoryEnabled(row) { return row.modulesEnabled?.inventoryEnabled !== false }
+function onSize(s) { size.value = s; page.value = 1; load() }
 function openCreate() {
   Object.assign(form, { manufacturerTenantId: '', dealerId: null, code: '', name: '', contactName: '', contactPhone: '', adminUsername: '', adminPassword: '', adminName: '', inventoryEnabled: true })
+  formRef.value?.resetFields()
   dialog.value = true
 }
 async function save() {
+  await formRef.value.validate()
   saving.value = true
   try { await createDealer(form); ElMessage.success('创建成功'); dialog.value = false; load() }
   finally { saving.value = false }
@@ -92,6 +125,6 @@ async function toggle(row, active) {
   }
   load()
 }
-onMounted(load)
+onMounted(async () => { await Promise.all([loadManufacturers(), load()]) })
 </script>
 <style scoped>.pager { margin-top: 16px; justify-content: flex-end; }</style>

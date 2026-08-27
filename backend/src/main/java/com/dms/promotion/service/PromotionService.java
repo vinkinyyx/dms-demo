@@ -22,9 +22,10 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class PromotionService {
-    private static final Set<String> ALLOWED_TYPES = Set.of("GIFT", "FULL_REDUCTION");
+    private static final Set<String> ALLOWED_TYPES = Set.of("GIFT", "FULL_REDUCTION", "QTY_DISCOUNT", "QTY_REDUCE");
     private final PromotionRepository repository;
     private final PromotionRuleRepository ruleRepository;
+    private final com.dms.v4.V4PricingService pricingService;
     @jakarta.persistence.PersistenceContext
     private jakarta.persistence.EntityManager em;
 
@@ -102,6 +103,7 @@ public class PromotionService {
         if (tenantId == null) throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
         validate(req);
         req.setId(null);
+        req.ensureMaps();
         req.setTenantId(tenantId);
         if (req.getStatus() == null) req.setStatus("draft");
         if (req.getPriority() == null) req.setPriority(50);
@@ -109,6 +111,7 @@ public class PromotionService {
         req.setCreatedBy(TenantContext.getUserId());
         req.setUpdatedAt(OffsetDateTime.now());
         req.ensureMaps();
+        checkSkuUniqueness(req, null);
         Promotion saved = repository.save(req);
         replaceRules(saved, req.getRules());
         List<PromotionRule> rules = ruleRepository.findByPromotionIdOrderBySeqAsc(saved.getId());
@@ -133,6 +136,7 @@ public class PromotionService {
         old.setStatus(patch.getStatus() == null ? "draft" : patch.getStatus());
         old.setUpdatedAt(OffsetDateTime.now());
         old.setUpdatedBy(TenantContext.getUserId());
+        checkSkuUniqueness(old, old.getId());
         Promotion saved = repository.save(old);
         if (patch.getRules() != null) replaceRules(saved, patch.getRules());
         List<PromotionRule> rules = ruleRepository.findByPromotionIdOrderBySeqAsc(saved.getId());
@@ -153,14 +157,88 @@ public class PromotionService {
     @Transactional
     public void activate(Long id) {
         Promotion p = get(id);
+        checkSkuUniqueness(p, p.getId());
         p.setStatus("active");
         p.setUpdatedAt(OffsetDateTime.now());
         p.setUpdatedBy(TenantContext.getUserId());
         repository.save(p);
     }
 
+    /**
+     * 同一 SKU 在同一有效时间段只能命中一种促销：把 SKU/品类展开为 SKU 集合，
+     * 与其它有效促销规则校验时间窗交集；冲突则拦截并列出活动名称与时段。
+     */
+    private void checkSkuUniqueness(Promotion req, Long excludePromotionId) {
+        UUID tenantId = TenantContext.getTenantId();
+        if (tenantId == null) return;
+        java.time.OffsetDateTime from = req.getValidFrom();
+        java.time.OffsetDateTime to = req.getValidTo();
+        Set<Long> mySkus = new HashSet<>();
+        for (PromotionRule r : (req.getRules() == null ? List.<PromotionRule>of() : req.getRules())) {
+            Map<String,Object> detail = r.getRuleDetail() == null ? Map.of() : r.getRuleDetail();
+            String scope = str(detail.get("scope") != null ? detail.get("scope") : detail.get("targetType"), "SKU");
+            Object pid = detail.get("targetProductId");
+            Object cid = detail.get("targetProductLineId") != null ? detail.get("targetProductLineId") : detail.get("targetCategoryId");
+            if ("LINE".equalsIgnoreCase(scope) || "CATEGORY".equalsIgnoreCase(scope)) {
+                mySkus.addAll(pricingService.expandScopeToSkus(tenantId, null, cid));
+            } else {
+                mySkus.addAll(pricingService.expandScopeToSkus(tenantId, pid, null));
+            }
+        }
+        if (mySkus.isEmpty()) return;
+        List<String> conflicts = new ArrayList<>();
+        for (var t : pricingService.allPromotionRulesForValidation(tenantId)) {
+            Long otherId = toLong(t.get("promotion_id"));
+            if (excludePromotionId != null && excludePromotionId.equals(otherId)) continue;
+            String status = str(t.get("status"), "");
+            if ("inactive".equals(status) || "void".equals(status) || "disabled".equals(status)) continue;
+            Object otherFrom = t.get("valid_from");
+            Object otherTo = t.get("valid_to");
+            if (!timeOverlap(from, to,
+                    otherFrom == null ? null : java.time.OffsetDateTime.parse(String.valueOf(otherFrom)),
+                    otherTo == null ? null : java.time.OffsetDateTime.parse(String.valueOf(otherTo)))) continue;
+            @SuppressWarnings("unchecked")
+            Map<String,Object> detail = t.get("rule_detail") instanceof Map ? (Map<String,Object>) t.get("rule_detail") : Map.of();
+            String scope = str(detail.get("scope") != null ? detail.get("scope") : detail.get("targetType"), "SKU");
+            Object pid = detail.get("targetProductId");
+            Object cid = detail.get("targetProductLineId") != null ? detail.get("targetProductLineId") : detail.get("targetCategoryId");
+            Set<Long> otherSkus = ("LINE".equalsIgnoreCase(scope) || "CATEGORY".equalsIgnoreCase(scope))
+                    ? pricingService.expandScopeToSkus(tenantId, null, cid)
+                    : pricingService.expandScopeToSkus(tenantId, pid, null);
+            for (Long s : mySkus) {
+                if (otherSkus.contains(s)) {
+                    conflicts.add("SKU[" + skuLabel(tenantId, s) + "] 在 " + fmt(otherFrom) + "~" + fmt(otherTo)
+                            + " 已存在促销【" + str(t.get("promo_name"), String.valueOf(otherId)) + "】，不可重复配置。");
+                    break;
+                }
+            }
+        }
+        if (!conflicts.isEmpty()) {
+            throw new BusinessException(ErrorCode.RESOURCE_CONFLICT,
+                    "同一 SKU 在同一时间段只能存在一种促销：" + String.join("；", conflicts));
+        }
+    }
+
+    private boolean timeOverlap(java.time.OffsetDateTime a1, java.time.OffsetDateTime a2,
+                                java.time.OffsetDateTime b1, java.time.OffsetDateTime b2) {
+        long lo = a1 == null ? Long.MIN_VALUE : a1.toEpochSecond();
+        long hi = a2 == null ? Long.MAX_VALUE : a2.toEpochSecond();
+        long lo2 = b1 == null ? Long.MIN_VALUE : b1.toEpochSecond();
+        long hi2 = b2 == null ? Long.MAX_VALUE : b2.toEpochSecond();
+        return lo <= hi2 && lo2 <= hi;
+    }
+
+    private String fmt(Object o) { return o == null ? "不限" : String.valueOf(o).replace("T", " ").substring(0, Math.min(16, String.valueOf(o).replace("T"," ").length())); }
+
+    private String skuLabel(UUID tenantId, Long productId) {
+        var rows = em.createNativeQuery("SELECT code, name_cn FROM products WHERE id=?1").setParameter(1, productId).getResultList();
+        if (rows.isEmpty()) return String.valueOf(productId);
+        Object[] row = (Object[]) rows.get(0);
+        return row[0] + " " + (row[1] == null ? "" : row[1]);
+    }
+
     private void validate(Promotion req) {
-        if (req.getPromoType() == null || !ALLOWED_TYPES.contains(req.getPromoType())) throw new BusinessException(ErrorCode.PARAM_INVALID, "促销类型只能是 GIFT 或 FULL_REDUCTION");
+        if (req.getPromoType() == null || !ALLOWED_TYPES.contains(req.getPromoType())) throw new BusinessException(ErrorCode.PARAM_INVALID, "促销类型只能是 GIFT、FULL_REDUCTION、QTY_DISCOUNT 或 QTY_REDUCE");
         if (req.getName() == null || req.getName().isBlank()) throw new BusinessException(ErrorCode.PARAM_MISSING, "促销名称不能为空");
         if (req.getValidFrom() != null && req.getValidTo() != null && req.getValidTo().isBefore(req.getValidFrom())) throw new BusinessException(ErrorCode.PARAM_INVALID, "结束时间不能早于开始时间");
     }
@@ -172,7 +250,7 @@ public class PromotionService {
         int seq = 1;
         for (PromotionRule r : requested) {
             Map<String,Object> detail = r.getRuleDetail() == null ? new HashMap<>() : new HashMap<>(r.getRuleDetail());
-            normalizeNumbers(detail, "thresholdQty", "giftQty", "everyN", "reduceAmount");
+            normalizeNumbers(detail, "thresholdQty", "giftQty", "everyN", "reduceAmount", "discountValue", "discountRate", "discount");
             String targetType = str(detail.get("targetType"), "SKU");
             if (!"SKU".equalsIgnoreCase(targetType) && !"LINE".equalsIgnoreCase(targetType))
                 throw new BusinessException(ErrorCode.PARAM_INVALID, "命中对象类型只能是 SKU 或 产品层次");
@@ -192,6 +270,28 @@ public class PromotionService {
                     BigDecimal everyN = toBd(detail.get("everyN"));
                     if (everyN.signum() <= 0) throw new BusinessException(ErrorCode.PARAM_MISSING, "请填写每满N数量");
                 }
+            } else if ("QTY_DISCOUNT".equals(promotion.getPromoType())) {
+                BigDecimal thresholdQty = toBd(detail.get("thresholdQty"));
+                if (thresholdQty.signum() <= 0) throw new BusinessException(ErrorCode.PARAM_MISSING, "请填写满N件门槛数量");
+                String discountType = str(detail.get("discountType"), "PERCENT").toUpperCase();
+                if (!"PERCENT".equals(discountType) && !"FIXED_PRICE".equals(discountType))
+                    throw new BusinessException(ErrorCode.PARAM_INVALID, "满件打折方式只能是 百分比 或 固定单价");
+                detail.put("discountType", discountType);
+                BigDecimal value = toBd(firstNonNull(detail.get("discountValue"), detail.get("discountRate"), detail.get("discount")));
+                if (value.signum() <= 0) throw new BusinessException(ErrorCode.PARAM_MISSING, "请填写打折比例或固定单价");
+                detail.put("targetType", targetType.toUpperCase());
+            } else if ("QTY_REDUCE".equals(promotion.getPromoType())) {
+                BigDecimal thresholdQty = toBd(detail.get("thresholdQty"));
+                if (thresholdQty.signum() <= 0) throw new BusinessException(ErrorCode.PARAM_MISSING, "请填写满N件门槛数量");
+                BigDecimal reduceAmount = toBd(detail.get("reduceAmount"));
+                if (reduceAmount.signum() <= 0) throw new BusinessException(ErrorCode.PARAM_MISSING, "请填写满减金额");
+                String cycle = str(detail.get("cycle"), "ONCE");
+                if (!"ONCE".equalsIgnoreCase(cycle) && !"EVERY_N".equalsIgnoreCase(cycle))
+                    throw new BusinessException(ErrorCode.PARAM_INVALID, "减免周期只能是 仅一次 或 每满N循环");
+                detail.put("cycle", cycle.toUpperCase());
+                if ("EVERY_N".equalsIgnoreCase(cycle) && toBd(detail.get("everyN")).signum() <= 0)
+                    throw new BusinessException(ErrorCode.PARAM_MISSING, "请填写每满N数量");
+                detail.put("targetType", targetType.toUpperCase());
             } else {
                  BigDecimal reduceAmount = toBd(detail.get("reduceAmount"));
                  BigDecimal discountValue = toBd(detail.get("discountValue"));
@@ -273,6 +373,7 @@ public class PromotionService {
         }
     }
 
+    private Object firstNonNull(Object... values) { for (Object v : values) if (v != null && !String.valueOf(v).isBlank()) return v; return null; }
     private BigDecimal toBd(Object value) {
         if (value == null) return BigDecimal.ZERO;
         try { return new BigDecimal(String.valueOf(value).trim()); } catch (Exception e) { return BigDecimal.ZERO; }

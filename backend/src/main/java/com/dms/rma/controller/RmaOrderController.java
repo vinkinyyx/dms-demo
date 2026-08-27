@@ -26,9 +26,19 @@ public class RmaOrderController {
         return ApiResponse.ok(service.list(pageQuery));
     }
 
+    @GetMapping("/{id}")
+    public ApiResponse<RmaOrder> get(@PathVariable Long id) {
+        return ApiResponse.ok(service.get(id));
+    }
+
     @PostMapping
     public ApiResponse<RmaOrder> create(@RequestBody RmaOrder req) {
         return ApiResponse.ok(service.create(req));
+    }
+
+    @PostMapping("/{id}/submit")
+    public ApiResponse<RmaOrder> submit(@PathVariable Long id) {
+        return ApiResponse.ok(service.submit(id));
     }
 
     @PostMapping("/{id}/complete")

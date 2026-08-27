@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="page">
     <div class="toolbar">
       <el-input v-model="query.path" placeholder="路径/URL" clearable style="width:220px" />
@@ -9,7 +9,8 @@
       <el-select v-model="query.slow" placeholder="慢请求" clearable style="width:130px">
         <el-option label="仅慢请求" :value="true" />
       </el-select>
-      <el-button type="primary" @click="load">查询</el-button>
+      <el-button type="primary" @click="onSearch">查询</el-button>
+      <el-button @click="onReset">重置</el-button>
     </div>
 
     <el-table :data="list" v-loading="loading" border size="small">
@@ -37,8 +38,8 @@
       </el-table-column>
     </el-table>
 
-    <el-pagination class="pager" background layout="total, prev, pager, next" :total="total"
-      :page-size="size" :current-page="page" @current-change="onPage" />
+    <el-pagination class="pager" background layout="total, sizes, prev, pager, next" :total="total"
+      :page-size="size" :current-page="page" :page-sizes="[20,50,100]" @current-change="onPage" @size-change="onSize" />
   </div>
 </template>
 
@@ -69,10 +70,10 @@ async function load() {
   }
 }
 
-function onPage(currentPage) {
-  page.value = currentPage
-  load()
-}
+function onSearch() { page.value = 1; load() }
+function onReset() { Object.assign(query, { path: '', method: '', statusCode: '', slow: undefined }); page.value = 1; load() }
+function onPage(currentPage) { page.value = currentPage; load() }
+function onSize(currentSize) { size.value = currentSize; page.value = 1; load() }
 
 async function copyFile(id, kind) {
   try {

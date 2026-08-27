@@ -1208,3 +1208,38 @@ GET /api/admin/api-call-logs?path=/api/orders/transfer&statusCode=200
 
 
 ---
+
+---
+
+## v4.3.0 / v4.3.1 API 变更（2026-08-27）
+
+> 路径以后端 Controller `@RequestMapping` 实际值为准；统一返回 `ApiResponse`（code=0 为成功）。
+
+### v4.3.0 新增/变更接口
+
+| 模块 | 方法 | 路径 | 说明 |
+|---|---|---|---|
+| V4 计价引擎 | POST | /api/v4/calc/preview | 计价预览；模式 NORMAL / FIXED_PRICE / ZERO_ORDER / VOUCHER；定价优先级链：合同价格 → 全局折扣（产品/客户）→ 促销 → 标准价 |
+| 代金券 | GET | /api/customer-vouchers | 券列表（分页） |
+| 代金券 | GET | /api/customer-vouchers/available?dealerId= | 当前客户可用券查询 |
+| 客户注册 | GET/POST | /api/customer-registrations | 经销商自助注册申请与审核列表 |
+| 产品全局折扣 | GET/POST | /api/product-global-discounts | 产品维度全局折扣维护 |
+| 客户全局折扣 | GET/POST | /api/dealer-global-discounts | 客户维度全局折扣维护 |
+| 合同价格 | GET | /api/contracts/{id}/prices | 合同下协议价格明细 |
+| 经销商联系人 | GET | /api/dealers/{id}/contacts、/api/dealer-contacts/all?dealerId= | 多联系人 |
+| 经销商地址 | GET | /api/dealers/{id}/addresses、/api/dealer-addresses/all?dealerId= | 多地址 |
+| 销退 | GET/POST | /api/rma-orders | 销退单；支持关联多张出库单（rma_order_outbound_refs） |
+
+### v4.3.1 变更接口
+
+| 模块 | 变更 | 说明 |
+|---|---|---|
+| 销退 | GET /api/rma-orders（及出库单选择接口）新增 **warehouseId** 查询参数 | 按发货仓库过滤可选出库单；服务端校验同一销退单所选出库单必须同仓库，跨仓库混选返回业务错误 |
+| 销退 | 出库单选择接口支持 **batchNo / serialNo** 筛选 | 弹窗批号、序列号筛选恢复，后端参数生效 |
+| 审批回调 | 销售订单/销退单审批**拒绝**分支增加代金券释放 | 拒绝时 voucherService.release()：customer_vouchers USED→ISSUED，清空占用订单关联；通过分支维持核销 |
+| 销退详情 | rma_order_lines 返回 **serialNo** | V134 新列，详情/回显携带 |
+
+### 契约注意事项
+
+- 编辑/重开回显：订单行载荷中产品主键可能为 `productId` 或 `id`（列表/详情/快照来源不同），前端 makeLine 统一 `p.productId ?? p.id ?? null` 兼容。
+- 报表/库存/财务类多表查询 SQL 必须使用 WITH CTE + LEFT JOIN，禁止 SELECT 子句/聚合参数/JOIN ON 中的嵌套相关子查询（见 project_rules.md §13 五）。

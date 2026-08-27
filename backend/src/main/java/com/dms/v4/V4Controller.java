@@ -13,6 +13,11 @@ public class V4Controller {
     private final V4OrderService orderService;
     private final V4ErpService erpService;
 
+    @PostMapping("/calc/preview")
+    public ApiResponse<Map<String, Object>> calcPreview(@RequestBody Map<String, Object> body) {
+        return ApiResponse.ok(orderService.calcPreview(body));
+    }
+
     @PostMapping("/erp/outbound-callbacks")
     public ApiResponse<Map<String, Object>> callback(@RequestBody Map<String, Object> body) {
         return ApiResponse.ok(erpService.receiveOutbound(body));

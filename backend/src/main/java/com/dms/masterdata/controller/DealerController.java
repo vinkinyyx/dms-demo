@@ -11,6 +11,10 @@ import com.dms.common.util.ContentDispositionUtils;
 import com.dms.common.util.ExcelExportUtils;
 import com.dms.common.util.ExcelImportUtils;
 import com.dms.masterdata.entity.Dealer;
+import com.dms.masterdata.entity.DealerAddress;
+import com.dms.masterdata.entity.DealerContact;
+import com.dms.masterdata.service.DealerAddressService;
+import com.dms.masterdata.service.DealerContactService;
 import com.dms.masterdata.service.DealerService;
 import com.dms.report.service.DealerProfileService;
 import jakarta.validation.Valid;
@@ -18,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,6 +37,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -42,6 +48,8 @@ public class DealerController {
 
     private final DealerService service;
     private final DealerProfileService dealerProfileService;
+    private final DealerContactService contactService;
+    private final DealerAddressService addressService;
 
     @GetMapping
     public ApiResponse<PageResult<Dealer>> list(@Valid PageQuery pageQuery,
@@ -57,6 +65,31 @@ public class DealerController {
     @GetMapping("/{id}")
     public ApiResponse<Dealer> get(@PathVariable Long id) {
         return ApiResponse.ok(service.get(id));
+    }
+
+    @GetMapping("/{id}/detail")
+    @PreAuthorize("@perm.hasAny('dealer:view','dealer:search')")
+    public ApiResponse<Map<String, Object>> getDetail(@PathVariable Long id) {
+        Dealer dealer = service.get(id);
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("dealer", dealer);
+        data.put("contacts", contactService.listByDealer(id));
+        data.put("addresses", addressService.listByDealer(id));
+        return ApiResponse.ok(data);
+    }
+
+    @GetMapping("/{id}/contacts")
+    @PreAuthorize("@perm.hasAny('dealer_contact:view','dealer:view')")
+    public ApiResponse<List<DealerContact>> contacts(@PathVariable Long id) {
+        service.get(id);
+        return ApiResponse.ok(contactService.listByDealer(id));
+    }
+
+    @GetMapping("/{id}/addresses")
+    @PreAuthorize("@perm.hasAny('dealer_address:view','dealer:view')")
+    public ApiResponse<List<DealerAddress>> addresses(@PathVariable Long id) {
+        service.get(id);
+        return ApiResponse.ok(addressService.listByDealer(id));
     }
 
     @PostMapping

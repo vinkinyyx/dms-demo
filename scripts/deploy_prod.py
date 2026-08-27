@@ -100,7 +100,9 @@ run(f"chown -R root:root {PROD_DIR}/frontend {PROD_DIR}/backend/app.jar")
 run(f"rm -f /tmp/dms-front-prod.tar.gz /tmp/dms-admin-prod.tar.gz")
 
 # 重启 backend
-run(f"docker-compose -f {COMPOSE} up -d --force-recreate backend", timeout=240)
+# 仅重启 backend 容器本身；不用 compose --force-recreate：旧版 docker-compose v1 会连带重建
+# postgres/redis/minio 依赖容器，且与新 docker engine 存在 ContainerConfig 兼容问题。
+run("docker restart dms-prod-backend", timeout=120)
 
 # 轮询 health（走公网 80，模拟用户访问路径）
 for attempt in range(60):

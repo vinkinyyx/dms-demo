@@ -100,7 +100,12 @@ const query = reactive({ page: 1, size: 20, status: '', keyword: '', category: '
 async function load() {
   loading.value = true
   try {
-    const res = await listContracts(query)
+    const params = {}
+    Object.keys(query).forEach((k) => {
+      const v = query[k]
+      if (v !== null && v !== undefined && v !== '') params[k] = v
+    })
+    const res = await listContracts(params)
     const data = res.data || res
     list.value = data.list || []
     total.value = data.total || 0
