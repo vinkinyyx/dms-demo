@@ -125,3 +125,9 @@ releases/*-prod-deploy-*/
 # Local staging for incoming change packages (not for repo)
 _incoming/
 *.tar.gz
+
+# v4.4.0 local temp helpers
+/_q*.sh
+/_p*.txt
+/_edit*.py
+/_dbhelper*.py

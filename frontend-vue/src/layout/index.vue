@@ -136,8 +136,10 @@ function permSet() {
   return out
 }
 function menuVisible(item) {
-  if (item.inventoryOnly && !features.value.inventoryEnabled) return false
-  if (item.purchaseOnly && !features.value.purchaseEnabled) return false
+  // v4.4.0：进销存开关仅约束厂家用户；经销商用户（userType=dealer）即使关闭也保留库存/采购菜单
+  const isVendor = userStore.userType === 'vendor'
+  if (isVendor && item.inventoryOnly && !features.value.inventoryEnabled) return false
+  if (isVendor && item.purchaseOnly && !features.value.purchaseEnabled) return false
   if (!item.permissionCode) return true
   return permSet().has(item.permissionCode)
 }

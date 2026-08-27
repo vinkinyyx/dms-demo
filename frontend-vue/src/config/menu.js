@@ -36,13 +36,14 @@ export const MENU_GROUPS = [
     group: '库存业务',
     items: [
       { key: 'inventory', inventoryOnly: true, icon: 'Box', label: '库存查询', permissionCode: 'inventory:view' },
-      { key: 'sales-outs', inventoryOnly: true, icon: 'Van', label: '销售出库', permissionCode: 'sales_out:view' },
+      { key: 'sales-outs', icon: 'Van', label: '销售出库', permissionCode: 'sales_out:view' },
       { key: 'receipts', inventoryOnly: true, icon: 'TakeawayBox', label: '收货入库', permissionCode: 'receipt:view' },
       { key: 'stock-moves', inventoryOnly: true, icon: 'Switch', label: '库存移动', permissionCode: 'stock_move:view' },
       { key: 'inventory-adjustments', inventoryOnly: true, icon: 'ScaleToOriginal', label: '库存调整', permissionCode: 'inventory_adjustment:view' }
       ,{ key: 'expiry-alerts', inventoryOnly: true, icon: 'AlarmClock', label: '效期预警', route: '/expiry-alerts', permissionCode: 'inventory:view' }
       ,{ key: 'stocktakes', inventoryOnly: true, icon: 'Histogram', label: '库存盘点', route: '/stocktakes', permissionCode: 'inventory:view' }
       ,{ key: 'traceability', inventoryOnly: true, icon: 'Search', label: '序列号追溯', route: '/traceability', permissionCode: 'inventory:view' }
+      ,{ key: 'consignment-stock', icon: 'Box', label: '寄售库存', route: '/consignment-stock', permissionCode: 'inventory:view' }
     ]
   },
   {
@@ -60,7 +61,8 @@ export const MENU_GROUPS = [
     items: [
       { key: 'dashboard', icon: 'DataLine', label: '数据驾驶舱', route: '/dashboard', permissionCode: 'dashboard:view' },
       { key: 'reports', icon: 'Document', label: '报表中心', route: '/reports', permissionCode: 'report:view' },
-      { key: 'dealer-profile', icon: 'User', label: '经销商画像', route: '/dealers/profile', permissionCode: 'dealer:view' }
+      { key: 'dealer-profile', icon: 'User', label: '经销商画像', route: '/dealers/profile', permissionCode: 'dealer:view' },
+      { key: 'dealer-credit', icon: 'Wallet', label: '经销商资信与账期', route: '/dealer-credit', permissionCode: 'dealer:view' }
     ]
   },
   {

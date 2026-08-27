@@ -43,6 +43,14 @@ public class Order {
     @Column(name = "ship_address_id")
     private Long shipAddressId;
 
+    /** v4.4.0：开票订单结算终端（终端医院） */
+    @Column(name = "terminal_hospital_id")
+    private Long terminalHospitalId;
+
+    /** v4.4.0：样品订单申请原因 */
+    @Column(name = "sample_reason", length = 500)
+    private String sampleReason;
+
     @Convert(converter = JsonMapConverter.class)
     @Column(name = "ship_snapshot", columnDefinition = "jsonb")
     private Map<String, Object> shipSnapshot;

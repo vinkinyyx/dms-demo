@@ -27,9 +27,12 @@
               </el-col>
               <el-col :xs="24" :sm="12" :md="12" :lg="12">
                 <el-form-item label="订单类型">
-                  <el-select v-model="form.orderType" style="width:100%">
+                    <el-select v-model="form.orderType" style="width:100%" @change="onOrderTypeChange">
                     <el-option label="销售订单" value="SALES"/>
-                    <el-option label="补货订单" value="REPLENISHMENT"/>
+                    <el-option label="补货订单（寄售）" value="REPLENISHMENT" :disabled="!dealerConsignment"/>
+                    <el-option label="开票订单（寄售）" value="INVOICE" :disabled="!dealerConsignment"/>
+                    <el-option label="样品订单" value="SAMPLE"/>
+                    <el-option label="定制订单" value="CUSTOM"/>
                   </el-select>
                 </el-form-item>
               </el-col>
@@ -44,6 +47,22 @@
                 <el-form-item label="期望日期">
                   <el-date-picker v-model="form.expectedDate" type="date" value-format="YYYY-MM-DD" style="width:100%"/>
                 </el-form-item>
+              </el-col>
+              <el-col :span="24" v-if="form.orderType==='INVOICE'">
+                <el-alert type="info" :closable="false" show-icon style="margin-bottom:10px"
+                  title="开票订单针对该经销商寄售库存开票；按合同价/客户价/全局折扣重新计价，不参与满减/满赠，不可用代金券/一口价/0金额。"/>
+                <el-form-item label="结算终端" prop="terminalHospitalId">
+                  <ResourcePicker resource="dealers" v-model="form.terminalHospitalId" :display-value="form.terminalHospitalName" placeholder="选择终端医院（开票结算对象，可搜索）" @pick="onTerminalPicked"/>
+                </el-form-item>
+              </el-col>
+              <el-col :span="24" v-if="form.orderType==='SAMPLE'">
+                <el-alert type="info" :closable="false" show-icon style="margin-bottom:10px" title="样品订单仅可下一个单品，订单0金额，不参与折扣与促销。"/>
+                <el-form-item label="申请样品原因" prop="sampleReason">
+                  <el-input v-model="form.sampleReason" type="textarea" :rows="2" maxlength="500" show-word-limit placeholder="请填写申请样品原因（必填）"/>
+                </el-form-item>
+              </el-col>
+              <el-col :span="24" v-if="form.orderType==='REPLENISHMENT'">
+                <el-alert type="info" :closable="false" show-icon style="margin-bottom:10px" title="补货订单产品均为0金额，不使用折扣、不参与满减/满赠；发货后厂家库存扣减并计入该经销商寄售库存，供日后开票。"/>
               </el-col>
               <el-col :span="24">
                 <el-form-item label="备注">
@@ -222,9 +241,9 @@ const addresses=ref([]),addressLoading=ref(false),vouchers=ref([]),voucherLoadin
 let previewTimer=null
 let previewToken=0
 let seq=1
-const form=reactive({id:null,status:'DRAFT',dealerId:null,dealerName:'',orderType:'SALES',expectedDate:'',shipAddressId:null,remark:'',pricingMode:'NORMAL',fixedPrice:null,voucherId:null,headerDiscountType:'',headerDiscountDirection:'REDUCE',headerDiscountValue:0,lines:[],amountInclTax:0,discountAmount:0,finalAmount:0,taxAmount:0,amountExclTax:0})
+const form=reactive({id:null,status:'DRAFT',dealerId:null,dealerName:'',orderType:'SALES',expectedDate:'',shipAddressId:null,terminalHospitalId:null,terminalHospitalName:'',sampleReason:'',remark:'',pricingMode:'NORMAL',fixedPrice:null,voucherId:null,headerDiscountType:'',headerDiscountDirection:'REDUCE',headerDiscountValue:0,lines:[],amountInclTax:0,discountAmount:0,finalAmount:0,taxAmount:0,amountExclTax:0})
 const summary=reactive({productDiscountTotal:0,promoDiscountTotal:0,lineDiscountTotal:0,dealerDiscountTotal:0,headerDiscountTotal:0,voucherAmount:0,payableAmount:0})
-const rules={dealerId:[{required:true,message:'请选择经销商',trigger:'change'}],shipAddressId:[{required:true,message:'请选择送货地址',trigger:'change'}]}
+const rules={dealerId:[{required:true,message:'请选择经销商',trigger:'change'}],shipAddressId:[{required:true,message:'请选择送货地址',trigger:'change'}],sampleReason:[{required:true,message:'请填写申请样品原因',trigger:'blur'}],terminalHospitalId:[{required:true,message:'开票订单请选择结算终端医院',trigger:'change'}]}
 const canEdit=computed(()=>!isEdit.value||['DRAFT','REJECTED'].includes(form.status))
 const flatLines=computed(()=>flatten(form.lines))
 const editableRoots=computed(()=>form.lines.filter(l=>!l.isGift&&l.lineLevel!=='CHILD'))
@@ -272,7 +291,19 @@ function activeNow(p){if(!p)return false;if(String(p.status||'').toLowerCase()!=
 function pickPrice(dealerRows,globalRows){const d=(dealerRows||[]).filter(activeNow).find(p=>String(p.partnerId||'')===String(form.dealerId||''));if(d)return d;const g=(globalRows||[]).filter(activeNow);return g.find(p=>Number(p.partnerId)===0)||g.find(p=>p.partnerId==null||p.partnerId==='')||null}
 async function loadPrice(r,bomParentProductId){if(!form.dealerId||!r.productId)return;const base={productId:r.productId,priceScope:'SALE',priceContext:bomParentProductId?'BOM_COMPONENT':'STANDALONE',includeComponents:true,size:100};const params=bomParentProductId?{...base,partnerType:'DEALER',partnerId:form.dealerId,bomParentProductId}:{...base,partnerType:'DEALER',partnerId:form.dealerId,priceContext:'STANDALONE'};const res=await request({url:'/api/product-prices',params}).catch(()=>null);const list=(x)=>x?.data?.list||x?.data?.records||(Array.isArray(x?.data)?x.data:[]);const rows=list(res);const p=bomParentProductId?rows.find(x=>String(x.productId)===String(r.productId)&&String(x.bomParentProductId||'')===String(bomParentProductId)):pickPrice(rows.filter(x=>x.priceContext==='STANDALONE'),[]);if(p){r.standardPriceInclTax=num(p.salesPrice);r.basePriceInclTax=num(p.salesPrice);r.taxRate=num(p.taxRate);r.priceResolved=num(p.salesPrice)>0}else{r.standardPriceInclTax=0;r.basePriceInclTax=0;r.taxRate=0;r.priceResolved=false}}
 function onLineQtyChange(row){if(row.children)row.children.forEach(c=>{c.qty=num(row.qty)*num(c.componentQty)});schedulePreview()}
-async function onDealerChange(){addresses.value=[];vouchers.value=[];form.shipAddressId=null;form.voucherId=null;form.lines=[];await loadAddresses();schedulePreview()}
+const dealerConsignment = ref(false)
+async function refreshDealerConsignment(){
+  if(!form.dealerId){dealerConsignment.value=false;return}
+  try{const res=await request({url:'/api/dealers/'+form.dealerId});const d=res?.data||res;dealerConsignment.value=!!(d.consignmentEnabled ?? d.consignment_enabled)}catch(e){dealerConsignment.value=false}
+}
+function onOrderTypeChange(t){
+  if((t==='REPLENISHMENT'||t==='INVOICE')&&!dealerConsignment.value){ElMessage.warning('该经销商未开启寄售库存，不能下补货/开票订单');form.orderType='SALES'}
+  if(t!=='INVOICE'){form.terminalHospitalId=null;form.terminalHospitalName=''}
+  if(t!=='SAMPLE'){form.sampleReason=''}
+  schedulePreview()
+}
+function onTerminalPicked(row){form.terminalHospitalId=row?.id??null;form.terminalHospitalName=row?((row.name||row.displayName||'')):''}
+async function onDealerChange(){addresses.value=[];vouchers.value=[];form.shipAddressId=null;form.voucherId=null;form.lines=[];form.terminalHospitalId=null;form.terminalHospitalName='';await Promise.all([loadAddresses(),refreshDealerConsignment()]);schedulePreview()}
 function onDealerPicked(p){if(!p||!p.value){form.dealerName='';form.lines=[];addresses.value=[];vouchers.value=[];return}form.dealerName=p.label||p.row?.name||p.name||'';onDealerChange()}
 async function loadAddresses(){if(!form.dealerId){addresses.value=[];return}addressLoading.value=true;try{const res=await dealerAddresses(form.dealerId);addresses.value=Array.isArray(res?.data)?res.data:(res?.data?.list||[])}catch(e){addresses.value=[]}finally{addressLoading.value=false}}
 async function loadVouchers(){if(!form.dealerId){vouchers.value=[];return}voucherLoading.value=true;try{const productIds=editableRoots.value.map(l=>l.productId).filter(Boolean).join(',');const res=await availableVouchers({dealerId:form.dealerId,amount:num(form.amountInclTax)||undefined,productIds:productIds||undefined});vouchers.value=Array.isArray(res?.data)?res.data:[]}catch(e){vouchers.value=[]}finally{voucherLoading.value=false}}
@@ -340,7 +371,7 @@ async function onSave(submit){
   saving.value=!submit;submitting.value=submit;error.value=''
   try{
     const payload=buildPreviewPayload(true);payload.remark=form.remark;payload.shipAddressId=form.shipAddressId||null
-    payload.extra={shipAddressId:form.shipAddressId||null,pricingMode:form.pricingMode,voucherId:form.voucherId||null,fixedPrice:num(form.fixedPrice)||null}
+    payload.extra={shipAddressId:form.shipAddressId||null,pricingMode:form.pricingMode,voucherId:form.voucherId||null,fixedPrice:num(form.fixedPrice)||null};payload.terminalHospitalId=form.terminalHospitalId||null;payload.sampleReason=form.sampleReason||null
     const res=isEdit.value?await request({url:`/api/sales-orders/${form.id}`,method:'put',data:payload}):await request({url:'/api/sales-orders',method:'post',data:payload})
     if(submit)await request({url:`/api/sales-orders/${form.id||res.data.id}/submit`,method:'post'})
     ElMessage.success(submit?'销售订单已提交':'销售订单已保存');router.push('/m/orders')

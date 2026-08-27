@@ -25,6 +25,7 @@ public final class ApprovalSummaryBuilder {
                 case "PURCHASE_RETURN" -> fillPurchaseReturn(em, result, instance);
                 case "CONTRACT" -> fillContract(em, result, instance);
                 case "AUTHORIZATION" -> fillAuthorization(em, result, instance);
+                case "RMA_ORDER" -> fillRmaOrder(em, result, instance);
                 default -> result.put("items", List.of());
             }
         } catch (Exception ex) {
@@ -167,6 +168,61 @@ public final class ApprovalSummaryBuilder {
         header.put("业务ID", in.getBusinessId());
         result.put("header", header);
         result.put("items", List.of());
+    }
+
+    private static void fillRmaOrder(EntityManager em, Map<String, Object> result, ApprovalInstance in) {
+        List<Tuple> rs = em.createNativeQuery(
+                "select r.*, d.name as dealer_name from rma_orders r " +
+                "left join dealers d on d.id = r.dealer_id " +
+                "where r.id = ?1 and r.tenant_id = ?2 and r.deleted_at is null", Tuple.class)
+                .setParameter(1, in.getBusinessId()).setParameter(2, in.getTenantId()).getResultList();
+        if (rs.isEmpty()) { fallbackHeader(result, in); return; }
+        Tuple r = rs.get(0);
+        String outCodes;
+        try {
+            @SuppressWarnings("unchecked")
+            List<String> codes = em.createNativeQuery(
+                    "select sales_out_code from rma_order_refs where rma_id = ?1 order by id")
+                    .setParameter(1, in.getBusinessId()).getResultList();
+            outCodes = codes.isEmpty() ? "-" : String.join(", ", codes);
+        } catch (Exception e) {
+            outCodes = "-";
+        }
+        String rmaType = val(r, "rma_type") == null ? "" : String.valueOf(val(r, "rma_type"));
+        String typeLabel = switch (rmaType) {
+            case "ZERO_RETURN" -> "0金额产品退货";
+            case "RETURN" -> "有价产品退货";
+            case "QUALITY" -> "质量退货";
+            default -> rmaType.isBlank() ? "-" : rmaType;
+        };
+        Map<String, Object> header = new LinkedHashMap<>();
+        header.put("销退单号", val(r, "code"));
+        header.put("经销商", val(r, "dealer_name"));
+        header.put("退货类型", typeLabel);
+        header.put("退货原因", val(r, "reason"));
+        header.put("关联出库单", outCodes);
+        header.put("退货总数量", val(r, "total_qty"));
+        header.put("退货金额", amount(r, "amount"));
+        result.put("header", header);
+
+        List<Tuple> rows = em.createNativeQuery(
+                "select l.* from rma_order_lines l where l.rma_id = ?1 order by l.seq, l.id", Tuple.class)
+                .setParameter(1, in.getBusinessId()).getResultList();
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Tuple l : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("productCode", val(l, "product_code"));
+            m.put("productName", val(l, "product_name"));
+            String batch = val(l, "batch_no") == null ? "" : String.valueOf(val(l, "batch_no"));
+            String serial = val(l, "serial_no") == null ? "" : String.valueOf(val(l, "serial_no"));
+            String bs = (batch + (serial.isBlank() ? "" : (batch.isBlank() ? "" : "/") + serial)).trim();
+            m.put("batchNo", bs.isBlank() ? "-" : bs);
+            m.put("qty", val(l, "qty"));
+            m.put("unitPrice", amount(l, "unit_price_incl_tax"));
+            m.put("subtotal", amount(l, "sub_total"));
+            items.add(m);
+        }
+        result.put("items", items);
     }
 
     private static void fillContract(EntityManager em, Map<String, Object> result, ApprovalInstance in) {

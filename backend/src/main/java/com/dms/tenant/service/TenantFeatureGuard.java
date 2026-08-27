@@ -3,6 +3,7 @@ package com.dms.tenant.service;
 import com.dms.common.BusinessException;
 import com.dms.common.ErrorCode;
 import com.dms.common.util.TenantContext;
+import com.dms.security.DataScope;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,21 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TenantFeatureGuard {
     private final EntityManager em;
+    private final DataScope dataScope;
     private final ObjectMapper mapper = new ObjectMapper();
+
+    /**
+     * v4.4.0：进销存开关仅约束「厂家用户」。
+     * 经销商用户（绑定了 dealer_id 的客户账号）即使租户关闭进销存，仍可使用库存/收货/采购相关菜单与接口。
+     */
+    private boolean isDealerUser() {
+        try {
+            DataScope.CurrentUser u = dataScope.currentUser();
+            return u != null && u.dealerId() != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     public boolean inventoryEnabled() {
         UUID tid = TenantContext.getTenantId();
@@ -33,6 +48,7 @@ public class TenantFeatureGuard {
     }
 
     public void requireInventory() {
+        if (isDealerUser()) return;
         if (!inventoryEnabled()) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "当前租户未启用进销存/库存模块");
     }
 

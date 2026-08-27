@@ -22,6 +22,8 @@ import com.dms.common.util.TenantContext;
 import com.dms.inventory.entity.StockSerial;
 import com.dms.inventory.repository.StockSerialRepository;
 import com.dms.inventory.service.InventoryService;
+import com.dms.consignment.service.ConsignmentService;
+import org.springframework.context.annotation.Lazy;
 import com.dms.masterdata.entity.Dealer;
 import com.dms.masterdata.repository.DealerRepository;
 import com.dms.sales.dto.SalesOutCancelLineRequest;
@@ -65,6 +67,8 @@ public class SalesOutService {
     private final DealerRepository dealerRepository;
     private final StockSerialRepository stockSerialRepository;
     private final EntityManager em;
+    @Lazy
+    private final ConsignmentService consignmentService;
 
     @Transactional(readOnly = true)
     public PageResult<SalesOut> list(PageQuery pageQuery) {
@@ -284,6 +288,7 @@ public class SalesOutService {
         }
 
         BigDecimal totalAmount = BigDecimal.ZERO;
+        List<ConsignmentService.StdLine> consignLines = new ArrayList<>();
 
         for (SalesOutPartialShipRequest.ShipLineRequest req : ships) {
             if (req.getProductId() == null || req.getWarehouseId() == null
@@ -356,6 +361,7 @@ public class SalesOutService {
                     .amount(amount)
                     .build();
             factRepository.save(fact);
+            consignLines.add(new ConsignmentService.StdLine(req.getProductId(), req.getBatchNo(), req.getSerialNo(), req.getWarehouseId(), req.getQty()));
             log.info("部分出库 soId={} execLineId={} product={} qty={}", soId, savedLine.getId(), req.getProductId(), req.getQty());
         }
 
@@ -404,6 +410,19 @@ public class SalesOutService {
             }
         }
 
+        // v4.4.0 补货订单发货 -> 计入经销商寄售库存（厂家库存已在上面扣减）
+        try {
+            if (so.getSourceOrderId() != null) {
+                Object ot = em.createNativeQuery("SELECT order_type FROM orders WHERE id=?1 AND tenant_id=?2")
+                        .setParameter(1, so.getSourceOrderId()).setParameter(2, tenantId).getResultList().stream().findFirst().orElse(null);
+                if (ot != null && "REPLENISH".equals(String.valueOf(ot))) {
+                    consignmentService.onReplenishShipped(so.getDealerId(), soId, consignLines);
+                }
+            }
+        } catch (Exception cex) {
+            log.error("补货寄售库存回写失败 soId={}: {}", soId, cex.getMessage(), cex);
+            throw cex;
+        }
         return saved;
     }
 

@@ -95,6 +95,30 @@ public class Dealer {
     @Column(length = 16)
     private String status;
 
+    /** v4.4.0：是否开启寄售库存（开启后可下补货订单/开票订单） */
+    @Column(name = "consignment_enabled")
+    private Boolean consignmentEnabled;
+
+    /** v4.4.0：寄售额度（按标准价汇总的寄售金额上限） */
+    @Column(name = "consignment_limit", precision = 18, scale = 2)
+    private BigDecimal consignmentLimit;
+
+    /** v4.4.0：信用额度 */
+    @Column(name = "credit_limit", precision = 18, scale = 2)
+    private BigDecimal creditLimit;
+
+    /** v4.4.0：账期（天） */
+    @Column(name = "payment_days")
+    private Integer paymentDays;
+
+    /** v4.4.0：结算方式 */
+    @Column(name = "settlement_method", length = 32)
+    private String settlementMethod;
+
+    /** v4.4.0：信用等级 */
+    @Column(name = "credit_grade", length = 16)
+    private String creditGrade;
+
     @Convert(converter = JsonMapConverter.class)
     @Column(name = "attrs", columnDefinition = "jsonb")
     private Map<String, Object> attrs;

@@ -37,6 +37,8 @@ const routes = [
     redirect: '/home',
     children: [
       { path: 'home', name: 'Home', component: () => import('@/views/Home.vue'), meta: { title: '工作台首页' } },
+      { path: 'consignment-stock', name: 'ConsignmentStock', component: () => import('@/views/ConsignmentStock.vue'), meta: { title: '寄售库存' } },
+      { path: 'dealer-credit', name: 'DealerCredit', component: () => import('@/views/DealerCredit.vue'), meta: { title: '经销商资信与账期' } },
       { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/Dashboard.vue'), meta: { title: '数据看板' } },
       { path: 'products/:id', name: 'ProductDetail', component: () => import('@/views/ResourceDetail.vue'), props: { moduleKey: 'products', title: '产品详情' }, meta: { title: '产品详情' } },
       { path: 'product-bundles/:id', name: 'BundleDetail', component: () => import('@/views/ResourceDetail.vue'), props: { moduleKey: 'product-bundles', title: 'BOM详情' }, meta: { title: 'BOM详情' } },

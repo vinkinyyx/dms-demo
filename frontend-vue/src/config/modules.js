@@ -91,7 +91,15 @@ const dealers = {
     { key: 'contactEmail', label: '邮箱', type: 'email', group: '联系信息' },
     { key: 'gspStatus', label: 'GSP资质状态', type: 'select', group: '资质', value: 'active', options: [{ value: 'active', label: '有效' }, { value: 'expired', label: '已过期' }, { value: 'none', label: '无' }] },
     { key: 'gspExpire', label: 'GSP到期日', type: 'date', group: '资质' },
-    { key: 'status', label: '状态', type: 'select', group: '状态', value: 'active', options: S_ACTIVE_BLOCK }
+    { key: 'status', label: '状态', type: 'select', group: '状态', value: 'active', options: S_ACTIVE_BLOCK },
+    { key: 'consignmentEnabled', label: '开启寄售库存', type: 'boolean', group: '资信与寄售', value: false },
+    { key: 'consignmentLimit', label: '寄售额度', type: 'number', group: '资信与寄售', value: 0 },
+    { key: 'creditLimit', label: '信用额度', type: 'number', group: '资信与寄售', value: 0 },
+    { key: 'paymentDays', label: '账期(天)', type: 'number', group: '资信与寄售', value: 0 },
+    { key: 'settlementMethod', label: '结算方式', type: 'select', group: '资信与寄售', options: [
+        { value: 'MONTHLY', label: '月结' }, { value: 'COD', label: '货到付款' }, { value: 'ADVANCE', label: '预付款' }, { value: 'CONSIGNMENT', label: '寄售结算' } ] },
+    { key: 'creditGrade', label: '信用等级', type: 'select', group: '资信与寄售', options: [
+        { value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'C', label: 'C' }, { value: 'D', label: 'D' } ] }
   ]
 }
 

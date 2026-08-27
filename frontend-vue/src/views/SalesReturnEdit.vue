@@ -218,7 +218,7 @@
               <el-button :icon="RefreshLeft" @click="resetPickerQuery">重置</el-button>
             </el-form-item>
           </el-form>
-          <el-table :data="shipmentList" v-loading="shipmentLoading" border stripe size="small" highlight-current-row height="320" @selection-change="onSelectionChange" ref="pickerTableRef">
+          <el-table :data="shipmentList" v-loading="shipmentLoading" border stripe size="small" highlight-current-row height="320" class="row-click-pick" @selection-change="onSelectionChange" @row-click="onRowClickToggle" ref="pickerTableRef">
             <el-table-column type="selection" width="42" />
             <el-table-column label="发货单号" prop="code" width="150" show-overflow-tooltip />
             <el-table-column label="销售订单" prop="orderCode" width="130" show-overflow-tooltip />
@@ -229,7 +229,7 @@
               <template #default="{ row }"><el-tag size="small" type="success">{{ statusFmt(row.status) }}</el-tag></template>
             </el-table-column>
           </el-table>
-          <div class="picker-tip">提示：勾选出库单后点击「确认添加」，可多次添加同一客户的多张出库单。已选 {{ pickedShipments.length }} 张。</div>
+          <div class="picker-tip">提示：点击整行即可选中/取消出库单（也可勾选复选框），再点「确认添加」；可多次添加同一客户的多张出库单。已选 {{ pickedShipments.length }} 张。</div>
           <div class="picker-footer">
             <el-button @click="pickerVisible=false">取消</el-button>
             <el-button type="primary" :loading="adding" @click="confirmAddShipments">确认添加（{{ pickedShipments.length }}）</el-button>
@@ -541,6 +541,12 @@ async function searchShipments() {
 }
 
 function onSelectionChange(rows) { pickedShipments.value = rows }
+function onRowClickToggle(row) {
+  const table = pickerTableRef.value
+  if (!table) return
+  const selected = table.getSelectionRows().some(r => r.id === row.id)
+  table.toggleRowSelection(row, !selected)
+}
 
 async function confirmAddShipments() {
   if (!pickedShipments.value.length) { ElMessage.warning('请先勾选要加入的出库单'); return }
@@ -877,6 +883,8 @@ watch(() => route.params.id, (newId) => { if (newId) loadForView(); else resetFo
 .source-reason :deep(.el-form-item) { margin-bottom: 0; }
 .shipment-picker .picker-form { margin-bottom: 8px; }
 .shipment-picker-dialog .el-dialog__body { padding-top: 12px; padding-bottom: 12px; }
+.shipment-picker-dialog .row-click-pick .el-table__row { cursor: pointer; }
+.shipment-picker-dialog .row-click-pick .el-table__row:hover > td { background-color: var(--el-table-row-hover-bg-color) !important; }
 .shipment-picker-dialog .picker-form .el-form-item { margin-bottom: 8px; margin-right: 8px; }
 .picker-dealer-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 8px 12px; background: #f4f8ff; border: 1px solid #d9e8ff; border-radius: 4px; font-size: 13px; }
 .picker-dealer-label { color: #606266; font-weight: 600; }

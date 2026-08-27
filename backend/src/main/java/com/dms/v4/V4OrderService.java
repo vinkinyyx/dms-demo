@@ -9,6 +9,8 @@ import com.dms.common.util.DocNoGenerator;
 import com.dms.common.util.TenantContext;
 import com.dms.voucher.dto.VoucherAcquireRequest;
 import com.dms.voucher.service.CustomerVoucherService;
+import com.dms.consignment.service.ConsignmentService;
+import com.dms.consignment.service.InvoiceOrderApprovalCallback;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
@@ -34,6 +36,8 @@ public class V4OrderService {
     private final CustomerVoucherService voucherService;
     @Lazy
     private final ApprovalService approvalService;
+    @Lazy
+    private final ConsignmentService consignmentService;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Transactional(readOnly = true)
@@ -70,12 +74,14 @@ public class V4OrderService {
         V4CalcResult result = calculate(tid, dealerId, body, true);
         List<V4Line> lines = result.getLines();
         String code = docNoGenerator.next("SO");
-        var q = em.createNativeQuery("INSERT INTO orders (tenant_id,code,order_type,dealer_id,ship_snapshot,status,amount_incl_tax,discount_amount,final_amount,tax_amount,amount_excl_tax,header_discount_type,header_discount_value,expected_date,remark,extra,is_red,erp_status,pricing_mode,voucher_id,voucher_amount,promo_messages,pricing_snapshot,created_at,updated_at,created_by) VALUES (?1,?2,?3,?4,CAST(?5 AS jsonb),'DRAFT',?6,?7,?8,?9,?10,?11,?12,CAST(?13 AS date),?14,CAST(?15 AS jsonb),false,'NOT_REQUIRED',?17,?18,?19,CAST(?20 AS jsonb),CAST(?21 AS jsonb),now(),now(),?16) RETURNING id");
+        var q = em.createNativeQuery("INSERT INTO orders (tenant_id,code,order_type,dealer_id,ship_snapshot,status,amount_incl_tax,discount_amount,final_amount,tax_amount,amount_excl_tax,header_discount_type,header_discount_value,expected_date,remark,extra,is_red,erp_status,pricing_mode,voucher_id,voucher_amount,promo_messages,pricing_snapshot,terminal_hospital_id,sample_reason,created_at,updated_at,created_by) VALUES (?1,?2,?3,?4,CAST(?5 AS jsonb),'DRAFT',?6,?7,?8,?9,?10,?11,?12,CAST(?13 AS date),?14,CAST(?15 AS jsonb),false,'NOT_REQUIRED',?17,?18,?19,CAST(?20 AS jsonb),CAST(?21 AS jsonb),?22,?23,now(),now(),?16) RETURNING id");
         q.setParameter(1, tid).setParameter(2, code).setParameter(3, str(body.get("orderType"), "NORMAL")).setParameter(4, dealerId).setParameter(5, snapshot(dealerId));
         setAmountParams(q, 6, lines);
         q.setParameter(11, body.get("headerDiscountType")).setParameter(12, bd(body.get("headerDiscountValue"))).setParameter(13, body.get("expectedDate")).setParameter(14, body.get("remark")).setParameter(15, json(body.get("extra"))).setParameter(16, TenantContext.getUserId());
         q.setParameter(17, result.getPricingMode()).setParameter(18, result.getVoucherId()).setParameter(19, result.getVoucherAmount());
-        q.setParameter(20, json(result.getPromotionMessages())).setParameter(21, json(pricingSnapshot(result)));
+        q.setParameter(20, json(result.getPromotionMessages())).setParameter(21, json(pricingSnapshot(result)))
+                .setParameter(22, body.get("terminalHospitalId") == null ? null : Long.valueOf(String.valueOf(body.get("terminalHospitalId"))))
+                .setParameter(23, body.get("sampleReason"));
         Long id = ((Number) q.getSingleResult()).longValue();
         insertLines(id, lines);
         syncShipAddress(id, body);
@@ -160,13 +166,31 @@ public class V4OrderService {
             voucherService.acquire(req);
         }
         recordPromotionHits(id, lines);
+        // v4.4.0 开票订单：提交即预占寄售库存（审批通过实扣，拒绝/退回/撤回释放）
+        String orderType = str(o.get("order_type"), "SALES");
+        boolean invoiceOrder = "INVOICE".equals(orderType);
+        if (invoiceOrder) {
+            List<ConsignmentService.StdLine> stockLines = new ArrayList<>();
+            for (Tuple lt : linesOf(id)) {
+                Object pid = lt.get("product_id"); Object qq = lt.get("qty");
+                if (pid == null || qq == null) continue;
+                Object wid = lt.get("warehouse_id");
+                stockLines.add(new ConsignmentService.StdLine(
+                    ((Number) pid).longValue(),
+                    lt.get("batch_no") == null ? null : String.valueOf(lt.get("batch_no")),
+                    lt.get("serial_no") == null ? null : String.valueOf(lt.get("serial_no")),
+                    wid == null ? null : ((Number) wid).longValue(),
+                    new BigDecimal(String.valueOf(qq))));
+            }
+            consignmentService.lockForInvoice(dealerId, id, String.valueOf(o.get("code")), stockLines);
+        }
         ApprovalInstance instance;
         try {
             StartApprovalRequest request = new StartApprovalRequest();
-            request.setBusinessType("SALES_ORDER");
+            request.setBusinessType(invoiceOrder ? InvoiceOrderApprovalCallback.BUSINESS_TYPE : "SALES_ORDER");
             request.setBusinessId(id);
             request.setBusinessCode(String.valueOf(o.get("code")));
-            request.setTitle("销售订单审批：" + request.getBusinessCode());
+            request.setTitle((invoiceOrder ? "开票订单审批：" : "销售订单审批：") + request.getBusinessCode());
             instance = approvalService.start(request);
         } catch (Exception e) {
             em.createNativeQuery("UPDATE orders SET status='DRAFT', updated_at=now() WHERE id=?1 AND tenant_id=?2").setParameter(1,id).setParameter(2,tid).executeUpdate();
@@ -197,10 +221,76 @@ public class V4OrderService {
     }
 
     private V4CalcResult calculate(UUID tid, Long dealerId, Map<String,Object> body, boolean applyPromotions) {
-        @SuppressWarnings("unchecked") List<Map<String,Object>> rows = (List<Map<String,Object>>) body.getOrDefault("lines", List.of());
+        @SuppressWarnings("unchecked") List<Map<String,Object>> rows = new ArrayList<>((List<Map<String,Object>>) body.getOrDefault("lines", List.of()));
+        String orderType = str(body.get("orderType"), "SALES");
+        // v4.4.0 订单类型计价规则
+        boolean isReplenish = "REPLENISHMENT".equals(orderType);   // 补货：全部0金额、无折扣、无促销
+        boolean isSample = "SAMPLE".equals(orderType);            // 样品：单品、0金额、无折扣促销、需申请原因
+        boolean isInvoice = "INVOICE".equals(orderType);          // 开票：按合同/客户/全局折扣重计价，不参与满减满赠/代金券/一口价/0金额
+        boolean isCustom = "CUSTOM".equals(orderType);            // 定制：保留选项，暂按普通订单
+        if (isReplenish) {
+            for (Map<String,Object> r : rows) {
+                r.put("lineZero", true);
+                r.put("lineDiscountType", null);
+                r.put("lineDiscountValue", null);
+            }
+            body.put("headerDiscountType", null);
+            body.put("headerDiscountValue", null);
+            body.put("voucherId", null);
+            body.put("pricingMode", "NORMAL");
+            body.put("fixedPrice", null);
+            applyPromotions = false;
+            validateDealerConsignment(tid, dealerId, "补货订单");
+        } else if (isSample) {
+            long rootCount = rows.stream().filter(r -> {
+                String lvl = r.get("lineLevel") == null ? "" : String.valueOf(r.get("lineLevel"));
+                return !"CHILD".equals(lvl);
+            }).count();
+            if (rootCount > 1) {
+                throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "样品订单只能包含一个样品（单品）");
+            }
+            Object reason = body.get("sampleReason");
+            if (reason == null || String.valueOf(reason).isBlank()) {
+                throw new BusinessException(ErrorCode.PARAM_MISSING, "样品订单必须填写申请样品原因");
+            }
+            for (Map<String,Object> r : rows) {
+                r.put("lineZero", true);
+                r.put("lineDiscountType", null);
+                r.put("lineDiscountValue", null);
+            }
+            body.put("headerDiscountType", null);
+            body.put("headerDiscountValue", null);
+            body.put("voucherId", null);
+            body.put("pricingMode", "NORMAL");
+            body.put("fixedPrice", null);
+            applyPromotions = false;
+        } else if (isInvoice) {
+            body.put("voucherId", null);
+            body.put("pricingMode", "NORMAL");
+            body.put("fixedPrice", null);
+            for (Map<String,Object> r : rows) { r.put("lineZero", false); }
+            applyPromotions = false; // 不参与满减/满赠；产品促销/经销商折扣/行折扣/整单折扣仍由引擎按合同/客户/全局价计算
+            validateDealerConsignment(tid, dealerId, "开票订单");
+        }
         Map<String,Object> params = new LinkedHashMap<>(body);
         params.put("dealerId", dealerId);
         return priceEngine.calculate(tid, dealerId, rows, applyPromotions, params);
+    }
+
+    /** v4.4.0：补货/开票订单要求经销商已开启寄售库存。 */
+    private void validateDealerConsignment(UUID tid, Long dealerId, String label) {
+        try {
+            Object v = em.createNativeQuery("SELECT COALESCE(consignment_enabled,false) FROM dealers WHERE id=?1 AND tenant_id=?2")
+                    .setParameter(1, dealerId).setParameter(2, tid).getSingleResult();
+            boolean enabled = v != null && Boolean.parseBoolean(String.valueOf(v));
+            if (!enabled) {
+                throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
+                        "该经销商未开启寄售库存，不能下" + label + "；请先在经销商主数据中开启寄售库存");
+            }
+        } catch (BusinessException be) { throw be; }
+        catch (Exception e) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "校验经销商寄售开关失败: " + e.getMessage());
+        }
     }
 
     private void insertLines(Long orderId, List<V4Line> lines) {
