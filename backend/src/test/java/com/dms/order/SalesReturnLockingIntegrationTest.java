@@ -146,7 +146,7 @@ class SalesReturnLockingIntegrationTest extends BaseIntegrationTest {
         TenantContext.setTenantId(tenant.getId());
         try {
             SalesReturnService svc = applicationContext.getBean(SalesReturnService.class);
-            var resp = svc.shippedOutLines(salesOutId);
+            var resp = svc.shippedOutLines(salesOutId, null);
             @SuppressWarnings("unchecked")
             Map<String, Object> data = (Map<String, Object>) resp.getData();
             @SuppressWarnings("unchecked")

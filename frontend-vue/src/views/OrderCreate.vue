@@ -20,12 +20,12 @@
           <template #header>基本信息</template>
           <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
             <el-row :gutter="20">
-              <el-col :xs="24" :sm="24" :md="16" :lg="16">
+              <el-col :xs="24" :sm="24" :md="12" :lg="12">
                 <el-form-item label="经销商" prop="dealerId">
                   <ResourcePicker resource="dealers" v-model="form.dealerId" :display-value="form.dealerName" placeholder="选择经销商" @pick="onDealerPicked"/>
                 </el-form-item>
               </el-col>
-              <el-col :xs="12" :sm="12" :md="4" :lg="4">
+              <el-col :xs="24" :sm="12" :md="12" :lg="12">
                 <el-form-item label="订单类型">
                   <el-select v-model="form.orderType" style="width:100%">
                     <el-option label="销售订单" value="SALES"/>
@@ -33,16 +33,16 @@
                   </el-select>
                 </el-form-item>
               </el-col>
-              <el-col :xs="12" :sm="12" :md="4" :lg="4">
-                <el-form-item label="期望日期">
-                  <el-date-picker v-model="form.expectedDate" type="date" value-format="YYYY-MM-DD" style="width:100%"/>
-                </el-form-item>
-              </el-col>
-              <el-col :xs="24" :sm="24" :md="16" :lg="16">
-                <el-form-item label="送货地址">
-                  <el-select v-model="form.shipAddressId" placeholder="选择该客户的收货地址" clearable filterable style="width:100%" :loading="addressLoading">
+              <el-col :xs="24" :sm="24" :md="12" :lg="12">
+                <el-form-item label="送货地址" prop="shipAddressId" required>
+                  <el-select v-model="form.shipAddressId" placeholder="选择该客户的收货地址（必选）" clearable filterable style="width:100%" :loading="addressLoading">
                     <el-option v-for="a in addresses" :key="a.id" :value="a.id" :label="addressLabel(a)"/>
                   </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :xs="24" :sm="12" :md="12" :lg="12">
+                <el-form-item label="期望日期">
+                  <el-date-picker v-model="form.expectedDate" type="date" value-format="YYYY-MM-DD" style="width:100%"/>
                 </el-form-item>
               </el-col>
               <el-col :span="24">
@@ -224,7 +224,7 @@ let previewToken=0
 let seq=1
 const form=reactive({id:null,status:'DRAFT',dealerId:null,dealerName:'',orderType:'SALES',expectedDate:'',shipAddressId:null,remark:'',pricingMode:'NORMAL',fixedPrice:null,voucherId:null,headerDiscountType:'',headerDiscountDirection:'REDUCE',headerDiscountValue:0,lines:[],amountInclTax:0,discountAmount:0,finalAmount:0,taxAmount:0,amountExclTax:0})
 const summary=reactive({productDiscountTotal:0,promoDiscountTotal:0,lineDiscountTotal:0,dealerDiscountTotal:0,headerDiscountTotal:0,voucherAmount:0,payableAmount:0})
-const rules={dealerId:[{required:true,message:'请选择经销商',trigger:'change'}]}
+const rules={dealerId:[{required:true,message:'请选择经销商',trigger:'change'}],shipAddressId:[{required:true,message:'请选择送货地址',trigger:'change'}]}
 const canEdit=computed(()=>!isEdit.value||['DRAFT','REJECTED'].includes(form.status))
 const flatLines=computed(()=>flatten(form.lines))
 const editableRoots=computed(()=>form.lines.filter(l=>!l.isGift&&l.lineLevel!=='CHILD'))

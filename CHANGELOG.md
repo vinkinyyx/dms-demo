@@ -1,3 +1,22 @@
+## v4.3.2 (2026-08-27) - 销退审批流接入、有价/0金额退货联动、销售订单布局与送货地址必填
+
+> PATCH 版本。v4.3.1 上线后用户反馈 4 项问题，全部修复并部署测试环境（真实浏览器端到端验证通过）。
+
+### 修复
+- **R1 销退单提交后不进审批（Critical）**：v4.3 多出库销退走 `RmaOrderService`（rma_orders 表，`POST /api/rma/orders`），`create()`/`submit()` 仅置 `SUBMITTED` 未调用 ApprovalService，导致单据卡在「已提交」、审批中心无待办。现统一接入审批流：有审批模板→`PENDING_APPROVAL`（审批中心可见待办），无模板自动通过→`COMPLETED`；新增 `RmaOrderApprovalCallback`（审批通过→complete，驳回/退回/撤回→释放 sales_out_lines 锁定量并回 DRAFT）；`RmaOrderPortalController` 新增 `/api/rma/orders/unified/{uid}/submit|approve|reject|cancel`，兼容 RMA 新单（r{id}）与 legacy 红字单（l{id}）；新增 Flyway `V135__rma_order_approval_template.sql` 播种 RMA_ORDER 审批模板。前端销退列表/详情状态文案修正：SUBMITTED=待审批、PENDING_APPROVAL=审批中、REJECTED=已驳回，列表与详情状态一致。
+- **R2 有价/0金额产品退货筛选联动**：销退新建页「发货仓库」后新增「退货类型」单选（默认「有价产品退货」，可选「0金额产品退货」）。后端 `SalesReturnController/Service` 的 shipped-outs/shipped-out-lines 增加 `amountType` 参数：PAID 仅带 unit_price>0 产品，ZERO 仅带 0 金额产品；选择「0金额产品退货」时退货原因禁用「常规退货（NORMAL）」，前端保存再拦截一次；明细 payload 带 rmaType（RETURN/ZERO_RETURN）。
+- **R3 销售订单新建页布局 + 送货地址必填**：栅格重排为第一行「经销商 + 订单类型」、第二行「送货地址 + 期望日期」，两字段均完整可见；送货地址加红星必填（rules 增加 shipAddressId required），未选地址提交被拦截；下单日期保持默认当天不变。
+- **R4 文档**：`.memory/layers/layer1-rules.md` 历史遗留 `????` 乱码段落（v4.0.0 规则）重写为中文。
+
+### 部署/运维
+- 测试环境 Nginx 由旧的「/dms/* 302 → /*」（对应 VITE_BASE=/）方案切换为生产同款「alias + try_files」（对应 VITE_BASE=/dms/），修复前端按 /dms/ 构建后业务 SPA 被重定向到宣传站、用户入口 500/白屏的问题；业务 SPA + 移动 H5 走 `/dms/` alias，平台后台走 `/dms/admin/` alias。
+
+### 验证
+- 后端打包、前端（VITE_BASE=/dms/ 与 /dms/admin/）构建通过；部署测试环境后真实浏览器铁律9 首检：`/`、`/dms/`、`/dms/login`、`/dms/admin/`、`/dms/mobile/login`、`/actuator/health` 全 200，登录→工作台→菜单展开→列表数据加载正常，Console 无红错、无 5xx。
+- R1：RMA-20260827-00008 提交→PENDING_APPROVAL→审批中心待办→同意→COMPLETED；RMA-00009 驳回→回 DRAFT 且可退量恢复；遗留 4 张卡死 SUBMITTED 单据重新进入审批流（软删除单自动排除）。
+- R2：退货类型单选默认「有价」，切「0金额」常规退货原因消失；API 实测 PAID 带出 6 张出库单、ZERO 带出 0 张。
+- R3：新建页两列布局 + 送货地址红星必填，截图存 `automation_test/v4-browser-results/`。
+
 ## v4.3.1 (2026-08-27) - 销退单返工、代金券审批返还、销售订单重开回显 BUG 修复
 
 > PATCH 版本。v4.3.0 上线后真实浏览器/业务走查发现 4 个 BUG，全部修复并已部署测试环境（v433）、浏览器端到端验证通过。完整文件清单见 `CHANGES-2026-08-27.md`。

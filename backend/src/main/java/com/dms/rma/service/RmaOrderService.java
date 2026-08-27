@@ -7,6 +7,9 @@ import com.dms.common.BusinessException;
 import com.dms.common.ErrorCode;
 import com.dms.common.PageQuery;
 import com.dms.common.PageResult;
+import com.dms.approval.dto.StartApprovalRequest;
+import com.dms.approval.entity.ApprovalInstance;
+import com.dms.approval.service.ApprovalService;
 import com.dms.common.util.DocNoGenerator;
 import com.dms.common.util.TenantContext;
 import com.dms.inventory.service.InventoryService;
@@ -51,6 +54,7 @@ public class RmaOrderService {
     private final RmaAuthorizationRepository authRepository;
     private final InventoryService inventoryService;
     private final DocNoGenerator docNoGenerator;
+    private final ApprovalService approvalService;
     private final EntityManager em;
 
     @Transactional(readOnly = true)
@@ -175,8 +179,7 @@ public class RmaOrderService {
         req.setId(null);
         req.setTenantId(tenantId);
         req.setCode(docNoGenerator.next("RMA"));
-        req.setStatus("SUBMITTED");
-        req.setSubmittedAt(OffsetDateTime.now());
+        req.setStatus("DRAFT");
         req.setCreatedBy(TenantContext.getUserId());
         req.setUpdatedAt(OffsetDateTime.now());
         req.ensureJson();
@@ -191,22 +194,56 @@ public class RmaOrderService {
             throw new BusinessException(ErrorCode.PARAM_INVALID,
                     "多出库单销退必须提供有效明细：每行需包含 salesOutId、salesOutLineId 和正整数 qty");
         }
+        RmaOrder saved;
         if (requestedLines.isEmpty()) {
-            return createLegacy(req, tenantId);
+            saved = createLegacy(req, tenantId);
+        } else {
+            saved = createMultiOutbound(req, tenantId, requestedLines);
         }
-        return createMultiOutbound(req, tenantId, requestedLines);
+        return startApproval(saved);
+    }
+
+    /**
+     * v4.3.2: 销退单创建后正式提交进入审批流（业务类型 RMA_ORDER）。
+     * 有审批模板 -> RUNNING / 状态 PENDING_APPROVAL（审批中心可见待办）；
+     * 无模板自动通过 -> AUTO_APPROVED / 状态 COMPLETED（回调 RmaOrderApprovalCallback 负责回写库存）。
+     */
+    private RmaOrder startApproval(RmaOrder order) {
+        StartApprovalRequest request = new StartApprovalRequest();
+        request.setBusinessType(RmaOrderApprovalCallback.BUSINESS_TYPE);
+        request.setBusinessId(order.getId());
+        request.setBusinessCode(order.getCode());
+        request.setTitle("销退单审批: " + order.getCode());
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("code", order.getCode());
+        snapshot.put("dealerId", order.getDealerId());
+        snapshot.put("amount", order.getAmount());
+        snapshot.put("salesOutCount", order.getSalesOutCount());
+        snapshot.put("totalQty", order.getTotalQty());
+        snapshot.put("reason", order.getReason());
+        request.setBusinessSnapshot(snapshot);
+        ApprovalInstance instance = approvalService.start(request);
+        String st = instance.getStatus() == null ? "" : instance.getStatus().name();
+        boolean autoApproved = "APPROVED".equals(st) || "AUTO_APPROVED".equals(st);
+        order.setStatus(autoApproved ? "COMPLETED" : "PENDING_APPROVAL");
+        order.setSubmittedAt(OffsetDateTime.now());
+        order.setUpdatedAt(OffsetDateTime.now());
+        if (autoApproved) {
+            order.setCompletedAt(OffsetDateTime.now());
+        }
+        return rmaOrderRepository.save(order);
     }
 
     @Transactional
     public RmaOrder submit(Long id) {
         RmaOrder order = findOrder(id);
-        if (!"DRAFT".equals(order.getStatus())) {
-            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "只有草稿状态的销退单可以提交");
+        if (!"DRAFT".equals(order.getStatus()) && !"REJECTED".equals(order.getStatus())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "只有草稿/已驳回状态的销退单可以提交");
         }
-        order.setStatus("SUBMITTED");
-        order.setSubmittedAt(OffsetDateTime.now());
+        order.setStatus("DRAFT");
         order.setUpdatedAt(OffsetDateTime.now());
-        return rmaOrderRepository.save(order);
+        rmaOrderRepository.saveAndFlush(order);
+        return startApproval(order);
     }
 
     @Transactional
@@ -215,8 +252,8 @@ public class RmaOrderService {
         if ("COMPLETED".equals(order.getStatus())) {
             return order;
         }
-        if (!"SUBMITTED".equals(order.getStatus())) {
-            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "只有已提交的销退单可以审批通过");
+        if (!"SUBMITTED".equals(order.getStatus()) && !"PENDING_APPROVAL".equals(order.getStatus())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "只有待审批/已提交的销退单可以审批通过");
         }
 
         List<RmaOrderLine> lines = rmaOrderLineRepository.findByRmaIdOrderBySeqAscIdAsc(id);

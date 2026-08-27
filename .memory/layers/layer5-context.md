@@ -8,14 +8,14 @@
 
 | 项目 | 状态 |
 |------|------|
-| 当前交付基线 | **v4.3.1**（测试环境后端镜像/产物 tag **v433**；上午 v4.3.0 MINOR 9 需求 R1–R9 + 下午 v4.3.1 PATCH 4 BUG 走查修复；前端 frontend-vue/package.json=4.3.0） |
-| 上一基线 | v4.2.9（2026-08-26 生产在跑版本；MINOR 未推生产） |
-| Flyway 迁移 | 已到 **V134**（V121–V133 = v4.3.0 功能包；V134 = rma_order_lines.serial_no） |
-| 测试环境 | http://43.128.145.141/dms/ 健康 UP；**前端 vite base=/，Nginx 对 /dms/* 做 302 外部重定向到 /*（地址栏会变 / 为预期）**；铁律9要求逐 URL 浏览器首检 |
+| 当前交付基线 | **v4.3.2**（v4.3.0 MINOR 9 需求 R1–R9 + v4.3.1 PATCH 4 BUG + v4.3.2 PATCH 3 修复：R1 销退 RMA 单接入审批流、R2 有价/0金额退货联动、R3 销售订单布局+送货地址必填；Flyway V135；2026-08-27 测试已部署验证，生产待发布；前端 package.json=4.3.0） |
+| 上一基线 | v4.2.9（2026-08-26 旧生产基线；v4.3.1 已于 2026-08-27 推生产） |
+| Flyway 迁移 | 已到 **V135**（V121–V133 = v4.3.0 功能包；V134 = rma_order_lines.serial_no；V135 = RMA_ORDER 审批模板播种） |
+| 测试环境 | http://43.128.145.141/dms/ 健康 UP；**前端 VITE_BASE=/dms/，Nginx 已切换为 alias + try_files（业务 SPA+H5 走 /dms/，后台走 /dms/admin/），与生产一致**；旧 302 重定向方案已废弃；铁律9五入口浏览器首检已通过 |
 | 业务前台 | http://43.128.145.141/dms/ （admin / Sh123456，租户 default；sys_admin / Dms@123456 为厂商超管） |
 | 移动端 H5 | http://43.128.145.141/dms/mobile/login |
 | 平台后台 | http://43.128.145.141/dms/admin/ （admin / Sh123456，token 与前台隔离） |
-| 正式环境 | http://8.133.193.238/dms/（**仍为 v4.2.9**；v4.3.x 未推生产，需用户明确指令） |
+| 正式环境 | http://8.133.193.238/dms/（**v4.3.1，2026-08-27 22:19 已部署**；Flyway 至 V134；webgate 直供 /dms/ 与 /dms/admin/，前端 VITE_BASE=/dms/；备份 stamp 20260827-221851，DB 备份 dms-db-pre-v431-prod-20260827-221839.sql.gz；铁律9 五入口浏览器首检 + 8 个 v4.3 API + V4 计价三模式均通过；已推送 GitHub vinkinyyx/dms-demo main b30896d） |
 | 记忆体系 | v2.0，五层结构（rules/conventions/lessons/decisions/context） |
 
 ### v4.3.0 MINOR 功能包（R1–R9，2026-08-27，Flyway V121–V133）

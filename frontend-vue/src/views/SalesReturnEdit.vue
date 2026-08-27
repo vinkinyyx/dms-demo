@@ -57,6 +57,14 @@
               </el-form-item>
             </el-col>
             <el-col :xs="24" :sm="12" :md="8" :lg="8">
+              <el-form-item label="退货类型" required>
+                <el-radio-group v-model="form.returnType" :disabled="isReadonly" @change="onReturnTypeChange">
+                  <el-radio-button label="PAID">有价产品退货</el-radio-button>
+                  <el-radio-button label="ZERO">0金额产品退货</el-radio-button>
+                </el-radio-group>
+              </el-form-item>
+            </el-col>
+            <el-col :xs="24" :sm="12" :md="8" :lg="8">
               <el-form-item label="退货金额">
                 <span class="amount-text">¥{{ returnTotal.toFixed(2) }}</span>
               </el-form-item>
@@ -116,7 +124,7 @@
               <el-col :xs="24" :sm="16" :md="12" :lg="10">
                 <el-form-item label="退货原因" required>
                   <el-select v-model="form.reasonCode" placeholder="选择发货单后选择退货原因（必选）" style="width:100%" :disabled="isReadonly" @change="onReasonCodeChange">
-                    <el-option v-for="r in reasonOptions" :key="r.value" :label="r.label" :value="r.value" />
+                    <el-option v-for="r in availableReasonOptions" :key="r.value" :label="r.label" :value="r.value" />
                   </el-select>
                 </el-form-item>
               </el-col>
@@ -286,6 +294,15 @@ const reasonOptions = [
   { value: 'DAMAGED', label: '运输破损' },
   { value: 'OTHER', label: '其他' }
 ]
+// v4.3.2: 0金额产品退货不允许「常规退货」
+const availableReasonOptions = computed(() =>
+  form.returnType === 'ZERO' ? reasonOptions.filter(r => r.value !== 'NORMAL') : reasonOptions
+)
+function onReturnTypeChange() {
+  // 切换退货类型：清空已选原因（若不再合法）、清空已带出明细，避免混入另一类型产品
+  if (form.returnType === 'ZERO' && form.reasonCode === 'NORMAL') form.reasonCode = ''
+  groups.value = []
+}
 
 const form = reactive({
   id: null,
@@ -295,12 +312,13 @@ const form = reactive({
   dealerName: '',
   warehouseId: null,
   warehouseName: '',
+  returnType: 'PAID',
   reasonCode: '',
   remark: ''
 })
 
 const isEdit = computed(() => !!route.params.id)
-const isReadonly = computed(() => isEdit.value || ['SUBMITTED', 'APPROVED', 'COMPLETED', 'CANCELLED'].includes(form.status))
+const isReadonly = computed(() => isEdit.value || ['SUBMITTED', 'PENDING_APPROVAL', 'APPROVED', 'COMPLETED', 'CANCELLED', 'REJECTED'].includes(form.status))
 const dealerDisplay = computed(() => form.dealerName || (groups.value[0]?.dealerName || ''))
 
 function dealerLabel(d) {
@@ -330,7 +348,7 @@ function statusFmt(s) {
   })[s] || s || '-'
 }
 function rmaStatusFmt(s) {
-  return ({ DRAFT: '草稿', SUBMITTED: '审批中', APPROVED: '已审批', COMPLETED: '已完成', CANCELLED: '已取消' })[s] || statusFmt(s)
+  return ({ DRAFT: '草稿', SUBMITTED: '待审批', PENDING_APPROVAL: '审批中', APPROVED: '已审批', COMPLETED: '已完成', CANCELLED: '已取消', REJECTED: '已驳回' })[s] || statusFmt(s)
 }
 function statusTag(s) {
   return ({ DRAFT: 'info', SUBMITTED: 'warning', PENDING_APPROVAL: 'warning', APPROVED: 'primary', REJECTED: 'danger', RECEIVING: 'warning', COMPLETED: 'success', CANCELLED: 'danger' })[s] || ''
@@ -503,6 +521,7 @@ async function searchShipments() {
     const params = {
       dealerId: form.dealerId,
       warehouseId: form.warehouseId,
+      amountType: form.returnType || 'PAID',
       batchNo: pickerQuery.batchNo || undefined,
       serialNo: pickerQuery.serialNo || undefined,
       productId: pickerQuery.productId || undefined
@@ -539,7 +558,7 @@ async function confirmAddShipments() {
   try {
     for (const s of pickedShipments.value) {
       if (groups.value.some(g => g.salesOutId === s.id)) continue
-      const res = await shippedOutLines(s.id)
+      const res = await shippedOutLines(s.id, { amountType: form.returnType || 'PAID' })
       const d = res?.data
       if (!d || !Array.isArray(d.lines) || !d.lines.length) { ElMessage.warning(`出库单 ${s.code || s.id} 无可退明细，已跳过`); continue }
       const whId = d.warehouseId || s.warehouseId
@@ -594,6 +613,7 @@ async function onSave() {
   if (!form.warehouseId) { ElMessage.error('请先选择发货仓库'); return }
   if (!groups.value.length) { ElMessage.error('请先选择至少一张出库单'); return }
   if (!form.reasonCode) { ElMessage.error('请选择退货原因'); return }
+  if (form.returnType === 'ZERO' && form.reasonCode === 'NORMAL') { ElMessage.error('0金额产品退货不能选择「常规退货」原因'); return }
   const chosen = allLines.value.filter(l => Number(l.qty) > 0)
   if (!chosen.length) { ElMessage.error('请至少填写一行本次退货数量'); return }
   const bad = chosen.find(l => !Number.isInteger(Number(l.qty)) || Number(l.qty) <= 0)
@@ -612,6 +632,7 @@ async function onSave() {
     const reasonText = reasonOptions.find(r => r.value === form.reasonCode)?.label || form.reasonCode
     const payload = {
       dealerId: form.dealerId,
+      rmaType: form.returnType === 'ZERO' ? 'ZERO_RETURN' : 'RETURN',
       reason: reasonText,
       reasonCode: form.reasonCode,
       remark: form.remark || '',

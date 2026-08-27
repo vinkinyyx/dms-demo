@@ -39,13 +39,14 @@ public class SalesReturnController {
     }
 
     @GetMapping("/shipped-outs")
-    public ApiResponse<List<Map<String, Object>>> shippedOuts( @RequestParam(required = false) Long orderId, @RequestParam(required = false) Long dealerId, @RequestParam(required = false) Long warehouseId, @RequestParam(required = false) String startDate, @RequestParam(required = false) String endDate, @RequestParam(required = false) String keyword, @RequestParam(required = false) String batchNo, @RequestParam(required = false) String serialNo, @RequestParam(required = false) Long productId) {
-        return service.shippedOuts(orderId, dealerId, warehouseId, startDate, endDate, keyword, batchNo, serialNo, productId);
+    public ApiResponse<List<Map<String, Object>>> shippedOuts( @RequestParam(required = false) Long orderId, @RequestParam(required = false) Long dealerId, @RequestParam(required = false) Long warehouseId, @RequestParam(required = false) String startDate, @RequestParam(required = false) String endDate, @RequestParam(required = false) String keyword, @RequestParam(required = false) String batchNo, @RequestParam(required = false) String serialNo, @RequestParam(required = false) Long productId, @RequestParam(required = false) String amountType) {
+        return service.shippedOuts(orderId, dealerId, warehouseId, startDate, endDate, keyword, batchNo, serialNo, productId, amountType);
     }
 
     @GetMapping("/shipped-outs/{salesOutId}/lines")
-    public ApiResponse<Map<String, Object>> shippedOutLines(@PathVariable Long salesOutId) {
-        return service.shippedOutLines(salesOutId);
+    public ApiResponse<Map<String, Object>> shippedOutLines(@PathVariable Long salesOutId,
+                                                            @RequestParam(required = false) String amountType) {
+        return service.shippedOutLines(salesOutId, amountType);
     }
 
     @PostMapping

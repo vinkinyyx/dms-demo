@@ -20,9 +20,9 @@ export function shippedOuts(params) {
   return request({ url: '/api/sales-returns/shipped-outs', method: 'get', params })
 }
 
-// 单张出库单的可退明细
-export function shippedOutLines(salesOutId) {
-  return request({ url: `/api/sales-returns/shipped-outs/${salesOutId}/lines`, method: 'get' })
+// 单张出库单的可退明细（params: { amountType: 'PAID' | 'ZERO' }）
+export function shippedOutLines(salesOutId, params) {
+  return request({ url: `/api/sales-returns/shipped-outs/${salesOutId}/lines`, method: 'get', params })
 }
 
 // v4.3.0 多出库单销退：创建并提交（body: { reason, outboundLines:[{salesOutId,salesOutLineId,qty,reason}] }）

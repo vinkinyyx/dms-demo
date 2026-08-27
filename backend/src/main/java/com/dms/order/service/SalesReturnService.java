@@ -247,8 +247,11 @@ public class SalesReturnService {
             String keyword,
             String batchNo,
             String serialNo,
-            Long productId) {
+            Long productId,
+            String amountType) {
         UUID tid = TenantContext.getTenantId();
+        boolean zeroOnly = "ZERO".equalsIgnoreCase(amountType);
+        boolean paidOnly = "PAID".equalsIgnoreCase(amountType);
         StringBuilder sql = new StringBuilder(
                 "SELECT so.id, so.code, so.dealer_id, so.warehouse_id, so.source_order_id, so.status, COALESCE(so.sales_date, so.shipped_at, so.created_at) AS sales_date, " +
                 "d.name AS dealer_name, w.name AS warehouse_name, o.code AS order_code " +
@@ -269,6 +272,8 @@ public class SalesReturnService {
         if (batchNo != null && !batchNo.isBlank()) { sql.append(" AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id AND sl.batch_no ILIKE ?)"); params.add("%"+batchNo+"%"); }
         if (serialNo != null && !serialNo.isBlank()) { sql.append(" AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id AND sl.serial_no ILIKE ?)"); params.add("%"+serialNo+"%"); }
         if (productId != null) { sql.append(" AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id AND sl.product_id=?)"); params.add(productId); }
+        if (zeroOnly) { sql.append(" AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id AND COALESCE(sl.unit_price,0)=0 AND (COALESCE(sl.shipped_qty,sl.qty,0) - COALESCE(sl.return_locked_qty,0) - COALESCE(sl.returned_qty,0)) > 0)"); }
+        if (paidOnly) { sql.append(" AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id AND COALESCE(sl.unit_price,0)>0 AND (COALESCE(sl.shipped_qty,sl.qty,0) - COALESCE(sl.return_locked_qty,0) - COALESCE(sl.returned_qty,0)) > 0)"); }
         sql.append(" ORDER BY so.sales_date DESC, so.id DESC LIMIT 200");
         var q = em.createNativeQuery(sql.toString(), Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
@@ -287,8 +292,10 @@ public class SalesReturnService {
         return ApiResponse.ok(list);
     }
     @Transactional(readOnly = true)
-    public ApiResponse<Map<String, Object>> shippedOutLines(Long salesOutId) {
+    public ApiResponse<Map<String, Object>> shippedOutLines(Long salesOutId, String amountType) {
         UUID tid = TenantContext.getTenantId();
+        boolean zeroOnly = "ZERO".equalsIgnoreCase(amountType);
+        boolean paidOnly = "PAID".equalsIgnoreCase(amountType);
         var hq = em.createNativeQuery(
                 "SELECT id, code, dealer_id, warehouse_id, source_order_id FROM sales_outs WHERE id=?1 AND tenant_id=?2", Tuple.class);
         hq.setParameter(1, salesOutId).setParameter(2, tid);
@@ -317,9 +324,12 @@ public class SalesReturnService {
             // v4.1.6: physical gifts (is_gift=true) are shipped in sales-out_lines and must be
             // returnable too. Still skip BOM parent (PARENT, no physical product).
             if ("PARENT".equals(lineLevel)) continue;
+            BigDecimal unitPrice = lineSupport.toBd(l.get("unit_price"));
             BigDecimal returnable = shipped.subtract(locked).subtract(returned);
             if (returnable.signum() < 0) returnable = BigDecimal.ZERO;
             if (returnable.signum() == 0) continue;
+            if (zeroOnly && unitPrice.signum() != 0) continue;
+            if (paidOnly && unitPrice.signum() == 0) continue;
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", l.get("id"));
             m.put("sourceOutLineId", l.get("id"));
@@ -336,7 +346,7 @@ public class SalesReturnService {
             m.put("returnableQty", returnable);
             m.put("qty", returnable);
             // Prefer the stored unit_price so gift lines (0.00) are returned accurately.
-            m.put("unitPrice", lineSupport.toBd(l.get("unit_price")));
+            m.put("unitPrice", unitPrice);
             m.put("taxRate", l.get("tax_rate"));
             lines.add(m);
         }
