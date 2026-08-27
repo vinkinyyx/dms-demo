@@ -43,7 +43,7 @@ public class ConsignmentService {
     }
     private String productCode(Long id){ return col(id, "code"); }
     private String productName(Long id){
-        try { Object v = em.createNativeQuery("SELECT COALESCE(name_cn,name) FROM products WHERE id=?1")
+        try { Object v = em.createNativeQuery("SELECT COALESCE(name_cn,'') FROM products WHERE id=?1")
                 .setParameter(1,id).getSingleResult(); return v==null?null:String.valueOf(v);}catch(Exception e){return null;} }
     private String productSpec(Long id){ return col(id, "spec"); }
 
@@ -189,11 +189,12 @@ public class ConsignmentService {
             BigDecimal used = v==null?BigDecimal.ZERO:new BigDecimal(v.toString());
             em.createNativeQuery(
                 "INSERT INTO dealer_credit_profiles (tenant_id,dealer_id,consignment_used,status,created_at,updated_at,version) " +
-                "VALUES (?1,?2,?3,'ACTIVE',now(),now(),0) ON CONFLICT DO NOTHING").executeUpdate();
+                "VALUES (?1,?2,?3,'ACTIVE',now(),now(),0) ON CONFLICT (tenant_id,dealer_id) WHERE deleted_at IS NULL DO NOTHING")
+                .setParameter(1,tid).setParameter(2,dealerId).setParameter(3,used).executeUpdate();
             em.createNativeQuery(
                 "UPDATE dealer_credit_profiles SET consignment_used=?3, updated_at=now() WHERE tenant_id=?1 AND dealer_id=?2 AND deleted_at IS NULL")
                 .setParameter(1,tid).setParameter(2,dealerId).setParameter(3,used).executeUpdate();
-        } catch (Exception e) { log.warn("汇总寄售金额失败 dealer={}: {}", dealerId, e.getMessage()); }
+        } catch (Exception e) { log.warn("汇总寄售金额失败 dealer={}: {}", dealerId, e.toString(), e); }
     }
 
     private String nz(String s){ return s==null?"?":s; }

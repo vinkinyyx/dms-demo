@@ -15,6 +15,14 @@
 - **进销存开关仅约束厂家用户**：租户关闭进销存后，厂家用户不可见采购/采退/收货入库/库存管理/库存调整等菜单与接口；经销商用户仍可使用库存相关菜单（销售订单/销退/销售出库始终保留）。
 - 销退单审批摘要（RMA_ORDER）补充退货类型/原因/关联出库单/退货数量金额与明细行。
 
+### 联调修复（2026-08-28 测试环境实测）
+- 开票订单端到端「寄售库存选择器」：OrderCreate 开票时改为从 `/api/consignment/available` 弹窗选择该经销商寄售库存（产品+批号+序列号维度，含可用量/标准价/仓库），明细携带批号/序列号落库；新增 Flyway `V137__v440_invoice_order_approval_template.sql` 播种开票订单审批模板，提交进入审批中心。
+- 修复开票预览 500：产品名 SQL 误引用 products 不存在的 `name` 列（应为 `name_cn`），同时使错误信息显示产品编码+名称而非数字 ID。
+- 修复开票落库 500：order_lines INSERT 增加 batch_no/serial_no 列后参数错位导致 line_zero 落 null 违反 NOT NULL，重排绑定顺序（?38 batch_no / ?39 serial_no / ?40 line_zero）。
+- 修复开票提交 `Unknown alias warehouse_id`：回调/提交从 order_lines 读取不存在的 warehouse_id，改为以寄售台账仓库为准。
+- 修复 dealer_credit_profiles 不落数：寄售金额汇总 INSERT 未绑定参数且 ON CONFLICT 无法推断部分唯一索引，补绑参并指定 `(tenant_id,dealer_id) WHERE deleted_at IS NULL`。
+- 前端：开票/补货/样品/定制订单锁定计价方式为普通折扣（禁用代金券/一口价/0金额）；修复开票产品选择器缺 resource 导致的 `/api/lookups/undefined` 404 与寄售表 row-key 告警。
+
 ### 数据迁移
 - Flyway `V136__v440_consignment_credit.sql`：经销商新增寄售/资信字段、寄售台账与流水表、资信档案表、订单结算终端/样品原因字段、资信模块资源播种。
 

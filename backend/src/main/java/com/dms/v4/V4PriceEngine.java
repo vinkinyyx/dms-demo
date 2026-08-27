@@ -52,6 +52,9 @@ public class V4PriceEngine {
                 l.setLineDiscountType(str(row.get("lineDiscountType"), null));
                 l.setLineDiscountValue(bd(row.get("lineDiscountValue")));
                 l.setLineDiscountDirection(str(row.get("lineDiscountDirection"), null));
+                // v4.4.0 开票订单：透传寄售库存批号/序列号，供订单行落库与寄售预占/实扣匹配
+                l.setBatchNo(str(row.get("batchNo"), null));
+                l.setSerialNo(str(row.get("serialNo"), null));
                 lines.add(l);
             }
         }

@@ -134,3 +134,9 @@ _incoming/
 /_gate*.cjs
 /_pgate*.cjs
 /_r.py
+
+# Local E2E/gate scratch scripts
+/_e2e*.cjs
+/_ui*.cjs
+/_gate*.cjs
+/_pgate*.cjs

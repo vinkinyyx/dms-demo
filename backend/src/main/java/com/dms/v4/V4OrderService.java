@@ -127,7 +127,7 @@ public class V4OrderService {
         Map<String, List<Map<String,Object>>> childDiscounts = new HashMap<>();
         for (Tuple t : linesOf(id)) {
             Map<String,Object> m = new HashMap<>();
-            m.put("productId", t.get("product_id")); m.put("qty", t.get("qty")); m.put("lineDiscountType", t.get("line_discount_type")); m.put("lineDiscountValue", t.get("line_discount_value")); m.put("lineDiscountDirection", t.get("line_discount_direction")); m.put("isGift", t.get("is_gift")); m.put("bomParentProductId", t.get("bom_parent_product_id")); m.put("bomVersion", t.get("bom_version")); m.put("bomGroupNo", t.get("bom_group_no")); m.put("componentQty", t.get("component_qty")); m.put("lineZero", t.get("line_zero"));
+            m.put("productId", t.get("product_id")); m.put("qty", t.get("qty")); m.put("lineDiscountType", t.get("line_discount_type")); m.put("lineDiscountValue", t.get("line_discount_value")); m.put("lineDiscountDirection", t.get("line_discount_direction")); m.put("isGift", t.get("is_gift")); m.put("bomParentProductId", t.get("bom_parent_product_id")); m.put("bomVersion", t.get("bom_version")); m.put("bomGroupNo", t.get("bom_group_no")); m.put("componentQty", t.get("component_qty")); m.put("lineZero", t.get("line_zero")); m.put("batchNo", t.get("batch_no")); m.put("serialNo", t.get("serial_no"));
             if ("CHILD".equals(String.valueOf(t.get("line_level")))) {
                 String groupNo = t.get("bom_group_no") == null ? null : String.valueOf(t.get("bom_group_no"));
                 if (groupNo != null) childDiscounts.computeIfAbsent(groupNo, k -> new ArrayList<>()).add(Map.of(
@@ -174,12 +174,11 @@ public class V4OrderService {
             for (Tuple lt : linesOf(id)) {
                 Object pid = lt.get("product_id"); Object qq = lt.get("qty");
                 if (pid == null || qq == null) continue;
-                Object wid = lt.get("warehouse_id");
                 stockLines.add(new ConsignmentService.StdLine(
                     ((Number) pid).longValue(),
                     lt.get("batch_no") == null ? null : String.valueOf(lt.get("batch_no")),
                     lt.get("serial_no") == null ? null : String.valueOf(lt.get("serial_no")),
-                    wid == null ? null : ((Number) wid).longValue(),
+                    null,
                     new BigDecimal(String.valueOf(qq))));
             }
             consignmentService.lockForInvoice(dealerId, id, String.valueOf(o.get("code")), stockLines);
@@ -271,10 +270,55 @@ public class V4OrderService {
             for (Map<String,Object> r : rows) { r.put("lineZero", false); }
             applyPromotions = false; // 不参与满减/满赠；产品促销/经销商折扣/行折扣/整单折扣仍由引擎按合同/客户/全局价计算
             validateDealerConsignment(tid, dealerId, "开票订单");
+            validateInvoiceConsignment(tid, dealerId, rows);
         }
         Map<String,Object> params = new LinkedHashMap<>(body);
         params.put("dealerId", dealerId);
         return priceEngine.calculate(tid, dealerId, rows, applyPromotions, params);
+    }
+
+    /**
+     * v4.4.0 开票订单：每行必须来自该经销商自身的可用寄售库存（产品+批号+序列号维度），
+     * 且开票数量不能超过该维度可用量（在库-已锁定）。提交时 lockForInvoice 会再次做并发兜底校验。
+     */
+    private void validateInvoiceConsignment(UUID tid, Long dealerId, List<Map<String,Object>> rows) {
+        for (Map<String,Object> r : rows) {
+            Long pid = toLong(r.get("productId"));
+            if (pid == null) continue;
+            String lvl = r.get("lineLevel") == null ? "" : String.valueOf(r.get("lineLevel"));
+            if ("CHILD".equals(lvl)) continue; // BOM 子件不独立开票
+            BigDecimal need = bd(r.get("qty"));
+            if (need == null || need.signum() <= 0)
+                throw new BusinessException(ErrorCode.PARAM_MISSING, "开票订单行数量必须大于 0");
+            String batch = r.get("batchNo") == null || String.valueOf(r.get("batchNo")).isBlank() ? null : String.valueOf(r.get("batchNo"));
+            String serial = r.get("serialNo") == null || String.valueOf(r.get("serialNo")).isBlank() ? null : String.valueOf(r.get("serialNo"));
+            List<Tuple> st = em.createNativeQuery(
+                "SELECT COALESCE(on_hand_qty,0) oh, COALESCE(locked_qty,0) lk FROM consignment_stock " +
+                "WHERE tenant_id=?1 AND dealer_id=?2 AND product_id=?3 " +
+                "AND COALESCE(batch_no,'')=COALESCE(?4,'') AND COALESCE(serial_no,'')=COALESCE(?5,'')", Tuple.class)
+                .setParameter(1,tid).setParameter(2,dealerId).setParameter(3,pid)
+                .setParameter(4,batch).setParameter(5,serial).getResultList();
+            String pname = productLabel(pid);
+            if (st.isEmpty()) {
+                throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
+                    "开票产品 [" + pname + "]" + (batch==null?"":" 批号 "+batch) + (serial==null?"":" 序列号 "+serial)
+                    + " 不在该经销商的寄售库存中；开票订单只能选择该经销商自己的寄售库存");
+            }
+            int avail = ((Number)st.get(0).get("oh")).intValue() - ((Number)st.get(0).get("lk")).intValue();
+            if (avail < need.intValue()) {
+                throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
+                    "开票产品 [" + pname + "]" + (batch==null?"":" 批号 "+batch) + (serial==null?"":" 序列号 "+serial)
+                    + " 寄售可用量 " + avail + "，本次开票需 " + need.intValue());
+            }
+        }
+    }
+
+    private String productLabel(Long productId) {
+        try {
+            Object v = em.createNativeQuery("SELECT COALESCE(code,'')||' '||COALESCE(name_cn,'') FROM products WHERE id=?1")
+                    .setParameter(1, productId).getSingleResult();
+            return v == null ? String.valueOf(productId) : String.valueOf(v);
+        } catch (Exception e) { return String.valueOf(productId); }
     }
 
     /** v4.4.0：补货/开票订单要求经销商已开启寄售库存。 */
@@ -297,11 +341,14 @@ public class V4OrderService {
         int seq = 1;
         java.util.Map<String, Long> parentLineIds = new java.util.HashMap<>();
         for (V4Line l : lines) {
-            jakarta.persistence.Query q = em.createNativeQuery("INSERT INTO order_lines (order_id,seq,product_id,product_code,product_name,product_spec,qty,unit_price,tax_rate,sub_total,standard_price_incl_tax,line_discount_type,line_discount_value,line_discount_amount,promo_discount_amount,header_discount_amount,discount_amount,final_amount,amount_excl_tax,tax_amount,is_gift,bom_parent_product_id,bom_version,bom_group_no,component_qty,line_level,is_group_header,bom_parent_line_id,price_snapshot,base_price_incl_tax,price_source,product_discount_rate,product_discount_amount,promo_type,promotion_id,promo_hit_id,unit_price_incl_tax,line_zero,created_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28,CAST(?29 AS jsonb),?30,?31,?32,?33,?34,?35,?36,?37,?38,now(),now()) RETURNING id");
+            jakarta.persistence.Query q = em.createNativeQuery("INSERT INTO order_lines (order_id,seq,product_id,product_code,product_name,product_spec,qty,unit_price,tax_rate,sub_total,standard_price_incl_tax,line_discount_type,line_discount_value,line_discount_amount,promo_discount_amount,header_discount_amount,discount_amount,final_amount,amount_excl_tax,tax_amount,is_gift,bom_parent_product_id,bom_version,bom_group_no,component_qty,line_level,is_group_header,bom_parent_line_id,price_snapshot,base_price_incl_tax,price_source,product_discount_rate,product_discount_amount,promo_type,promotion_id,promo_hit_id,unit_price_incl_tax,batch_no,serial_no,line_zero,created_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28,CAST(?29 AS jsonb),?30,?31,?32,?33,?34,?35,?36,?37,?38,?39,?40,now(),now()) RETURNING id");
             q.setParameter(1,orderId).setParameter(2,seq++).setParameter(3,l.getProductId()).setParameter(4,l.getProductCode()).setParameter(5,l.getProductName()).setParameter(6,l.getProductSpec()).setParameter(7,l.getQty()).setParameter(8,l.getStandardPriceInclTax()).setParameter(9,l.getTaxRate()).setParameter(10,l.getStandardAmount()).setParameter(11,l.getStandardPriceInclTax()).setParameter(12,l.getLineDiscountType()).setParameter(13,l.getLineDiscountValue()==null?BigDecimal.ZERO:l.getLineDiscountValue()).setParameter(14,l.getLineDiscountAmount()).setParameter(15,l.getPromoDiscountAmount()).setParameter(16,l.getHeaderDiscountAmount()).setParameter(17,l.getDiscountAmount()).setParameter(18,l.getFinalAmount()).setParameter(19,l.getAmountExclTax()).setParameter(20,l.getTaxAmount()).setParameter(21,l.isGift()).setParameter(22,l.getBomParentProductId()).setParameter(23,l.getBomVersion()).setParameter(24,l.getBomGroupNo()).setParameter(25,l.getComponentQty()).setParameter(26,l.getLineLevel() == null ? "NORMAL" : l.getLineLevel()).setParameter(27,l.isGroupHeader()).setParameter(28,l.getBomParentLineId()).setParameter(29,json(Map.of("excl", l.getUnitPriceExclTax(), "incl", l.getStandardPriceInclTax())))
             .setParameter(30, nz(l.getBasePriceInclTax())).setParameter(31, l.getPriceSource()).setParameter(32, nz(l.getProductDiscountRate())).setParameter(33, nz(l.getProductDiscountAmount()))
             .setParameter(34, l.getPromoType()).setParameter(35, l.getPromotionId()).setParameter(36, l.getPromoHitId())
-            .setParameter(37, nz(l.getUnitPriceInclTax())).setParameter(38, l.isLineZero() || l.isGift());
+            .setParameter(37, nz(l.getUnitPriceInclTax()))
+            .setParameter(38, l.getBatchNo()==null||l.getBatchNo().isBlank()?null:l.getBatchNo())
+            .setParameter(39, l.getSerialNo()==null||l.getSerialNo().isBlank()?null:l.getSerialNo())
+            .setParameter(40, l.isLineZero() || l.isGift());
             Long lineId = ((Number) q.getSingleResult()).longValue();
             if (l.isGroupHeader() && l.getBomGroupNo() != null) parentLineIds.put(l.getBomGroupNo(), lineId);
             if (l.getLineDiscountDirection() != null) {

@@ -81,8 +81,9 @@
                 <el-tag size="small" type="info">共 {{ editableRoots.length }} 个录入行</el-tag>
                 <el-tag v-if="giftLines.length" size="small" type="warning">赠品 {{ giftLines.length }} 行</el-tag>
                 <el-tag size="small" type="success">应付 ¥{{ payableTotal.toFixed(2) }}</el-tag>
-                <el-button size="small" :icon="Refresh" :loading="refreshing" @click="refreshPromotions">刷新赠品及价格</el-button>
-                <el-button type="primary" size="small" :icon="Plus" @click="addLine">添加行</el-button>
+                <el-button v-if="form.orderType==='INVOICE'" type="warning" size="small" :icon="Box" @click="openConsignmentPicker">选择寄售库存</el-button>
+                <el-button v-else type="primary" size="small" :icon="Plus" @click="addLine">添加行</el-button>
+                <el-button v-if="form.orderType!=='INVOICE'" size="small" :icon="Refresh" :loading="refreshing" @click="refreshPromotions">刷新赠品及价格</el-button>
               </div>
             </div>
           </template>
@@ -90,7 +91,9 @@
             <el-table-column label="产品" min-width="240">
               <template #default="{row}">
                 <div class="product-cell">
-                  <ResourcePicker v-if="canPickProduct(row)" resource="products" v-model="row.productId" :display-value="row.productLabel" @pick="p=>onProductPicked(row,p)" style="flex:1"/>
+                  <ResourcePicker v-if="form.orderType==='INVOICE'" resource="products" disabled :model-value="row.productId" :display-value="row.productLabel" placeholder="请点击「选择寄售库存」" style="flex:1"/>
+                  <ResourcePicker v-else-if="canPickProduct(row)" resource="products" v-model="row.productId" :display-value="row.productLabel" @pick="p=>onProductPicked(row,p)" style="flex:1"/>
+                  <el-tag v-if="form.orderType==='INVOICE' && (row.batchNo||row.serialNo)" size="small" type="warning" style="flex:0 0 auto">批号 {{row.batchNo||'-'}} / 序列号 {{row.serialNo||'-'}}</el-tag>
                   <span v-else class="child-product-text"><span class="child-product-code">{{row.productCode}}</span><span class="child-product-name">{{row.productName}}</span></span>
                   <el-tag v-if="row.lineLevel==='PARENT'||row.isBom" size="small" type="warning">BOM母件</el-tag>
                   <el-tag v-if="row.isGift" size="small" type="danger">赠品</el-tag>
@@ -169,7 +172,7 @@
             <el-col :xs="24" :md="12">
               <div class="mode-block">
                 <div class="block-title">计价方式（互斥）</div>
-                <el-radio-group v-model="form.pricingMode" :disabled="!canEdit" @change="onModeChange">
+                <el-radio-group v-model="form.pricingMode" :disabled="!canEdit || pricingLocked" @change="onModeChange">
                   <el-radio-button label="NORMAL">普通折扣</el-radio-button>
                   <el-radio-button label="FIXED_PRICE">整单一口价</el-radio-button>
                   <el-radio-button label="ZERO_ORDER">整单0金额</el-radio-button>
@@ -225,6 +228,38 @@
           </el-row>
         </el-card>
       </div>
+
+    <el-dialog v-model="consignDialog.visible" title="选择经销商寄售库存" width="1080px" append-to-body destroy-on-close>
+      <div style="margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <el-tag type="info" size="large">经销商：{{ form.dealerName || '-' }}</el-tag>
+        <el-input v-model="consignDialog.keyword" placeholder="产品编码/名称/批号/序列号" clearable style="width:280px" @keyup.enter="loadConsignment"/>
+        <el-button type="primary" :icon="Search" @click="loadConsignment">查询</el-button>
+        <el-button :icon="RefreshLeft" @click="consignDialog.keyword='';loadConsignment()">重置</el-button>
+        <span class="muted small">仅显示该经销商当前可用（在库-已锁定）寄售库存；勾选并设置本次开票数量后加入明细。</span>
+      </div>
+      <el-table :data="consignDialog.rows" v-loading="consignDialog.loading" border stripe size="small" max-height="430" row-key="ck"
+                @selection-change="onConsignSelect" ref="consignTableRef">
+        <el-table-column type="selection" width="42" :reserve-selection="true"/>
+        <el-table-column label="产品编码" prop="productCode" width="120"/>
+        <el-table-column label="产品名称" prop="productName" min-width="160" show-overflow-tooltip/>
+        <el-table-column label="规格" prop="productSpec" width="110" show-overflow-tooltip/>
+        <el-table-column label="批号" prop="batchNo" width="110"/>
+        <el-table-column label="序列号" prop="serialNo" width="120"/>
+        <el-table-column label="仓库" prop="warehouseName" width="90"/>
+        <el-table-column label="可用量" prop="availableQty" width="80" align="right"/>
+        <el-table-column label="标准单价" prop="stdUnitPrice" width="100" align="right"/>
+        <el-table-column label="本次开票数量" width="140" align="center">
+          <template #default="{row}">
+            <el-input-number v-model="row.pickQty" :min="1" :max="num(row.availableQty)" :precision="0" controls-position="right" size="small" style="width:120px"/>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div style="margin-top:8px" class="muted small">已选 {{ consignDialog.selected.length }} 行，合计开票数量 {{ consignPickTotal }}。</div>
+      <template #footer>
+        <el-button @click="consignDialog.visible=false">取消</el-button>
+        <el-button type="primary" @click="confirmConsignment">加入开票明细</el-button>
+      </template>
+    </el-dialog>
     </div>
   </div>
 </template><script setup>
@@ -232,7 +267,7 @@ defineOptions({ name: 'OrderCreate' })
 import {computed,nextTick,onMounted,onActivated,reactive,ref,watch} from 'vue'
 import {useRoute,useRouter} from 'vue-router'
 import {ElMessage} from 'element-plus'
-import {ArrowLeft,Plus,Refresh} from '@element-plus/icons-vue'
+import {ArrowLeft,Plus,Refresh,Box,Search,RefreshLeft} from '@element-plus/icons-vue'
 import ResourcePicker from '@/components/ResourcePicker.vue'
 import request from '@/utils/request'
 import {calcPreview,availableVouchers,dealerAddresses} from '@/api/orderPricing'
@@ -263,17 +298,58 @@ function basePrice(row){if(row.lineLevel==='PARENT'){const qty=Math.max(num(row.
 function lineFinal(row){if(row.lineLevel==='PARENT')return childSum(row,'finalAmount');return num(row.finalAmount)}
 function childSum(row,key){return (row.children||[]).reduce((s,c)=>s+num(c[key]),0)}
 function isExclusiveMode(){return form.pricingMode&&form.pricingMode!=='NORMAL'}
+const pricingLocked=computed(()=>['INVOICE','REPLENISHMENT','SAMPLE','CUSTOM'].includes(form.orderType))
 function discountLocked(row){if(isExclusiveMode())return true;return row.lineLevel!=='CHILD'&&row.promoType==='QTY_DISCOUNT'}
 function zeroLocked(row){if(isExclusiveMode())return true;return !!row.promoType}
 function canZeroRow(row){return !row.isGift&&row.lineLevel!=='PARENT'&&row.lineLevel!=='CHILD'}
 function onLineZeroChange(row){if(row.lineZero){row.lineDiscountType='';row.lineDiscountValue=0}schedulePreview()}
 function onModeChange(mode){if(mode==='VOUCHER'){loadVouchers()}if(mode!=='NORMAL'){form.lines.forEach(l=>{l.lineZero=false});form.headerDiscountType='';form.headerDiscountValue=0}if(mode!=='VOUCHER'){form.voucherId=null}if(mode!=='FIXED_PRICE'){form.fixedPrice=null}schedulePreview()}
-function makeLine(p={}){const linePid=p.productId??p.id??null;return {tempId:'t'+(seq++),productId:linePid,productCode:p.code||p.productCode||'',productName:p.nameCn||p.name||p.productName||'',productLabel:linePid?`${p.code||p.productCode||''} ${p.nameCn||p.name||p.productName||''}`.trim():'',productSpec:p.spec||p.productSpec||'',unit:p.unit||p.unitType||'EA',qty:Number(p.qty||1),standardPriceInclTax:num(p.currentPrice??p.price??p.standardPriceInclTax),basePriceInclTax:num(p.basePriceInclTax),priceSource:p.priceSource||'',taxRate:num(p.taxRate),standardAmount:num(p.standardAmount),productDiscountAmount:num(p.productDiscountAmount),lineDiscountType:p.lineDiscountType||'',lineDiscountDirection:p.lineDiscountDirection||'REDUCE',lineDiscountValue:num(p.lineDiscountValue),lineDiscountAmount:num(p.lineDiscountAmount),promoType:p.promoType||'',promotionId:p.promotionId||null,promoDiscountAmount:num(p.promoDiscountAmount),dealerDiscountAmount:num(p.dealerDiscountAmount),headerDiscountAmount:num(p.headerDiscountAmount),unitPriceInclTax:num(p.unitPriceInclTax),lineZero:!!p.lineZero,discountAmount:num(p.discountAmount),finalAmount:num(p.finalAmount),amountExclTax:num(p.amountExclTax),taxAmount:num(p.taxAmount),lineLevel:p.lineLevel||'NORMAL',isBom:!!(p.isBundle||p.isBom),isGift:!!(p.isGift||p.gift),bomVersion:p.bomVersion||null,bomGroupNo:p.bomGroupNo||null,componentQty:num(p.componentQty),children:Array.isArray(p.children)?p.children:[]}}
+function makeLine(p={}){const linePid=p.productId??p.id??null;return {tempId:'t'+(seq++),productId:linePid,productCode:p.code||p.productCode||'',productName:p.nameCn||p.name||p.productName||'',productLabel:linePid?`${p.code||p.productCode||''} ${p.nameCn||p.name||p.productName||''}`.trim():'',productSpec:p.spec||p.productSpec||'',unit:p.unit||p.unitType||'EA',qty:Number(p.qty||1),standardPriceInclTax:num(p.currentPrice??p.price??p.standardPriceInclTax),basePriceInclTax:num(p.basePriceInclTax),priceSource:p.priceSource||'',taxRate:num(p.taxRate),standardAmount:num(p.standardAmount),productDiscountAmount:num(p.productDiscountAmount),lineDiscountType:p.lineDiscountType||'',lineDiscountDirection:p.lineDiscountDirection||'REDUCE',lineDiscountValue:num(p.lineDiscountValue),lineDiscountAmount:num(p.lineDiscountAmount),promoType:p.promoType||'',promotionId:p.promotionId||null,promoDiscountAmount:num(p.promoDiscountAmount),dealerDiscountAmount:num(p.dealerDiscountAmount),headerDiscountAmount:num(p.headerDiscountAmount),unitPriceInclTax:num(p.unitPriceInclTax),lineZero:!!p.lineZero,discountAmount:num(p.discountAmount),finalAmount:num(p.finalAmount),amountExclTax:num(p.amountExclTax),taxAmount:num(p.taxAmount),lineLevel:p.lineLevel||'NORMAL',isBom:!!(p.isBundle||p.isBom),isGift:!!(p.isGift||p.gift),bomVersion:p.bomVersion||null,bomGroupNo:p.bomGroupNo||null,componentQty:num(p.componentQty),children:Array.isArray(p.children)?p.children:[],batchNo:p.batchNo||'',serialNo:p.serialNo||'',stockId:p.stockId??null}}
 function canPickProduct(row){return !row.isGift&&row.lineLevel!=='CHILD'}
 function canEditQty(row){return !row.isGift&&row.lineLevel!=='CHILD'}
 function canEditDiscount(row){return !row.isGift&&row.lineLevel!=='PARENT'}
 function canDeleteRow(row){return !row.isGift&&row.lineLevel!=='CHILD'}
 function addLine(){if(!form.dealerId)return ElMessage.warning('请先选择经销商');form.lines.push(makeLine())}
+// ===== v4.4.0 开票订单：寄售库存选择 =====
+const consignDialog=reactive({visible:false,loading:false,keyword:'',rows:[],selected:[]})
+const consignTableRef=ref(null)
+const consignPickTotal=computed(()=>consignDialog.selected.reduce((sum,r)=>sum+num(r.pickQty),0))
+async function openConsignmentPicker(){
+  if(!form.dealerId)return ElMessage.warning('请先选择经销商');
+  consignDialog.visible=true;consignDialog.keyword='';consignDialog.selected=[];
+  await loadConsignment();
+}
+async function loadConsignment(){
+  if(!form.dealerId)return;
+  consignDialog.loading=true;
+  try{
+    const params={dealerId:form.dealerId};if(consignDialog.keyword)params.keyword=consignDialog.keyword;
+    const res=await request({url:'/api/consignment/available',params});
+    const list=res?.data||[];
+    const prev=new Map(consignDialog.rows.map(r=>[r.stockId,r.pickQty]));
+    consignDialog.rows=list.map(r=>({...r,ck:r.stockId,pickQty:prev.get(r.stockId)||1}));
+    await nextTick();
+    // reselect previously chosen rows still present
+    if(consignTableRef.value){consignTableRef.value.clearSelection();consignDialog.rows.forEach(r=>{if(consignDialog.selected.some(x=>x.stockId===r.stockId))consignTableRef.value.toggleRowSelection(r,true)})}
+  }catch(e){ElMessage.error('加载寄售库存失败');consignDialog.rows=[]}
+  finally{consignDialog.loading=false}
+}
+function onConsignSelect(sel){consignDialog.selected=sel||[]}
+function confirmConsignment(){
+  if(!consignDialog.selected.length)return ElMessage.warning('请先勾选寄售库存行');
+  const picked=consignDialog.selected.map(r=>({
+    id:r.productId,productId:r.productId,code:r.productCode,nameCn:r.productName,spec:r.productSpec,
+    qty:Math.min(Math.max(parseInt(num(r.pickQty))||1,1),num(r.availableQty)),
+    batchNo:r.batchNo||'',serialNo:r.serialNo||'',stockId:r.stockId
+  }));
+  // 开票明细整体替换为所选寄售库存（一个开票单针对一个经销商的寄售库存），按 产品+批号+序列号 合并同维度
+  const map=new Map();
+  for(const it of picked){const k=it.productId+'|'+(it.batchNo||'')+'|'+(it.serialNo||'');if(map.has(k)){map.get(k).qty+=it.qty}else{map.set(k,{...it})}}
+  form.lines=[...map.values()].map(it=>makeLine(it));
+  consignDialog.visible=false;
+  ElMessage.success('已加入 '+form.lines.length+' 行寄售库存开票明细');
+  schedulePreview();
+}
 function removeLine(i){form.lines.splice(i,1);schedulePreview()}
 async function onProductPicked(row,picked){
   const p=picked.raw||picked.row||picked
@@ -297,6 +373,7 @@ async function refreshDealerConsignment(){
   try{const res=await request({url:'/api/dealers/'+form.dealerId});const d=res?.data||res;dealerConsignment.value=!!(d.consignmentEnabled ?? d.consignment_enabled)}catch(e){dealerConsignment.value=false}
 }
 function onOrderTypeChange(t){
+  if(['INVOICE','REPLENISHMENT','SAMPLE','CUSTOM'].includes(t)){form.pricingMode='NORMAL';form.voucherId=null;form.fixedPrice=null}
   if((t==='REPLENISHMENT'||t==='INVOICE')&&!dealerConsignment.value){ElMessage.warning('该经销商未开启寄售库存，不能下补货/开票订单');form.orderType='SALES'}
   if(t!=='INVOICE'){form.terminalHospitalId=null;form.terminalHospitalName=''}
   if(t!=='SAMPLE'){form.sampleReason=''}
@@ -309,14 +386,14 @@ async function loadAddresses(){if(!form.dealerId){addresses.value=[];return}addr
 async function loadVouchers(){if(!form.dealerId){vouchers.value=[];return}voucherLoading.value=true;try{const productIds=editableRoots.value.map(l=>l.productId).filter(Boolean).join(',');const res=await availableVouchers({dealerId:form.dealerId,amount:num(form.amountInclTax)||undefined,productIds:productIds||undefined});vouchers.value=Array.isArray(res?.data)?res.data:[]}catch(e){vouchers.value=[]}finally{voucherLoading.value=false}}
 function buildPreviewPayload(applyPromotions){
   const exclusive=isExclusiveMode();
-  const payload={applyPromotions:!!applyPromotions,orderType:form.orderType,dealerId:form.dealerId,expectedDate:form.expectedDate||null,pricingMode:form.pricingMode||'NORMAL',lines:editableRoots.value.map(l=>({productId:l.productId,qty:num(l.qty),lineZero:!exclusive&&!!l.lineZero,lineDiscountType:(!exclusive&&l.lineDiscountType)?l.lineDiscountType:null,lineDiscountValue:(!exclusive&&l.lineDiscountType)?num(l.lineDiscountValue):null,lineDiscountDirection:(!exclusive&&l.lineDiscountType)?(l.lineDiscountDirection||'REDUCE'):null,bomVersion:l.bomVersion||null,bomGroupNo:l.bomGroupNo||null,childDiscounts:(l.children||[]).filter(c=>!exclusive&&c.lineDiscountType).map(c=>({productId:c.productId,lineDiscountType:c.lineDiscountType||null,lineDiscountValue:c.lineDiscountType?num(c.lineDiscountValue):0,lineDiscountDirection:c.lineDiscountDirection||'REDUCE'}))}))}
+  const payload={applyPromotions:!!applyPromotions,orderType:form.orderType,dealerId:form.dealerId,expectedDate:form.expectedDate||null,pricingMode:form.pricingMode||'NORMAL',lines:editableRoots.value.map(l=>({productId:l.productId,qty:num(l.qty),batchNo:l.batchNo||null,serialNo:l.serialNo||null,lineZero:!exclusive&&!!l.lineZero,lineDiscountType:(!exclusive&&l.lineDiscountType)?l.lineDiscountType:null,lineDiscountValue:(!exclusive&&l.lineDiscountType)?num(l.lineDiscountValue):null,lineDiscountDirection:(!exclusive&&l.lineDiscountType)?(l.lineDiscountDirection||'REDUCE'):null,bomVersion:l.bomVersion||null,bomGroupNo:l.bomGroupNo||null,childDiscounts:(l.children||[]).filter(c=>!exclusive&&c.lineDiscountType).map(c=>({productId:c.productId,lineDiscountType:c.lineDiscountType||null,lineDiscountValue:c.lineDiscountType?num(c.lineDiscountValue):0,lineDiscountDirection:c.lineDiscountDirection||'REDUCE'}))}))}
   if(!exclusive){payload.headerDiscountType=form.headerDiscountType||null;payload.headerDiscountValue=form.headerDiscountType?num(form.headerDiscountValue):null;payload.headerDiscountDirection=form.headerDiscountType?(form.headerDiscountDirection||'REDUCE'):null}
   else{payload.headerDiscountType=null;payload.headerDiscountValue=null}
   if(form.pricingMode==='FIXED_PRICE')payload.fixedPrice=num(form.fixedPrice)
   if(form.pricingMode==='VOUCHER')payload.voucherId=form.voucherId||null
   return payload
 }
-function mapPreviewLine(l,current){return {...makeLine({...l,qty:num(l.qty)}),tempId:current?.tempId||'t'+(seq++),productLabel:`${l.productCode||''} ${l.productName||''}`.trim(),lineLevel:l.lineLevel||'NORMAL',isGift:(l.isGift===true||l.gift===true),isBom:l.lineLevel==='PARENT',bomVersion:l.bomVersion||current?.bomVersion||null,bomGroupNo:l.bomGroupNo||current?.bomGroupNo||null,componentQty:num(l.componentQty),lineDiscountType:current?.lineDiscountType||l.lineDiscountType||'',lineDiscountDirection:current?.lineDiscountDirection||l.lineDiscountDirection||'REDUCE',lineDiscountValue:num(current?.lineDiscountValue??l.lineDiscountValue),lineZero:!!(current?.lineZero||l.lineZero),children:[]}}
+function mapPreviewLine(l,current){return {...makeLine({...l,qty:num(l.qty)}),tempId:current?.tempId||'t'+(seq++),productLabel:`${l.productCode||''} ${l.productName||''}`.trim(),lineLevel:l.lineLevel||'NORMAL',isGift:(l.isGift===true||l.gift===true),isBom:l.lineLevel==='PARENT',bomVersion:l.bomVersion||current?.bomVersion||null,bomGroupNo:l.bomGroupNo||current?.bomGroupNo||null,componentQty:num(l.componentQty),lineDiscountType:current?.lineDiscountType||l.lineDiscountType||'',lineDiscountDirection:current?.lineDiscountDirection||l.lineDiscountDirection||'REDUCE',lineDiscountValue:num(current?.lineDiscountValue??l.lineDiscountValue),lineZero:!!(current?.lineZero||l.lineZero),children:[],batchNo:l.batchNo||current?.batchNo||'',serialNo:l.serialNo||current?.serialNo||'',stockId:l.stockId??current?.stockId??null}}
 function applyPreview(data,fullRefresh){
   const existingGifts=fullRefresh?[]:flatLines.value.filter(l=>l.isGift).map(l=>({...l}));
   const roots=editableRoots.value;let rootIndex=0;let currentParent=null;const next=[];
