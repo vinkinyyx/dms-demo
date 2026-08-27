@@ -132,3 +132,5 @@ _incoming/
 /_edit*.py
 /_dbhelper*.py
 /_gate*.cjs
+/_pgate*.cjs
+/_r.py
