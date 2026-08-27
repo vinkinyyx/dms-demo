@@ -360,7 +360,7 @@ node tools/smoke-test.cjs
 
 ## 8. 版本号规则
 
-- 当前版本：**v4.3.1**（测试环境镜像 tag v433；v4.3.0 MINOR 功能包 R1–R9 + v4.3.1 PATCH 走查修复；Flyway 已到 V134）。
+- 当前版本：**v4.3.1**（测试与生产环境镜像 tag v433；v4.3.0 MINOR 功能包 R1–R9 + v4.3.1 PATCH 走查修复；Flyway 已到 V134；2026-08-27 已部署测试与生产）。
 - PATCH（4.3.0 → 4.3.x）：每次小修复/bugfix 由 Codex 自动升，同步 CHANGELOG 和文档。
 - MINOR（4.3 → 4.4）和 MAJOR（4.x → 5.0）：必须由用户明确决定，Codex 不得自动升。
 - 每次交付在 CHANGELOG.md 顶部新增条目。
