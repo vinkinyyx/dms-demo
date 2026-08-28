@@ -9,6 +9,7 @@
     <van-cell-group inset style="margin-top: -24px;">
       <van-cell title="消息中心" icon="bell" is-link to="/mobile/messages" />
       <van-cell title="我的审批" icon="todo-list-o" is-link to="/mobile/approvals" />
+      <van-cell title="切换到电脑版" icon="desktop-o" is-link @click="onSwitchPc" />
     </van-cell-group>
 
     <van-cell-group inset style="margin-top: 12px;">
@@ -31,6 +32,7 @@ import { useRouter } from 'vue-router'
 import { onMounted } from 'vue'
 import { showConfirmDialog, showToast } from 'vant'
 import { useUserStore } from '@/store/user'
+import { setViewPref, clearViewPref } from '@/utils/device'
 
 const USER_TYPE_LABELS = {
   vendor: '厂商',
@@ -54,6 +56,13 @@ onMounted(() => {
   if (!userStore.user?.username) userStore.fetchInfo().catch(() => {})
 })
 
+function onSwitchPc() {
+  // 标记本次会话强制 PC 形态，随后跳到 PC 工作台；守卫据此不再自动弹回移动端
+  setViewPref('pc')
+  showToast('已切换到电脑版')
+  router.push('/home')
+}
+
 async function onLogout() {
   try {
     await showConfirmDialog({ title: '退出登录', message: '确定要退出当前账号？' })
@@ -61,6 +70,7 @@ async function onLogout() {
   try {
     await userStore.logout()
   } catch (e) { /* ignore */ }
+  clearViewPref()
   showToast('已退出')
   router.replace('/mobile/login')
 }

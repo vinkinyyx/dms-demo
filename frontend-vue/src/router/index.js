@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getToken, getPermissions } from '@/utils/auth'
+import { shouldUseMobile } from '@/utils/device'
 import { useUserStore } from '@/store/user'
 import { MENU_GROUPS } from '@/config/menu'
 
@@ -134,6 +135,16 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from, next) => {
+  // 设备形态分流：移动设备打开 PC 业务页时自动进入移动 H5（/mobile/*）。
+  // 手动「切换到电脑版」(sessionStorage dms_view_pref=pc) 后不再强制弹回；
+  // /print 打印页与错误页保持 PC 渲染，避免影响单据打印。
+  const forceMobile = shouldUseMobile()
+  const isPrint = to.path.startsWith('/print')
+  const isError = to.path.startsWith('/error')
+  if (forceMobile && !to.meta.mobile && !isPrint && !isError) {
+    next(getToken() ? '/mobile/home' : '/mobile/login')
+    return
+  }
   const token = getToken()
   if (to.meta.public) {
     next()
