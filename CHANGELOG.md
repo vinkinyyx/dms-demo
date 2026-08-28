@@ -1,3 +1,50 @@
+## v4.4.3 (2026-08-28) - 移动端列表页永久"加载中"修复（van-list 首次加载）
+
+> PATCH 版本（纯前端缺陷修复，无后端逻辑变更）。全面测试中发现并修复移动 H5 核心列表无法加载数据的问题。
+
+### 修复
+- **【Critical】移动端销售订单/审批/消息列表永久"加载中"**：`MOrders.vue`、`MApprovals.vue`、`MMessages.vue` 的 `<van-list>` 在该移动布局下首次 `@load` 事件未稳定触发（列表容器初始高度极小、immediate-check 未判定触底），且加载处理函数开头的守卫 `if (loading.value) return` 与 Vant 行为冲突——Vant 触发 load 前已通过 v-model 将 loading 置 true，守卫直接 return，既不发请求也不复位 loading，导致页面一直转圈、数据不渲染。
+  - 移除与 van-list 冲突的 `loading` 早返回守卫，改用独立的 `inFlight` 标志防重入；
+  - 三个列表页统一新增 `onMounted(() => 首拉)` 主动首次加载兜底，不再仅依赖 van-list 的 immediate-check。
+- 对照页 `MSurgeryReports.vue`（无该守卫）本就正常，未改动。
+
+### 测试脚本/工具修复（消除假阴性，非产品代码）
+- `tools/smoke-test.cjs`：新增 `--target=pc/admin/mobile/all` 分段参数与按段超时预算，修复原 8 分钟总超时导致 admin/mobile 段从未执行的问题。
+- `automation_test/v440_browser_deep.js`：菜单可见性改用全菜单项文本（折叠态 innerText 取空导致假阴性）；订单类型下拉真实展开浮层再断言；菜单显隐改为读取 `/api/tenant/features` 按开关状态动态判定。
+- `automation_test/v440_browser_gate.js`：G9 菜单检测同款修复 + 进销存菜单按租户开关动态判定。
+
+### 部署运维
+- 部署时后端首次启动报 Flyway V135 校验和不匹配（V135 迁移在数据库已应用后内容随 v4.4.0 包更新过）：按 `flyway repair` 等价方式对齐 `flyway_schema_history` 中 V135 校验和（454037780 → 55081890），不重放迁移、不动业务数据，后端正常启动 UP。
+- 服务器清理：删除 /home/ubuntu 部署残留与 /tmp 临时文件；/opt/dms/backups 旧 jar/前端备份由 2.3G 精简至约 201M（保留最新 app.jar、最新 frontend、最新 DB dump、dms-changes 归档）。
+
+### 验证（测试环境 http://43.128.145.141/dms）
+- 铁律9/10 浏览器首检 GATE：**22/22 PASS**（8 入口 + PC/admin/移动登录 + 核心列表 + 菜单）。
+- 移动端回归：销售订单列表发 `GET /api/sales-orders?page=1&size=20` 渲染 20 卡片、审批列表渲染 RMA 待办、消息列表渲染审批待办通知；永久"加载中"消失，Console 无红错、无 5xx。
+- `v440_browser_deep.js`：**12/12 PASS**；`smoke-test --target=mobile`：**17/17 PASS**。
+- v4.4.1 红字补货红冲端到端 `scripts/e2e_invoice_consignment.py`：**0 失败**（SOR→提交→审批→RED 回调→台账 on_hand-1→REPLENISH_OUT→红字 GIR is_red=true，红字行同序列号豁免）。
+- 代金券计价矩阵：券模式实付=原价-券扣减、多产品分摊不超面值、USED 券被拒、券与整单折扣互斥、补货全单 0 金额、开票不可用券，均通过。
+
+## v4.4.2 (2026-08-28) - 全站 MySolMed 品牌 logo、测试环境域名 dms-dev.mysolmed.com、Nginx 变更管控
+
+> PATCH 版本（品牌与运维设施，无业务逻辑变更）。测试环境启用域名、全站替换品牌 logo，并固化 Nginx 配置基线。
+
+### 品牌
+- **全站换 MySolMed logo**：PC 业务工作台登录页/页头、平台后台、移动端 H5（登录/注册/工作台）统一替换为 MySolMed 品牌标识（藏青 #0B2545 + 青色 #00B4D8），品牌资源取自 `DMS产品宣传手册/mysolmed-brand/assets`。
+
+### 域名与 Nginx
+- **测试环境域名启用**：`dms-dev.mysolmed.com` → 43.128.145.141（A 记录解析）；`server_name dms-dev.mysolmed.com _;`，域名与 IP 直连行为一致。
+- **裸域名根路径 302 → `/dms/`**：打开 `http://dms-dev.mysolmed.com/` 直达 DMS 系统登录页/工作台，不再落到产品宣传页；宣传手册保留在 `/brochure/`（PC `/brochure/`、移动 `/brochure/mobile.html`、打印 `/brochure/print.html`，移动/打印页与 index.html 平级，**无 /brochure/pages/ 子目录**）。
+- 后端 `APP_BASE_URL=http://dms-dev.mysolmed.com/dms`（审批邮件链接等绝对地址）。
+- 配置备份：服务器 `/opt/dms/test/nginx/nginx.conf.bak.domain-20260828164741`。
+
+### 规则与文档
+- **新增【铁律10：Nginx 变更管控】**（AGENTS.md Gap 7 + project_rules.md 同源）：nginx 配置非必要不调整；变更前必备份、容器内 `nginx -t`、bind-mount 改完必须 `docker restart dms-test-nginx`（reload 可能因 inode 变化不生效）、`nginx -T` 取证实际生效配置、再按铁律9 真实浏览器终验全部入口；警惕 try_files 静默回退产生"假 200"。
+- 铁律9 部署后首检必检 URL 扩为 8 条：`/`、`/dms/`、`/dms/admin/`、`/dms/mobile/login`、`/dms/mobile/register`（经销商准入）、`/brochure/`、`/brochure/mobile.html`、`/brochure/print.html` + `/actuator/health`。
+- 登录信息手册/README/运维部署/需求文档/AI开发文档/automation_test README 全部域名化，补全经销商准入链接与宣传 3 链接。
+
+### 验证
+- 7 个用户入口经 TRAE-browseruse 真实浏览器逐一验证通过（PC 工作台登录态直达 /dms/home、移动登录、平台后台、经销商注册页、宣传 PC/移动/打印），页面 logo/标题正确、图片零破损、Console 无红色错误。
+
 ## v4.4.0 (2026-08-28) - 寄售库存/补货开票订单/样品订单/经销商资信账期
 
 > MINOR 版本。新增寄售（代销）业务闭环与经销商资信管理，订单类型扩展。

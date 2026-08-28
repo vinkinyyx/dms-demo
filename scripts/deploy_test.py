@@ -25,6 +25,8 @@ JAR = ROOT / "backend/target/dms-backend.jar"
 FRONT = ROOT / "frontend-vue/dist"
 ADMIN = ROOT / "admin-vue/dist"
 LANDING = ROOT / "deploy/landing/index.html"
+LANDING_ASSETS = ROOT / "DMS产品宣传手册/assets"
+BROCHURE_PAGES = ROOT / "DMS产品宣传手册/pages"
 for path in (JAR, FRONT / "index.html", ADMIN / "index.html"):
     if not path.exists():
         raise SystemExit(f"Missing build artifact: {path}")
@@ -66,6 +68,19 @@ def tar_bytes(path: Path) -> bytes:
                 tar.add(item, arcname=str(item.relative_to(path)).replace("\\", "/"))
     return buf.getvalue()
 
+def tar_brochure_bytes() -> bytes:
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        if BROCHURE_PAGES.is_dir():
+            for item in BROCHURE_PAGES.rglob("*"):
+                if item.is_file():
+                    tar.add(item, arcname=item.name)
+        if LANDING_ASSETS.is_dir():
+            for item in LANDING_ASSETS.rglob("*"):
+                if item.is_file():
+                    tar.add(item, arcname="assets/" + item.name)
+    return buf.getvalue()
+
 stamp = time.strftime("%Y%m%d-%H%M%S")
 run(f"{sudo} mkdir -p /opt/dms/backups /opt/dms/test/backend /opt/dms/test/frontend/dms/admin")
 run(f"{sudo} cp -a /opt/dms/test/backend/app.jar /opt/dms/backups/app-{stamp}.jar", check=False)
@@ -76,7 +91,9 @@ try:
     run(f"{sudo} chown {USER}:{USER} /opt/dms/test/backend/app.jar", check=False)
     print(f"uploading {JAR.name} ({JAR.stat().st_size // 1048576} MB)", flush=True)
     sftp.put(str(JAR), "/opt/dms/test/backend/app.jar")
-    for name, data in (("dms-front.tar.gz", tar_bytes(FRONT)), ("dms-admin.tar.gz", tar_bytes(ADMIN))):
+    for name, data in (("dms-front.tar.gz", tar_bytes(FRONT)),
+                       ("dms-admin.tar.gz", tar_bytes(ADMIN)),
+                       ("dms-brochure.tar.gz", tar_brochure_bytes())):
         remote = f"/home/ubuntu/{name}"
         print(f"uploading {name} ({len(data) // 1024} KB)", flush=True)
         with sftp.file(remote, "wb") as handle:
@@ -85,6 +102,11 @@ try:
     if LANDING.exists():
         print("uploading landing page", flush=True)
         sftp.put(str(LANDING), "/home/ubuntu/dms-landing.html")
+    if LANDING_ASSETS.is_dir():
+        print(f"uploading landing assets ({len(list(LANDING_ASSETS.iterdir()))} files)", flush=True)
+        with sftp.file("/home/ubuntu/dms-landing-assets.tar.gz", "wb") as handle:
+            handle.set_pipelined(True)
+            handle.write(tar_bytes(LANDING_ASSETS))
 finally:
     sftp.close()
 
@@ -97,6 +119,16 @@ run(f"{sudo} tar -xzf /home/ubuntu/dms-admin.tar.gz -C /opt/dms/test/frontend/dm
 if LANDING.exists():
     run(f"{sudo} cp /home/ubuntu/dms-landing.html /opt/dms/test/frontend/index.html", timeout=60)
     run("rm -f /home/ubuntu/dms-landing.html")
+if LANDING_ASSETS.is_dir():
+    run(f"{sudo} rm -rf /opt/dms/test/frontend/assets", timeout=120)
+    run(f"{sudo} mkdir -p /opt/dms/test/frontend/assets", timeout=60)
+    run(f"{sudo} tar -xzf /home/ubuntu/dms-landing-assets.tar.gz -C /opt/dms/test/frontend/assets", timeout=180)
+    run("rm -f /home/ubuntu/dms-landing-assets.tar.gz")
+if BROCHURE_PAGES.is_dir():
+    run(f"{sudo} rm -rf /opt/dms/test/frontend/brochure", timeout=120)
+    run(f"{sudo} mkdir -p /opt/dms/test/frontend/brochure", timeout=60)
+    run(f"{sudo} tar -xzf /home/ubuntu/dms-brochure.tar.gz -C /opt/dms/test/frontend/brochure", timeout=180)
+run("rm -f /home/ubuntu/dms-brochure.tar.gz")
 run(f"{sudo} chown -R root:root /opt/dms/test/frontend /opt/dms/test/backend/app.jar")
 run(f"{sudo} docker compose -f /opt/dms/test/docker-compose.yml up -d --force-recreate backend-test nginx-test", timeout=240)
 
@@ -114,6 +146,11 @@ else:
     raise SystemExit("backend health check failed")
 
 run('rm -f /home/ubuntu/dms-front.tar.gz /home/ubuntu/dms-admin.tar.gz')
+run("curl -s -o /dev/null -w 'landing %{http_code}\\n' http://127.0.0.1/")
+run("curl -s -o /dev/null -w 'landing-asset %{http_code}\\n' http://127.0.0.1/assets/01-pc-login-new.png")
+run("curl -s -o /dev/null -w 'dms %{http_code}\\n' http://127.0.0.1/dms/")
+run("curl -s -o /dev/null -w 'dms-admin %{http_code}\\n' http://127.0.0.1/dms/admin/")
+run("curl -s -o /dev/null -w 'brochure %{http_code}\\n' http://127.0.0.1/brochure/")
 run(f"{sudo} docker ps --format '{{.Names}}\t{{.Status}}\t{{.Ports}}'")
 client.close()
 print(f"DEPLOY COMPLETE: backup stamp {stamp}")

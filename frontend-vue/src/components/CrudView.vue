@@ -1335,6 +1335,8 @@ async function fetchData() {
     else if (data && Array.isArray(data.list)) { rows.value = data.list; total.value = data.total ?? data.list.length }
     else if (data && Array.isArray(data.records)) { rows.value = data.records; total.value = data.total ?? data.records.length }
     else { rows.value = []; total.value = 0 }
+  } catch (e) {
+    rows.value = []; total.value = 0
   } finally {
     loading.value = false
   }

@@ -11,7 +11,7 @@ export const MENU_GROUPS = [
       { key: 'hospitals', icon: 'FirstAidKit', label: '医院/终端', permissionCode: 'hospital:view' },
       { key: 'warehouses', icon: 'House', label: '仓库管理', inventoryOnly: true, permissionCode: 'warehouse:view' },
       { key: 'regions', icon: 'Location', label: '区域管理', permissionCode: 'region:view' },
-      { key: 'suppliers', icon: 'Shop', label: '供应商', permissionCode: 'supplier:view' },
+      { key: 'suppliers', icon: 'Shop', label: '供应商', inventoryOnly: true, permissionCode: 'supplier:view' },
       { key: 'product-prices', icon: 'Money', label: '产品价格', permissionCode: 'product_price:view' }
     ]
   },

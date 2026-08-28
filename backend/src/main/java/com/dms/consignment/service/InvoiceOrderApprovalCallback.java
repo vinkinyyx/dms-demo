@@ -45,18 +45,20 @@ public class InvoiceOrderApprovalCallback implements ApprovalBusinessCallback {
 
     private List<ConsignmentService.StdLine> lines(Long orderId) {
         List<Tuple> rows = em.createNativeQuery(
-                "SELECT product_id, batch_no, serial_no, qty FROM order_lines WHERE order_id=?1 ORDER BY seq,id",
+                "SELECT product_id, batch_no, serial_no, qty, consignment_stock_id FROM order_lines WHERE order_id=?1 ORDER BY seq,id",
                 Tuple.class).setParameter(1, orderId).getResultList();
         List<ConsignmentService.StdLine> out = new ArrayList<>();
         for (Tuple t : rows) {
             Object pid = t.get("product_id"); Object q = t.get("qty");
             if (pid == null || q == null) continue;
+            Object sid = t.get("consignment_stock_id");
             out.add(new ConsignmentService.StdLine(
                     ((Number) pid).longValue(),
                     t.get("batch_no") == null ? null : String.valueOf(t.get("batch_no")),
                     t.get("serial_no") == null ? null : String.valueOf(t.get("serial_no")),
                     null,
-                    new BigDecimal(String.valueOf(q))));
+                    new BigDecimal(String.valueOf(q)),
+                    sid == null ? null : ((Number) sid).longValue()));
         }
         return out;
     }

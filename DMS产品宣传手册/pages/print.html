@@ -21,6 +21,13 @@
     -webkit-font-smoothing: antialiased;
   }
   @page { size: A4 landscape; margin: 0; }
+  @media print {
+    html, body { margin: 0; padding: 0; background: transparent; }
+    .sheet { page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; box-shadow: none !important; }
+    .sheet:last-child { page-break-after: auto; break-after: auto; }
+    body > section:empty { display: none; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
   .sheet {
     width: 297mm;
     height: 210mm;
@@ -167,13 +174,12 @@
             mask-image: radial-gradient(circle at top right, #000 0%, transparent 70%);
   }
   .cover-inner { position: relative; z-index: 2; padding: 16mm 20mm 14mm; height:100%; display:flex; flex-direction:column; }
-  .cover .logo { display:flex; align-items:center; gap:4mm; font-weight:700; font-size:12pt; color: rgba(255,255,255,.92); letter-spacing:.5px; }
-  .cover .logo .mark {
-    width: 13mm; height:13mm; border-radius:3mm; background: var(--accent);
-    display:flex; align-items:center; justify-content:center;
-    font-size:11pt; font-weight:800; color:#1a1300; letter-spacing:0;
-    box-shadow: 0 4px 14px -4px rgba(245,158,11,.6);
-  }
+  .cover .logo { display:inline-flex; align-items:center; gap:4mm; font-weight:700; font-size:12pt; color: rgba(255,255,255,.92); letter-spacing:.5px;
+    background: transparent; border: none; padding: 0; align-self: flex-start;
+    box-shadow: none; }
+  .cover .logo img { max-height: 14mm; max-width: 66mm; object-fit: contain;
+    filter: drop-shadow(0 2mm 4mm rgba(0,0,0,.45)) drop-shadow(0 0 0.8mm rgba(180,230,255,.18)); }
+  .cover .logo .mark { display:none; }
   .cover .sub { margin-top: auto; }
   .cover .tag {
     display:inline-block; padding:1.6mm 4.5mm;
@@ -198,7 +204,8 @@
 <section class="sheet">
   <div class="cover">
     <div class="cover-inner">
-      <div class="logo"><span class="mark">DMS</span><span>通用经销商管理系统</span></div>
+      <div class="logo"><img src="assets/00-mysolmed-logo-cover.png" alt="mysolmed" /><span style="display:none;">通用经销商管理系统</span></div>
+      <div style="margin-top:4mm; width:64mm; height:.4mm; background:linear-gradient(90deg,#06d8ff 0%,#0b7bff 55%,rgba(11,123,255,0) 100%); border-radius:2mm;"></div>
       <div class="sub">
         <span class="tag">企业级渠道管理 SaaS · 产品介绍</span>
         <h1 class="cover-title" style="margin-top:10mm; font-size:40pt; line-height:1.18;">让每一条渠道<br/>都清晰可见</h1>
@@ -354,7 +361,7 @@
       <div>
         <div class="shot">
           <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/login</span></div>
-          <img src="../assets/01-pc-login-new.png" alt="统一登录" />
+          <img src="assets/01-pc-login-new.png" alt="统一登录" />
         </div>
         <h3 class="module-title" style="font-size:13pt; margin-top:4mm;">统一登录</h3>
         <ul class="feat">
@@ -366,7 +373,7 @@
       <div>
         <div class="shot">
           <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/workspace</span></div>
-          <img src="../assets/02-pc-home-new.png" alt="工作台首页" />
+          <img src="assets/02-pc-home-new.png" alt="工作台首页" />
         </div>
         <h3 class="module-title" style="font-size:13pt; margin-top:4mm;">工作台首页</h3>
         <ul class="feat">
@@ -396,7 +403,7 @@
     <div style="margin-top:6mm;" class="grid2">
       <div class="shot">
         <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/products</span></div>
-        <img src="../assets/03-pc-products-new.png" alt="产品物料管理" />
+        <img src="assets/03-pc-products-new.png" alt="产品物料管理" />
       </div>
       <div>
         <h3 class="module-title">关键能力</h3>
@@ -417,12 +424,46 @@
   <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>06</span></div>
 </section>
 
-<!-- ============ 7. 经销商管理 ============ -->
+<!-- ============ 7. BOM 组合品管理 ============ -->
+<section class="sheet">
+  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>BOM 组合品管理</span></div>
+  <div class="body">
+    <div style="display:flex; align-items:center; gap:4mm;">
+      <div class="num-badge">04</div>
+      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">BOM 组合品与套装管理</h2></div>
+    </div>
+    <div class="accent-bar" style="margin-top:4mm;"></div>
+    <p class="lead" style="margin-top:4mm;">针对关节假体、手术套装等组合销售场景，紧跟产品主数据之后提供固定 BOM 版本管理与子件配比展开；母件不参与出库计价，子件按版本自动拆分，订单详情页支持母件一键展开为可编辑行。</p>
+    <div style="margin-top:6mm;" class="grid2">
+      <div>
+        <h3 class="module-title">关键能力</h3>
+        <ul class="feat">
+          <li>固定 BOM 版本：生效起止与版本状态独立管控，历史版本可追溯</li>
+          <li>母件下单、子件按 BOM 配比自动展开为可编辑行</li>
+          <li>单品价与 BOM 子件价双轨维护，同一 SKU 可两套价格</li>
+          <li>出库以子件 SKU 计价扣减库存，母件不参与实物扣减</li>
+          <li>订单详情页支持母件一键展开，查看 / 修改子件明细</li>
+        </ul>
+        <div class="card soft" style="margin-top:5mm;">
+          <h4 style="color:var(--brand);">业务价值</h4>
+          <p>套装销售场景下计价与库存口径统一，避免母件虚库存与子件漏扣；跟台与仓储可直接按子件拣货，降低错发漏发。</p>
+        </div>
+      </div>
+      <div class="shot">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/product-bundles</span></div>
+        <img src="assets/42-pc-bom-new.png" alt="BOM 组合品管理" />
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>07</span></div>
+</section>
+
+<!-- ============ 8. 经销商管理 ============ -->
 <section class="sheet">
   <div class="page-header"><span class="brand">DMS 产品介绍</span><span>经销商管理</span></div>
   <div class="body">
     <div style="display:flex; align-items:center; gap:4mm;">
-      <div class="num-badge">04</div>
+      <div class="num-badge">05</div>
       <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">经销商管理</h2></div>
     </div>
     <div class="accent-bar" style="margin-top:4mm;"></div>
@@ -437,26 +478,87 @@
           <li>信用额度、账期与应收管控</li>
           <li>经销商画像与经营数据分析</li>
         </ul>
-        <div class="card soft" style="margin-top:6mm;">
-          <h4 style="color:var(--brand);">业务价值</h4>
-          <p>资质到期自动提醒、信用额度下单校验，从准入与交易两个环节降低渠道经营风险。</p>
-        </div>
+
       </div>
       <div class="shot">
         <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/dealers</span></div>
-        <img src="../assets/04-pc-dealers-new.png" alt="经销商管理" />
+        <img src="assets/04-pc-dealers-new.png" alt="经销商管理" />
       </div>
     </div>
   </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>07</span></div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>08</span></div>
 </section>
 
-<!-- ============ 8. 医院/终端 ============ -->
+<!-- ============ 9. 经销商画像 ============ -->
+<section class="sheet">
+  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>经销商画像</span></div>
+  <div class="body">
+    <div style="display:flex; align-items:center; gap:4mm;">
+      <div class="num-badge">06</div>
+      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">经销商画像</h2></div>
+    </div>
+    <div class="accent-bar" style="margin-top:4mm;"></div>
+    <p class="lead" style="margin-top:4mm;">深入掌握每个合作伙伴的经营全貌：月度销售目标达成率、核心指标卡、年度采购趋势、Top 产品结构与库存健康度，全维度画像支撑精准运营。</p>
+    <div style="margin-top:6mm;" class="grid2">
+      <div>
+        <h3 class="module-title">关键能力</h3>
+        <ul class="feat">
+          <li>本月 / 本年累计销售目标达成率与环比</li>
+          <li>订单数 · 净销售额 · 退货率 · 库存 6 大指标</li>
+          <li>年度采购趋势图、Top 产品结构分析</li>
+          <li>按区域 / 等级 / 产品线多维筛选画像指标</li>
+        </ul>
+        <div class="card soft" style="margin-top:6mm;">
+          <h4 style="color:var(--brand);">业务价值</h4>
+          <p>把经销商从"编号+名称"提升为"可量化、可对比、可排序"的全维度画像，支撑授信、续约、资源倾斜等关键决策。</p>
+        </div>
+      </div>
+      <div class="shot">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/dealers/profile</span></div>
+        <img src="assets/04b-pc-dealer-profile.png" alt="经销商画像" />
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>09</span></div>
+</section>
+<!-- ============ 10. 经销商准入 ============ -->
+<section class="sheet">
+  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>经销商准入</span></div>
+  <div class="body">
+    <div style="display:flex; align-items:center; gap:4mm;">
+      <div class="num-badge">07</div>
+      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">经销商准入</h2></div>
+    </div>
+    <div class="accent-bar" style="margin-top:4mm;"></div>
+    <p class="lead" style="margin-top:4mm;">厂家视角的渠道准入全流程在线化：新增 / 批量导入 → 资质审核 → 自动建客户主数据与登录账号，准入状态与黑白名单同步回写画像。</p>
+    <div style="margin-top:6mm;" class="grid2">
+      <div class="shot">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/dealers/admission</span></div>
+        <img src="assets/04c-pc-dealer-admission.png" alt="经销商准入管理" />
+      </div>
+      <div>
+        <h3 class="module-title">关键能力</h3>
+        <ul class="feat">
+          <li>厂家后台新增经销商 + Excel 批量导入初始化</li>
+          <li>编号 · 名称 · 级别 · GSP 状态 · 法人统一建档</li>
+          <li>启用 / 停用 + 黑白名单 + 准入后画像查看</li>
+          <li>资质证照有效期预警与到期自动标红</li>
+        </ul>
+        <div class="card soft" style="margin-top:6mm;">
+          <h4 style="color:var(--brand);">业务价值</h4>
+          <p>渠道准入流程线上化、标准化，人工遗漏风险大幅降低；准入后同步建主数据与账号，合作伙伴次日即可进入业务流程。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>10</span></div>
+</section>
+<!-- ============ 11. 医院/终端 ============ -->
 <section class="sheet">
   <div class="page-header"><span class="brand">DMS 产品介绍</span><span>医院 / 终端管理</span></div>
   <div class="body">
     <div style="display:flex; align-items:center; gap:4mm;">
-      <div class="num-badge">05</div>
+      <div class="num-badge">08</div>
       <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">医院 / 终端管理</h2></div>
     </div>
     <div class="accent-bar" style="margin-top:4mm;"></div>
@@ -464,7 +566,7 @@
     <div style="margin-top:6mm;" class="grid2">
       <div class="shot">
         <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/hospitals</span></div>
-        <img src="../assets/05-pc-hospitals-new.png" alt="医院终端管理" />
+        <img src="assets/05-pc-hospitals-new.png" alt="医院终端管理" />
       </div>
       <div>
         <h3 class="module-title">关键能力</h3>
@@ -482,14 +584,14 @@
       </div>
     </div>
   </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>08</span></div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>11</span></div>
 </section>
 
-<!-- ============ 9. 合同管理与模板 ============ -->
+<!-- ============ 12. 合同管理与模板 ============ -->
 <section class="sheet">
   <div class="page-header"><span class="brand">DMS 产品介绍</span><span>合同管理与模板</span></div>
   <div class="body">
-    <span class="pill">PC 业务端 · 06 / 07</span>
+    <span class="pill">PC 业务端 · 09 / 10</span>
     <h2 class="section-title" style="margin-top:3mm;">合同管理与模板</h2>
     <div class="accent-bar" style="margin-top:3mm;"></div>
     <p class="lead" style="margin-top:4mm;">协议全生命周期在线化，标准模板沉淀法务经验，审批、签署、变更、补充一环不缺。</p>
@@ -497,7 +599,7 @@
       <div>
         <div class="shot">
           <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/contracts</span></div>
-          <img src="../assets/07-pc-contracts-new.png" alt="合同管理" />
+          <img src="assets/07-pc-contracts-new.png" alt="合同管理" />
         </div>
         <h3 class="module-title" style="font-size:13pt; margin-top:4mm;">合同管理</h3>
         <ul class="feat">
@@ -510,7 +612,7 @@
       <div>
         <div class="shot">
           <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/contract-templates</span></div>
-          <img src="../assets/08-pc-contract-templates-new.png" alt="合同模板" />
+          <img src="assets/08-pc-contract-templates-new.png" alt="合同模板" />
         </div>
         <h3 class="module-title" style="font-size:13pt; margin-top:4mm;">合同模板与条款库</h3>
         <ul class="feat">
@@ -522,15 +624,15 @@
       </div>
     </div>
   </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>09</span></div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>12</span></div>
 </section>
 
-<!-- ============ 10. 授权管理 ============ -->
+<!-- ============ 13. 授权管理 ============ -->
 <section class="sheet">
   <div class="page-header"><span class="brand">DMS 产品介绍</span><span>授权管理</span></div>
   <div class="body">
     <div style="display:flex; align-items:center; gap:4mm;">
-      <div class="num-badge">08</div>
+      <div class="num-badge">11</div>
       <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">授权管理</h2></div>
     </div>
     <div class="accent-bar" style="margin-top:4mm;"></div>
@@ -552,329 +654,54 @@
       </div>
       <div class="shot">
         <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/authorizations</span></div>
-        <img src="../assets/09-pc-authorizations-new.png" alt="授权管理" />
-      </div>
-    </div>
-  </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>10</span></div>
-</section>
-
-<!-- ============ 11. 销售订单 ============ -->
-<section class="sheet">
-  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>销售订单</span></div>
-  <div class="body">
-    <div style="display:flex; align-items:center; gap:4mm;">
-      <div class="num-badge">09</div>
-      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">销售订单</h2></div>
-    </div>
-    <div class="accent-bar" style="margin-top:4mm;"></div>
-    <p class="lead" style="margin-top:4mm;">从下单、审批到发货、回款的完整订单链路，状态全程可视，价格、库存、信用与授权自动校验。</p>
-    <div style="margin-top:6mm;" class="grid2">
-      <div class="shot">
-        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/sales-orders</span></div>
-        <img src="../assets/10-pc-sales-orders-new.png" alt="销售订单" />
-      </div>
-      <div>
-        <h3 class="module-title">关键能力</h3>
-        <ul class="feat">
-          <li>在线下单，价格与库存实时校验</li>
-          <li>多级审批与信用额度检查</li>
-          <li>发货、物流、签收节点跟踪</li>
-          <li>回款登记与应收账龄分析</li>
-          <li>订单状态全流程可追溯</li>
-        </ul>
-        <div class="card soft" style="margin-top:6mm;">
-          <h4 style="color:var(--brand);">业务价值</h4>
-          <p>经销商可自助下单，内勤告别录单；审批流自动路由，异常订单被提前拦截，订单交付周期明显缩短。</p>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>11</span></div>
-</section>
-
-<!-- ============ 12. 库存管理 ============ -->
-<section class="sheet">
-  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>库存管理</span></div>
-  <div class="body">
-    <div style="display:flex; align-items:center; gap:4mm;">
-      <div class="num-badge">10</div>
-      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">库存管理</h2></div>
-    </div>
-    <div class="accent-bar" style="margin-top:4mm;"></div>
-    <p class="lead" style="margin-top:4mm;">多仓多批号精细化管理，满足医疗器械行业对序列号与效期的强追溯要求，让库存真实、可视、可追。</p>
-    <div style="margin-top:6mm;" class="grid2">
-      <div>
-        <h3 class="module-title">关键能力</h3>
-        <ul class="feat">
-          <li>多仓库、库位实时库存</li>
-          <li>批号、序列号、效期一物一码</li>
-          <li>效期预警与呆滞品分析</li>
-          <li>调拨、盘点、调整全流程记录</li>
-          <li>库存收发存报表与周转分析</li>
-        </ul>
-        <div class="card soft" style="margin-top:6mm;">
-          <h4 style="color:var(--brand);">业务价值</h4>
-          <p>近效期商品提前处理、过期商品锁定禁出；序列号从入库到手术使用全程绑定，召回时可精准定位去向。</p>
-        </div>
-      </div>
-      <div class="shot">
-        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/inventory</span></div>
-        <img src="../assets/14-pc-inventory-new.png" alt="库存管理" />
-      </div>
-    </div>
-  </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>12</span></div>
-</section>
-
-<!-- ============ 13. 销售出库 ============ -->
-<section class="sheet">
-  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>销售出库</span></div>
-  <div class="body">
-    <div style="display:flex; align-items:center; gap:4mm;">
-      <div class="num-badge">11</div>
-      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">销售出库</h2></div>
-    </div>
-    <div class="accent-bar" style="margin-top:4mm;"></div>
-    <p class="lead" style="margin-top:4mm;">出库单与物流、签收紧密衔接，指定批号序列号发货，产品流向清晰可查，是防窜货与追溯的关键一环。</p>
-    <div style="margin-top:6mm;" class="grid2">
-      <div class="shot">
-        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/sales-outs</span></div>
-        <img src="../assets/18-pc-sales-outs-new.png" alt="销售出库" />
-      </div>
-      <div>
-        <h3 class="module-title">关键能力</h3>
-        <ul class="feat">
-          <li>按单拣货，批号序列号指定</li>
-          <li>物流单号、承运商对接</li>
-          <li>电子签收与回单上传</li>
-          <li>流向追溯与防窜货核查</li>
-          <li>出库单据与发票、回款关联</li>
-        </ul>
-        <div class="card soft" style="margin-top:6mm;">
-          <h4 style="color:var(--brand);">业务价值</h4>
-          <p>每一件高值耗材从仓库到哪家经销商、哪家医院都有记录，配合手术报台形成"出库—使用"闭环，审计时一键溯源。</p>
-        </div>
+        <img src="assets/09-pc-authorizations-new.png" alt="授权管理" />
       </div>
     </div>
   </div>
   <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>13</span></div>
 </section>
 
-<!-- ============ 14. 手术报台 ============ -->
+<!-- ============ 14. 销售订单 ============ -->
 <section class="sheet">
-  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>手术报台</span></div>
+  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>销售订单</span></div>
   <div class="body">
     <div style="display:flex; align-items:center; gap:4mm;">
       <div class="num-badge">12</div>
-      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">手术报台</h2></div>
+      <div><span class="pill">PC 业务端 · 编辑页</span><h2 class="section-title" style="margin-top:2mm;">销售订单 · 编辑页</h2></div>
     </div>
     <div class="accent-bar" style="margin-top:4mm;"></div>
-    <p class="lead" style="margin-top:4mm;">连接真实临床使用场景，把病例、植入物、跟台与影像统一归档，让渠道数据真正延伸到手术室。</p>
+    <p class="lead" style="margin-top:4mm;">真实编辑页含客户基础价 / 合同价取价、BOM 母件自动展开、行折扣与促销折扣分列、整单折扣、操作日志全程留痕；从下单到审批到发货到签收的完整链路可视。</p>
     <div style="margin-top:6mm;" class="grid2">
+      <div class="shot">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/sales-orders/edit</span></div>
+        <img src="assets/10-pc-sales-orders-new.png" alt="销售订单编辑页" />
+      </div>
       <div>
         <h3 class="module-title">关键能力</h3>
         <ul class="feat">
-          <li>病例、术式、主刀与跟台记录</li>
-          <li>植入物批号、序列号使用登记</li>
-          <li>现场影像与知情文件上传</li>
-          <li>术式量、医生与医院统计</li>
-          <li>与出库批号自动关联核销</li>
+          <li>合同价 / 客户价 / 全局价三级取价，来源可追溯</li>
+          <li>BOM 母件下单自动按比例展开子件明细</li>
+          <li>产品折扣、促销折扣、行手动折扣三列可见</li>
+          <li>多级审批与信用额度实时校验</li>
+          <li>操作日志全程记录「谁在何时做了什么」</li>
+          <li>发货、物流、签收节点跟踪，回款登记与应收账龄分析</li>
         </ul>
-        <div class="card soft" style="margin-top:6mm;">
+        <div class="card soft" style="margin-top:5mm;">
           <h4 style="color:var(--brand);">业务价值</h4>
-          <p>真实手术使用数据回流，既支撑合规追溯，也帮助企业看清每家医院、每位术者的实际用量，让市场投入更精准。</p>
+          <p>经销商可自助下单，内勤告别录单；异常订单被自动拦截；价格与折扣全透明，审计追溯无死角，订单交付周期显著缩短。</p>
         </div>
-      </div>
-      <div class="shot">
-        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/surgery-reports</span></div>
-        <img src="../assets/19-pc-surgery-reports-new.png" alt="手术报台" />
       </div>
     </div>
   </div>
   <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>14</span></div>
 </section>
 
-<!-- ============ 15. 审批工作流 ============ -->
-<section class="sheet">
-  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>审批工作流</span></div>
-  <div class="body">
-    <div style="display:flex; align-items:center; gap:4mm;">
-      <div class="num-badge">16</div>
-      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">审批工作流</h2></div>
-    </div>
-    <div class="accent-bar" style="margin-top:4mm;"></div>
-    <p class="lead" style="margin-top:4mm;">可视化配置业务审批流，适配不同金额、区域与组织的复杂路由，让制度真正落到系统里。</p>
-    <div style="margin-top:6mm;" class="grid2">
-      <div class="shot">
-        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/workflow</span></div>
-        <img src="../assets/39-pc-approval-workflow-new.png" alt="审批工作流" />
-      </div>
-      <div>
-        <h3 class="module-title">关键能力</h3>
-        <ul class="feat">
-          <li>拖拽式节点与连线设计</li>
-          <li>条件分支、会签 / 或签规则</li>
-          <li>按岗位、角色、上级自动找人</li>
-          <li>审批记录与加签 / 转办留痕</li>
-          <li>合同、订单、调拨等多业务复用</li>
-        </ul>
-        <div class="card soft" style="margin-top:6mm;">
-          <h4 style="color:var(--brand);">业务价值</h4>
-          <p>流程变化无需改代码，业务管理员即可配置；审批全程在线，审批效率与合规留痕同时提升。</p>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>15</span></div>
-</section>
-
-<!-- ============ 16. 数据分析 ============ -->
-<section class="sheet">
-  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>数据分析</span></div>
-  <div class="body">
-    <span class="pill">PC 业务端 · 13</span>
-    <h2 class="section-title" style="margin-top:3mm;">数据分析与看板</h2>
-    <div class="accent-bar" style="margin-top:3mm;"></div>
-    <p class="lead" style="margin-top:4mm;">把渠道数据变成决策依据，销售、库存、手术多维透视，管理层随时掌握渠道脉搏。</p>
-    <div style="margin-top:6mm;" class="grid2">
-      <div class="shot">
-        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/dashboard</span></div>
-        <img src="../assets/20-pc-dashboard-new.png" alt="数据分析看板" />
-      </div>
-      <div>
-        <h3 class="module-title">分析维度</h3>
-        <ul class="feat">
-          <li>渠道销售趋势与同比环比</li>
-          <li>产品、区域、经销商结构</li>
-          <li>库存周转与效期健康度</li>
-          <li>手术量与终端活跃度</li>
-        </ul>
-        <div class="grid2" style="margin-top:6mm; gap:3mm;">
-          <div class="kpi card"><div class="n" style="font-size:18pt;">1,000+</div><div class="l">经销商覆盖</div></div>
-          <div class="kpi card"><div class="n" style="font-size:18pt;">98.2%</div><div class="l">准时交付率</div></div>
-          <div class="kpi card"><div class="n" style="font-size:18pt;">42 天</div><div class="l">库存周转</div></div>
-          <div class="kpi card"><div class="n" style="font-size:18pt;">12,600</div><div class="l">年报台量</div></div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>16</span></div>
-</section>
-
-<!-- ============ 17. 用户与角色权限 ============ -->
-<section class="sheet">
-  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>用户与角色权限</span></div>
-  <div class="body">
-    <span class="pill">PC 业务端 · 14 / 15</span>
-    <h2 class="section-title" style="margin-top:3mm;">用户与角色权限</h2>
-    <div class="accent-bar" style="margin-top:3mm;"></div>
-    <p class="lead" style="margin-top:4mm;">清晰的组织、岗位与数据权限体系，菜单、按钮、数据范围三维授权，让合适的人看到合适的数据。</p>
-    <div class="grid2" style="margin-top:6mm;">
-      <div>
-        <div class="shot">
-          <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/users</span></div>
-          <img src="../assets/21-pc-users-new.png" alt="用户与组织" />
-        </div>
-        <h3 class="module-title" style="font-size:13pt; margin-top:4mm;">用户与组织</h3>
-        <ul class="feat">
-          <li>部门、岗位、员工层级管理</li>
-          <li>按区域 / 经销商数据权限隔离</li>
-          <li>账号启停、重置与交接</li>
-        </ul>
-      </div>
-      <div>
-        <div class="shot">
-          <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/roles</span></div>
-          <img src="../assets/22-pc-roles-new.png" alt="角色权限" />
-        </div>
-        <h3 class="module-title" style="font-size:13pt; margin-top:4mm;">角色权限</h3>
-        <ul class="feat">
-          <li>菜单与功能模块授权</li>
-          <li>按钮级操作权限控制</li>
-          <li>数据范围：全部 / 区域 / 本人</li>
-          <li>角色复制与权限模板复用</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>17</span></div>
-</section>
-
-<!-- ============ 18. 邮件通知 ============ -->
-<section class="sheet">
-  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>邮件通知</span></div>
-  <div class="body">
-    <div style="display:flex; align-items:center; gap:4mm;">
-      <div class="num-badge">17</div>
-      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">邮件通知日志</h2></div>
-    </div>
-    <div class="accent-bar" style="margin-top:4mm;"></div>
-    <p class="lead" style="margin-top:4mm;">关键业务事件通过邮件及时触达，模板统一管理，发送状态全程可查可追溯。</p>
-    <div style="margin-top:6mm;" class="grid2">
-      <div>
-        <h3 class="module-title">关键能力</h3>
-        <ul class="feat">
-          <li>审批、发货、到期事件模板</li>
-          <li>发送记录与送达状态追踪</li>
-          <li>失败重试与退信处理</li>
-          <li>按收件人 / 业务单号检索</li>
-          <li>模板变量与品牌样式统一</li>
-        </ul>
-        <div class="card soft" style="margin-top:6mm;">
-          <h4 style="color:var(--brand);">业务价值</h4>
-          <p>合同到期、订单审批、发货签收等关键节点自动通知相关方，通知记录本身也成为业务流程留痕的一部分。</p>
-        </div>
-      </div>
-      <div class="shot">
-        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/email-logs</span></div>
-        <img src="../assets/40-pc-email-logs-new.png" alt="邮件通知日志" />
-      </div>
-    </div>
-  </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>18</span></div>
-</section>
-
-<!-- ============ 19. BOM 组合品管理 ============ -->
-<section class="sheet">
-  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>BOM 组合品管理</span></div>
-  <div class="body">
-    <div style="display:flex; align-items:center; gap:4mm;">
-      <div class="num-badge">18</div>
-      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">BOM 组合品与套装管理</h2></div>
-    </div>
-    <div class="accent-bar" style="margin-top:4mm;"></div>
-    <p class="lead" style="margin-top:4mm;">针对关节假体、手术套装等组合销售场景，提供固定 BOM 版本管理与子件配比展开，母件不参与出库计价，子件按版本自动拆分。</p>
-    <div style="margin-top:6mm;" class="grid2">
-      <div>
-        <h3 class="module-title">关键能力</h3>
-        <ul class="feat">
-          <li>固定 BOM 版本：生效起止与版本状态独立管控</li>
-          <li>母件下单、子件按 BOM 配比自动展开</li>
-          <li>单品价与 BOM 子件价双轨维护</li>
-          <li>出库以子件 SKU 计价扣减库存</li>
-          <li>历史版本可追溯，订单绑定下单时版本</li>
-        </ul>
-        <div class="card soft" style="margin-top:6mm;">
-          <h4 style="color:var(--brand);">业务价值</h4>
-          <p>套装销售场景下计价与库存口径统一，避免母件虚库存与子件漏扣，跟台与仓储可直接按子件拣货。</p>
-        </div>
-      </div>
-      <div class="shot">
-        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/product-bundles</span></div>
-        <img src="../assets/42-pc-bom-new.png" alt="BOM 组合品管理" />
-      </div>
-    </div>
-  </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>19</span></div>
-</section>
-
-<!-- ============ 20. 促销引擎 ============ -->
+<!-- ============ 15. 促销引擎 ============ -->
 <section class="sheet">
   <div class="page-header"><span class="brand">DMS 产品介绍</span><span>促销引擎</span></div>
   <div class="body">
     <div style="display:flex; align-items:center; gap:4mm;">
-      <div class="num-badge">19</div>
+      <div class="num-badge">13</div>
       <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">促销引擎 · 满赠满减</h2></div>
     </div>
     <div class="accent-bar" style="margin-top:4mm;"></div>
@@ -896,19 +723,325 @@
       </div>
       <div class="shot">
         <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/promotions</span></div>
-        <img src="../assets/43-pc-promotions-new.png" alt="促销引擎" />
+        <img src="assets/43-pc-promotions-new.png" alt="促销引擎" />
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>15</span></div>
+</section>
+
+<!-- ============ 16. 库存管理 ============ -->
+<section class="sheet">
+  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>库存管理</span></div>
+  <div class="body">
+    <div style="display:flex; align-items:center; gap:4mm;">
+      <div class="num-badge">14</div>
+      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">库存管理</h2></div>
+    </div>
+    <div class="accent-bar" style="margin-top:4mm;"></div>
+    <p class="lead" style="margin-top:4mm;">多仓多批号精细化管理，满足医疗器械行业对序列号与效期的强追溯要求，让库存真实、可视、可追。</p>
+    <div style="margin-top:6mm;" class="grid2">
+      <div>
+        <h3 class="module-title">关键能力</h3>
+        <ul class="feat">
+          <li>多仓库、库位实时库存</li>
+          <li>批号、序列号、效期一物一码</li>
+          <li>效期预警与呆滞品分析</li>
+          <li>调拨、盘点、调整全流程记录</li>
+          <li>库存收发存报表与周转分析</li>
+        </ul>
+        <div class="card soft" style="margin-top:6mm;">
+          <h4 style="color:var(--brand);">业务价值</h4>
+          <p>近效期商品提前处理、过期商品锁定禁出；序列号从入库到手术使用全程绑定，召回时可精准定位去向。</p>
+        </div>
+      </div>
+      <div class="shot">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/inventory</span></div>
+        <img src="assets/14-pc-inventory-new.png" alt="库存管理" />
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>16</span></div>
+</section>
+
+<!-- ============ 17. 销售出库 ============ -->
+<section class="sheet">
+  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>销售出库</span></div>
+  <div class="body">
+    <div style="display:flex; align-items:center; gap:4mm;">
+      <div class="num-badge">15</div>
+      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">销售出库</h2></div>
+    </div>
+    <div class="accent-bar" style="margin-top:4mm;"></div>
+    <p class="lead" style="margin-top:4mm;">出库单与物流、签收紧密衔接，指定批号序列号发货，产品流向清晰可查，是防窜货与追溯的关键一环。</p>
+    <div style="margin-top:6mm;" class="grid2">
+      <div class="shot">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/sales-outs</span></div>
+        <img src="assets/18-pc-sales-outs-new.png" alt="销售出库" />
+      </div>
+      <div>
+        <h3 class="module-title">关键能力</h3>
+        <ul class="feat">
+          <li>按单拣货，批号序列号指定</li>
+          <li>物流单号、承运商对接</li>
+          <li>电子签收与回单上传</li>
+          <li>流向追溯与防窜货核查</li>
+          <li>出库单据与发票、回款关联</li>
+        </ul>
+        <div class="card soft" style="margin-top:6mm;">
+          <h4 style="color:var(--brand);">业务价值</h4>
+          <p>每一件高值耗材从仓库到哪家经销商、哪家医院都有记录，配合手术报台形成"出库—使用"闭环，审计时一键溯源。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>17</span></div>
+</section>
+
+<!-- ============ 18. 销售退货 ============ -->
+<section class="sheet">
+  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>销售退货</span></div>
+  <div class="body">
+    <div style="display:flex; align-items:center; gap:4mm;">
+      <div class="num-badge">16</div>
+      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">销售退货</h2></div>
+    </div>
+    <div class="accent-bar" style="margin-top:4mm;"></div>
+    <p class="lead" style="margin-top:4mm;">一张销退单可关联同一客户多张出库单，按来源行锁定可退量分别回写；新建页强制「经销商 → 发货仓库 → 出库单 → 退货原因」字段顺序门禁，杜绝自由录入与跨客户退货。</p>
+    <div style="margin-top:6mm;" class="grid2">
+      <div>
+        <h3 class="module-title">关键能力</h3>
+        <ul class="feat">
+          <li>一张销退单可关联同一客户多张出库单</li>
+          <li>按来源行锁定可退量分别回写库存与应收</li>
+          <li>强制字段顺序门禁：经销商 → 仓库 → 出库单 → 原因</li>
+          <li>同仓库校验 + 批号 / 序列号筛选</li>
+          <li>代金券审批拒绝自动返还，退款不套现</li>
+        </ul>
+        <div class="card soft" style="margin-top:5mm;">
+          <h4 style="color:var(--brand);">业务价值</h4>
+          <p>销退从源头杜绝跨客户串货退货与超额退款，合规口径与账务口径一致；审批拒绝自动释放代金券额度，资金链路闭环。</p>
+        </div>
+      </div>
+      <div class="shot">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/sales-returns</span></div>
+        <img src="assets/18-pc-sales-outs-new.png" alt="销售退货" />
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>18</span></div>
+</section>
+<!-- ============ 19. 手术报台 ============ -->
+<section class="sheet">
+  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>手术报台</span></div>
+  <div class="body">
+    <div style="display:flex; align-items:center; gap:4mm;">
+      <div class="num-badge">17</div>
+      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">手术报台 · 真实业务数据</h2></div>
+    </div>
+    <div class="accent-bar" style="margin-top:4mm;"></div>
+    <p class="lead" style="margin-top:4mm;">25 张真实报台单可见；植入物、跟台与术式数据完整归档，列表支持按经销商 / 医院 / 状态多条件组合查询，形成从出库到医院使用的闭环追溯。</p>
+    <div style="margin-top:6mm;" class="grid2">
+      <div>
+        <h3 class="module-title">关键能力</h3>
+        <ul class="feat">
+          <li>7 列主信息：报台单号 + 经销商 + 医院 + 手术日期 + 主刀医生 + 状态</li>
+          <li>植入物批号、序列号一对一登记与 UDI 全程追溯</li>
+          <li>已完成 / 待审核状态流转，支持导出、查看详情</li>
+          <li>现场影像与知情文件上传归档</li>
+          <li>术式量、医生 / 医院多维度统计</li>
+        </ul>
+        <div class="card soft" style="margin-top:5mm;">
+          <h4 style="color:var(--brand);">业务价值</h4>
+          <p>真实手术使用数据回流，支撑合规飞检追溯；同时帮助企业看清每家医院、每位术者的实际用量，让市场投入精准到术式与主刀。</p>
+        </div>
+      </div>
+      <div class="shot">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/surgery-reports</span></div>
+        <img src="assets/19-pc-surgery-reports-new.png" alt="手术报台" />
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>19</span></div>
+</section>
+
+<!-- ============ 20. 销售岗位工作台 ============ -->
+<section class="sheet">
+  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>销售岗位工作台</span></div>
+  <div class="body">
+    <div style="display:flex; align-items:center; gap:4mm;">
+      <div class="num-badge">18</div>
+      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">销售岗位 · 日常动作四合一</h2></div>
+    </div>
+    <div class="accent-bar" style="margin-top:4mm;"></div>
+    <p class="lead" style="margin-top:4mm;">为一线销售岗位量身定制的一站式工作台，把客户拜访、订单推进、出库跟催与合同到期 4 个高频动作集中呈现，月目标 / 周拜访 / 日待办三层 KPI 自动聚合，把管理口径真正落到岗位日常。</p>
+    <div style="margin-top:6mm;" class="grid2">
+      <div>
+        <h3 class="module-title">关键能力</h3>
+        <ul class="feat">
+          <li>KPI 闭环：月目标 → 达成率 → 环比趋势，三张卡一站看完</li>
+          <li>拜访打卡：按区域 / 客户清单制定周计划，进度红黄绿自动预警</li>
+          <li>订单全链路：创建、审批拒绝、出库、签收全流程提醒到岗到人</li>
+          <li>风险置顶：合同到期、销退异常、授信超限自动标红置顶</li>
+          <li>支持岗位视图切换：销售主管 / 销售代表 / 商务专员一键切换</li>
+        </ul>
+        <div class="card soft" style="margin-top:5mm;">
+          <h4 style="color:var(--brand);">业务价值</h4>
+          <p>管理口径落到岗位动作，一线不用在多个菜单间跳转；主管端实时看到每位销售的拜访与 KPI 进度，团队节奏可控。</p>
+        </div>
+      </div>
+      <div class="shot">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/positions</span></div>
+        <img src="assets/54-pc-sales-position.png" alt="销售岗位管理" />
       </div>
     </div>
   </div>
   <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>20</span></div>
 </section>
 
-<!-- ============ 21. 开放接口与 ERP 集成 ============ -->
+<!-- ============ 21. 数据分析与看板 ============ -->
+<section class="sheet">
+  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>数据分析</span></div>
+  <div class="body">
+    <div style="display:flex; align-items:center; gap:4mm;">
+      <div class="num-badge">19</div>
+      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">数据分析与看板</h2></div>
+    </div>
+    <div class="accent-bar" style="margin-top:4mm;"></div>
+    <p class="lead" style="margin-top:4mm;">把渠道数据变成决策依据，销售、库存、手术多维透视，管理层随时掌握渠道脉搏。</p>
+    <div style="margin-top:6mm;" class="grid2">
+      <div class="shot">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/dashboard</span></div>
+        <img src="assets/20-pc-dashboard-new.png" alt="数据分析看板" />
+      </div>
+      <div>
+        <h3 class="module-title">分析维度</h3>
+        <ul class="feat">
+          <li>渠道销售趋势与同比环比</li>
+          <li>产品、区域、经销商结构</li>
+          <li>库存周转与效期健康度</li>
+          <li>手术量与终端活跃度</li>
+        </ul>
+        <div class="grid2" style="margin-top:6mm; gap:3mm;">
+          <div class="kpi card"><div class="n" style="font-size:18pt;">1,000+</div><div class="l">经销商覆盖</div></div>
+          <div class="kpi card"><div class="n" style="font-size:18pt;">98.2%</div><div class="l">准时交付率</div></div>
+          <div class="kpi card"><div class="n" style="font-size:18pt;">42 天</div><div class="l">库存周转</div></div>
+          <div class="kpi card"><div class="n" style="font-size:18pt;">12,600</div><div class="l">年报台量</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>21</span></div>
+</section>
+
+<!-- ============ 22. 角色权限 ============ -->
+<section class="sheet">
+  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>角色权限</span></div>
+  <div class="body">
+    <div style="display:flex; align-items:center; gap:4mm;">
+      <div class="num-badge">20</div>
+      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">角色权限</h2></div>
+    </div>
+    <div class="accent-bar" style="margin-top:4mm;"></div>
+    <p class="lead" style="margin-top:4mm;">菜单、按钮、数据范围三维授权，最小权限原则轻松落地，权限变更有据可查。</p>
+    <div style="margin-top:6mm;" class="grid2">
+      <div>
+        <h3 class="module-title">关键能力</h3>
+        <ul class="feat">
+          <li>菜单与功能模块授权，按模块一键勾选</li>
+          <li>按钮级操作权限控制，支持导入导出与批量</li>
+          <li>数据范围：全部 / 区域 / 本人三级隔离</li>
+          <li>角色复制与权限模板复用，新建角色秒级完成</li>
+          <li>变更留痕：谁、什么时候、改了什么字段完整记录</li>
+        </ul>
+        <div class="card soft" style="margin-top:5mm;">
+          <h4 style="color:var(--brand);">业务价值</h4>
+          <p>权限按角色集中管控，最小权限原则落地；审计时一查便知谁在哪天获得了哪项权限，合规留痕零死角。</p>
+        </div>
+      </div>
+      <div class="shot">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/roles</span></div>
+        <img src="assets/22-pc-roles-new.png" alt="角色权限" />
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>22</span></div>
+</section>
+
+<!-- ============ 23. 审批工作流 ============ -->
+<section class="sheet">
+  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>审批工作流</span></div>
+  <div class="body">
+    <div style="display:flex; align-items:center; gap:4mm;">
+      <div class="num-badge">21</div>
+      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">审批工作流</h2></div>
+    </div>
+    <div class="accent-bar" style="margin-top:4mm;"></div>
+    <p class="lead" style="margin-top:4mm;">可视化配置业务审批流，适配不同金额、区域与组织的复杂路由，让制度真正落到系统里。</p>
+    <div style="margin-top:6mm;" class="grid2">
+      <div class="shot">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/workflow</span></div>
+        <img src="assets/39-pc-approval-workflow-new.png" alt="审批工作流" />
+      </div>
+      <div>
+        <h3 class="module-title">关键能力</h3>
+        <ul class="feat">
+          <li>拖拽式节点与连线设计</li>
+          <li>条件分支、会签 / 或签规则</li>
+          <li>按岗位、角色、上级自动找人</li>
+          <li>审批记录与加签 / 转办留痕</li>
+          <li>合同、订单、调拨等多业务复用</li>
+        </ul>
+        <div class="card soft" style="margin-top:6mm;">
+          <h4 style="color:var(--brand);">业务价值</h4>
+          <p>流程变化无需改代码，业务管理员即可配置；审批全程在线，审批效率与合规留痕同时提升。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>23</span></div>
+</section>
+
+<!-- ============ 24. 邮件通知日志 ============ -->
+<section class="sheet">
+  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>邮件通知</span></div>
+  <div class="body">
+    <div style="display:flex; align-items:center; gap:4mm;">
+      <div class="num-badge">22</div>
+      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">邮件通知日志</h2></div>
+    </div>
+    <div class="accent-bar" style="margin-top:4mm;"></div>
+    <p class="lead" style="margin-top:4mm;">关键业务事件通过邮件及时触达，模板统一管理，发送状态全程可查可追溯。</p>
+    <div style="margin-top:6mm;" class="grid2">
+      <div>
+        <h3 class="module-title">关键能力</h3>
+        <ul class="feat">
+          <li>审批、发货、到期事件模板</li>
+          <li>发送记录与送达状态追踪</li>
+          <li>失败重试与退信处理</li>
+          <li>按收件人 / 业务单号检索</li>
+          <li>模板变量与品牌样式统一</li>
+        </ul>
+        <div class="card soft" style="margin-top:6mm;">
+          <h4 style="color:var(--brand);">业务价值</h4>
+          <p>合同到期、订单审批、发货签收等关键节点自动通知相关方，通知记录本身也成为业务流程留痕的一部分。</p>
+        </div>
+      </div>
+      <div class="shot">
+        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/email-logs</span></div>
+        <img src="assets/40-pc-email-logs-new.png" alt="邮件通知日志" />
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>24</span></div>
+</section>
+
+<!-- ============ 25. 开放接口与 ERP 集成 ============ -->
 <section class="sheet">
   <div class="page-header"><span class="brand">DMS 产品介绍</span><span>开放接口与 ERP 集成</span></div>
   <div class="body">
     <div style="display:flex; align-items:center; gap:4mm;">
-      <div class="num-badge">20</div>
+      <div class="num-badge">23</div>
       <div><span class="pill">PC 业务端 · 集成</span><h2 class="section-title" style="margin-top:2mm;">开放接口与 ERP 集成</h2></div>
     </div>
     <div class="accent-bar" style="margin-top:4mm;"></div>
@@ -930,48 +1063,14 @@
       </div>
       <div class="shot">
         <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/api-call-logs</span></div>
-        <img src="../assets/41-pc-api-logs-new.png" alt="开放接口调用日志" />
+        <img src="assets/41-pc-api-logs-new.png" alt="开放接口调用日志" />
       </div>
     </div>
   </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>21</span></div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>25</span></div>
 </section>
 
-<!-- ============ 22. 列表页个性化配置 ============ -->
-<section class="sheet">
-  <div class="page-header"><span class="brand">DMS 产品介绍</span><span>列表页个性化配置</span></div>
-  <div class="body">
-    <div style="display:flex; align-items:center; gap:4mm;">
-      <div class="num-badge">21</div>
-      <div><span class="pill">PC 业务端</span><h2 class="section-title" style="margin-top:2mm;">列表页个性化配置</h2></div>
-    </div>
-    <div class="accent-bar" style="margin-top:4mm;"></div>
-    <p class="lead" style="margin-top:4mm;">每个列表页支持列拖拽排序、高级筛选弹层与固定列，配置按用户持久化保存；管理员还可按角色统一配置搜索字段、工具栏与行内按钮。</p>
-    <div style="margin-top:6mm;" class="grid2">
-      <div>
-        <h3 class="module-title">关键能力</h3>
-        <ul class="feat">
-          <li>列拖拽排序，宽度调整，固定操作列</li>
-          <li>高级筛选弹层，多条件组合查询</li>
-          <li>个人配置按用户持久化，下次进入保持</li>
-          <li>管理员按角色配置字段、按钮显隐与排序</li>
-          <li>搜索字段、工具栏、行内按钮三层可配</li>
-        </ul>
-        <div class="card soft" style="margin-top:6mm;">
-          <h4 style="color:var(--brand);">业务价值</h4>
-          <p>不同岗位看到最关心的列与操作，宽表场景不再横向滚动反复找列，日常操作效率显著提升。</p>
-        </div>
-      </div>
-      <div class="shot">
-        <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">dms.example.com/tenant-page-configs</span></div>
-        <img src="../assets/44-pc-page-config-new.png" alt="列表页个性化配置" />
-      </div>
-    </div>
-  </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>22</span></div>
-</section>
-
-<!-- ============ 23. 移动办公 ============ -->
+<!-- ============ 26. 移动办公 ============ -->
 <section class="sheet">
   <div class="page-header"><span class="brand">DMS 产品介绍</span><span>移动办公</span></div>
   <div class="body">
@@ -980,11 +1079,11 @@
     <div class="accent-bar" style="margin-top:3mm;"></div>
     <p class="lead" style="margin-top:4mm;">一线销售、仓储与跟台人员通过手机完成下单、盘点、扫码与手术报台，现场数据实时回传。</p>
     <div class="grid5" style="margin-top:6mm; align-items:end;">
-      <div class="phone"><div class="notch"></div><div class="screen"><img src="../assets/33-mobile-login-new.png" alt="移动登录"></div></div>
-      <div class="phone"><div class="notch"></div><div class="screen"><img src="../assets/34-mobile-home-new.png" alt="移动工作台"></div></div>
-      <div class="phone"><div class="notch"></div><div class="screen"><img src="../assets/35-mobile-orders-new.png" alt="移动订单"></div></div>
-      <div class="phone"><div class="notch"></div><div class="screen"><img src="../assets/36-mobile-inventory-new.png" alt="移动库存"></div></div>
-      <div class="phone"><div class="notch"></div><div class="screen"><img src="../assets/37-mobile-surgery-new.png" alt="移动手术报台"></div></div>
+      <div class="phone"><div class="notch"></div><div class="screen"><img src="assets/33-mobile-login-new.png" alt="移动登录"></div></div>
+      <div class="phone"><div class="notch"></div><div class="screen"><img src="assets/34-mobile-home-new.png" alt="移动工作台"></div></div>
+      <div class="phone"><div class="notch"></div><div class="screen"><img src="assets/35-mobile-orders-new.png" alt="移动订单"></div></div>
+      <div class="phone"><div class="notch"></div><div class="screen"><img src="assets/36-mobile-inventory-new.png" alt="移动库存"></div></div>
+      <div class="phone"><div class="notch"></div><div class="screen"><img src="assets/37-mobile-surgery-new.png" alt="移动手术报台"></div></div>
     </div>
     <div class="grid5" style="margin-top:2mm; text-align:center; font-size:8.5pt; font-weight:700;">
       <div>移动登录</div><div>移动工作台</div><div>移动订单</div><div>移动库存</div><div>手术报台</div>
@@ -995,10 +1094,10 @@
       <div class="card" style="padding:4mm;"><h4 style="font-size:10pt;">现场取证</h4><p style="font-size:8.5pt;">手术与签收场景拍照上传，影像与业务单据自动关联归档。</p></div>
     </div>
   </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>23</span></div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>26</span></div>
 </section>
 
-<!-- ============ 24. 平台后台 - 租户与权限 ============ -->
+<!-- ============ 27. 平台后台 - 租户与权限 ============ -->
 <section class="sheet">
   <div class="page-header"><span class="brand">DMS 产品介绍</span><span>平台后台 · 租户与权限</span></div>
   <div class="body">
@@ -1009,19 +1108,19 @@
     <div class="grid3" style="margin-top:7mm;">
       <div>
         <div class="shot"><div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">admin.dms.example.com</span></div>
-          <img src="../assets/23-admin-login-new.png" alt="后台登录"></div>
+          <img src="assets/23-admin-login-new.png" alt="后台登录"></div>
         <h4 style="margin-top:3mm; font-size:11pt;">后台登录</h4>
         <p style="font-size:9pt; color:var(--muted);">运维与超管独立入口，强身份校验</p>
       </div>
       <div>
         <div class="shot"><div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">admin/tenants</span></div>
-          <img src="../assets/25-admin-tenants-new.png" alt="租户管理"></div>
+          <img src="assets/25-admin-tenants-new.png" alt="租户管理"></div>
         <h4 style="margin-top:3mm; font-size:11pt;">租户管理</h4>
         <p style="font-size:9pt; color:var(--muted);">开通、配额、套餐、启停全生命周期</p>
       </div>
       <div>
         <div class="shot"><div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">admin/roles</span></div>
-          <img src="../assets/28-admin-roles-new.png" alt="平台角色"></div>
+          <img src="assets/28-admin-roles-new.png" alt="平台角色"></div>
         <h4 style="margin-top:3mm; font-size:11pt;">平台角色</h4>
         <p style="font-size:9pt; color:var(--muted);">超管、运维、租户管理员分层授权</p>
       </div>
@@ -1045,10 +1144,10 @@
       </div>
     </div>
   </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>24</span></div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>27</span></div>
 </section>
 
-<!-- ============ 25. 平台后台 - 字典与审计 ============ -->
+<!-- ============ 28. 平台后台 - 字典与审计 ============ -->
 <section class="sheet">
   <div class="page-header"><span class="brand">DMS 产品介绍</span><span>平台后台 · 字典与审计</span></div>
   <div class="body">
@@ -1059,34 +1158,34 @@
     <div class="grid4" style="margin-top:5mm; gap:3mm;">
       <div>
         <div class="shot"><div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">admin/dicts</span></div>
-          <img src="../assets/29-admin-dicts-new.png" alt="数据字典" style="max-height:85mm;"></div>
+          <img src="assets/29-admin-dicts-new.png" alt="数据字典" style="max-height:85mm;"></div>
         <h4 style="margin-top:2mm; font-size:9.5pt; color:var(--brand);">数据字典</h4>
         <p style="font-size:8pt; color:var(--muted); line-height:1.4;">枚举、区域、行业分类统一维护</p>
       </div>
       <div>
         <div class="shot"><div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">admin/api-logs</span></div>
-          <img src="../assets/30-admin-api-logs-new.png" alt="API 日志" style="max-height:85mm;"></div>
+          <img src="assets/30-admin-api-logs-new.png" alt="API 日志" style="max-height:85mm;"></div>
         <h4 style="margin-top:2mm; font-size:9.5pt; color:var(--brand);">API 日志</h4>
         <p style="font-size:8pt; color:var(--muted); line-height:1.4;">调用、耗时、状态码、链路追踪</p>
       </div>
       <div>
         <div class="shot"><div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">admin/operation-logs</span></div>
-          <img src="../assets/31-admin-operation-logs-new.png" alt="操作日志" style="max-height:85mm;"></div>
+          <img src="assets/31-admin-operation-logs-new.png" alt="操作日志" style="max-height:85mm;"></div>
         <h4 style="margin-top:2mm; font-size:9.5pt; color:var(--brand);">操作日志</h4>
         <p style="font-size:8pt; color:var(--muted); line-height:1.4;">用户行为、数据变更、IP 留痕</p>
       </div>
       <div>
         <div class="shot"><div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">admin/login-logs</span></div>
-          <img src="../assets/32-admin-login-logs-new.png" alt="登录日志" style="max-height:85mm;"></div>
+          <img src="assets/32-admin-login-logs-new.png" alt="登录日志" style="max-height:85mm;"></div>
         <h4 style="margin-top:2mm; font-size:9.5pt; color:var(--brand);">登录日志</h4>
         <p style="font-size:8pt; color:var(--muted); line-height:1.4;">时间、地点、设备、异常检测</p>
       </div>
     </div>
   </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>25</span></div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>28</span></div>
 </section>
 
-<!-- ============ 26. 客户价值 ============ -->
+<!-- ============ 29. 客户价值 ============ -->
 <section class="sheet">
   <div class="page-header"><span class="brand">DMS 产品介绍</span><span>客户价值</span></div>
   <div class="body">
@@ -1107,14 +1206,15 @@
       <p style="margin-top:2mm;">把渠道从"黑盒"变成"看板"，是 DMS 带给每一位客户最根本的改变。</p>
     </div>
   </div>
-  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>26</span></div>
+  <div class="page-footer"><span>DMS 通用经销商管理系统</span><span>29</span></div>
 </section>
 
-<!-- ============ 27. 联系我们 / 封底 ============ -->
+<!-- ============ 30. 联系我们 / 封底 ============ -->
 <section class="sheet">
   <div class="cover back-cover">
     <div class="cover-inner">
-      <div class="logo"><span class="mark">DMS</span><span>通用经销商管理系统</span></div>
+      <div class="logo"><img src="assets/00-mysolmed-logo-cover.png" alt="mysolmed" /><span style="display:none;">通用经销商管理系统</span></div>
+      <div style="margin-top:3.5mm; width:46mm; height:.4mm; background:linear-gradient(90deg,#06d8ff 0%,#0b7bff 60%,rgba(11,123,255,0) 100%); border-radius:2mm;"></div>
       <div class="sub">
         <span class="tag">联系我们</span>
         <h1 class="cover-title" style="font-size:32pt; margin-top:9mm; line-height:1.2;">预约专属<br/>产品演示</h1>

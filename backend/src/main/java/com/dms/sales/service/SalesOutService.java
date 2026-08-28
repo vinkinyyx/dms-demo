@@ -415,7 +415,7 @@ public class SalesOutService {
             if (so.getSourceOrderId() != null) {
                 Object ot = em.createNativeQuery("SELECT order_type FROM orders WHERE id=?1 AND tenant_id=?2")
                         .setParameter(1, so.getSourceOrderId()).setParameter(2, tenantId).getResultList().stream().findFirst().orElse(null);
-                if (ot != null && "REPLENISH".equals(String.valueOf(ot))) {
+                if (ot != null && "REPLENISHMENT".equals(String.valueOf(ot))) {
                     consignmentService.onReplenishShipped(so.getDealerId(), soId, consignLines);
                 }
             }

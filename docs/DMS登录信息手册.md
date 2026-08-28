@@ -1,8 +1,10 @@
 # DMS 登录信息手册
 
-**更新时间**: 2026-08-26
-**当前版本**: v4.2.9
-**适用范围**: 测试环境（43.128.145.141；UI 在 `/dms/`）与生产环境（8.133.193.238；UI 在 `/dms/`）
+**更新时间**: 2026-08-28
+**当前版本**: v4.4.2
+**适用范围**: 测试环境（域名 `dms-dev.mysolmed.com` → 43.128.145.141；UI 在 `/dms/`）与生产环境（8.133.193.238；UI 在 `/dms/`）
+
+> **2026-08-28 起测试环境推荐使用域名访问**：`http://dms-dev.mysolmed.com`（已解析到 43.128.145.141；裸域名/根路径会 302 跳转到 `/dms/` 直达 DMS 登录页，产品宣传手册保留在 `/brochure/`）。IP 直连 `http://43.128.145.141` 仍然可用，行为与域名一致。
 
 ---
 
@@ -11,7 +13,7 @@
 | 环境 | UI 入口 | 后端 API | 数据库 | 用途 |
 |---|---|---|---|---|
 | 生产 | `http://8.133.193.238/dms/` | Nginx 根路径 `/api`、`/auth`、`/actuator` 反代后端容器 | `dms` | 正式生产环境（v4.2.9，Docker Compose 部署） |
-| 测试 | `http://43.128.145.141/dms/` | Nginx 根路径 `/api`、`/auth`、`/actuator` 反代后端容器 | `dms_test` | 当前 DMS 测试环境，Docker Compose 部署 |
+| 测试 | `http://dms-dev.mysolmed.com/dms/`（域名；IP `43.128.145.141` 同样可用） | Nginx 根路径 `/api`、`/auth`、`/actuator` 反代后端容器 | `dms_test` | 当前 DMS 测试环境，Docker Compose 部署；裸域名根路径 302 → `/dms/` |
 
 > 重要：DMS 的浏览器入口在 `/dms/` 下；API、登录接口和健康检查仍在站点根路径，不要写成 `/dms/api`。
 
@@ -42,13 +44,22 @@
 
 ### 2.2 测试环境
 
+> **推荐入口（域名）**：直接打开 `http://dms-dev.mysolmed.com` 即自动跳转到 DMS 登录页；下列完整 URL 用域名或 IP 访问均可。
+
 | 入口 | 地址 | 说明 |
 |---|---|---|
-| 业务前台/PC 工作台 | http://43.128.145.141/dms/ | PC 登录与工作台，租户 `default`，账号 `sys_admin` / `Dms@123456` 或 `admin` / `Sh123456` |
-| 移动端 H5 登录页 | http://43.128.145.141/dms/mobile/login | 手机浏览器访问，账号与 PC 业务前台相同 |
-| 平台后台 | http://43.128.145.141/dms/admin/ | 平台管理员账号 `admin` / `Sh123456` |
-| 后端 API | http://43.128.145.141/api、http://43.128.145.141/auth | API 不加 `/dms` 前缀 |
-| 健康检查 | http://43.128.145.141/actuator/health | 返回 `{"status":"UP"}` 表示正常 |
+| 裸域名（推荐） | http://dms-dev.mysolmed.com/ | 302 跳转 `/dms/`，直达 DMS 登录页/工作台 |
+| 业务前台/PC 工作台 | http://dms-dev.mysolmed.com/dms/ | PC 登录与工作台，租户 `default`，账号 `sys_admin` / `Dms@123456` 或 `admin` / `Sh123456` |
+| 移动端 H5 登录页 | http://dms-dev.mysolmed.com/dms/mobile/login | 手机浏览器访问，账号与 PC 业务前台相同 |
+| 经销商准入（客户自助注册） | http://dms-dev.mysolmed.com/dms/mobile/register | **开放给经销商的准入链接，无需登录**（public 路由，客户注册页），可直接发给经销商 |
+| 平台后台 | http://dms-dev.mysolmed.com/dms/admin/ | 平台管理员账号 `admin` / `Sh123456` |
+| 后端 API | http://dms-dev.mysolmed.com/api、http://dms-dev.mysolmed.com/auth | API 不加 `/dms` 前缀 |
+| 健康检查 | http://dms-dev.mysolmed.com/actuator/health | 返回 `{"status":"UP"}` 表示正常 |
+| 产品宣传手册 PC 版 | http://dms-dev.mysolmed.com/brochure/ | 独立静态站（根路径已让给 DMS，宣传页保留在 `/brochure/`） |
+| 产品宣传手册 移动版 | http://dms-dev.mysolmed.com/brochure/mobile.html | ⚠️ 与 index.html **平级**放在 `/brochure/` 目录下 |
+| 产品宣传手册 打印版 | http://dms-dev.mysolmed.com/brochure/print.html | ⚠️ **不存在 `/brochure/pages/` 子目录**；写错路径会被 Nginx try_files 静默回退成 PC 首页（HTTP 仍为 200，须以页面标题区分） |
+
+> IP 直连同样可用：将 `dms-dev.mysolmed.com` 替换为 `43.128.145.141` 即可（SSH/运维仍用 IP）。
 
 **服务器登录与部署信息**：
 
@@ -59,7 +70,8 @@
 - 宿主机静态目录：`/opt/dms/test/frontend`
 - DMS PC/移动端静态目录：`/opt/dms/test/frontend/dms`
 - 平台后台静态目录：`/opt/dms/test/frontend/dms/admin`
-- Nginx 配置：`/opt/dms/test/nginx/nginx.conf`
+- Nginx 配置：`/opt/dms/test/nginx/nginx.conf`（**不得随意调整**：变更前必须备份、`nginx -t` 校验、reload/重启后进容器 `nginx -T` 取证确认实际生效；详见 AGENTS.md「Nginx 变更管控规则」）
+- 域名：`dms-dev.mysolmed.com` → 43.128.145.141（测试环境，2026-08-28 启用）；后端 `APP_BASE_URL=http://dms-dev.mysolmed.com/dms`（审批邮件链接用）
 - UI 发布前备份目录：`/opt/dms/backups/`
 
 ---

@@ -25,6 +25,18 @@ public class AutoDocGenerator {
     private final EntityManager em;
     private final com.dms.common.util.DocNoGenerator docNoGenerator;
 
+    /** 订单 order_type → 出库单 business_type 映射（v4.4.1）。 */
+    public static String salesOutBizType(String orderType) {
+        if (orderType == null) return null;
+        return switch (orderType) {
+            case "REPLENISHMENT" -> "REPLENISH";
+            case "INVOICE" -> "INVOICE";
+            case "SAMPLE" -> "SAMPLE";
+            case "NORMAL", "SALES" -> "SALES";
+            default -> null;
+        };
+    }
+
     /**
      * 订单审批通过后自动生成销售出库草稿
      */
@@ -33,7 +45,7 @@ public class AutoDocGenerator {
         UUID tid = TenantContext.getTenantId();
 
         var q = em.createNativeQuery(
-                "SELECT id, is_red, dealer_id, warehouse_id, amount_incl_tax FROM orders WHERE id = ?1 AND tenant_id = ?2", Tuple.class);
+                "SELECT id, is_red, dealer_id, warehouse_id, amount_incl_tax, order_type FROM orders WHERE id = ?1 AND tenant_id = ?2", Tuple.class);
         q.setParameter(1, orderId).setParameter(2, tid);
         List<?> rs = q.getResultList();
         if (rs.isEmpty()) throw new RuntimeException("订单不存在: " + orderId);
@@ -41,6 +53,7 @@ public class AutoDocGenerator {
         boolean isRed = Boolean.TRUE.equals(t.get("is_red"));
         Long dealerId = t.get("dealer_id") == null ? null : ((Number) t.get("dealer_id")).longValue();
         Long whId = t.get("warehouse_id") == null ? null : ((Number) t.get("warehouse_id")).longValue();
+        String bizType = salesOutBizType(t.get("order_type") == null ? "" : String.valueOf(t.get("order_type")));
 
         var chk = em.createNativeQuery(
                 "SELECT id FROM sales_outs WHERE source_order_id = ?1 AND tenant_id = ?2 AND COALESCE(is_red,false) = ?3 AND deleted_at IS NULL " +
@@ -65,11 +78,12 @@ public class AutoDocGenerator {
 
         String code = docNoGenerator.next(isRed ? "GIR" : "GI");
         var ins = em.createNativeQuery(
-                "INSERT INTO sales_outs (tenant_id, code, dealer_id, warehouse_id, is_red, status, auto_created, source_order_id, " +
+                "INSERT INTO sales_outs (tenant_id, code, dealer_id, warehouse_id, business_type, is_red, status, auto_created, source_order_id, " +
                 "amount_incl_tax, sales_date, created_at, updated_at) " +
-                "VALUES (?1, ?2, ?3, ?4, ?5, 'DRAFT', true, ?6, ?7, now(), now(), now()) RETURNING id");
+                "VALUES (?1, ?2, ?3, ?4, ?8, ?5, 'DRAFT', true, ?6, ?7, now(), now(), now()) RETURNING id");
         ins.setParameter(1, tid).setParameter(2, code).setParameter(3, dealerId).setParameter(4, whId)
-           .setParameter(5, isRed).setParameter(6, orderId).setParameter(7, t.get("amount_incl_tax"));
+           .setParameter(5, isRed).setParameter(6, orderId).setParameter(7, t.get("amount_incl_tax"))
+           .setParameter(8, bizType);
         Long soId = ((Number) ins.getSingleResult()).longValue();
 
         // 拷贝明细：把订单行的 qty 作为 expected_qty（应发数），shipped_qty/qty 初始化为 0。

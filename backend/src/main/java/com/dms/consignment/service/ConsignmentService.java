@@ -15,9 +15,10 @@ import java.util.*;
 
 /**
  * v4.4.0 寄售库存服务。
- * 补货订单(REPLENISH)发货后：厂家库存已由销售出库扣减，此处把这批货计入经销商寄售台账(on_hand+)。
+ * 补货订单(REPLENISHMENT)发货后：厂家库存已由销售出库扣减，此处把这批货计入经销商寄售台账(on_hand+)。
  * 开票订单(INVOICE)：提交即预占(locked+)，审批通过实扣(on_hand-/locked-)，拒绝/退回/撤回释放(locked-)。
  * 维度：经销商 + 产品SKU + 批号 + 序列号。寄售金额按产品标准价(std_unit_price)汇总。
+ * v4.4.1：开票明细携带 consignment_stock_id(stockId) 后，锁定/扣减/释放按台账行精准定位。
  */
 @Slf4j
 @Service
@@ -32,7 +33,11 @@ public class ConsignmentService {
         return t;
     }
 
-    public record StdLine(Long productId, String batchNo, String serialNo, Long warehouseId, BigDecimal qty) {}
+    public record StdLine(Long productId, String batchNo, String serialNo, Long warehouseId, BigDecimal qty, Long stockId) {
+        public StdLine(Long productId, String batchNo, String serialNo, Long warehouseId, BigDecimal qty) {
+            this(productId, batchNo, serialNo, warehouseId, qty, null);
+        }
+    }
 
     private String col(Long productId, String field) {
         try {
@@ -141,19 +146,61 @@ public class ConsignmentService {
         return ((Number)rs.get(0).get("oh")).intValue() - ((Number)rs.get(0).get("lk")).intValue();
     }
 
+    /** v4.4.1 按台账行ID定位（校验租户/经销商/产品一致）；找不到返回 null。 */
+    private Tuple locateStockRow(UUID tid, Long dealerId, Long stockId, Long productId) {
+        if (stockId == null) return null;
+        List<Tuple> rs = em.createNativeQuery(
+            "SELECT id, dealer_id, product_id, COALESCE(batch_no,'') batch_no, COALESCE(serial_no,'') serial_no, " +
+            "on_hand_qty, locked_qty, COALESCE(std_unit_price,0) std_unit_price FROM consignment_stock WHERE id=?1 AND tenant_id=?2",
+            Tuple.class).setParameter(1, stockId).setParameter(2, tid).getResultList();
+        if (rs.isEmpty()) return null;
+        Tuple row = rs.get(0);
+        if (dealerId != null && !dealerId.equals(toLong(row.get("dealer_id"))))
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "所选寄售库存不属于当前经销商");
+        if (productId != null && !productId.equals(toLong(row.get("product_id"))))
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "所选寄售库存与开票产品不一致");
+        return row;
+    }
+
+    private Long toLong(Object o){ return o==null?null:((Number)o).longValue(); }
+
+    /** v4.4.1 按台账行ID直接增减（onHandDelta/lockedDelta 可正可负，GREATEST 兜底防负）。 */
+    private void adjustStockRow(Long stockId, int onHandDelta, int lockedDelta) {
+        em.createNativeQuery(
+            "UPDATE consignment_stock SET on_hand_qty=GREATEST(on_hand_qty+?2,0), locked_qty=GREATEST(locked_qty+?3,0), " +
+            "updated_at=now(), version=version+1 WHERE id=?1")
+            .setParameter(1, stockId).setParameter(2, onHandDelta).setParameter(3, lockedDelta).executeUpdate();
+    }
+
     @Transactional
     public void lockForInvoice(Long dealerId, Long invoiceOrderId, String invoiceCode, List<StdLine> lines) {
         UUID tid = tid();
         for (StdLine l : lines) {
             if (l.productId()==null||l.qty()==null||l.qty().signum()<=0) continue;
             int need = l.qty().intValue();
-            int avail = availableQty(tid, dealerId, l.productId(), l.batchNo(), l.serialNo());
-            if (avail < need)
-                throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
-                    "经销商寄售库存不足：产品 [" + nz(productCode(l.productId())) + " " + nz(productName(l.productId())) + "]"
-                    + (l.batchNo()==null?"":" 批号 "+l.batchNo()) + " 可用 " + avail + "，开票需 " + need);
-            upsertStock(tid, dealerId, l.productId(), l.batchNo(), l.serialNo(), l.warehouseId(), 0, need, stdPrice(tid,l.productId()), null);
-            writeMovement(tid, dealerId, l.productId(), l.batchNo(), l.serialNo(), "INVOICE_LOCK", -need, "INVOICE_ORDER", invoiceOrderId, invoiceCode, "开票提交预占");
+            Tuple row = locateStockRow(tid, dealerId, l.stockId(), l.productId());
+            if (row != null) {
+                int onHand = ((Number) row.get("on_hand_qty")).intValue();
+                int locked = ((Number) row.get("locked_qty")).intValue();
+                int avail = onHand - locked;
+                if (avail < need)
+                    throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
+                        "经销商寄售库存不足：产品 [" + nz(productCode(l.productId())) + " " + nz(productName(l.productId())) + "]"
+                        + (l.batchNo()==null?"":" 批号 "+l.batchNo()) + " 可用 " + avail + "，开票需 " + need);
+                adjustStockRow(((Number) row.get("id")).longValue(), 0, need);
+                writeMovement(tid, dealerId, l.productId(),
+                        row.get("batch_no")==null||String.valueOf(row.get("batch_no")).isBlank()?null:String.valueOf(row.get("batch_no")),
+                        row.get("serial_no")==null||String.valueOf(row.get("serial_no")).isBlank()?null:String.valueOf(row.get("serial_no")),
+                        "INVOICE_LOCK", -need, "INVOICE_ORDER", invoiceOrderId, invoiceCode, "开票提交预占");
+            } else {
+                int avail = availableQty(tid, dealerId, l.productId(), l.batchNo(), l.serialNo());
+                if (avail < need)
+                    throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
+                        "经销商寄售库存不足：产品 [" + nz(productCode(l.productId())) + " " + nz(productName(l.productId())) + "]"
+                        + (l.batchNo()==null?"":" 批号 "+l.batchNo()) + " 可用 " + avail + "，开票需 " + need);
+                upsertStock(tid, dealerId, l.productId(), l.batchNo(), l.serialNo(), l.warehouseId(), 0, need, stdPrice(tid,l.productId()), null);
+                writeMovement(tid, dealerId, l.productId(), l.batchNo(), l.serialNo(), "INVOICE_LOCK", -need, "INVOICE_ORDER", invoiceOrderId, invoiceCode, "开票提交预占");
+            }
         }
         recomputeConsignmentUsed(tid, dealerId);
     }
@@ -164,8 +211,17 @@ public class ConsignmentService {
         for (StdLine l : lines) {
             if (l.productId()==null||l.qty()==null||l.qty().signum()<=0) continue;
             int q = l.qty().intValue();
-            upsertStock(tid, dealerId, l.productId(), l.batchNo(), l.serialNo(), l.warehouseId(), -q, -q, stdPrice(tid,l.productId()), null);
-            writeMovement(tid, dealerId, l.productId(), l.batchNo(), l.serialNo(), "INVOICE_DEDUCT", -q, "INVOICE_ORDER", invoiceOrderId, invoiceCode, "开票审批通过实扣");
+            Tuple row = locateStockRow(tid, dealerId, l.stockId(), l.productId());
+            if (row != null) {
+                adjustStockRow(((Number) row.get("id")).longValue(), -q, -q);
+                writeMovement(tid, dealerId, l.productId(),
+                        row.get("batch_no")==null||String.valueOf(row.get("batch_no")).isBlank()?null:String.valueOf(row.get("batch_no")),
+                        row.get("serial_no")==null||String.valueOf(row.get("serial_no")).isBlank()?null:String.valueOf(row.get("serial_no")),
+                        "INVOICE_DEDUCT", -q, "INVOICE_ORDER", invoiceOrderId, invoiceCode, "开票审批通过实扣");
+            } else {
+                upsertStock(tid, dealerId, l.productId(), l.batchNo(), l.serialNo(), l.warehouseId(), -q, -q, stdPrice(tid,l.productId()), null);
+                writeMovement(tid, dealerId, l.productId(), l.batchNo(), l.serialNo(), "INVOICE_DEDUCT", -q, "INVOICE_ORDER", invoiceOrderId, invoiceCode, "开票审批通过实扣");
+            }
         }
         recomputeConsignmentUsed(tid, dealerId);
     }
@@ -176,10 +232,60 @@ public class ConsignmentService {
         for (StdLine l : lines) {
             if (l.productId()==null||l.qty()==null||l.qty().signum()<=0) continue;
             int q = l.qty().intValue();
-            upsertStock(tid, dealerId, l.productId(), l.batchNo(), l.serialNo(), l.warehouseId(), 0, -q, stdPrice(tid,l.productId()), null);
-            writeMovement(tid, dealerId, l.productId(), l.batchNo(), l.serialNo(), "INVOICE_RELEASE", q, "INVOICE_ORDER", invoiceOrderId, invoiceCode, "开票释放预占");
+            Tuple row = locateStockRow(tid, dealerId, l.stockId(), l.productId());
+            if (row != null) {
+                adjustStockRow(((Number) row.get("id")).longValue(), 0, -q);
+                writeMovement(tid, dealerId, l.productId(),
+                        row.get("batch_no")==null||String.valueOf(row.get("batch_no")).isBlank()?null:String.valueOf(row.get("batch_no")),
+                        row.get("serial_no")==null||String.valueOf(row.get("serial_no")).isBlank()?null:String.valueOf(row.get("serial_no")),
+                        "INVOICE_RELEASE", q, "INVOICE_ORDER", invoiceOrderId, invoiceCode, "开票释放预占");
+            } else {
+                upsertStock(tid, dealerId, l.productId(), l.batchNo(), l.serialNo(), l.warehouseId(), 0, -q, stdPrice(tid,l.productId()), null);
+                writeMovement(tid, dealerId, l.productId(), l.batchNo(), l.serialNo(), "INVOICE_RELEASE", q, "INVOICE_ORDER", invoiceOrderId, invoiceCode, "开票释放预占");
+            }
         }
         recomputeConsignmentUsed(tid, dealerId);
+    }
+
+    /**
+     * v4.4.1 补货红字出库（销退/红冲回调）：把对应数量从经销商寄售台账冲回(on_hand-)。
+     * 按 产品+批号+序列号 维度匹配台账行；无台账行时跳过（可能本就不是寄售补货入库的批次）。
+     */
+    @Transactional
+    public void onReplenishReversed(Long dealerId, Long salesOutId, List<StdLine> lines) {
+        if (dealerId==null || lines==null || lines.isEmpty()) return;
+        UUID tid = tid();
+        int touched = 0;
+        for (StdLine l : lines) {
+            if (l.productId()==null || l.qty()==null || l.qty().signum()<=0) continue;
+            int q = l.qty().intValue();
+            List<Tuple> rs = em.createNativeQuery(
+                "SELECT id, on_hand_qty, locked_qty FROM consignment_stock " +
+                "WHERE tenant_id=?1 AND dealer_id=?2 AND product_id=?3 AND COALESCE(batch_no,'')=COALESCE(?4,'') AND COALESCE(serial_no,'')=COALESCE(?5,'')",
+                Tuple.class)
+                .setParameter(1,tid).setParameter(2,dealerId).setParameter(3,l.productId())
+                .setParameter(4,bn(l.batchNo())).setParameter(5,bn(l.serialNo())).getResultList();
+            if (rs.isEmpty()) {
+                log.warn("补货红冲未匹配到寄售台账行 dealer={} product={} batch={} serial={} qty={}",
+                        dealerId, l.productId(), l.batchNo(), l.serialNo(), q);
+                continue;
+            }
+            Tuple row = rs.get(0);
+            int onHand = ((Number) row.get("on_hand_qty")).intValue();
+            int locked = ((Number) row.get("locked_qty")).intValue();
+            if (onHand - q < locked) {
+                log.warn("补货红冲冲回数量超过可用在库 dealer={} product={} onHand={} locked={} qty={}，仅冲回至锁定下限",
+                        dealerId, l.productId(), onHand, locked, q);
+                q = Math.max(onHand - locked, 0);
+                if (q == 0) continue;
+            }
+            adjustStockRow(((Number) row.get("id")).longValue(), -q, 0);
+            writeMovement(tid, dealerId, l.productId(), l.batchNo(), l.serialNo(),
+                    "REPLENISH_OUT", -q, "SALES_OUT", salesOutId, null, "补货红冲冲回");
+            touched++;
+        }
+        if (touched > 0) recomputeConsignmentUsed(tid, dealerId);
+        log.info("补货红冲冲回寄售库存 dealer={} out={} lines={}", dealerId, salesOutId, touched);
     }
 
     public void recomputeConsignmentUsed(UUID tid, Long dealerId) {

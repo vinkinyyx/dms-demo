@@ -247,11 +247,8 @@ public class SalesReturnService {
             String keyword,
             String batchNo,
             String serialNo,
-            Long productId,
-            String amountType) {
+            Long productId) {
         UUID tid = TenantContext.getTenantId();
-        boolean zeroOnly = "ZERO".equalsIgnoreCase(amountType);
-        boolean paidOnly = "PAID".equalsIgnoreCase(amountType);
         StringBuilder sql = new StringBuilder(
                 "SELECT so.id, so.code, so.dealer_id, so.warehouse_id, so.source_order_id, so.status, COALESCE(so.sales_date, so.shipped_at, so.created_at) AS sales_date, " +
                 "d.name AS dealer_name, w.name AS warehouse_name, o.code AS order_code " +
@@ -272,8 +269,6 @@ public class SalesReturnService {
         if (batchNo != null && !batchNo.isBlank()) { sql.append(" AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id AND sl.batch_no ILIKE ?)"); params.add("%"+batchNo+"%"); }
         if (serialNo != null && !serialNo.isBlank()) { sql.append(" AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id AND sl.serial_no ILIKE ?)"); params.add("%"+serialNo+"%"); }
         if (productId != null) { sql.append(" AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id AND sl.product_id=?)"); params.add(productId); }
-        if (zeroOnly) { sql.append(" AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id AND COALESCE(sl.unit_price,0)=0 AND (COALESCE(sl.shipped_qty,sl.qty,0) - COALESCE(sl.return_locked_qty,0) - COALESCE(sl.returned_qty,0)) > 0)"); }
-        if (paidOnly) { sql.append(" AND EXISTS (SELECT 1 FROM sales_out_lines sl WHERE sl.sales_out_id=so.id AND COALESCE(sl.unit_price,0)>0 AND (COALESCE(sl.shipped_qty,sl.qty,0) - COALESCE(sl.return_locked_qty,0) - COALESCE(sl.returned_qty,0)) > 0)"); }
         sql.append(" ORDER BY so.sales_date DESC, so.id DESC LIMIT 200");
         var q = em.createNativeQuery(sql.toString(), Tuple.class);
         for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
@@ -292,10 +287,8 @@ public class SalesReturnService {
         return ApiResponse.ok(list);
     }
     @Transactional(readOnly = true)
-    public ApiResponse<Map<String, Object>> shippedOutLines(Long salesOutId, String amountType) {
+    public ApiResponse<Map<String, Object>> shippedOutLines(Long salesOutId) {
         UUID tid = TenantContext.getTenantId();
-        boolean zeroOnly = "ZERO".equalsIgnoreCase(amountType);
-        boolean paidOnly = "PAID".equalsIgnoreCase(amountType);
         var hq = em.createNativeQuery(
                 "SELECT id, code, dealer_id, warehouse_id, source_order_id FROM sales_outs WHERE id=?1 AND tenant_id=?2", Tuple.class);
         hq.setParameter(1, salesOutId).setParameter(2, tid);
@@ -324,12 +317,9 @@ public class SalesReturnService {
             // v4.1.6: physical gifts (is_gift=true) are shipped in sales-out_lines and must be
             // returnable too. Still skip BOM parent (PARENT, no physical product).
             if ("PARENT".equals(lineLevel)) continue;
-            BigDecimal unitPrice = lineSupport.toBd(l.get("unit_price"));
             BigDecimal returnable = shipped.subtract(locked).subtract(returned);
             if (returnable.signum() < 0) returnable = BigDecimal.ZERO;
             if (returnable.signum() == 0) continue;
-            if (zeroOnly && unitPrice.signum() != 0) continue;
-            if (paidOnly && unitPrice.signum() == 0) continue;
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", l.get("id"));
             m.put("sourceOutLineId", l.get("id"));
@@ -346,7 +336,7 @@ public class SalesReturnService {
             m.put("returnableQty", returnable);
             m.put("qty", returnable);
             // Prefer the stored unit_price so gift lines (0.00) are returned accurately.
-            m.put("unitPrice", unitPrice);
+            m.put("unitPrice", lineSupport.toBd(l.get("unit_price")));
             m.put("taxRate", l.get("tax_rate"));
             lines.add(m);
         }
@@ -474,8 +464,8 @@ public class SalesReturnService {
             BigDecimal price = lineSupport.toBd(l.get("unit_price")).negate();
             BigDecimal sub = lineSupport.toBd(l.get("sub_total")).negate();
             em.createNativeQuery(
-                    "INSERT INTO sales_out_lines (sales_out_id,seq,product_id,warehouse_id,batch_no,serial_no,expected_qty,qty,unit_price,subtotal,created_at) " +
-                    "VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,now())")
+                    "INSERT INTO sales_out_lines (sales_out_id,seq,product_id,warehouse_id,batch_no,serial_no,expected_qty,qty,unit_price,subtotal,is_red,created_at) " +
+                    "VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,true,now())")
               .setParameter(1,outId).setParameter(2,seq++).setParameter(3,lineSupport.toLong(l.get("product_id"))).setParameter(4,warehouseId)
               .setParameter(5,l.get("batch_no")).setParameter(6,l.get("serial_no")).setParameter(7,qty).setParameter(8,qty).setParameter(9,price).setParameter(10,sub)
               .executeUpdate();

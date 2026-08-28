@@ -25,7 +25,13 @@ public class SalesOrderApprovalCallback implements ApprovalBusinessCallback {
 
     @Override
     public void onApproved(ApprovalInstance instance) {
-        v4OrderService.approvePushErp(instance.getBusinessId(), false);
+        boolean red = false;
+        try {
+            Object v = em.createNativeQuery("SELECT COALESCE(is_red,false) FROM orders WHERE id=?1 AND tenant_id=?2")
+                    .setParameter(1, instance.getBusinessId()).setParameter(2, instance.getTenantId()).getSingleResult();
+            red = v != null && Boolean.parseBoolean(String.valueOf(v));
+        } catch (Exception ignored) { }
+        v4OrderService.approvePushErp(instance.getBusinessId(), red);
     }
     @Override public void onReturned(ApprovalInstance instance) { setDraft(instance); voucherService.release(instance.getBusinessId()); }
     @Override public void onRejected(ApprovalInstance instance) { em.createNativeQuery("UPDATE orders SET status='REJECTED', updated_at=now() WHERE id=?1 AND tenant_id=?2").setParameter(1,instance.getBusinessId()).setParameter(2,instance.getTenantId()).executeUpdate(); voucherService.release(instance.getBusinessId()); }

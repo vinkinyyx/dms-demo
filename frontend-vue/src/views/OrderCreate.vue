@@ -81,7 +81,10 @@
                 <el-tag size="small" type="info">共 {{ editableRoots.length }} 个录入行</el-tag>
                 <el-tag v-if="giftLines.length" size="small" type="warning">赠品 {{ giftLines.length }} 行</el-tag>
                 <el-tag size="small" type="success">应付 ¥{{ payableTotal.toFixed(2) }}</el-tag>
-                <el-button v-if="form.orderType==='INVOICE'" type="warning" size="small" :icon="Box" @click="openConsignmentPicker">选择寄售库存</el-button>
+                <el-tooltip v-if="form.orderType==='INVOICE' && !form.dealerId" content="请先选择经销商后再拣选寄售库存" placement="top">
+                  <el-button type="warning" size="small" :icon="Box" disabled>选择寄售库存</el-button>
+                </el-tooltip>
+                <el-button v-else-if="form.orderType==='INVOICE'" type="warning" size="small" :icon="Box" @click="openConsignmentPicker">选择寄售库存</el-button>
                 <el-button v-else type="primary" size="small" :icon="Plus" @click="addLine">添加行</el-button>
                 <el-button v-if="form.orderType!=='INVOICE'" size="small" :icon="Refresh" :loading="refreshing" @click="refreshPromotions">刷新赠品及价格</el-button>
               </div>
@@ -232,32 +235,48 @@
     <el-dialog v-model="consignDialog.visible" title="选择经销商寄售库存" width="1080px" append-to-body destroy-on-close>
       <div style="margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <el-tag type="info" size="large">经销商：{{ form.dealerName || '-' }}</el-tag>
-        <el-input v-model="consignDialog.keyword" placeholder="产品编码/名称/批号/序列号" clearable style="width:280px" @keyup.enter="loadConsignment"/>
+        <el-input v-model="consignDialog.keyword" placeholder="产品编码/名称/批号/序列号" clearable style="width:240px" @keyup.enter="loadConsignment"/>
+        <el-select v-model="consignDialog.warehouseId" placeholder="全部仓库" clearable filterable style="width:160px" @change="onConsignFilterChange">
+          <el-option v-for="w in consignDialog.warehouses" :key="w.id" :value="w.id" :label="w.name"/>
+        </el-select>
         <el-button type="primary" :icon="Search" @click="loadConsignment">查询</el-button>
-        <el-button :icon="RefreshLeft" @click="consignDialog.keyword='';loadConsignment()">重置</el-button>
-        <span class="muted small">仅显示该经销商当前可用（在库-已锁定）寄售库存；勾选并设置本次开票数量后加入明细。</span>
+        <el-button :icon="RefreshLeft" @click="resetConsignFilter">重置</el-button>
+        <span class="muted small">仅显示该经销商当前可用（在库-已锁定）寄售库存；点击整行即可勾选，设置本次开票数量后加入明细。序列号商品每行只能开 1 件。</span>
       </div>
-      <el-table :data="consignDialog.rows" v-loading="consignDialog.loading" border stripe size="small" max-height="430" row-key="ck"
-                @selection-change="onConsignSelect" ref="consignTableRef">
-        <el-table-column type="selection" width="42" :reserve-selection="true"/>
+      <el-table :data="consignFilteredRows" v-loading="consignDialog.loading" border stripe size="small" max-height="430" row-key="ck"
+                @selection-change="onConsignSelect" @row-click="onConsignRowClick" ref="consignTableRef"
+                :row-class-name="consignRowClass">
+        <el-table-column type="selection" width="42" :reserve-selection="true" :selectable="consignSelectable"/>
         <el-table-column label="产品编码" prop="productCode" width="120"/>
         <el-table-column label="产品名称" prop="productName" min-width="160" show-overflow-tooltip/>
         <el-table-column label="规格" prop="productSpec" width="110" show-overflow-tooltip/>
         <el-table-column label="批号" prop="batchNo" width="110"/>
         <el-table-column label="序列号" prop="serialNo" width="120"/>
         <el-table-column label="仓库" prop="warehouseName" width="90"/>
-        <el-table-column label="可用量" prop="availableQty" width="80" align="right"/>
-        <el-table-column label="标准单价" prop="stdUnitPrice" width="100" align="right"/>
+        <el-table-column label="在库" prop="onHandQty" width="70" align="right"/>
+        <el-table-column label="已锁定" prop="lockedQty" width="70" align="right">
+          <template #default="{row}">
+            <span :style="{color:num(row.lockedQty)>0?'var(--el-color-warning)':'#909399'}">{{ num(row.lockedQty) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="可用量" prop="availableQty" width="70" align="right"/>
+        <el-table-column label="标准单价" width="100" align="right">
+          <template #default="{row}">{{ num(row.stdUnitPrice).toFixed(2) }}</template>
+        </el-table-column>
         <el-table-column label="本次开票数量" width="140" align="center">
           <template #default="{row}">
-            <el-input-number v-model="row.pickQty" :min="1" :max="num(row.availableQty)" :precision="0" controls-position="right" size="small" style="width:120px"/>
+            <el-input-number v-if="!isSerialRow(row)" v-model="row.pickQty" :min="1" :max="num(row.availableQty)" :precision="0" controls-position="right" size="small" style="width:120px"/>
+            <el-tag v-else type="info" size="small">序列号商品 1 件</el-tag>
           </template>
         </el-table-column>
       </el-table>
-      <div style="margin-top:8px" class="muted small">已选 {{ consignDialog.selected.length }} 行，合计开票数量 {{ consignPickTotal }}。</div>
+      <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+        <span class="muted small">已选 {{ consignDialog.selected.length }} 行，合计开票数量 {{ consignPickTotal }}。</span>
+        <b style="color:var(--el-color-danger)">合计开票金额：¥{{ consignPickAmount.toFixed(2) }}</b>
+      </div>
       <template #footer>
         <el-button @click="consignDialog.visible=false">取消</el-button>
-        <el-button type="primary" @click="confirmConsignment">加入开票明细</el-button>
+        <el-button type="primary" @click="confirmConsignment">加入开票明细（{{ consignDialog.selected.length }} 行）</el-button>
       </template>
     </el-dialog>
     </div>
@@ -266,7 +285,7 @@
 defineOptions({ name: 'OrderCreate' })
 import {computed,nextTick,onMounted,onActivated,reactive,ref,watch} from 'vue'
 import {useRoute,useRouter} from 'vue-router'
-import {ElMessage} from 'element-plus'
+import {ElMessage,ElMessageBox} from 'element-plus'
 import {ArrowLeft,Plus,Refresh,Box,Search,RefreshLeft} from '@element-plus/icons-vue'
 import ResourcePicker from '@/components/ResourcePicker.vue'
 import request from '@/utils/request'
@@ -304,20 +323,37 @@ function zeroLocked(row){if(isExclusiveMode())return true;return !!row.promoType
 function canZeroRow(row){return !row.isGift&&row.lineLevel!=='PARENT'&&row.lineLevel!=='CHILD'}
 function onLineZeroChange(row){if(row.lineZero){row.lineDiscountType='';row.lineDiscountValue=0}schedulePreview()}
 function onModeChange(mode){if(mode==='VOUCHER'){loadVouchers()}if(mode!=='NORMAL'){form.lines.forEach(l=>{l.lineZero=false});form.headerDiscountType='';form.headerDiscountValue=0}if(mode!=='VOUCHER'){form.voucherId=null}if(mode!=='FIXED_PRICE'){form.fixedPrice=null}schedulePreview()}
-function makeLine(p={}){const linePid=p.productId??p.id??null;return {tempId:'t'+(seq++),productId:linePid,productCode:p.code||p.productCode||'',productName:p.nameCn||p.name||p.productName||'',productLabel:linePid?`${p.code||p.productCode||''} ${p.nameCn||p.name||p.productName||''}`.trim():'',productSpec:p.spec||p.productSpec||'',unit:p.unit||p.unitType||'EA',qty:Number(p.qty||1),standardPriceInclTax:num(p.currentPrice??p.price??p.standardPriceInclTax),basePriceInclTax:num(p.basePriceInclTax),priceSource:p.priceSource||'',taxRate:num(p.taxRate),standardAmount:num(p.standardAmount),productDiscountAmount:num(p.productDiscountAmount),lineDiscountType:p.lineDiscountType||'',lineDiscountDirection:p.lineDiscountDirection||'REDUCE',lineDiscountValue:num(p.lineDiscountValue),lineDiscountAmount:num(p.lineDiscountAmount),promoType:p.promoType||'',promotionId:p.promotionId||null,promoDiscountAmount:num(p.promoDiscountAmount),dealerDiscountAmount:num(p.dealerDiscountAmount),headerDiscountAmount:num(p.headerDiscountAmount),unitPriceInclTax:num(p.unitPriceInclTax),lineZero:!!p.lineZero,discountAmount:num(p.discountAmount),finalAmount:num(p.finalAmount),amountExclTax:num(p.amountExclTax),taxAmount:num(p.taxAmount),lineLevel:p.lineLevel||'NORMAL',isBom:!!(p.isBundle||p.isBom),isGift:!!(p.isGift||p.gift),bomVersion:p.bomVersion||null,bomGroupNo:p.bomGroupNo||null,componentQty:num(p.componentQty),children:Array.isArray(p.children)?p.children:[],batchNo:p.batchNo||'',serialNo:p.serialNo||'',stockId:p.stockId??null}}
+function makeLine(p={}){const linePid=p.productId??p.id??null;return {tempId:'t'+(seq++),productId:linePid,productCode:p.code||p.productCode||'',productName:p.nameCn||p.name||p.productName||'',productLabel:linePid?`${p.code||p.productCode||''} ${p.nameCn||p.name||p.productName||''}`.trim():'',productSpec:p.spec||p.productSpec||'',unit:p.unit||p.unitType||'EA',qty:Number(p.qty||1),standardPriceInclTax:num(p.currentPrice??p.price??p.standardPriceInclTax),basePriceInclTax:num(p.basePriceInclTax),priceSource:p.priceSource||'',taxRate:num(p.taxRate),standardAmount:num(p.standardAmount),productDiscountAmount:num(p.productDiscountAmount),lineDiscountType:p.lineDiscountType||'',lineDiscountDirection:p.lineDiscountDirection||'REDUCE',lineDiscountValue:num(p.lineDiscountValue),lineDiscountAmount:num(p.lineDiscountAmount),promoType:p.promoType||'',promotionId:p.promotionId||null,promoDiscountAmount:num(p.promoDiscountAmount),dealerDiscountAmount:num(p.dealerDiscountAmount),headerDiscountAmount:num(p.headerDiscountAmount),unitPriceInclTax:num(p.unitPriceInclTax),lineZero:!!p.lineZero,discountAmount:num(p.discountAmount),finalAmount:num(p.finalAmount),amountExclTax:num(p.amountExclTax),taxAmount:num(p.taxAmount),lineLevel:p.lineLevel||'NORMAL',isBom:!!(p.isBundle||p.isBom),isGift:!!(p.isGift||p.gift),bomVersion:p.bomVersion||null,bomGroupNo:p.bomGroupNo||null,componentQty:num(p.componentQty),children:Array.isArray(p.children)?p.children:[],batchNo:p.batchNo||'',serialNo:p.serialNo||'',stockId:p.stockId??p.consignmentStockId??null}}
 function canPickProduct(row){return !row.isGift&&row.lineLevel!=='CHILD'}
-function canEditQty(row){return !row.isGift&&row.lineLevel!=='CHILD'}
+function canEditQty(row){if(form.orderType==='INVOICE')return false;return !row.isGift&&row.lineLevel!=='CHILD'}
 function canEditDiscount(row){return !row.isGift&&row.lineLevel!=='PARENT'}
 function canDeleteRow(row){return !row.isGift&&row.lineLevel!=='CHILD'}
 function addLine(){if(!form.dealerId)return ElMessage.warning('请先选择经销商');form.lines.push(makeLine())}
-// ===== v4.4.0 开票订单：寄售库存选择 =====
-const consignDialog=reactive({visible:false,loading:false,keyword:'',rows:[],selected:[]})
+// ===== v4.4.0 开票订单：寄售库存选择（v4.4.1 弹窗交互加固 + stockId 精准锁定） =====
+const consignDialog=reactive({visible:false,loading:false,keyword:'',warehouseId:null,warehouses:[],rows:[],selected:[]})
 const consignTableRef=ref(null)
-const consignPickTotal=computed(()=>consignDialog.selected.reduce((sum,r)=>sum+num(r.pickQty),0))
+const consignPickTotal=computed(()=>consignDialog.selected.reduce((sum,r)=>sum+(isSerialRow(r)?1:num(r.pickQty)),0))
+const consignPickAmount=computed(()=>consignDialog.selected.reduce((sum,r)=>sum+num(r.stdUnitPrice)*(isSerialRow(r)?1:num(r.pickQty)),0))
+const consignFilteredRows=computed(()=>!consignDialog.warehouseId?consignDialog.rows:consignDialog.rows.filter(r=>String(r.warehouseId)===String(consignDialog.warehouseId)))
+function isSerialRow(row){return !!(row?.serialNo)||row?.isSerialManaged===true}
+function consignSelectable(row){return num(row.availableQty)>0}
+function consignRowClass({row}){return consignDialog.selected.some(s=>s.stockId===row.stockId)?'consign-row-picked':''}
+function onConsignRowClick(row,column,e){
+  if(!consignSelectable(row)){ElMessage.warning('该台账行可用量为 0，已被其他开票单锁定或在库不足');return}
+  const tag=(e?.target?.closest?.('input,button,.el-input-number,.el-checkbox,.el-input'))?.tagName
+  if(tag)return
+  if(!consignTableRef.value)return
+  const checked=consignDialog.selected.some(s=>s.stockId===row.stockId)
+  consignTableRef.value.toggleRowSelection(row,!checked)
+}
+function onConsignFilterChange(){/* 仓库筛选为前端 computed 过滤，change 仅触发响应式刷新 */}
+async function resetConsignFilter(){consignDialog.keyword='';consignDialog.warehouseId=null;await loadConsignment()}
 async function openConsignmentPicker(){
   if(!form.dealerId)return ElMessage.warning('请先选择经销商');
-  consignDialog.visible=true;consignDialog.keyword='';consignDialog.selected=[];
+  consignDialog.visible=true;
   await loadConsignment();
+  await nextTick();
+  if(consignTableRef.value){consignTableRef.value.clearSelection();consignDialog.rows.forEach(r=>{if(consignDialog.selected.some(x=>x.stockId===r.stockId))consignTableRef.value.toggleRowSelection(r,true)})}
 }
 async function loadConsignment(){
   if(!form.dealerId)return;
@@ -328,10 +364,12 @@ async function loadConsignment(){
     const list=res?.data||[];
     const prev=new Map(consignDialog.rows.map(r=>[r.stockId,r.pickQty]));
     consignDialog.rows=list.map(r=>({...r,ck:r.stockId,pickQty:prev.get(r.stockId)||1}));
+    const whMap=new Map();
+    list.forEach(r=>{if(r.warehouseId!=null&&!whMap.has(String(r.warehouseId)))whMap.set(String(r.warehouseId),{id:r.warehouseId,name:r.warehouseName||('仓库'+r.warehouseId)})});
+    consignDialog.warehouses=[...whMap.values()];
     await nextTick();
-    // reselect previously chosen rows still present
     if(consignTableRef.value){consignTableRef.value.clearSelection();consignDialog.rows.forEach(r=>{if(consignDialog.selected.some(x=>x.stockId===r.stockId))consignTableRef.value.toggleRowSelection(r,true)})}
-  }catch(e){ElMessage.error('加载寄售库存失败');consignDialog.rows=[]}
+  }catch(e){ElMessage.error('加载寄售库存失败');consignDialog.rows=[];consignDialog.warehouses=[]}
   finally{consignDialog.loading=false}
 }
 function onConsignSelect(sel){consignDialog.selected=sel||[]}
@@ -339,12 +377,12 @@ function confirmConsignment(){
   if(!consignDialog.selected.length)return ElMessage.warning('请先勾选寄售库存行');
   const picked=consignDialog.selected.map(r=>({
     id:r.productId,productId:r.productId,code:r.productCode,nameCn:r.productName,spec:r.productSpec,
-    qty:Math.min(Math.max(parseInt(num(r.pickQty))||1,1),num(r.availableQty)),
+    qty:isSerialRow(r)?1:Math.min(Math.max(parseInt(num(r.pickQty))||1,1),num(r.availableQty)),
     batchNo:r.batchNo||'',serialNo:r.serialNo||'',stockId:r.stockId
   }));
-  // 开票明细整体替换为所选寄售库存（一个开票单针对一个经销商的寄售库存），按 产品+批号+序列号 合并同维度
+  // v4.4.1 按台账行 stockId 精准合并（同产品不同批号/序列号/台账行各自独立成行，不做产品级合并）
   const map=new Map();
-  for(const it of picked){const k=it.productId+'|'+(it.batchNo||'')+'|'+(it.serialNo||'');if(map.has(k)){map.get(k).qty+=it.qty}else{map.set(k,{...it})}}
+  for(const it of picked){if(map.has(it.stockId)){map.get(it.stockId).qty+=it.qty}else{map.set(it.stockId,{...it})}}
   form.lines=[...map.values()].map(it=>makeLine(it));
   consignDialog.visible=false;
   ElMessage.success('已加入 '+form.lines.length+' 行寄售库存开票明细');
@@ -380,20 +418,39 @@ function onOrderTypeChange(t){
   schedulePreview()
 }
 function onTerminalPicked(row){form.terminalHospitalId=row?.id??null;form.terminalHospitalName=row?((row.name||row.displayName||'')):''}
-async function onDealerChange(){addresses.value=[];vouchers.value=[];form.shipAddressId=null;form.voucherId=null;form.lines=[];form.terminalHospitalId=null;form.terminalHospitalName='';await Promise.all([loadAddresses(),refreshDealerConsignment()]);schedulePreview()}
-function onDealerPicked(p){if(!p||!p.value){form.dealerName='';form.lines=[];addresses.value=[];vouchers.value=[];return}form.dealerName=p.label||p.row?.name||p.name||'';onDealerChange()}
+let prevDealerId=null
+async function onDealerChange(){
+  addresses.value=[];vouchers.value=[];form.shipAddressId=null;form.voucherId=null;form.lines=[];form.terminalHospitalId=null;form.terminalHospitalName='';
+  consignDialog.selected=[];consignDialog.rows=[];consignDialog.warehouses=[];consignDialog.keyword='';consignDialog.warehouseId=null;
+  await Promise.all([loadAddresses(),refreshDealerConsignment()]);
+  prevDealerId=form.dealerId;
+  schedulePreview()
+}
+async function onDealerPicked(p){
+  const hasLines=editableRoots.value.some(l=>l.productId);
+  if(!p||!p.value){
+    if(prevDealerId==null){form.dealerName='';form.lines=[];addresses.value=[];vouchers.value=[];return}
+    if(hasLines){try{await ElMessageBox.confirm('清空经销商将清空当前已录入的明细行，是否继续？','提示',{type:'warning',confirmButtonText:'清空',cancelButtonText:'取消'})}catch(e){form.dealerId=prevDealerId;return}}
+    form.dealerId=null;form.dealerName='';form.lines=[];addresses.value=[];vouchers.value=[];form.terminalHospitalId=null;form.terminalHospitalName='';prevDealerId=null;schedulePreview();return
+  }
+  if(prevDealerId!=null&&String(p.value)!==String(prevDealerId)&&hasLines){
+    try{await ElMessageBox.confirm('切换经销商将清空当前已录入的明细行（含寄售开票拣选），是否继续？','提示',{type:'warning',confirmButtonText:'切换',cancelButtonText:'取消'})}catch(e){form.dealerId=prevDealerId;return}
+  }
+  form.dealerName=p.label||p.row?.name||p.name||'';
+  await onDealerChange()
+}
 async function loadAddresses(){if(!form.dealerId){addresses.value=[];return}addressLoading.value=true;try{const res=await dealerAddresses(form.dealerId);addresses.value=Array.isArray(res?.data)?res.data:(res?.data?.list||[])}catch(e){addresses.value=[]}finally{addressLoading.value=false}}
 async function loadVouchers(){if(!form.dealerId){vouchers.value=[];return}voucherLoading.value=true;try{const productIds=editableRoots.value.map(l=>l.productId).filter(Boolean).join(',');const res=await availableVouchers({dealerId:form.dealerId,amount:num(form.amountInclTax)||undefined,productIds:productIds||undefined});vouchers.value=Array.isArray(res?.data)?res.data:[]}catch(e){vouchers.value=[]}finally{voucherLoading.value=false}}
 function buildPreviewPayload(applyPromotions){
   const exclusive=isExclusiveMode();
-  const payload={applyPromotions:!!applyPromotions,orderType:form.orderType,dealerId:form.dealerId,expectedDate:form.expectedDate||null,pricingMode:form.pricingMode||'NORMAL',lines:editableRoots.value.map(l=>({productId:l.productId,qty:num(l.qty),batchNo:l.batchNo||null,serialNo:l.serialNo||null,lineZero:!exclusive&&!!l.lineZero,lineDiscountType:(!exclusive&&l.lineDiscountType)?l.lineDiscountType:null,lineDiscountValue:(!exclusive&&l.lineDiscountType)?num(l.lineDiscountValue):null,lineDiscountDirection:(!exclusive&&l.lineDiscountType)?(l.lineDiscountDirection||'REDUCE'):null,bomVersion:l.bomVersion||null,bomGroupNo:l.bomGroupNo||null,childDiscounts:(l.children||[]).filter(c=>!exclusive&&c.lineDiscountType).map(c=>({productId:c.productId,lineDiscountType:c.lineDiscountType||null,lineDiscountValue:c.lineDiscountType?num(c.lineDiscountValue):0,lineDiscountDirection:c.lineDiscountDirection||'REDUCE'}))}))}
+  const payload={applyPromotions:!!applyPromotions,orderType:form.orderType,dealerId:form.dealerId,expectedDate:form.expectedDate||null,pricingMode:form.pricingMode||'NORMAL',lines:editableRoots.value.map(l=>({productId:l.productId,qty:num(l.qty),batchNo:l.batchNo||null,serialNo:l.serialNo||null,consignmentStockId:l.stockId??null,lineZero:!exclusive&&!!l.lineZero,lineDiscountType:(!exclusive&&l.lineDiscountType)?l.lineDiscountType:null,lineDiscountValue:(!exclusive&&l.lineDiscountType)?num(l.lineDiscountValue):null,lineDiscountDirection:(!exclusive&&l.lineDiscountType)?(l.lineDiscountDirection||'REDUCE'):null,bomVersion:l.bomVersion||null,bomGroupNo:l.bomGroupNo||null,childDiscounts:(l.children||[]).filter(c=>!exclusive&&c.lineDiscountType).map(c=>({productId:c.productId,lineDiscountType:c.lineDiscountType||null,lineDiscountValue:c.lineDiscountType?num(c.lineDiscountValue):0,lineDiscountDirection:c.lineDiscountDirection||'REDUCE'}))}))}
   if(!exclusive){payload.headerDiscountType=form.headerDiscountType||null;payload.headerDiscountValue=form.headerDiscountType?num(form.headerDiscountValue):null;payload.headerDiscountDirection=form.headerDiscountType?(form.headerDiscountDirection||'REDUCE'):null}
   else{payload.headerDiscountType=null;payload.headerDiscountValue=null}
   if(form.pricingMode==='FIXED_PRICE')payload.fixedPrice=num(form.fixedPrice)
   if(form.pricingMode==='VOUCHER')payload.voucherId=form.voucherId||null
   return payload
 }
-function mapPreviewLine(l,current){return {...makeLine({...l,qty:num(l.qty)}),tempId:current?.tempId||'t'+(seq++),productLabel:`${l.productCode||''} ${l.productName||''}`.trim(),lineLevel:l.lineLevel||'NORMAL',isGift:(l.isGift===true||l.gift===true),isBom:l.lineLevel==='PARENT',bomVersion:l.bomVersion||current?.bomVersion||null,bomGroupNo:l.bomGroupNo||current?.bomGroupNo||null,componentQty:num(l.componentQty),lineDiscountType:current?.lineDiscountType||l.lineDiscountType||'',lineDiscountDirection:current?.lineDiscountDirection||l.lineDiscountDirection||'REDUCE',lineDiscountValue:num(current?.lineDiscountValue??l.lineDiscountValue),lineZero:!!(current?.lineZero||l.lineZero),children:[],batchNo:l.batchNo||current?.batchNo||'',serialNo:l.serialNo||current?.serialNo||'',stockId:l.stockId??current?.stockId??null}}
+function mapPreviewLine(l,current){return {...makeLine({...l,qty:num(l.qty)}),tempId:current?.tempId||'t'+(seq++),productLabel:`${l.productCode||''} ${l.productName||''}`.trim(),lineLevel:l.lineLevel||'NORMAL',isGift:(l.isGift===true||l.gift===true),isBom:l.lineLevel==='PARENT',bomVersion:l.bomVersion||current?.bomVersion||null,bomGroupNo:l.bomGroupNo||current?.bomGroupNo||null,componentQty:num(l.componentQty),lineDiscountType:current?.lineDiscountType||l.lineDiscountType||'',lineDiscountDirection:current?.lineDiscountDirection||l.lineDiscountDirection||'REDUCE',lineDiscountValue:num(current?.lineDiscountValue??l.lineDiscountValue),lineZero:!!(current?.lineZero||l.lineZero),children:[],batchNo:l.batchNo||current?.batchNo||'',serialNo:l.serialNo||current?.serialNo||'',stockId:l.consignmentStockId??l.stockId??current?.stockId??null}}
 function applyPreview(data,fullRefresh){
   const existingGifts=fullRefresh?[]:flatLines.value.filter(l=>l.isGift).map(l=>({...l}));
   const roots=editableRoots.value;let rootIndex=0;let currentParent=null;const next=[];
@@ -439,7 +496,7 @@ async function onSave(submit){
   const ok=await formRef.value.validate().catch(()=>false);if(!ok)return
   if(!editableRoots.value.length)return ElMessage.error('请至少添加一行')
   if(editableRoots.value.some(l=>!l.productId||!Number.isInteger(num(l.qty))||num(l.qty)<=0))return ElMessage.error('请完善产品和正整数数量')
-  const dup=new Set();const dupSku=editableRoots.value.find(l=>{if(!l.productId)return false;if(dup.has(String(l.productId)))return true;dup.add(String(l.productId));return false});if(dupSku)return ElMessage.error(`产品「${dupSku.productCode||dupSku.productName}」存在重复行，请合并为一行后提交`)
+  const dup=new Set();const dupSku=form.orderType==='INVOICE'?null:editableRoots.value.find(l=>{if(!l.productId)return false;if(dup.has(String(l.productId)))return true;dup.add(String(l.productId));return false});if(dupSku)return ElMessage.error(`产品「${dupSku.productCode||dupSku.productName}」存在重复行，请合并为一行后提交`)
   await refreshPromotions().catch(()=>null)
   if(error.value)return ElMessage.error('当前计价存在问题，请先按提示修正后再提交：'+error.value)
   const chargeable=flatLines.value.filter(l=>!l.isGift&&l.lineLevel!=='PARENT')
@@ -460,11 +517,12 @@ async function loadOrder(){
   const savedExtra=d.extra&&typeof d.extra==='object'?d.extra:{}
   Object.assign(form,{id:d.id,code:d.code,status:d.status||'DRAFT',dealerId:d.dealerId,dealerName:d.dealerName||'',orderType:d.orderType||'SALES',expectedDate:d.expectedDate||'',remark:d.remark||'',pricingMode:savedExtra.pricingMode||d.pricingMode||'NORMAL',fixedPrice:savedExtra.fixedPrice??null,voucherId:savedExtra.voucherId||d.voucherId||null,shipAddressId:savedExtra.shipAddressId||d.shipAddressId||null,headerDiscountType:d.headerDiscountType||'',headerDiscountDirection:'REDUCE',headerDiscountValue:num(d.headerDiscountValue),amountInclTax:num(d.amountInclTax),discountAmount:num(d.discountAmount),finalAmount:num(d.finalAmount),taxAmount:num(d.taxAmount),amountExclTax:num(d.amountExclTax)})
   if(Array.isArray(d.lines)){form.lines=d.lines.filter(l=>!l.bomParentLineId).map(l=>({...makeLine(l),productLabel:`${l.productCode||''} ${l.productName||''}`,qty:num(l.qty),standardPriceInclTax:num(l.standardPriceInclTax??l.unitPrice),basePriceInclTax:num(l.basePriceInclTax??l.standardPriceInclTax??l.unitPrice),lineLevel:l.lineLevel||(l.isGroupHeader?'PARENT':'NORMAL'),children:d.lines.filter(c=>String(c.bomParentLineId)===String(l.id)).map(c=>({...makeLine(c),productLabel:`${c.productCode||''} ${c.productName||''}`,qty:num(c.qty),standardPriceInclTax:num(c.standardPriceInclTax??c.unitPrice),basePriceInclTax:num(c.basePriceInclTax??c.standardPriceInclTax??c.unitPrice),lineLevel:'CHILD'}))}))}
+  prevDealerId=form.dealerId
   await loadAddresses()
   if(form.pricingMode==='VOUCHER')await loadVouchers()
   schedulePreview()
 }
-function resetForm(){Object.assign(form,{id:null,code:'',status:'DRAFT',dealerId:null,dealerName:'',orderType:'SALES',expectedDate:todayStr(),shipAddressId:null,remark:'',pricingMode:'NORMAL',fixedPrice:null,voucherId:null,headerDiscountType:'',headerDiscountDirection:'REDUCE',headerDiscountValue:0,lines:[],amountInclTax:0,discountAmount:0,finalAmount:0,taxAmount:0,amountExclTax:0});Object.assign(summary,{productDiscountTotal:0,promoDiscountTotal:0,lineDiscountTotal:0,dealerDiscountTotal:0,headerDiscountTotal:0,voucherAmount:0,payableAmount:0});promoMessages.value=[];addresses.value=[];vouchers.value=[];saving.value=false;submitting.value=false;error.value='';nextTick(()=>{formRef.value?.clearValidate?.();formRef.value?.resetFields?.()})}
+function resetForm(){Object.assign(form,{id:null,code:'',status:'DRAFT',dealerId:null,dealerName:'',orderType:'SALES',expectedDate:todayStr(),shipAddressId:null,remark:'',pricingMode:'NORMAL',fixedPrice:null,voucherId:null,headerDiscountType:'',headerDiscountDirection:'REDUCE',headerDiscountValue:0,lines:[],amountInclTax:0,discountAmount:0,finalAmount:0,taxAmount:0,amountExclTax:0});Object.assign(summary,{productDiscountTotal:0,promoDiscountTotal:0,lineDiscountTotal:0,dealerDiscountTotal:0,headerDiscountTotal:0,voucherAmount:0,payableAmount:0});promoMessages.value=[];addresses.value=[];vouchers.value=[];saving.value=false;submitting.value=false;error.value='';prevDealerId=null;consignDialog.selected=[];consignDialog.rows=[];consignDialog.warehouses=[];consignDialog.keyword='';consignDialog.warehouseId=null;nextTick(()=>{formRef.value?.clearValidate?.();formRef.value?.resetFields?.()})}
 function handleRouteChange(){if(isEdit.value){loadOrder()}else{resetForm()}}
 onMounted(handleRouteChange)
 onActivated(handleRouteChange)
@@ -472,4 +530,5 @@ watch(()=>route.params.id,handleRouteChange)
 </script>
 <style scoped>
 .order-create-page .area-scroll{padding:0}.form-container{padding:16px}.page-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#fff;border-bottom:1px solid #ebeef5}.page-title{display:flex;align-items:center;gap:10px}.page-title h3{margin:0;font-size:18px}.page-alert{margin:12px 16px 0}.promo-alert{white-space:pre-line}.form-container{padding:16px;display:flex;flex-direction:column;gap:12px}.lines-header{display:flex;justify-content:space-between;align-items:center}.lines-header>div{display:flex;gap:8px;align-items:center}.product-cell{display:flex;gap:6px;align-items:center}.child-product-text{display:flex;gap:8px;align-items:center;min-width:0}.child-product-code{color:#606266;font-weight:600;flex:0 0 auto}.child-product-name{color:#303133;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.price-cell{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.discount-input{display:flex;gap:8px;width:100%;max-width:560px;align-items:center}.discount-input .el-select{width:130px;flex:0 0 130px}.discount-input .el-input-number{flex:1 1 auto;width:auto}.line-discount{display:flex;gap:4px;align-items:center}.muted{color:#909399}.small{font-size:12px}.mode-block{margin-bottom:18px}.block-title{font-weight:600;color:#303133;margin-bottom:10px}.mode-input{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}.mode-tip{margin-top:10px}.settle-block{background:#fafafa;border:1px solid #ebeef5;border-radius:2px;padding:14px 16px}.settle-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#606266;padding:4px 0}.settle-row.total{font-size:15px;color:#303133;font-weight:600}.settle-row.payable{font-size:17px;color:var(--el-color-danger);font-weight:700}.settle-row.voucher{color:var(--el-color-warning)} .settle-row.signed{font-variant-numeric:tabular-nums}
+.consign-row-picked>td.el-table__cell{background-color:var(--el-color-warning-light-9)!important}
 </style>

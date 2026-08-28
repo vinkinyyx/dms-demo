@@ -158,12 +158,13 @@ public class SalesOutBatchService {
 
             em.createNativeQuery(
                 "INSERT INTO sales_out_lines (sales_out_id, seq, product_id, warehouse_id, stock_batch_id, batch_no, serial_no, " +
-                "  qty, quantity, shipped_qty, expected_qty, unit_price, subtotal, created_at) " +
+                "  qty, quantity, shipped_qty, expected_qty, unit_price, subtotal, is_red, created_at) " +
                 "VALUES (?1, COALESCE((SELECT MAX(seq) FROM sales_out_lines s2 WHERE s2.sales_out_id = ?1),0)+1, " +
-                "  ?2, ?3, ?4, ?5, ?6, CAST(?7 AS numeric), CAST(?7 AS numeric), CAST(?7 AS numeric), 0, CAST(?8 AS numeric), CAST(?7 AS numeric) * CAST(?8 AS numeric), now())")
+                "  ?2, ?3, ?4, ?5, ?6, CAST(?7 AS numeric), CAST(?7 AS numeric), CAST(?7 AS numeric), 0, CAST(?8 AS numeric), CAST(?7 AS numeric) * CAST(?8 AS numeric), ?9, now())")
               .setParameter(1, soId).setParameter(2, productId).setParameter(3, lineWh)
               .setParameter(4, l.get("stock_batch_id") == null ? null : ((Number) l.get("stock_batch_id")).longValue())
               .setParameter(5, batchNo).setParameter(6, serialNo).setParameter(7, qty).setParameter(8, unitPrice)
+              .setParameter(9, isRed)
               .executeUpdate();
         }
 

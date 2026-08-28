@@ -3,6 +3,7 @@ package com.dms.v4;
 import com.dms.common.BusinessException;
 import com.dms.common.ErrorCode;
 import com.dms.common.util.DocNoGenerator;
+import com.dms.consignment.service.ConsignmentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
@@ -21,6 +22,7 @@ import java.util.*;
 public class V4ErpService {
     private final EntityManager em;
     private final DocNoGenerator docNoGenerator;
+    private final ConsignmentService consignmentService;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Transactional
@@ -77,12 +79,14 @@ public class V4ErpService {
         String code = docNoGenerator.next(red ? "GIR" : "GI");
         Long dealerId = toLong(body.get("dealerId"));
         if (dealerId == null) dealerId = toLong(order.get("dealer_id"));
-        var ins = em.createNativeQuery("INSERT INTO sales_outs (tenant_id,code,dealer_id,business_type,is_red,source_order_id,warehouse_id,sales_date,status,amount_incl_tax,erp_outbound_no,idempotency_key,callback_payload,shipped_at,completed_at,created_at,updated_at) VALUES (?1,?2,?3,'ERP',?4,?5,?6,CAST(?10 AS date),'COMPLETED',0,?7,?8,CAST(?9 AS jsonb),now(),now(),now(),now()) RETURNING id");
+        String mappedBizType = com.dms.execution.service.AutoDocGenerator.salesOutBizType(str(order.get("order_type"), ""));
+        String bizType = mappedBizType != null ? mappedBizType : "ERP";
+        var ins = em.createNativeQuery("INSERT INTO sales_outs (tenant_id,code,dealer_id,business_type,is_red,source_order_id,warehouse_id,sales_date,status,amount_incl_tax,erp_outbound_no,idempotency_key,callback_payload,shipped_at,completed_at,created_at,updated_at) VALUES (?1,?2,?3,?11,?4,?5,?6,CAST(?10 AS date),'COMPLETED',0,?7,?8,CAST(?9 AS jsonb),now(),now(),now(),now()) RETURNING id");
         Long whId = toLong(body.get("warehouseId"));
         if (whId == null) whId = toLong(order.get("warehouse_id"));
         if (whId == null) whId = firstWarehouse(tid);
         if (whId == null) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "出库单未指定仓库，且无默认仓库");
-        Long soId = toLong(ins.setParameter(1,tid).setParameter(2,code).setParameter(3,dealerId).setParameter(4,red).setParameter(5,orderId).setParameter(6,whId).setParameter(7,body.get("erpOutboundNo")).setParameter(8,idem).setParameter(9,json(body)).setParameter(10, body.getOrDefault("salesDate", java.time.LocalDate.now())).getSingleResult());
+        Long soId = toLong(ins.setParameter(1,tid).setParameter(2,code).setParameter(3,dealerId).setParameter(4,red).setParameter(5,orderId).setParameter(6,whId).setParameter(7,body.get("erpOutboundNo")).setParameter(8,idem).setParameter(9,json(body)).setParameter(10, body.getOrDefault("salesDate", java.time.LocalDate.now())).setParameter(11,bizType).getSingleResult());
         @SuppressWarnings("unchecked") List<Map<String,Object>> lines = (List<Map<String,Object>>) body.getOrDefault("lines", List.of());
         BigDecimal total = BigDecimal.ZERO;
         int lineSeq = 0;
@@ -102,12 +106,12 @@ public class V4ErpService {
             BigDecimal amount = V4Money.money(price.multiply(qty));
             var tax = V4Money.splitTax(amount, taxRate);
             int currentSeq = ++lineSeq;
-            var lineIns = em.createNativeQuery("INSERT INTO sales_out_lines (sales_out_id,warehouse_id,source_order_line_id,product_id,batch_no,serial_no,expected_qty,shipped_qty,qty,unit_price,tax_rate,subtotal,final_amount,amount_excl_tax,tax_amount,bom_parent_product_id,bom_version,bom_group_no,component_qty,returned_qty,return_locked_qty,seq,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?7,?7,?8,?9,?10,?10,?11,?12,?13,?14,?15,?16,0,0,?17,now()) RETURNING id");
+            var lineIns = em.createNativeQuery("INSERT INTO sales_out_lines (sales_out_id,warehouse_id,source_order_line_id,product_id,batch_no,serial_no,expected_qty,shipped_qty,qty,unit_price,tax_rate,subtotal,final_amount,amount_excl_tax,tax_amount,bom_parent_product_id,bom_version,bom_group_no,component_qty,returned_qty,return_locked_qty,seq,is_red,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?7,?7,?8,?9,?10,?10,?11,?12,?13,?14,?15,?16,0,0,?17,?18,now()) RETURNING id");
             Long outLineId = toLong(lineIns
                     .setParameter(1,soId).setParameter(2, toLong(first(row.get("warehouseId"), whId))).setParameter(3,orderLineId).setParameter(4, first(row.get("productId"), ol==null?null:ol.get("product_id")))
                     .setParameter(5,row.get("batchNo")).setParameter(6,row.get("serialNo")).setParameter(7,qty).setParameter(8,price).setParameter(9,taxRate).setParameter(10,amount)
                     .setParameter(11,tax.get("excl")).setParameter(12,tax.get("tax")).setParameter(13, ol==null?null:ol.get("bom_parent_product_id")).setParameter(14, ol==null?null:ol.get("bom_version")).setParameter(15, ol==null?null:ol.get("bom_group_no")).setParameter(16, ol==null?BigDecimal.ONE:bd(ol.get("component_qty")))
-                    .setParameter(17,currentSeq).getSingleResult());
+                    .setParameter(17,currentSeq).setParameter(18,red).getSingleResult());
             Map<String,Object> shipped = new LinkedHashMap<>();
             shipped.put("outLineId", outLineId);
             shipped.put("seq", currentSeq);
@@ -134,6 +138,20 @@ public class V4ErpService {
             }
         }
         em.createNativeQuery("INSERT INTO erp_outbound_callbacks (tenant_id,idempotency_key,direction,source_order_id,sales_out_id,erp_outbound_no,process_status,raw_payload) VALUES (?1,?2,?3,?4,?5,?6,'PROCESSED',CAST(?7 AS jsonb))").setParameter(1,tid).setParameter(2,idem).setParameter(3,red?"RED":"FORWARD").setParameter(4,orderId).setParameter(5,soId).setParameter(6,body.get("erpOutboundNo")).setParameter(7,json(body)).executeUpdate();
+        String orderType = str(order.get("order_type"), "");
+        if ("REPLENISHMENT".equals(orderType)) {
+            List<ConsignmentService.StdLine> consignLines = new ArrayList<>();
+            for (Map<String,Object> srow : shippedRows) {
+                consignLines.add(new ConsignmentService.StdLine(
+                        toLong(srow.get("productId")),
+                        srow.get("batchNo") == null ? null : String.valueOf(srow.get("batchNo")),
+                        srow.get("serialNo") == null ? null : String.valueOf(srow.get("serialNo")),
+                        toLong(srow.get("warehouseId")),
+                        bd(srow.get("qty")), null));
+            }
+            if (red) consignmentService.onReplenishReversed(dealerId, soId, consignLines);
+            else consignmentService.onReplenishShipped(dealerId, soId, consignLines);
+        }
         refreshOrderStatus(orderId, tid, red);
         return Map.of("id", soId, "code", code, "amount", total, "direction", red ? "RED" : "FORWARD");
     }

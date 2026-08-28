@@ -55,6 +55,8 @@ public class V4PriceEngine {
                 // v4.4.0 开票订单：透传寄售库存批号/序列号，供订单行落库与寄售预占/实扣匹配
                 l.setBatchNo(str(row.get("batchNo"), null));
                 l.setSerialNo(str(row.get("serialNo"), null));
+                // v4.4.1 透传用户在拣选弹窗中勾选的具体台账行 id（精准锁定）
+                l.setConsignmentStockId(toLong(row.get("consignmentStockId")));
                 lines.add(l);
             }
         }

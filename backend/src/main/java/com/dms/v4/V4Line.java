@@ -35,6 +35,7 @@ public class V4Line {
     private String bomGroupNo;
     private String batchNo;
     private String serialNo;
+    private Long consignmentStockId; // v4.4.1 开票订单拣选的寄售库存台账行 id
     private String lineLevel;
     private boolean groupHeader;
     private Long bomParentLineId;

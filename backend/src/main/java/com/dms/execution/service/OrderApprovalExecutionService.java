@@ -35,7 +35,7 @@ public class OrderApprovalExecutionService {
     public ApiResponse<Map<String, Object>> approveOrder(Long id) {
         UUID tid = TenantContext.getTenantId();
         var q = em.createNativeQuery(
-                "SELECT id, status, is_red, dealer_id, ref_order_id FROM orders WHERE id = ?1 AND tenant_id = ?2", Tuple.class);
+                "SELECT id, status, is_red, dealer_id, ref_order_id, order_type FROM orders WHERE id = ?1 AND tenant_id = ?2", Tuple.class);
         q.setParameter(1, id).setParameter(2, tid);
         List<?> rs = q.getResultList();
         if (rs.isEmpty()) throw new BusinessException(ErrorCode.NOT_FOUND, "订单不存在");
@@ -46,6 +46,7 @@ public class OrderApprovalExecutionService {
         }
         boolean isRed = Boolean.TRUE.equals(t.get("is_red"));
         Long dealerId = t.get("dealer_id") == null ? null : ((Number) t.get("dealer_id")).longValue();
+        String bizType = AutoDocGenerator.salesOutBizType(t.get("order_type") == null ? "" : String.valueOf(t.get("order_type")));
 
         // 更新订单
         em.createNativeQuery("UPDATE orders SET status = 'APPROVED', approved_at = now(), updated_at = now() WHERE id = ?1")
@@ -54,10 +55,10 @@ public class OrderApprovalExecutionService {
         // 自动建单：销售出库草稿
         String code = docNoGenerator.next(isRed ? "GIR" : "GI");
         var ins = em.createNativeQuery(
-                "INSERT INTO sales_outs (tenant_id, code, dealer_id, is_red, status, auto_created, source_order_id, sales_date, created_at, updated_at) " +
-                "VALUES (?1, ?2, ?3, ?4, 'DRAFT', true, ?5, now(), now(), now()) RETURNING id");
+                "INSERT INTO sales_outs (tenant_id, code, dealer_id, business_type, is_red, status, auto_created, source_order_id, sales_date, created_at, updated_at) " +
+                "VALUES (?1, ?2, ?3, ?6, ?4, 'DRAFT', true, ?5, now(), now(), now()) RETURNING id");
         ins.setParameter(1, tid).setParameter(2, code).setParameter(3, dealerId)
-                .setParameter(4, isRed).setParameter(5, id);
+                .setParameter(4, isRed).setParameter(5, id).setParameter(6, bizType);
         Long soId = ((Number) ins.getSingleResult()).longValue();
 
         // 拷贝明细

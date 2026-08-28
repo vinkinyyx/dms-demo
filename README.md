@@ -81,10 +81,11 @@ ullable=false，默认 ZERO。
 - 回归工具 tools/_e2e_v389_final.py。
 # 通用 DMS 经销商管理系统 — 项目入口
 
-**当前版本**: v4.2.9
-**最后更新**: 2026-08-26
+**当前版本**: v4.4.2
+**最后更新**: 2026-08-28
 **正式环境**: 业务前台/PC http://8.133.193.238/dms/ ｜ 移动端 http://8.133.193.238/dms/mobile/login ｜ 平台后台 http://8.133.193.238/dms/admin/ ｜ 健康检查 http://8.133.193.238/actuator/health
-**测试环境**: 业务前台/PC http://43.128.145.141/dms/ ｜ 移动端 http://43.128.145.141/dms/mobile/login ｜ 平台后台 http://43.128.145.141/dms/admin/ ｜ API/健康检查 http://43.128.145.141/api、http://43.128.145.141/actuator/health
+**测试环境（域名）**: PC http://dms-dev.mysolmed.com/dms/ ｜ 移动 H5 http://dms-dev.mysolmed.com/dms/mobile/login ｜ 经销商准入注册 http://dms-dev.mysolmed.com/dms/mobile/register ｜ 平台后台 http://dms-dev.mysolmed.com/dms/admin/ ｜ API/健康检查 http://dms-dev.mysolmed.com/api、http://dms-dev.mysolmed.com/actuator/health ｜ 产品宣传手册 http://dms-dev.mysolmed.com/brochure/（移动页 /brochure/mobile.html、打印页 /brochure/print.html）
+**测试环境（IP 直连，行为同域名）**: 把 `dms-dev.mysolmed.com` 替换为 `43.128.145.141` 即可；裸域名/根路径 `/` 已配置 302 跳转 `/dms/` 直达系统
 
 ---
 
@@ -285,15 +286,26 @@ v3.12.4 起生产环境统一走 80 端口网关，DMS 挂在 `/dms/` 子路径�
 | 数据库/缓存/对象存储 | 仅容器内网访问，不对外暴露端口（见 `deploy/prod/`） |
 | SSH | `root@8.133.193.238`（见 `docs/DMS登录信息手册.md`） |
 
-### 测试环境（开发验证）
+### 测试环境（开发验证，2026-08-28 起推荐域名访问）
+
+域名 `dms-dev.mysolmed.com` 已解析到 43.128.145.141；下列 URL 用域名或 IP 直连均可（把域名换成 IP 即可）。
+
 | 用途 | URL / 命令 |
 |---|---|
-| 业务前台/PC 工作台 | http://43.128.145.141/dms/ |
-| 移动端 H5 登录 | http://43.128.145.141/dms/mobile/login |
-| 平台后台 | http://43.128.145.141/dms/admin/ |
-| 后端健康检查 | http://43.128.145.141/actuator/health |
+| 裸域名/根路径 | http://dms-dev.mysolmed.com/ （302 跳转 `/dms/`，直达系统） |
+| 业务前台/PC 工作台 | http://dms-dev.mysolmed.com/dms/ |
+| 移动端 H5 登录 | http://dms-dev.mysolmed.com/dms/mobile/login |
+| 经销商准入（客户自助注册） | http://dms-dev.mysolmed.com/dms/mobile/register |
+| 平台后台 | http://dms-dev.mysolmed.com/dms/admin/ |
+| 后端健康检查 | http://dms-dev.mysolmed.com/actuator/health |
+| 产品宣传手册 PC | http://dms-dev.mysolmed.com/brochure/ |
+| 产品宣传手册 移动版 | http://dms-dev.mysolmed.com/brochure/mobile.html |
+| 产品宣传手册 打印版 | http://dms-dev.mysolmed.com/brochure/print.html |
 | 数据库 | 仅容器内网访问，不对外暴露端口 |
-| 演示账号 | 同正式环境 |
+| 演示账号 | 业务前台 租户 `default` / `sys_admin` / `Dms@123456`（或 `admin` / `Sh123456`）；平台后台 `admin` / `Sh123456` |
+
+> ⚠️ 宣传手册的移动页/打印页与 PC 首页平级放在 `/brochure/` 目录下，**没有** `/brochure/pages/` 子目录；写错路径会被 Nginx try_files 静默回退成 PC 首页（状态码仍是 200）。
+> ⚠️ Nginx 配置已冻结基线，不得随意调整；变更须遵守 AGENTS.md【铁律10：Nginx 变更管控】（备份 → nginx -t → 重启容器 → nginx -T 取证 → 浏览器终验全部入口）。
 
 ### 双环境管理规则
 1. 所有需求调整先部署到**测试环境**验证

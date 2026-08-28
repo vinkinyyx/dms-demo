@@ -44,7 +44,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { listSalesOrders } from '@/api/order'
 import { statusText, statusTagType } from '@/utils/dict'
 
@@ -52,11 +52,13 @@ const list = ref([])
 const loading = ref(false)
 const finished = ref(false)
 const keyword = ref('')
+const inFlight = ref(false)
 let page = 1
 const pageSize = 20
 
 async function onLoad() {
-  if (loading.value) return
+  if (inFlight.value) return
+  inFlight.value = true
   loading.value = true
   try {
     const params = { page, size: pageSize }
@@ -67,7 +69,7 @@ async function onLoad() {
     list.value.push(...rows)
     page++
     if (rows.length < pageSize) finished.value = true
-  } catch (e) { finished.value = true } finally { loading.value = false }
+  } catch (e) { finished.value = true } finally { loading.value = false; inFlight.value = false }
 }
 
 function onSearch() {
@@ -76,6 +78,8 @@ function onSearch() {
   finished.value = false
   onLoad()
 }
+
+onMounted(() => onLoad())
 </script>
 
 <style scoped>

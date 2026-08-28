@@ -265,9 +265,8 @@
 
 <header class="nav-glass fixed top-0 left-0 right-0 z-50">
   <div class="max-w-7xl mx-auto px-5 md:px-8 h-16 flex items-center justify-between">
-    <a href="#top" class="flex items-center gap-2 font-extrabold text-xl tracking-tight">
-      <span class="w-9 h-9 rounded-lg bg-brand text-white flex items-center justify-center text-sm">DMS</span>
-      <span class="text-slate-900">经销商管理系统</span>
+    <a href="#top" class="flex items-center gap-3 font-extrabold text-xl tracking-tight">
+      <img src="assets/00-mysolmed-logo.png" alt="mysolmed" class="h-9 object-contain" />
     </a>
     <nav class="hidden md:flex items-center gap-8 text-sm text-slate-600 font-medium">
       <a href="#capabilities" class="hover:text-brand transition">产品能力</a>
@@ -317,7 +316,7 @@
           <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
           <div class="browser-url"><i data-lucide="lock" style="width:12px;height:12px;margin-right:6px"></i> dms.example.com/workspace</div>
         </div>
-        <img src="../assets/02-pc-home-new.png" alt="DMS 工作台首页" />
+        <img src="assets/02-pc-home-new.png" alt="DMS 工作台首页" />
       </div>
       <div class="hidden md:block absolute -left-6 -bottom-6 bg-white rounded-xl shadow-xl border border-slate-100 p-4 w-52">
         <div class="flex items-center gap-2 text-xs text-slate-500"><i data-lucide="trending-up" style="width:14px;height:14px;color:var(--accent)"></i> 本月销售出库</div>
@@ -419,11 +418,11 @@
     <div class="mt-16 space-y-20 md:space-y-28">
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="browser-chrome">
+        <div class="browser-chrome md:order-2">
           <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/login</div></div>
-          <img src="../assets/01-pc-login-new.png" alt="统一登录" />
+          <img src="assets/01-pc-login-new.png" alt="统一登录" />
         </div>
-        <div>
+        <div class="md:order-1">
           <span class="section-num">01</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">统一登录与租户识别</h3>
           <p class="mt-3 text-slate-600">一套入口服务于品牌方与众多经销商，安全识别租户身份，保障数据隔离。</p>
@@ -437,11 +436,11 @@
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="md:order-2 browser-chrome">
+        <div class="browser-chrome md:order-1">
           <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/workspace</div></div>
-          <img src="../assets/02-pc-home-new.png" alt="工作台首页" />
+          <img src="assets/02-pc-home-new.png" alt="工作台首页" />
         </div>
-        <div class="md:order-1">
+        <div class="md:order-2">
           <span class="section-num">02</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">工作台首页</h3>
           <p class="mt-3 text-slate-600">登录即见关键数据与待办，让每个角色聚焦自己最重要的事。</p>
@@ -455,11 +454,11 @@
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="browser-chrome">
+        <div class="browser-chrome md:order-2">
           <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/products</div></div>
-          <img src="../assets/03-pc-products-new.png" alt="产品物料管理" />
+          <img src="assets/03-pc-products-new.png" alt="产品物料管理" />
         </div>
-        <div>
+        <div class="md:order-1">
           <span class="section-num">03</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">产品 / 物料管理</h3>
           <p class="mt-3 text-slate-600">以 SKU 为核心的主数据中心，支撑医疗器械注册证与多维度价格政策。</p>
@@ -473,16 +472,35 @@
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="md:order-2 browser-chrome">
+        <div class="browser-chrome md:order-1">
+          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/product-bundles</div></div>
+          <img src="assets/42-pc-bom-new.png" alt="BOM 组合品管理" />
+        </div>
+        <div class="md:order-2">
+          <span class="section-num">04</span>
+          <h3 class="mt-4 text-2xl md:text-3xl font-bold">BOM 组合品管理</h3>
+          <p class="mt-3 text-slate-600">针对关节假体、手术套装等组合销售场景，紧跟产品主数据之后提供固定 BOM 版本管理与子件配比展开；母件不参与出库计价，子件按版本自动拆分，订单详情页支持母件一键展开。</p>
+          <ul class="mt-6 space-y-3">
+            <li class="feature-tag"><i data-lucide="layers-3"></i>固定 BOM 版本：生效期与状态独立管控</li>
+            <li class="feature-tag"><i data-lucide="git-fork"></i>母件下单、子件按配比自动展开为可编辑行</li>
+            <li class="feature-tag"><i data-lucide="tags"></i>单品价与 BOM 子件价双轨维护</li>
+            <li class="feature-tag"><i data-lucide="package-check"></i>出库以子件 SKU 计价扣减库存</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+        <div class="browser-chrome md:order-2">
           <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/dealers</div></div>
-          <img src="../assets/04-pc-dealers-new.png" alt="经销商管理" />
+          <img src="assets/04-pc-dealers-new.png" alt="经销商管理" />
         </div>
         <div class="md:order-1">
-          <span class="section-num">04</span>
+          <span class="section-num">05</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">经销商管理</h3>
-          <p class="mt-3 text-slate-600">从准入到分级、授信与续约，建立完整的渠道合作伙伴档案。</p>
+          <p class="mt-3 text-slate-600">从自助准入到分级、授信与续约，建立完整的渠道合作伙伴档案。客户可在 PC 或 H5 自助注册，提交资质后由厂家审核，通过即自动建立客户主数据与登录账号，准入全流程在线化。</p>
           <ul class="mt-6 space-y-3">
             <li class="feature-tag"><i data-lucide="id-card"></i>渠道档案、资质证照、经营范围</li>
+            <li class="feature-tag"><i data-lucide="user-plus"></i>客户自助注册（PC + H5）→ 审核 → 自动建账号</li>
             <li class="feature-tag"><i data-lucide="user-check"></i>准入审批与黑白名单机制</li>
             <li class="feature-tag"><i data-lucide="award"></i>经销商等级与区域划分</li>
             <li class="feature-tag"><i data-lucide="wallet"></i>信用额度、账期与应收管控</li>
@@ -491,12 +509,45 @@
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/hospitals</div></div>
-          <img src="../assets/05-pc-hospitals-new.png" alt="医院终端管理" />
+        <div class="browser-chrome md:order-1">
+          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/dealers/profile</div></div>
+          <img src="assets/04b-pc-dealer-profile.png" alt="经销商画像查看" />
         </div>
-        <div>
-          <span class="section-num">05</span>
+        <div class="md:order-2">
+          <span class="section-num">06</span>
+          <h3 class="mt-4 text-2xl md:text-3xl font-bold">经销商画像</h3>
+          <p class="mt-3 text-slate-600">深入掌握每个合作伙伴的经营全貌：月度销售目标达成率、核心指标卡、年度采购趋势、Top 产品结构与库存健康度，全维度画像支撑精准运营。</p>
+          <ul class="mt-6 space-y-3">
+            <li class="feature-tag"><i data-lucide="user-round-search"></i>客户基本信息 · 等级 · 授信 · 状态一览</li>
+            <li class="feature-tag"><i data-lucide="target"></i>本月 / 本年累计销售目标达成率与环比</li>
+            <li class="feature-tag"><i data-lucide="bar-chart-3"></i>订单数 · 净销售额 · 退货率 · 库存 6 大指标</li>
+            <li class="feature-tag"><i data-lucide="trending-up"></i>月度目标达成趋势（柱状图 + 曲线）</li>
+            <li class="feature-tag"><i data-lucide="map-pinned"></i>收货地址、联系人、授权范围统一视图</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+        <div class="browser-chrome md:order-2">
+          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/dealers/admission</div></div>
+          <img src="assets/04c-pc-dealer-admission.png" alt="经销商准入管理" />
+        </div>
+        <div class="md:order-1">
+          <span class="section-num">07</span>
+          <h3 class="mt-4 text-2xl md:text-3xl font-bold">经销商准入</h3>
+          <p class="mt-3 text-slate-600">厂家视角的渠道准入全流程在线化：新增经销商、批量导入、审核通过即自动创建客户主数据与登录账号；支持画像查看、编辑、黑白名单与状态批量管理，从源头杜绝资质不全的客户进入渠道。</p>
+          <ul class="mt-6 space-y-3">
+            <li class="feature-tag"><i data-lucide="user-plus"></i>厂家后台新增经销商 + 批量导入初始化</li>
+            <li class="feature-tag"><i data-lucide="badge-check"></i>编号 · 名称 · 级别 · GSP 状态 · 法人统一建档</li>
+            <li class="feature-tag"><i data-lucide="file-check-2"></i>资质证照、经营范围与经营许可证在线上传</li>
+            <li class="feature-tag"><i data-lucide="shield-check"></i>启用 / 停用 + 黑白名单 + 准入后画像查看</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+        <div class="md:order-2">
+          <span class="section-num">08</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">医院 / 终端管理</h3>
           <p class="mt-3 text-slate-600">掌握真实终端覆盖，连接科室、术式与目标医院，驱动精准运营。</p>
           <ul class="mt-6 space-y-3">
@@ -506,15 +557,20 @@
             <li class="feature-tag"><i data-lucide="map-pinned"></i>终端流向可视化与归属确认</li>
           </ul>
         </div>
+      <div class="browser-chrome md:order-1">
+          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/hospitals</div></div>
+          <img src="assets/05-pc-hospitals-new.png" alt="医院终端管理" />
+        </div>
+        
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="md:order-2 browser-chrome">
+        <div class="browser-chrome md:order-2">
           <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/contracts</div></div>
-          <img src="../assets/07-pc-contracts-new.png" alt="合同管理" />
+          <img src="assets/07-pc-contracts-new.png" alt="合同管理" />
         </div>
         <div class="md:order-1">
-          <span class="section-num">06</span>
+          <span class="section-num">09</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">合同管理</h3>
           <p class="mt-3 text-slate-600">协议全生命周期在线化，审批、签署、变更、补充一环不缺。</p>
           <ul class="mt-6 space-y-3">
@@ -527,12 +583,8 @@
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/contract-templates</div></div>
-          <img src="../assets/08-pc-contract-templates-new.png" alt="合同模板" />
-        </div>
-        <div>
-          <span class="section-num">07</span>
+        <div class="md:order-2">
+          <span class="section-num">10</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">合同模板与条款库</h3>
           <p class="mt-3 text-slate-600">标准模板沉淀法务经验，让业务签约既规范又高效。</p>
           <ul class="mt-6 space-y-3">
@@ -542,15 +594,20 @@
             <li class="feature-tag"><i data-lucide="lock"></i>模板启停与使用权限控制</li>
           </ul>
         </div>
+      <div class="browser-chrome md:order-1">
+          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/contract-templates</div></div>
+          <img src="assets/08-pc-contract-templates-new.png" alt="合同模板" />
+        </div>
+        
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="md:order-2 browser-chrome">
+        <div class="browser-chrome md:order-2">
           <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/authorizations</div></div>
-          <img src="../assets/09-pc-authorizations-new.png" alt="授权管理" />
+          <img src="assets/09-pc-authorizations-new.png" alt="授权管理" />
         </div>
         <div class="md:order-1">
-          <span class="section-num">08</span>
+          <span class="section-num">11</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">授权管理</h3>
           <p class="mt-3 text-slate-600">授权书、授权区域与产品范围清晰可控，杜绝超范围经营。</p>
           <ul class="mt-6 space-y-3">
@@ -563,30 +620,50 @@
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/sales-orders</div></div>
-          <img src="../assets/10-pc-sales-orders-new.png" alt="销售订单" />
-        </div>
-        <div>
-          <span class="section-num">09</span>
-          <h3 class="mt-4 text-2xl md:text-3xl font-bold">销售订单</h3>
-          <p class="mt-3 text-slate-600">从下单、审批到发货、回款的完整订单链路，状态全程可视。</p>
+        <div class="md:order-2">
+          <span class="section-num">12</span>
+          <h3 class="mt-4 text-2xl md:text-3xl font-bold">销售订单 · 编辑页</h3>
+          <p class="mt-3 text-slate-600">从下单到审批的完整订单链路，真实编辑页含客户基础价/合同价取价、BOM 母件自动展开、行折扣与促销折扣分列、整单折扣、操作日志全程留痕。</p>
           <ul class="mt-6 space-y-3">
-            <li class="feature-tag"><i data-lucide="shopping-cart"></i>在线下单、价格与库存实时校验</li>
-            <li class="feature-tag"><i data-lucide="git-pull-request"></i>多级审批与信用额度检查</li>
-            <li class="feature-tag"><i data-lucide="truck"></i>发货、物流、签收节点跟踪</li>
-            <li class="feature-tag"><i data-lucide="hand-coins"></i>回款登记与应收账龄分析</li>
+            <li class="feature-tag"><i data-lucide="shopping-cart"></i>在线下单、合同价 / 客户价 / 全局价三级取价</li>
+            <li class="feature-tag"><i data-lucide="box-select"></i>BOM 母件下单自动按比例展开子件明细</li>
+            <li class="feature-tag"><i data-lucide="percent"></i>产品折扣、促销折扣、行手动折扣三列可见</li>
+            <li class="feature-tag"><i data-lucide="git-pull-request"></i>多级审批与信用额度实时校验</li>
+            <li class="feature-tag"><i data-lucide="history"></i>操作日志全程记录谁在何时做了什么</li>
+          </ul>
+        </div>
+      <div class="browser-chrome md:order-1">
+          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/sales-orders</div></div>
+          <img src="assets/10-pc-sales-orders-new.png" alt="销售订单" />
+        </div>
+        
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+        <div class="browser-chrome md:order-2">
+          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/promotions</div></div>
+          <img src="assets/43-pc-promotions-new.png" alt="促销引擎" />
+        </div>
+        <div class="md:order-1">
+          <span class="section-num">13</span>
+          <h3 class="mt-4 text-2xl md:text-3xl font-bold">促销引擎与计价</h3>
+          <p class="mt-3 text-slate-600">V4 计价引擎贯穿订单全流程：满 N 件打折、满减、满赠三类促销 + 产品/客户全局折扣 + 代金券 + 一口价 + 整单 0 金额，互斥矩阵清晰，同 SKU 同时段唯一防冲突，分摊口径精确到分。</p>
+          <ul class="mt-6 space-y-3">
+            <li class="feature-tag"><i data-lucide="gift"></i>满 N 打折 / 满减 / 满赠三种促销，支持每满 N 循环</li>
+            <li class="feature-tag"><i data-lucide="ticket"></i>代金券：厂家发放、一单一张、范围与门槛校验</li>
+            <li class="feature-tag"><i data-lucide="percent"></i>产品 / 客户全局折扣，按时间段独立维护</li>
+            <li class="feature-tag"><i data-lucide="layers"></i>一口价 / 整单 0 / 行 0 互斥模式，差额按比例分摊</li>
           </ul>
         </div>
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="md:order-2 browser-chrome">
+        <div class="browser-chrome md:order-1">
           <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/inventory</div></div>
-          <img src="../assets/14-pc-inventory-new.png" alt="库存管理" />
+          <img src="assets/14-pc-inventory-new.png" alt="库存管理" />
         </div>
-        <div class="md:order-1">
-          <span class="section-num">10</span>
+        <div class="md:order-2">
+          <span class="section-num">14</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">库存管理</h3>
           <p class="mt-3 text-slate-600">多仓多批号精细化管理，满足医疗器械行业对序列号与效期的强追溯要求。</p>
           <ul class="mt-6 space-y-3">
@@ -599,12 +676,12 @@
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="browser-chrome">
+        <div class="browser-chrome md:order-2">
           <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/sales-outs</div></div>
-          <img src="../assets/18-pc-sales-outs-new.png" alt="销售出库" />
+          <img src="assets/18-pc-sales-outs-new.png" alt="销售出库" />
         </div>
-        <div>
-          <span class="section-num">11</span>
+        <div class="md:order-1">
+          <span class="section-num">15</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">销售出库</h3>
           <p class="mt-3 text-slate-600">出库单与物流、签收紧密衔接，批号流向清晰可查。</p>
           <ul class="mt-6 space-y-3">
@@ -617,30 +694,67 @@
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="md:order-2 browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/surgery-reports</div></div>
-          <img src="../assets/19-pc-surgery-reports-new.png" alt="手术报台" />
+        <div class="browser-chrome md:order-1">
+          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/sales-returns</div></div>
+          <img src="assets/18-pc-sales-outs-new.png" alt="销售退货" />
         </div>
-        <div class="md:order-1">
-          <span class="section-num">12</span>
-          <h3 class="mt-4 text-2xl md:text-3xl font-bold">手术报台</h3>
-          <p class="mt-3 text-slate-600">连接真实临床使用场景，植入物、跟台与术式数据完整归档。</p>
+        <div class="md:order-2">
+          <span class="section-num">16</span>
+          <h3 class="mt-4 text-2xl md:text-3xl font-bold">销售退货</h3>
+          <p class="mt-3 text-slate-600">一张销退单可关联同一客户多张出库单，按来源行锁定可退量分别回写；新建页强制「经销商 → 发货仓库 → 出库单 → 退货原因」字段顺序，杜绝自由录入与跨客户退货，退款按 EA 单价精准计算。</p>
           <ul class="mt-6 space-y-3">
-            <li class="feature-tag"><i data-lucide="stethoscope"></i>病例、术式、主刀与跟台记录</li>
-            <li class="feature-tag"><i data-lucide="syringe"></i>植入物批号、序列号使用登记</li>
-            <li class="feature-tag"><i data-lucide="camera"></i>现场影像与知情文件上传</li>
-            <li class="feature-tag"><i data-lucide="bar-chart-3"></i>术式量、医生与医院统计</li>
+            <li class="feature-tag"><i data-lucide="link"></i>多出库单合并退：按来源行锁定可退量</li>
+            <li class="feature-tag"><i data-lucide="list-ordered"></i>字段顺序门禁：经销商→仓库→出库单→原因</li>
+            <li class="feature-tag"><i data-lucide="shield-check"></i>同仓库校验 + 批号 / 序列号筛选</li>
+            <li class="feature-tag"><i data-lucide="rotate-ccw"></i>代金券审批拒绝自动返还，退款不套现</li>
           </ul>
         </div>
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/dashboard</div></div>
-          <img src="../assets/20-pc-dashboard-new.png" alt="数据分析看板" />
+        <div class="browser-chrome md:order-2">
+          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/surgery-reports</div></div>
+          <img src="assets/19-pc-surgery-reports-new.png" alt="手术报台" />
         </div>
-        <div>
-          <span class="section-num">13</span>
+        <div class="md:order-1">
+          <span class="section-num">17</span>
+          <h3 class="mt-4 text-2xl md:text-3xl font-bold">手术报台</h3>
+          <p class="mt-3 text-slate-600">连接真实临床使用场景，25 张真实报台单可见；植入物、跟台与术式数据完整归档，列表支持按经销商 / 医院 / 状态多条件组合查询。</p>
+          <ul class="mt-6 space-y-3">
+            <li class="feature-tag"><i data-lucide="stethoscope"></i>报台单号 + 经销商 + 医院 + 手术日期 + 主刀医生列</li>
+            <li class="feature-tag"><i data-lucide="syringe"></i>植入物批号、序列号一对一登记与追溯</li>
+            <li class="feature-tag"><i data-lucide="clipboard-list"></i>已完成 / 待审核状态流转与导出、查看详情</li>
+            <li class="feature-tag"><i data-lucide="camera"></i>现场影像与知情文件上传</li>
+            <li class="feature-tag"><i data-lucide="bar-chart-3"></i>术式量、医生 / 医院多维度统计</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+        <div class="browser-chrome md:order-1">
+          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/positions</div></div>
+          <img src="assets/54-pc-sales-position.png" alt="销售岗位管理" />
+        </div>
+        <div class="md:order-2">
+          <span class="section-num">18</span>
+          <h3 class="mt-4 text-2xl md:text-3xl font-bold">销售岗位工作台</h3>
+          <p class="mt-3 text-slate-600">为一线销售岗位量身定制的一站式工作台，把客户拜访、订单推进、出库跟催与合同到期揉成 4 个日常动作，日目标、周拜访、月达成三层 KPI 自动聚合并可回溯，真正把「管理口径」落到岗位动作。</p>
+          <ul class="mt-6 space-y-3">
+            <li class="feature-tag"><i data-lucide="target"></i>目标闭环：月目标 → 达成率 → 环比趋势一站式可见</li>
+            <li class="feature-tag"><i data-lucide="map-pinned"></i>客户拜访计划打卡，按完成进度自动红黄绿灯</li>
+            <li class="feature-tag"><i data-lucide="shopping-bag"></i>订单跟进：创建、审批拒绝、出库、签收全链路提醒</li>
+            <li class="feature-tag"><i data-lucide="alert-triangle"></i>高风险预警：合同到期、销退异常、授信超限自动置顶</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+        <div class="browser-chrome md:order-2">
+          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/dashboard</div></div>
+          <img src="assets/20-pc-dashboard-new.png" alt="数据分析看板" />
+        </div>
+        <div class="md:order-1">
+          <span class="section-num">19</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">数据分析与看板</h3>
           <p class="mt-3 text-slate-600">把渠道数据变成决策依据，销售、库存、手术多维透视。</p>
           <ul class="mt-6 space-y-3">
@@ -653,30 +767,8 @@
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="md:order-2 browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/users</div></div>
-          <img src="../assets/21-pc-users-new.png" alt="用户与组织" />
-        </div>
-        <div class="md:order-1">
-          <span class="section-num">14</span>
-          <h3 class="mt-4 text-2xl md:text-3xl font-bold">用户与组织</h3>
-          <p class="mt-3 text-slate-600">清晰的组织、岗位与数据权限体系，让合适的人看到合适的数据。</p>
-          <ul class="mt-6 space-y-3">
-            <li class="feature-tag"><i data-lucide="network"></i>部门、岗位、员工层级管理</li>
-            <li class="feature-tag"><i data-lucide="database"></i>按区域 / 经销商数据权限隔离</li>
-            <li class="feature-tag"><i data-lucide="user-cog"></i>账号启停、重置与交接</li>
-            <li class="feature-tag"><i data-lucide="import"></i>批量导入与组织同步</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/roles</div></div>
-          <img src="../assets/22-pc-roles-new.png" alt="角色权限" />
-        </div>
-        <div>
-          <span class="section-num">15</span>
+        <div class="md:order-2">
+          <span class="section-num">20</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">角色权限</h3>
           <p class="mt-3 text-slate-600">菜单、按钮、数据范围三维授权，最小权限原则轻松落地。</p>
           <ul class="mt-6 space-y-3">
@@ -686,15 +778,20 @@
             <li class="feature-tag"><i data-lucide="copy"></i>角色复制与权限模板复用</li>
           </ul>
         </div>
+      <div class="browser-chrome md:order-1">
+          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/roles</div></div>
+          <img src="assets/22-pc-roles-new.png" alt="角色权限" />
+        </div>
+        
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="md:order-2 browser-chrome">
+        <div class="browser-chrome md:order-2">
           <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/workflow</div></div>
-          <img src="../assets/39-pc-approval-workflow-new.png" alt="审批工作流" />
+          <img src="assets/39-pc-approval-workflow-new.png" alt="审批工作流" />
         </div>
         <div class="md:order-1">
-          <span class="section-num">16</span>
+          <span class="section-num">21</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">审批工作流</h3>
           <p class="mt-3 text-slate-600">可视化配置业务审批流，适配不同金额、区域与组织的复杂路由。</p>
           <ul class="mt-6 space-y-3">
@@ -707,12 +804,8 @@
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/email-logs</div></div>
-          <img src="../assets/40-pc-email-logs-new.png" alt="邮件通知日志" />
-        </div>
-        <div>
-          <span class="section-num">17</span>
+        <div class="md:order-2">
+          <span class="section-num">22</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">邮件通知日志</h3>
           <p class="mt-3 text-slate-600">关键业务事件通过邮件触达，发送状态全程可查可追溯。</p>
           <ul class="mt-6 space-y-3">
@@ -722,51 +815,20 @@
             <li class="feature-tag"><i data-lucide="search"></i>按收件人 / 业务单号检索</li>
           </ul>
         </div>
+      <div class="browser-chrome md:order-1">
+          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/email-logs</div></div>
+          <img src="assets/40-pc-email-logs-new.png" alt="邮件通知日志" />
+        </div>
+        
       </div>
 
       <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="md:order-2 browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/product-bundles</div></div>
-          <img src="../assets/42-pc-bom-new.png" alt="BOM 组合品管理" />
-        </div>
-        <div class="md:order-1">
-          <span class="section-num">18</span>
-          <h3 class="mt-4 text-2xl md:text-3xl font-bold">BOM 组合品管理</h3>
-          <p class="mt-3 text-slate-600">针对关节假体、手术套装等组合销售场景，提供固定 BOM 版本管理与子件配比展开，母件不参与出库计价，子件按版本自动拆分。</p>
-          <ul class="mt-6 space-y-3">
-            <li class="feature-tag"><i data-lucide="layers-3"></i>固定 BOM 版本：生效期与状态独立管控</li>
-            <li class="feature-tag"><i data-lucide="git-fork"></i>母件下单、子件按配比自动展开</li>
-            <li class="feature-tag"><i data-lucide="tags"></i>单品价与 BOM 子件价双轨维护</li>
-            <li class="feature-tag"><i data-lucide="package-check"></i>出库以子件 SKU 计价扣减库存</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/promotions</div></div>
-          <img src="../assets/43-pc-promotions-new.png" alt="促销引擎" />
-        </div>
-        <div>
-          <span class="section-num">19</span>
-          <h3 class="mt-4 text-2xl md:text-3xl font-bold">促销引擎</h3>
-          <p class="mt-3 text-slate-600">内置满 A 赠 B、满 A 减钱两类促销规则，支持产品线与 BOM 子件展开，赠品手动刷新、幂等锁定，计价口径清晰可追溯。</p>
-          <ul class="mt-6 space-y-3">
-            <li class="feature-tag"><i data-lucide="gift"></i>满 A 赠 B / 满 A 减钱两种模式</li>
-            <li class="feature-tag"><i data-lucide="percent"></i>优先级与生效期控制，行折扣优先</li>
-            <li class="feature-tag"><i data-lucide="refresh-cw"></i>赠品手动刷新，幂等防重复累加</li>
-            <li class="feature-tag"><i data-lucide="boxes"></i>支持产品线与 BOM 子件层级展开</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="md:order-2 browser-chrome">
+        <div class="browser-chrome md:order-2">
           <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/api-call-logs</div></div>
-          <img src="../assets/41-pc-api-logs-new.png" alt="开放接口与集成" />
+          <img src="assets/41-pc-api-logs-new.png" alt="开放接口与集成" />
         </div>
         <div class="md:order-1">
-          <span class="section-num">20</span>
+          <span class="section-num">23</span>
           <h3 class="mt-4 text-2xl md:text-3xl font-bold">开放接口与 ERP 集成</h3>
           <p class="mt-3 text-slate-600">提供 HMAC-SHA256 签名的对外开放 API，销售订单与销退审批后自动推送 ERP，支持回调出库结果与幂等防重，全量调用日志可查可追溯。</p>
           <ul class="mt-6 space-y-3">
@@ -774,24 +836,6 @@
             <li class="feature-tag"><i data-lucide="arrow-left-right"></i>订单 / 销退推送 ERP，回调出库结果</li>
             <li class="feature-tag"><i data-lucide="shield-check"></i>幂等防重，biz_key / biz_action 留痕</li>
             <li class="feature-tag"><i data-lucide="scroll-text"></i>入站出站全量日志，耗时状态链路追踪</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/tenant-page-configs</div></div>
-          <img src="../assets/44-pc-page-config-new.png" alt="列表页个性化配置" />
-        </div>
-        <div>
-          <span class="section-num">21</span>
-          <h3 class="mt-4 text-2xl md:text-3xl font-bold">列表页个性化配置</h3>
-          <p class="mt-3 text-slate-600">每个业务列表均支持列拖拽排序、显隐切换与高级筛选，个人配置自动持久化，宽表操作列固定，让不同角色聚焦自己关心的数据。</p>
-          <ul class="mt-6 space-y-3">
-            <li class="feature-tag"><i data-lucide="columns-3"></i>列拖拽排序与显隐，按用户记忆</li>
-            <li class="feature-tag"><i data-lucide="sliders-horizontal"></i>高级筛选弹层，多条件组合查询</li>
-            <li class="feature-tag"><i data-lucide="pin"></i>宽表操作列与关键列固定不滚动</li>
-            <li class="feature-tag"><i data-lucide="clock"></i>创建 / 更新时间自动补列，无需配置</li>
           </ul>
         </div>
       </div>
@@ -823,7 +867,7 @@
       <div class="flex flex-col items-center text-center">
         <div class="phone-chrome">
           <div class="phone-top"><div class="phone-notch"></div></div>
-          <div class="phone-screen"><img src="../assets/33-mobile-login-new.png" alt="移动登录" /></div>
+          <div class="phone-screen"><img src="assets/33-mobile-login-new.png" alt="移动登录" /></div>
         </div>
         <h4 class="mt-4 font-semibold text-white">移动登录</h4>
         <p class="text-xs text-slate-400 mt-1">租户识别 · 安全验证</p>
@@ -831,7 +875,7 @@
       <div class="flex flex-col items-center text-center">
         <div class="phone-chrome">
           <div class="phone-top"><div class="phone-notch"></div></div>
-          <div class="phone-screen"><img src="../assets/34-mobile-home-new.png" alt="移动工作台" /></div>
+          <div class="phone-screen"><img src="assets/34-mobile-home-new.png" alt="移动工作台" /></div>
         </div>
         <h4 class="mt-4 font-semibold text-white">移动工作台</h4>
         <p class="text-xs text-slate-400 mt-1">待办 · 指标 · 快捷入口</p>
@@ -839,7 +883,7 @@
       <div class="flex flex-col items-center text-center">
         <div class="phone-chrome">
           <div class="phone-top"><div class="phone-notch"></div></div>
-          <div class="phone-screen"><img src="../assets/35-mobile-orders-new.png" alt="移动订单" /></div>
+          <div class="phone-screen"><img src="assets/35-mobile-orders-new.png" alt="移动订单" /></div>
         </div>
         <h4 class="mt-4 font-semibold text-white">移动订单</h4>
         <p class="text-xs text-slate-400 mt-1">下单 · 审批 · 查询</p>
@@ -847,7 +891,7 @@
       <div class="flex flex-col items-center text-center">
         <div class="phone-chrome">
           <div class="phone-top"><div class="phone-notch"></div></div>
-          <div class="phone-screen"><img src="../assets/36-mobile-inventory-new.png" alt="移动库存" /></div>
+          <div class="phone-screen"><img src="assets/36-mobile-inventory-new.png" alt="移动库存" /></div>
         </div>
         <h4 class="mt-4 font-semibold text-white">移动库存</h4>
         <p class="text-xs text-slate-400 mt-1">扫码 · 盘点 · 调拨</p>
@@ -855,7 +899,7 @@
       <div class="flex flex-col items-center text-center">
         <div class="phone-chrome">
           <div class="phone-top"><div class="phone-notch"></div></div>
-          <div class="phone-screen"><img src="../assets/37-mobile-surgery-new.png" alt="移动手术报台" /></div>
+          <div class="phone-screen"><img src="assets/37-mobile-surgery-new.png" alt="移动手术报台" /></div>
         </div>
         <h4 class="mt-4 font-semibold text-white">手术报台</h4>
         <p class="text-xs text-slate-400 mt-1">现场录入 · 拍照上传</p>
@@ -892,31 +936,31 @@
 
     <div class="mt-12 grid md:grid-cols-3 gap-6">
       <div class="admin-card">
-        <img src="../assets/23-admin-login-new.png" alt="后台登录" />
+        <img src="assets/23-admin-login-new.png" alt="后台登录" />
         <div class="cap"><h4>后台登录</h4><p>运维与超管独立入口，强身份校验</p></div>
       </div>
       <div class="admin-card">
-        <img src="../assets/25-admin-tenants-new.png" alt="租户管理" />
+        <img src="assets/25-admin-tenants-new.png" alt="租户管理" />
         <div class="cap"><h4>租户管理</h4><p>开通、配额、套餐、启停全生命周期</p></div>
       </div>
       <div class="admin-card">
-        <img src="../assets/28-admin-roles-new.png" alt="平台角色" />
+        <img src="assets/28-admin-roles-new.png" alt="平台角色" />
         <div class="cap"><h4>平台角色</h4><p>超管、运维、租户管理员分层授权</p></div>
       </div>
       <div class="admin-card">
-        <img src="../assets/29-admin-dicts-new.png" alt="数据字典" />
+        <img src="assets/29-admin-dicts-new.png" alt="数据字典" />
         <div class="cap"><h4>数据字典</h4><p>枚举、区域、行业分类统一维护</p></div>
       </div>
       <div class="admin-card">
-        <img src="../assets/30-admin-api-logs-new.png" alt="API 日志" />
+        <img src="assets/30-admin-api-logs-new.png" alt="API 日志" />
         <div class="cap"><h4>API 日志</h4><p>接口调用、耗时、状态码、链路追踪</p></div>
       </div>
       <div class="admin-card">
-        <img src="../assets/31-admin-operation-logs-new.png" alt="操作日志" />
+        <img src="assets/31-admin-operation-logs-new.png" alt="操作日志" />
         <div class="cap"><h4>操作日志</h4><p>用户行为、数据变更、IP 完整留痕</p></div>
       </div>
       <div class="admin-card md:col-span-1">
-        <img src="../assets/32-admin-login-logs-new.png" alt="登录日志" />
+        <img src="assets/32-admin-login-logs-new.png" alt="登录日志" />
         <div class="cap"><h4>登录日志</h4><p>登录时间、地点、设备、异常检测</p></div>
       </div>
       <div class="md:col-span-2 bg-slate-50 border border-slate-200 rounded-2xl p-8 flex flex-col justify-center">
@@ -983,6 +1027,42 @@
       <p class="mt-3 text-slate-600">持续迭代，让每一条渠道都清晰可见。</p>
     </div>
     <div class="mt-14 space-y-10">
+      <div class="changelog-item">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="changelog-version">v4.3.3</span>
+          <span class="changelog-date">2026-08-27</span>
+        </div>
+        <ul class="space-y-2 text-sm text-slate-700 leading-relaxed">
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>经销商准入流程：客户可在 PC 或 H5 自助注册，提交资质后由厂家审核，通过即自动建立客户主数据与登录账号</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>灵活的促销：V4 计价引擎贯通满 N 打折 / 满减 / 满赠 + 代金券 + 一口价 + 整单 0 + 产品 / 客户全局折扣，互斥矩阵清晰，同 SKU 同时段唯一防冲突</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>便捷的退货：一张销退单关联多张出库单，按来源行锁定可退量；字段顺序门禁（经销商→仓库→出库单→退货原因），代金券审批拒绝自动返还</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>合同价格清单 Tab + 客户多联系人 / 多收货地址 + H5 自助下单全流程</span></li>
+        </ul>
+      </div>
+      <div class="changelog-item">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="changelog-version">v4.3.1</span>
+          <span class="changelog-date">2026-08-27</span>
+        </div>
+        <ul class="space-y-2 text-sm text-slate-700 leading-relaxed">
+          <li class="flex gap-3"><i data-lucide="wrench" style="width:18px;height:18px;color:var(--accent);flex-shrink:0;margin-top:2px"></i><span>销退单返工：新建页字段顺序改为经销商→仓库→出库单→退货原因，未选经销商 / 仓库时按钮禁用 + tooltip</span></li>
+          <li class="flex gap-3"><i data-lucide="wrench" style="width:18px;height:18px;color:var(--accent);flex-shrink:0;margin-top:2px"></i><span>代金券审批拒绝返还（Critical）：审批拒绝 / 退回 / 撤销路径补券状态恢复，券从 USED 回到 ISSUED</span></li>
+          <li class="flex gap-3"><i data-lucide="wrench" style="width:18px;height:18px;color:var(--accent);flex-shrink:0;margin-top:2px"></i><span>销售订单重开经销商为空 / 价格报错修复：产品 ID 兼容 + dealerName 回显</span></li>
+        </ul>
+      </div>
+      <div class="changelog-item">
+        <div class="flex items-center gap-4 mb-4">
+          <span class="changelog-version">v4.3.0</span>
+          <span class="changelog-date">2026-08-27</span>
+        </div>
+        <ul class="space-y-2 text-sm text-slate-700 leading-relaxed">
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>V4 计价引擎：合同价 > 客户价 > 全局价，行级 + 整单级折扣链，分摊到 EA 单价精确到分</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>代金券：厂家统一发放、一单一张、范围 / 门槛校验，抵扣不摊入行单价防退货套现</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>客户自助注册（R9）：PC + H5 注册页 → 审核 → 自动建账号与客户主数据</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>多出库单销退（R1）：一张销退单关联多张出库单，按来源行锁定可退量分别回写</span></li>
+          <li class="flex gap-3"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--brand);flex-shrink:0;margin-top:2px"></i><span>产品 / 客户全局折扣 + 合同价格清单 Tab + 客户多联系人 / 多收货地址 + H5 自助下单</span></li>
+        </ul>
+      </div>
       <div class="changelog-item">
         <div class="flex items-center gap-4 mb-4">
           <span class="changelog-version">v4.2</span>

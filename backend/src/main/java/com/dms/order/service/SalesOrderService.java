@@ -184,7 +184,8 @@ public class SalesOrderService {
         var q = em.createNativeQuery(
                 "SELECT ol.id, ol.seq, ol.product_id, p.code AS p_code, p.name_cn AS p_name, p.spec AS p_spec, " +
                 "ol.qty, ol.unit_price, ol.tax_rate, ol.sub_total, ol.standard_price_incl_tax, ol.line_discount_type, ol.line_discount_value, ol.line_discount_amount, ol.promo_discount_amount, ol.header_discount_amount, ol.discount_amount, ol.final_amount, ol.amount_excl_tax, ol.tax_amount AS line_tax_amount, ol.is_gift, ol.bom_parent_product_id, ol.bom_parent_line_id, ol.bom_version, ol.bom_group_no, ol.component_qty, ol.line_level, ol.is_group_header, ol.closed_qty, " +
-                "ol.base_price_incl_tax, ol.price_source, ol.product_discount_amount, ol.promo_type, ol.promotion_id, ol.unit_price_incl_tax, ol.line_zero, ol.line_discount_direction " +
+                "ol.base_price_incl_tax, ol.price_source, ol.product_discount_amount, ol.promo_type, ol.promotion_id, ol.unit_price_incl_tax, ol.line_zero, ol.line_discount_direction, " +
+                "ol.batch_no, ol.serial_no, ol.consignment_stock_id " +
                 "FROM order_lines ol LEFT JOIN products p ON p.id = ol.product_id " +
                 "WHERE ol.order_id = ?1 ORDER BY ol.seq, ol.id", Tuple.class);
         q.setParameter(1, id);
@@ -230,6 +231,9 @@ public class SalesOrderService {
             l.put("unitPriceInclTax", t.get("unit_price_incl_tax"));
             l.put("lineZero", t.get("line_zero"));
             l.put("lineDiscountDirection", t.get("line_discount_direction"));
+            l.put("batchNo", t.get("batch_no"));
+            l.put("serialNo", t.get("serial_no"));
+            l.put("consignmentStockId", t.get("consignment_stock_id"));
             lines.add(l);
         }
         data.put("lines", lines);

@@ -105,7 +105,7 @@
 
 | 环境 | 地址 | 用途 | 数据库 |
 |------|------|------|--------|
-| 测试环境 | UI：`http://43.128.145.141/dms/`；API/health：根路径 `/api`、`/auth`、`/actuator` | 需求开发、功能调整、验证测试（Docker Compose，统一 80 端口） | `dms_test`（容器内） |
+| 测试环境 | UI（域名，推荐）：`http://dms-dev.mysolmed.com/dms/`（IP 直连 `http://43.128.145.141/dms/` 行为一致）；移动 H5 `/dms/mobile/login`；经销商准入注册 `/dms/mobile/register`；后台 `/dms/admin/`；API/health：根路径 `/api`、`/auth`、`/actuator`；宣传手册 `/brochure/`（移动页 `/brochure/mobile.html`、打印页 `/brochure/print.html`，**无 /brochure/pages/ 子目录**） | 需求开发、功能调整、验证测试（Docker Compose，统一 80 端口；裸域名 `/` 已 302→`/dms/`） | `dms_test`（容器内） |
 | 正式环境 | `http://8.133.193.238/dms/` | 生产使用（webgate/nginx 统一 80，DMS 挂 `/dms/` 子路径） | `dms`（容器内） |
 
 #### 核心规则
@@ -462,17 +462,23 @@ LEFT JOIN shipment sh ON sh.order_id = o.id
 | 部署归档 | `deploy/prod/`（compose、nginx、.env.example、README） |
 | 说明 | DB/Redis/MinIO 仅容器内网访问；后端仅监听 127.0.0.1:18080；`/` 为产品宣传手册、`/ai/` 为 ai-knowledge |
 
-### 测试环境（开发验证）
+### 测试环境（开发验证，2026-08-28 起域名 dms-dev.mysolmed.com → 43.128.145.141）
 | 用途 | URL / 命令 |
 |---|---|
-| 业务前台/PC 工作台 | http://43.128.145.141/dms/ |
-| 移动端 H5 登录 | http://43.128.145.141/dms/mobile/login |
-| 平台后台 | http://43.128.145.141/dms/admin/ |
-| 后端健康检查 | http://43.128.145.141/actuator/health |
+| 裸域名/根路径 | http://dms-dev.mysolmed.com/ （302 → `/dms/`，直达系统） |
+| 业务前台/PC 工作台 | http://dms-dev.mysolmed.com/dms/ |
+| 移动端 H5 登录 | http://dms-dev.mysolmed.com/dms/mobile/login |
+| 经销商准入（客户自助注册） | http://dms-dev.mysolmed.com/dms/mobile/register |
+| 平台后台 | http://dms-dev.mysolmed.com/dms/admin/ |
+| 后端健康检查 | http://dms-dev.mysolmed.com/actuator/health |
+| 产品宣传手册 | PC http://dms-dev.mysolmed.com/brochure/ ；移动 http://dms-dev.mysolmed.com/brochure/mobile.html ；打印 http://dms-dev.mysolmed.com/brochure/print.html |
 | 部署脚本 | `scripts/deploy_test.py` |
 
+> IP 直连（43.128.145.141）行为与域名完全一致；宣传移动/打印页无 /brochure/pages/ 前缀，写错会被 try_files 静默回退成 PC 首页（假 200）。
+> **铁律10（Nginx 变更管控）**：nginx 配置不得随意调整——变更前备份 `nginx.conf.bak.<时间戳>`、容器内 `nginx -t`、bind-mount 改完必须 `docker restart dms-test-nginx`（reload 可能因 inode 变化不生效）、`nginx -T` 取证实际生效配置、再按铁律9 用真实浏览器终验全部入口；详见 AGENTS.md Gap 7。
+
 ## 版本信息
-- 当前版本：v3.12.4
-- 最后更新：2026-08-16
+- 当前版本：v4.4.2
+- 最后更新：2026-08-28
 - 测试成绩：14/14 需求全部通过
-- 防回归规则：v3.7.1 新增铁律6-8 + 防回归章节
+- 防回归规则：v3.7.1 新增铁律6-8 + 防回归章节；v4.4.2 新增铁律9（部署后首检 GATE，必检 8 入口）+ 铁律10（Nginx 变更管控）

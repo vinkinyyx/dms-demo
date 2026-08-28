@@ -2,7 +2,7 @@
 
 > 本文件是 Codex 在本项目中的**强制工作准则**，每次会话自动加载。
 > 详细规范见 `.memory/layers/`，本文件只规定**必须执行的流程和不可跳过的检查**。
-> 最后更新：2026-08-27（Gap5升级为project_rules.md【铁律9】：部署后首检必须逐条验证文档中所有用户入口URL，含 /dms/ 路径，禁止只 curl 根路径）
+> 最后更新：2026-08-28（v4.4.2：测试环境启用域名 dms-dev.mysolmed.com、全站 MySolMed 品牌 logo、根路径 302→/dms/；新增【铁律10：Nginx 变更管控】，nginx 配置不得随意调整）
 
 ---
 
@@ -12,11 +12,17 @@
 - **后端**：Spring Boot 3.2 + Java 17 + MyBatis-Plus + Flyway + PostgreSQL 14 + Redis 7
 - **前端**：Vue 3 + Vite 5 + Element Plus（PC）+ Vant 4（H5）+ Pinia
 - **部署**：Docker Compose + Nginx
-- **测试环境**：http://43.128.145.141/dms/（后台 http://43.128.145.141/dms/admin/，移动端 http://43.128.145.141/dms/mobile/login；API 与健康检查仍走根路径 /api、/auth、/actuator）
-  - ✅ **当前部署状态（v4.3.2，2026-08-27）**：前端已统一按 `VITE_BASE=/dms/`（admin 为 `/dms/admin/`）构建，Nginx 用 `alias + try_files` 直供：业务 SPA + 移动 H5 → `/usr/share/nginx/html/dms/`（`location /dms/`），平台后台 → `/usr/share/nginx/html/dms/admin/`（`location /dms/admin/`）；与生产 webgate 方案一致。**访问 `/dms/*` 地址栏保持 `/dms/*` 不再 302 跳根**；旧的 `/dms/* → /* 302 重定向方案（对应 VITE_BASE=/）已废弃
-  - ⚠️ **铁律9强制**：每次部署后必须用真实浏览器逐个验证上述 3 个 `/dms/*` 入口 URL，**不允许只验证根路径**
+- **测试环境（域名，推荐）**：http://dms-dev.mysolmed.com/dms/ （域名 → 43.128.145.141；IP 直连 http://43.128.145.141/dms/ 同样可用）
+  - 移动端 H5 登录：http://dms-dev.mysolmed.com/dms/mobile/login
+  - 经销商准入（客户自助注册）：http://dms-dev.mysolmed.com/dms/mobile/register
+  - 平台后台：http://dms-dev.mysolmed.com/dms/admin/
+  - 裸域名 http://dms-dev.mysolmed.com/ 已配置 `302 → /dms/`（直达系统，不落宣传页）
+  - API 与健康检查仍走根路径：/api、/auth、/actuator（如 http://dms-dev.mysolmed.com/actuator/health）
+  - 产品宣传手册（独立静态站，不在 /dms/ 下）：PC http://dms-dev.mysolmed.com/brochure/ ；移动 http://dms-dev.mysolmed.com/brochure/mobile.html ；打印 http://dms-dev.mysolmed.com/brochure/print.html （⚠️ 移动/打印页直接在 /brochure/ 目录下，**没有** /brochure/pages/ 子目录，写错会回退成 PC 首页）
+  - ✅ **当前部署状态（2026-08-28 v4.4.2）**：前端以 `VITE_BASE=/dms/` 构建，Nginx 用 `alias + try_files` 直接 serve（/dms/、/dms/admin/ 各自 alias），地址栏保持 /dms/ 前缀，无 302 到根路径的旧行为
+  - ⚠️ **铁律9强制**：每次部署/配置变更后必须用真实浏览器逐个验证上述全部入口（含 /dms/、/dms/mobile/login、/dms/mobile/register、/dms/admin/、宣传 3 页），**不允许只 curl 根路径**
 - **生产环境**：http://8.133.193.238/dms/ （未经用户明确指令，禁止操作）
-- **演示账号**：租户 `default` / `admin` / `Sh123456`
+- **演示账号**：租户 `default` / 业务前端 `sys_admin`/`Dms@123456`（或 `admin`/`Sh123456`）；平台后台 `admin`/`Sh123456`
 
 ---
 
@@ -95,7 +101,8 @@
 ### 4.2 功能验证（必须用浏览器实际点击，不能只看代码）
 
 - [ ] **【铁律9 · 部署后首检 GATE】（最高优先级，必须第一个做，禁止跳过）**：对照 AGENTS.md §1 和 project_rules.md 环境信息中的**全部用户入口 URL 清单**，用 TRAE-browseruse 真实浏览器**逐条打开**，每条都必须验证：
-  - 测试环境必检 ≥ 5 条：`/`（根）、`/dms/`、`/dms/admin/`、`/dms/mobile/login`、`/actuator/health`
+  - 测试环境必检 8 条（2026-08-28 v4.4.2 起）：`/`（根，验证 302→/dms/）、`/dms/`（PC 工作台）、`/dms/admin/`（平台后台）、`/dms/mobile/login`（移动 H5）、`/dms/mobile/register`（经销商准入注册）、`/brochure/`（宣传 PC）、`/brochure/mobile.html`（宣传移动）、`/brochure/print.html`（宣传打印），另加 `/actuator/health`
+  - ⚠️ 宣传移动/打印页**没有** `/brochure/pages/` 前缀（文件与 index.html 平级），写错路径会被 try_files 静默回退成 PC 首页并返回假 200，必须比对页面 title 确认
   - 生产环境必检同结构（用户明确指令时才测）
   - 通过标准：HTTP 200 或 302 后最终 200；DOM refs ≥ 20（非空骨架）；Console 无红色 error；Network 无 5xx
   - **特别提醒**：若访问 `/dms/` 最终跳 `/error/404`，先 `localStorage.clear()` + 重新登录排除旧会话假 404，再判断是否是真的 VITE_BASE 与 URL 前缀不匹配
@@ -243,6 +250,23 @@ PATCH 改动任何模块时，默认必须把以下 5 条核心流也跑一遍�
   - **后端支持的查询参数必须有对应前端入口**：接口支持的筛选参数（batchNo/serialNo 等）前端必须挂筛选框，并实测筛选生效（输入批号→结果只剩对应单据）
   - **浏览器自动化取证**：EP 弹窗按钮在视口外时 `browser_click` 可能静默失败，下结论前先用 `window.__cap`（error/XHR 钩子）+ JS `el.click()` 取证，禁止把自动化点击失败误判为应用 Bug
 
+**Gap 7：Nginx 配置随意调整 / 改了不生效 / 静默回退假 200（⚠️ 2026-08-28 升级为【铁律10：Nginx 变更管控】，强制执行）**
+- 背景：2026-08-28 测试环境绑定域名 dms-dev.mysolmed.com 过程中接连踩坑——① 裸域名根路径 `/` 落到产品宣传页而用户期望直达系统；② Docker bind-mount 的 nginx.conf 用 sed 改完后 `nginx -s reload` 不生效（sed -i 换新 inode，容器内挂载仍指向旧 inode）；③ `/brochure/pages/mobile.html` 等不存在的路径因 `try_files ... /brochure/index.html` **静默回退成 PC 宣传首页并返回 200**，curl 状态码完全发现不了，浏览器比对 title/正文长度才识破
+- 管控要求（违反 = 部署失败）：
+  1. **非必要不调整**：`server_name`、`location`、`proxy_pass`、`alias`/`root`、`try_files`、`return`/`rewrite` 这几类指令一经验证生效即冻结；任何变更必须是解决问题的**最小 diff**，禁止"顺手优化/重排"
+  2. **改动前必备份**：`cp nginx.conf nginx.conf.bak.<YYYYMMDDHHmmss>`，备份与 nginx.conf 同目录保留
+  3. **bind-mount 生效方式**：宿主机直接改写挂载文件后，`docker exec <nginx容器> nginx -s reload` **可能不生效**（inode 变化）；必须 `docker restart dms-test-nginx`（或 `docker cp` 进容器后再 `nginx -s reload`），然后执行 `docker exec dms-test-nginx nginx -T | grep -nE 'server_name|location|proxy_pass|return|try_files'` **取证实际生效配置**，禁止只看宿主机源文件
+  4. **改前 `nginx -t`、改后取证**：容器内 `nginx -t` 通过才允许 reload/restart；变更 diff 必须在交付汇报中逐行列出
+  5. **环境隔离不得串线**：测试环境反代目标为测试后端（172.17.0.1:8082 / backend-test 容器），生产为 8080；`proxy_pass` 改完必须进容器 grep 确认
+  6. **警惕 try_files 静默回退**：新增/调整静态站点路径后，必须比对返回内容的 title / 正文长度 / 图片数量确认是**目标文件**而非回退页；状态码 200 不作为证据
+  7. **变更后必走铁律9**：用真实浏览器逐个验证全部用户入口（测试环境 7 条：`/dms/`、`/dms/mobile/login`、`/dms/mobile/register`、`/dms/admin/`、`/brochure/`、`/brochure/mobile.html`、`/brochure/print.html`，外加 `/actuator/health`；裸域名 `/` 验证 302 跳转去向符合预期）
+- 当前生效基线（2026-08-28 v4.4.2，未经用户明确指令不得改动）：
+  - `server_name dms-dev.mysolmed.com _;`（IP 直连与域名均可用）
+  - `location = / { return 302 /dms/; }`（裸域名直达系统，不落宣传页）
+  - `/dms/`、`/dms/admin/` 为 alias + try_files 直接 serve（前端以 `VITE_BASE=/dms/` 构建）
+  - `/api/`、`/auth/`、`/actuator/` 反代测试后端
+  - 宣传手册：`/brochure/`（PC）、`/brochure/mobile.html`（移动）、`/brochure/print.html`（打印）；**mobile.html / print.html 与 index.html 平级放在 /brochure/ 根目录，不存在 /brochure/pages/ 子目录**，文档与书签一律按此写
+
 ### 5.4 必跑脚本
 
 ```bash
@@ -360,9 +384,9 @@ node tools/smoke-test.cjs
 
 ## 8. 版本号规则
 
-- 当前版本：**v4.3.2**（v4.3.0 MINOR 功能包 R1–R9 + v4.3.1 走查修复 + v4.3.2 PATCH：销退审批流接入/有价0金额退货联动/销售订单布局与送货地址必填；Flyway 已到 V135；2026-08-27 测试环境已部署验证，生产待发布）。
-- PATCH（4.3.0 → 4.3.x）：每次小修复/bugfix 由 Codex 自动升，同步 CHANGELOG 和文档。
-- MINOR（4.3 → 4.4）和 MAJOR（4.x → 5.0）：必须由用户明确决定，Codex 不得自动升。
+- 当前版本：**v4.2.9**。
+- PATCH（4.2.1 → 4.2.x）：每次小修复/bugfix 由 Codex 自动升，同步 CHANGELOG 和文档。
+- MINOR（4.2 → 4.3）和 MAJOR（4.x → 5.0）：必须由用户明确决定，Codex 不得自动升。
 - 每次交付在 CHANGELOG.md 顶部新增条目。
 
 ---

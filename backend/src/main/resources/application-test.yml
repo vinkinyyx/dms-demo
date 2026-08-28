@@ -15,6 +15,7 @@ spring:
   flyway:
     enabled: true
     clean-disabled: false
+    out-of-order: true
   data:
     redis:
       host: ${REDIS_HOST:localhost}

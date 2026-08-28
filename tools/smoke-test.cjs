@@ -15,6 +15,11 @@ function arg(name, def) {
 const BASE = (arg("base") || process.env.E2E_BASE || "http://43.128.145.141").replace(/\/$/, "");
 const ONLY_MODULE = arg("module", "");
 const HEADLESS = !args.includes("--headed");
+// 分段执行：--target=pc|admin|mobile|all（默认 all；分段避免总超时只跑得到 PC）
+const TARGET = (arg("target", "all") || "all").toLowerCase();
+const RUN_PC = TARGET === "all" || TARGET === "pc";
+const RUN_ADMIN = TARGET === "all" || TARGET === "admin";
+const RUN_MOBILE = TARGET === "all" || TARGET === "mobile";
 
 const RESULT_DIR = path.join(__dirname, "..", "automation_test", "v4-browser-results", "smoke-" + Date.now());
 fs.mkdirSync(RESULT_DIR, { recursive: true });
@@ -376,7 +381,8 @@ const MOBILE_PAGES = [
 ];
 
 // ---------- main ----------
-const PROCESS_TIMEOUT_MS = 8 * 60 * 1000;
+const _SEG = (RUN_PC?1:0)+(RUN_ADMIN?1:0)+(RUN_MOBILE?1:0);
+const PROCESS_TIMEOUT_MS = Math.max(8 * 60 * 1000, _SEG * 8 * 60 * 1000);
 const PROCESS_TIMER = setTimeout(() => {
   console.error("FATAL: process exceeded " + PROCESS_TIMEOUT_MS + "ms, force-exiting");
   process.exit(2);
@@ -390,12 +396,14 @@ PROCESS_TIMER.unref();
   console.log("");
 
   const browser = await chromium.launch({ headless: HEADLESS });
+  console.log("Target segments:", TARGET, "(pc/admin/mobile)");
 
   // ---- PC ----
-  const pcCtx = await browser.newContext({ viewport: { width: 1440, height: 900 }, ignoreHTTPSErrors: true });
-  const pcPage = await pcCtx.newPage();
-  const pcLoginOk = await loginPC(pcPage);
-  check("PC login", pcLoginOk, pcPage.url());
+  if (!RUN_PC) console.log("(skipped PC: target=" + TARGET + ")");
+  const pcCtx = RUN_PC ? await browser.newContext({ viewport: { width: 1440, height: 900 }, ignoreHTTPSErrors: true }) : null;
+  const pcPage = RUN_PC ? await pcCtx.newPage() : null;
+  const pcLoginOk = RUN_PC ? await loginPC(pcPage) : false;
+  if (RUN_PC) check("PC login", pcLoginOk, pcPage.url());
 
   if (pcLoginOk) {
     for (const p of PC_PAGES) {
@@ -407,9 +415,11 @@ PROCESS_TIMER.unref();
   }
 
   // ---- Admin ----
-  const adCtx = await browser.newContext({ viewport: { width: 1440, height: 900 }, ignoreHTTPSErrors: true });
-  const adPage = await adCtx.newPage();
-  const adLoginOk = await loginAdmin(adPage);
+  if (!RUN_ADMIN) console.log("(skipped Admin: target=" + TARGET + ")");
+  const adCtx = RUN_ADMIN ? await browser.newContext({ viewport: { width: 1440, height: 900 }, ignoreHTTPSErrors: true }) : null;
+  const adPage = RUN_ADMIN ? await adCtx.newPage() : null;
+  const adLoginOk = RUN_ADMIN ? await loginAdmin(adPage) : false;
+  if (!RUN_ADMIN) check("Admin login", true, "skipped (target=" + TARGET + ")");
 
   if (adLoginOk) {
     for (const p of ADMIN_PAGES) {
@@ -421,15 +431,16 @@ PROCESS_TIMER.unref();
   }
 
   // ---- Mobile ----
-  const mCtx = await browser.newContext({
+  if (!RUN_MOBILE) console.log("(skipped Mobile: target=" + TARGET + ")");
+  const mCtx = RUN_MOBILE ? await browser.newContext({
     viewport: { width: 390, height: 844 },
     isMobile: true, hasTouch: true,
     userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148",
     ignoreHTTPSErrors: true
-  });
-  const mPage = await mCtx.newPage();
-  const mLoginOk = await loginMobile(mPage);
-  check("Mobile login", mLoginOk, mPage.url());
+  }) : null;
+  const mPage = RUN_MOBILE ? await mCtx.newPage() : null;
+  const mLoginOk = RUN_MOBILE ? await loginMobile(mPage) : false;
+  if (RUN_MOBILE) check("Mobile login", mLoginOk, mPage.url()); else check("Mobile login", true, "skipped (target=" + TARGET + ")");
 
   if (mLoginOk) {
     for (const p of MOBILE_PAGES) {
