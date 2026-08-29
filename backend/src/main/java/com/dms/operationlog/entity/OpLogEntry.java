@@ -80,4 +80,30 @@ public class OpLogEntry {
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
+
+    /**
+     * v4.4.6：落库前按列长度安全截断，避免长 Java 方法签名 / 长 path / 长 User-Agent /
+     * 长 remark 触发 PostgreSQL "value too long for type character varying(255)" 导致整条操作日志写入失败。
+     */
+    @PrePersist
+    void enforceLengths() {
+        this.requestId = clip(this.requestId, 64);
+        this.traceId = clip(this.traceId, 64);
+        this.username = clip(this.username, 64);
+        this.layer = clip(this.layer, 16);
+        this.method = clip(this.method, 255);
+        this.httpMethod = clip(this.httpMethod, 8);
+        this.path = clip(this.path, 255);
+        this.ip = clip(this.ip, 64);
+        this.userAgent = clip(this.userAgent, 255);
+        this.bizType = clip(this.bizType, 32);
+        this.bizId = clip(this.bizId, 64);
+        this.action = clip(this.action, 16);
+        this.remark = clip(this.remark, 255);
+    }
+
+    private static String clip(String s, int max) {
+        if (s == null) return null;
+        return s.length() <= max ? s : s.substring(0, Math.max(0, max - 3)) + "...";
+    }
 }

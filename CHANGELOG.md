@@ -1,3 +1,40 @@
+## v4.4.6 (2026-08-30) - 修复移动端"很慢/页面刷不出来"：令牌刷新路径错误 + op_log 超长写入失败
+
+> PATCH 版本（线上性能/可用性缺陷修复）。用户反馈移动端整体变慢、搜产品和页面都加载不出。诊断后端接口本身很快（80–145ms）、无长慢查询，根因在前端令牌刷新与操作日志写入两处。
+
+### 修复
+- **【Critical·主因】移动端登录态失效后整页刷不出/请求一直转圈**：access token 过期（约 18 分钟）后，前端 `frontend-vue/src/utils/request.js` 的 `doRefresh()` 向 **`/auth/refresh`** 发起刷新，但本系统 API 统一带 `/api` 前缀，Nginx 只把 `/api/`、`/auth/` 反代到后端，而后端刷新接口实际是 **`/api/auth/refresh`**——`/auth/refresh` 在后端没有映射，落到 `GlobalExceptionHandler` 返回 404（"No static resource auth/refresh"）。结果：access token 一过期，所有业务请求 401 → 刷新又 404 → 清空登录态/请求挂起，表现为"页面刷不出来、搜产品转圈"。
+  - 修复：`doRefresh()` 改为 `POST /api/auth/refresh`；并新增 `redirectToLogin()`——登录过期跳转按当前路由/设备区分，移动端跳 `/mobile/login`、PC 跳 `/login`（原先写死 `/login`，移动端会跳到不存在的 PC 登录页）。
+  - 验证：登录后人为把 access token 改成失效串，再进移动订单页，前端自动发起 1 次 `POST /api/auth/refresh` 拿到新令牌、重放 `/api/sales-orders` 成功，**保持登录且列表正常渲染**，Console 无红错。
+- **【次因】操作日志 op_log 频繁写入失败刷错误日志/DB**：长 Java 方法签名、长 path、长 User-Agent、长 remark 超过 varchar(255/16/8/64) 时，PostgreSQL 抛 `value too long for type character varying(255)`，整条操作日志 INSERT 失败（`op_log DB persist failed`）。虽为异步、不阻塞业务请求，但持续产生错误日志和无效 DB 写入。
+  - 修复 `backend/.../operationlog/entity/OpLogEntry.java`：新增 `@PrePersist enforceLengths()`，落库前按各列长度安全截断（method/path/user_agent/remark≤255、http_method≤8、layer/action≤16、request_id/username/ip/biz_id≤64 等），超长追加 "..."；日志不再写失败。部署后持续制造业务流量，`value too long` 与 `op_log DB persist failed` 均为 0。
+
+### 诊断结论（为什么"感觉很慢"）
+- 服务器健康、无资源瓶颈：主机 load 低（空闲 85–98%），PostgreSQL 无长查询/锁（11 连接仅 1 active、0 waiting），各业务 API 实测 57–351ms；主机内存偏紧（3.6G、有约 380MB swap）是潜在隐患但非本次主因。
+- 真正的用户可见现象来自令牌刷新 404：token 过期后页面无法静默续期，请求失败/挂起、被踢登录，体验即"很慢、刷不出来"。
+- `actuator/health` 本身 ~1.4s（DB+Redis+MinIO 探针对内存偏紧主机较慢），但该端点仅运维用、前端不调用，不影响移动端。
+
+### 验证（测试环境 http://dms-dev.mysolmed.com/dms）
+- 令牌刷新：`/api/auth/refresh` 用有效 refresh token 返回新 access token（旧 `/auth/refresh` 仍 404，前端已不再调用）；浏览器实测失效 access token 下自动刷新 + 重放成功、不掉登录。
+- op_log：部署后产生多笔业务流量，后端无 `value too long`、无 `op_log DB persist failed`，容器 healthy。
+- 铁律9 部署后首检：`/`(302→/dms/)、`/dms/`、`/dms/admin/`、`/dms/mobile/login`、`/dms/mobile/register`、`/brochure/`、`/brochure/mobile.html`、`/brochure/print.html` 全 200，业务页 80–148ms，`/actuator/health` UP。
+- 移动端深度冒烟 `smoke-test.cjs --target=mobile`：17/17 通过，Console 无红错、无 5xx。
+## 工程化（2026-08-29）- 引入 Ponytail 极简工程模式（项目级 skill + 铁律12）
+
+> 非业务版本：不改动任何业务代码、不新增运行时依赖、不动部署/Nginx。把开源 [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail)（MIT，"像最懒的资深开发一样写代码：最好的代码是从没写过的代码"）按 DMS 规则体系改编融入。
+
+### 新增
+- **项目级 skill `.codex/skills/`（随仓库版本控制，团队共享）**：
+  - `ponytail/`：常驻极简模式。极简阶梯——①YAGNI 这事真要做吗 ②先复用代码库已有（`CrudView.vue`/`ListPageLayout.vue`/`usePageLayout.js`、`frontend-vue/src/api/` 封装、`v-has` 指令、已装依赖）③标准库 ④平台原生 ⑤已装依赖 ⑥一行 ⑦才写最少代码；修 Bug 修根因（grep 全部调用方、在共享层修一次）；删除优先于新增、最短可工作 diff；有意砍的有上限角用 `ponytail:` 注释标记。
+  - `ponytail-review/`：只查过度工程的 diff 审查（delete/reuse/stdlib/native/yagni/shrink 标签），并把 DMS 高频复用点（CrudView/统一 api/v-has）列为 `reuse:` 检查项；明确不许把 DMS 硬约定（CrudView、铁律9/10/11、五维测试）当冗余删。
+  - `ponytail-debt/`：把全仓库 `ponytail:` 注释收台账，追加到 `.memory/layers/layer3-lessons.md` 末尾附录（遵守 §0.7 不建散文件）。
+  - 刻意**不**引入上游的 hooks/MCP/多平台插件脚手架与 `ponytail-gain`（对 DMS 是多余依赖/营销看板，正是 ponytail 自身反对的）。
+- **【铁律12：极简优先 / Ponytail】** 写入 `.memory/layers/layer1-rules.md` 部署铁律表，使极简原则不依赖 skill 被触发也常驻生效。
+
+### 取舍
+- **优先级**：ponytail 管"怎么写代码最简"；DMS 铁律9（真实浏览器首检）、铁律10（Nginx 管控）、铁律11（文档同批更新）、五维测试、审批回滚测试是更高优先级硬约束，冲突时以 DMS 铁律为准，绝不为求简删减验证/安全/错误处理/文档。
+- 极简的是**实现**，不是**理解**：阶段 A 需求确认、旧功能盘点（Gap6）不省。
+
 ## v4.4.5 (2026-08-29) - 移动端智能下单：BOM 组件价回退（非零金额）、选择列表分页、数量快填、移动审批越权门禁
 
 > PATCH 版本（移动端对话向导体验优化 + 后端计价缺陷修复 + 移动审批越权修复）。基于用户对 v4.4.4 智能下单的 4 项反馈逐条修复。
@@ -1663,5 +1700,6 @@ v3.8.7 沉淀了 D13 规范和基础设施（platform_button_configs 表、v-has
 - Layer 2 §18 列表页布局规范保持冻结（v3.8.7 入冻结区，本版未变更规范文字）。
 - Layer 4 D13：本版本正式落地 D13（CrudView 接入、菜单按权限过滤、admin-vue 维护入口完善）。
 - D12 状态：原文 2026-08-06 已因 PowerShell 编码异常丢失；按上下文重写并锁定 deploy-fast 流程。
+
 
 

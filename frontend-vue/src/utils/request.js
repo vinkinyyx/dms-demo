@@ -2,6 +2,7 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { getToken, setToken, getRefreshToken, setRefreshToken, clearAuth } from '@/utils/auth'
 import router from '@/router'
+import { isMobileDevice } from '@/utils/device'
 
 const service = axios.create({
   baseURL: '',
@@ -68,7 +69,7 @@ function doRefresh() {
   if (!refreshToken) return Promise.reject(new Error('no refresh token'))
   return axios
     .create({ baseURL: '', timeout: 300000 })
-    .post('/auth/refresh', { refreshToken })
+    .post('/api/auth/refresh', { refreshToken })
     .then((resp) => {
       const data = resp && resp.data ? resp.data.data || resp.data : null
       if (!data || !data.accessToken) throw new Error('refresh response invalid')
@@ -76,6 +77,14 @@ function doRefresh() {
       if (data.refreshToken) setRefreshToken(data.refreshToken)
       return data.accessToken
     })
+}
+
+
+// 登录过期后的跳转：移动端进 /mobile/login，PC 端进 /login
+function redirectToLogin() {
+  clearAuth()
+  const onMobile = (router.currentRoute && router.currentRoute.value && (router.currentRoute.value.path || '').indexOf('/mobile') === 0) || isMobileDevice()
+  router.replace(onMobile ? '/mobile/login' : '/login')
 }
 
 service.interceptors.response.use(
@@ -106,14 +115,12 @@ service.interceptors.response.use(
       }
       if (originalConfig.url && originalConfig.url.indexOf('/auth/refresh') >= 0) {
         ElMessage.error('登录已过期，请重新登录')
-        clearAuth()
-        router.replace('/login')
+        redirectToLogin()
         return Promise.reject(error)
       }
       if (!getRefreshToken()) {
         ElMessage.error('登录已过期，请重新登录')
-        clearAuth()
-        router.replace('/login')
+        redirectToLogin()
         return Promise.reject(error)
       }
       if (isRefreshing) {
@@ -132,8 +139,7 @@ service.interceptors.response.use(
           isRefreshing = false
           flushQueue(refreshErr, null)
           ElMessage.error('登录已过期，请重新登录')
-          clearAuth()
-          router.replace('/login')
+          redirectToLogin()
           return Promise.reject(refreshErr)
         })
     }
