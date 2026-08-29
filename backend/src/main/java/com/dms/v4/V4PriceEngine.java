@@ -44,7 +44,7 @@ public class V4PriceEngine {
             BigDecimal qty = requirePositiveInt(row.get("qty"), lineNo);
             boolean lineZero = Boolean.TRUE.equals(row.get("lineZero"));
             if (pricing.isBom(tid, pid)) {
-                expandBom(tid, dealerId, pid, qty, row, lines, lineNo);
+                expandBom(tid, dealerId, pid, qty, row, lines, lineNo, lineZero);
             } else {
                 Tuple prod = pricing.product(tid, pid);
                 V4Line l = buildStandalone(tid, dealerId, pid, qty, prod);
@@ -95,7 +95,7 @@ public class V4PriceEngine {
     // ---- 行展开 ----
 
     private int expandBom(UUID tid, Long dealerId, Long pid, BigDecimal qty, Map<String, Object> row,
-                          List<V4Line> lines, int startNo) {
+                          List<V4Line> lines, int startNo, boolean parentLineZero) {
         String group = "BOM-" + pid + "-" + startNo;
         String version = str(row.get("bomVersion"), pricing.currentBomVersion(tid, pid));
         List<Map<String, Object>> comps = pricing.bomLines(tid, pid, version);
@@ -123,6 +123,12 @@ public class V4PriceEngine {
                 l.setLineDiscountType(str(d.get("lineDiscountType"), null));
                 l.setLineDiscountValue(bd(d.get("lineDiscountValue")));
                 l.setLineDiscountDirection(str(d.get("lineDiscountDirection"), null));
+            }
+            // v4.4.5：补货/样品/整单0 等零金额订单，BOM 子件行同步置零，避免子件仍计价导致整单金额不为 0
+            if (parentLineZero) {
+                l.setLineZero(true);
+                l.setLineDiscountType(null);
+                l.setLineDiscountValue(null);
             }
             lines.add(l);
             added++;

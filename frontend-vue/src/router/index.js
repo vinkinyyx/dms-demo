@@ -114,6 +114,7 @@ const routes = [
       { path: 'orders', name: 'MOrders', component: () => import('@/views/mobile/MOrders.vue'), meta: { mobile: true, title: '销售订单' } },
       { path: 'orders/:id', name: 'MOrderDetail', component: () => import('@/views/mobile/MOrderDetail.vue'), meta: { mobile: true, title: '订单详情' } },
       { path: 'orders/create', name: 'MOrderCreate', component: () => import('@/views/mobile/MOrderCreate.vue'), meta: { mobile: true, title: '下销售订单' } },
+      { path: 'smart-order', name: 'MSmartOrder', component: () => import('@/views/mobile/MSmartOrder.vue'), meta: { mobile: true, title: '智能下单' } },
       { path: 'surgery-reports', name: 'MSurgeryReports', component: () => import('@/views/mobile/MSurgeryReports.vue'), meta: { mobile: true, title: '手术报台' } },
       { path: 'surgery-reports/:id', name: 'MSurgeryReportDetail', component: () => import('@/views/mobile/MSurgeryReportDetail.vue'), meta: { mobile: true, title: '报台详情' } },
       { path: 'surgery-reports/create', name: 'MSurgeryReportCreate', component: () => import('@/views/mobile/MSurgeryReportCreate.vue'), meta: { mobile: true, title: '手术植入报台' } },

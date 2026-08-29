@@ -91,6 +91,7 @@ const recentOrders = ref([])
 const loadingRecent = ref(false)
 
 const quicks = [
+  { key: 'smart-order', label: '智能下单', icon: 'chat-o', color: '#722ed1', to: '/mobile/smart-order' },
   { key: 'order-create', label: '下销售订单', icon: 'orders-o', color: '#1677ff', to: '/mobile/orders/create' },
   { key: 'surgery',      label: '填手术报台', icon: 'edit-o',    color: '#52c41a', to: '/mobile/surgery-reports/create' },
   { key: 'orders',       label: '我的订单',   icon: 'list-switching', color: '#fa8c16', to: '/mobile/orders' },
