@@ -71,7 +71,19 @@
       </div>
     </div>
 
-    <!-- 输入栏：仅自由输入步骤显示 -->
+    <!-- 数量快捷条：数量步可点选/步进 -->
+    <div v-if="inputMode && inputKind === 'qty'" class="qty-bar">
+      <div class="qty-stepper">
+        <van-button size="small" plain icon="minus" @click="qtyStep(-1)" />
+        <span class="qty-val">{{ qtyDraft || 1 }}</span>
+        <van-button size="small" plain icon="plus" @click="qtyStep(1)" />
+      </div>
+      <div class="qty-quick">
+        <van-button v-for="n in [1,5,10,20,50,100]" :key="n" size="mini" plain round @click="qtySet(n)">{{ n }}</van-button>
+      </div>
+      <van-button size="small" type="primary" block round @click="qtyConfirm()">确定 {{ qtyDraft || 1 }} 件</van-button>
+    </div>
+    <!-- 输入栏：仅自由输入步骤显示（数量步保留输入框也可直接打字） -->
     <div v-if="inputMode" class="input-bar">
       <van-field
         v-model="inputValue"
@@ -119,6 +131,7 @@ const inputType = ref('text')
 const inputPlaceholder = ref('')
 const inputValue = ref('')
 const inputKind = ref('')
+const qtyDraft = ref(1)
 
 const state = reactive({
   orderType: '',
@@ -141,6 +154,67 @@ const state = reactive({
 const dealers = ref([])
 let productResults = []
 let voucherResults = []
+const PAGE_SIZE = 5
+const listPage = ref(0)        // 当前产品/客户列表批次（0 起）
+let listKind = ''              // 'product' | 'dealer' | 'voucher'
+function listMaxPage(len) { return Math.max(0, Math.ceil(len / PAGE_SIZE) - 1) }
+// 构造某一类列表某一批的选项（5 个/批 + 上一批/下一批）
+function buildPagedOptions(kind, all) {
+  const total = all.length
+  const max = listMaxPage(total)
+  const pg = Math.min(listPage.value, max)
+  const start = pg * PAGE_SIZE
+  const slice = all.slice(start, start + PAGE_SIZE)
+  let opts
+  if (kind === 'product') {
+    opts = slice.map((p, i) => ({
+      key: 'p' + p.id,
+      label: (start + i + 1) + '. ' + (p.code || '') + ' · ' + (p.nameCn || p.name || '') + (p.spec ? ' / ' + p.spec : ''),
+      action: 'product', value: start + i
+    }))
+  } else if (kind === 'dealer') {
+    opts = slice.map((d, i) => ({
+      key: 'd' + d.id,
+      label: (start + i + 1) + '. ' + d.label,
+      action: 'dealer', value: d.id
+    }))
+  } else {
+    opts = slice.map((v, i) => ({
+      key: 'v' + v.id,
+      label: (start + i + 1) + '. ¥' + num(v.faceValue).toFixed(2) + ' ' + (v.name || '代金券') + (num(v.minSpend) > 0 ? '（满 ¥' + num(v.minSpend).toFixed(2) + '）' : '（无门槛）'),
+      action: 'voucher', value: start + i
+    }))
+  }
+  const nav = []
+  if (pg > 0) nav.push({ key: 'prev-page', label: '‹ 上一批', action: 'page', value: 'prev' })
+  if (pg < max) nav.push({ key: 'next-page', label: '下一批 ›（还有 ' + (total - start - slice.length) + ' 个）', action: 'page', value: 'next' })
+  return { opts: [...opts, ...nav], pageInfo: '第 ' + (pg + 1) + '/' + (max + 1) + ' 批 · 共 ' + total + ' 个' }
+}
+function rerenderPaged() {
+  // 翻页：替换最后一条分页消息为同一批数据的新批次选项（整对象替换确保 Vue 重渲染）；
+  // 非数据按钮（如"进入下一步"/"不使用券"）以 _pin 保留在最前。
+  const msgs = messages.value
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i].role === 'bot' && msgs[i].options && msgs[i]._paged) {
+      const all = listKind === 'product' ? productResults : listKind === 'dealer' ? dealers.value : voucherResults
+      const { opts: dataOpts, pageInfo } = buildPagedOptions(listKind, all)
+      const pinned = (msgs[i].options || []).filter(o => o._pin)
+      // 标题里的“第 x/y 批”用最新 pageInfo 刷新
+      const baseTpl = msgs[i]._baseTitle || msgs[i].title || ''
+      const newTitle = baseTpl.includes('{PAGE}') ? baseTpl.replace('{PAGE}', pageInfo) : baseTpl
+      msgs[i] = {
+        ...msgs[i],
+        title: newTitle,
+        options: [...pinned, ...dataOpts],
+        _paged: true,
+        _baseTitle: baseTpl
+      }
+      scrollBottom()
+      return
+    }
+  }
+}
+
 
 function typeLabel(t) {
   return { SALES: '销售订单', REPLENISHMENT: '补货订单', SAMPLE: '样品订单' }[t] || t || '-'
@@ -171,6 +245,7 @@ function setInput(kind, placeholder, type = 'text') {
   inputType.value = type
   inputPlaceholder.value = placeholder
   inputValue.value = ''
+  if (kind === 'qty') qtyDraft.value = 1
 }
 function hideInput() {
   inputMode.value = false
@@ -240,13 +315,9 @@ function askDealer() {
     bot({ text: '当前没有可选客户（经销商），请联系管理员开通授权。', options: [{ key: 'restart', label: '↺ 重新开始', action: 'restart' }] })
     return
   }
-  bot({
-    title: '第二步：请选择下单客户',
-    text: '直接点击下方客户：',
-    options: dealers.value.slice(0, 30).map((d, i) => ({
-      key: d.id, label: (i + 1) + '. ' + d.label, action: 'dealer', value: d.id
-    }))
-  })
+  listKind = 'dealer'; listPage.value = 0
+  const dPaged = buildPagedOptions('dealer', dealers.value)
+  bot({ title: '第二步：请选择下单客户（' + dPaged.pageInfo + '）', text: '直接点击下方客户；客户较多时用「下一批」翻页：', options: dPaged.opts, _paged: true, _baseTitle: '第二步：请选择下单客户（{PAGE}）' })
 }
 
 function afterDealer() {
@@ -272,7 +343,7 @@ function askProductSearch() {
 async function doProductSearch(keyword) {
   loading.value = true
   try {
-    const r = await lookup('products', { keyword, dealerId: state.dealerId, limit: 20 })
+    const r = await lookup('products', { keyword, dealerId: state.dealerId, limit: 100 })
     const d = r.data
     productResults = Array.isArray(d) ? d : (d.list || d.records || [])
     if (!productResults.length) {
@@ -283,15 +354,11 @@ async function doProductSearch(keyword) {
       setInput('product-search', '重新输入产品关键词')
       return
     }
-    const opts = productResults.slice(0, 10).map((p, i) => ({
-      key: p.id,
-      label: (i + 1) + '. ' + (p.code || '') + ' · ' + (p.nameCn || p.name || '') + (p.spec ? ' / ' + p.spec : ''),
-      action: 'product',
-      value: i
-    }))
-    if (state.lines.length) opts.push({ key: 'cancel-add', label: '不新增了，进入下一步 ›', action: 'after-lines' })
+    listKind = 'product'; listPage.value = 0
+    const pPaged = buildPagedOptions('product', productResults)
+    if (state.lines.length) pPaged.opts.unshift({ key: 'cancel-add', label: '✔ 不新增了，进入下一步 ›', action: 'after-lines', primary: true, _pin: true })
     hideInput()
-    bot({ title: '找到 ' + productResults.length + ' 个产品，请点击选择：', options: opts })
+    bot({ title: '找到 ' + productResults.length + ' 个产品（' + pPaged.pageInfo + '），请点击选择：', text: '每批显示 ' + PAGE_SIZE + ' 个，点「下一批」查看更多：', options: pPaged.opts, _paged: true, _baseTitle: '找到 ' + productResults.length + ' 个产品（{PAGE}），请点击选择：' })
   } catch (e) {
     bot({ text: '产品搜索失败：' + escapeHtml(e?.response?.data?.message || e.message) })
     setInput('product-search', '重新输入产品关键词')
@@ -327,6 +394,18 @@ function askQty() {
   bot({ title: '第四步：下单数量？', text: '请输入该产品的<b>正整数</b>数量，例如 10。' })
 }
 
+function qtyStep(delta) {
+  qtyDraft.value = Math.max(1, (Number(qtyDraft.value) || 1) + delta)
+  inputValue.value = String(qtyDraft.value)
+}
+function qtySet(n) {
+  qtyDraft.value = n
+  inputValue.value = String(n)
+}
+function qtyConfirm() {
+  if (!qtyDraft.value || Number(qtyDraft.value) <= 0) { showFailToast('数量必须大于 0'); return }
+  onQtyInput(String(qtyDraft.value))
+}
 function onQtyInput(text) {
   const qty = Number(text)
   if (!/^\d+$/.test(text.trim()) || qty <= 0) {
@@ -523,14 +602,10 @@ async function askVoucher() {
       })
       return
     }
-    const opts = voucherResults.slice(0, 10).map((v, i) => ({
-      key: v.id,
-      label: (i + 1) + '. ¥' + num(v.faceValue).toFixed(2) + ' ' + (v.name || '代金券') + (num(v.minSpend) > 0 ? '（满 ¥' + num(v.minSpend).toFixed(2) + ' 可用）' : '（无门槛）'),
-      action: 'voucher',
-      value: i
-    }))
-    opts.push({ key: 'cancel-voucher', label: '不使用代金券，返回重选优惠方式', action: 'ask-header' })
-    bot({ title: '请选择代金券：', options: opts })
+    listKind = 'voucher'; listPage.value = 0
+    const vPaged = buildPagedOptions('voucher', voucherResults)
+    vPaged.opts.unshift({ key: 'cancel-voucher', label: '✖ 不使用代金券，返回重选优惠方式', action: 'ask-header', _pin: true })
+    bot({ title: '请选择代金券（' + vPaged.pageInfo + '）：', options: vPaged.opts, _paged: true, _baseTitle: '请选择代金券（{PAGE}）：' })
   } catch (e) {
     state.pricingMode = 'NORMAL'
     bot({
@@ -761,6 +836,13 @@ function onOption(msg, opt) {
       break
     case 'noop':
       break
+    case 'page': {
+      const all = listKind === 'product' ? productResults : listKind === 'dealer' ? dealers.value : voucherResults
+      if (opt.value === 'next') listPage.value = Math.min(listPage.value + 1, listMaxPage(all.length))
+      else listPage.value = Math.max(0, listPage.value - 1)
+      rerenderPaged()
+      break
+    }
     case 'type':
       state.orderType = opt.value
       state.lines = []
@@ -864,6 +946,12 @@ onMounted(async () => {
 .promo-line { font-size: 12px; color: #ad6800; line-height: 1.6; }
 .sum-total { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--van-gray-3, #dcdee0); font-weight: 600; }
 .sum-amt { color: var(--dms-color-danger, #ee0a24); font-size: 18px; }
+
+.page-info { margin-top: 8px; font-size: 12px; color: var(--van-text-color-3, #969799); }
+.qty-bar { flex: 0 0 auto; background: #fff; border-top: 1px solid var(--van-gray-2, #ebedf0); padding: 10px 12px 4px; }
+.qty-stepper { display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 8px; }
+.qty-val { font-size: 24px; font-weight: 700; color: var(--dms-color-primary, #1677ff); min-width: 60px; text-align: center; }
+.qty-quick { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 10px; }
 .input-bar { flex: 0 0 auto; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: #fff; border-top: 1px solid var(--van-gray-2, #ebedf0); }
 .input-hint { text-align: center; font-size: 11px; color: var(--dms-text-4, #a9aeb8); margin-top: 4px; }
 </style>

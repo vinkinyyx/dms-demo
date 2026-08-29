@@ -1,3 +1,26 @@
+## v4.4.5 (2026-08-29) - 移动端智能下单：BOM 组件价回退（非零金额）、选择列表分页、数量快填、移动审批越权门禁
+
+> PATCH 版本（移动端对话向导体验优化 + 后端计价缺陷修复 + 移动审批越权修复）。基于用户对 v4.4.4 智能下单的 4 项反馈逐条修复。
+
+### 修复
+- **【Critical·问题1】销售订单中 BOM 组合品的组件（子件）未维护 BOM 专属组件价时静默按 0 计价，导致整套组合品近乎免费**：订单 SO-20260829-00003 中 BOM 母件 PRD-T005（股骨髓内钉系统）的子件 PRD-T003/T004（锁定接骨螺钉）因没有配 BOM_COMPONENT 专属价，`V4PricingService.salesPrice(BOM_COMPONENT)` 找不到组件价时直接 `zeroPrice` 返回 0，且不报错。
+  - 修复 `backend/.../v4/V4PricingService.java`：BOM 组件价查找顺序为「经销商组件价 → 全局组件价(0L) → 全局组件价(null)」，全部未命中时**回退到该组件的单品销售价**（DEALER STANDALONE → GLOBAL 0L → GLOBAL null），仍取不到价则抛 `BusinessException`（含产品编码+名称+所属 BOM 母件提示），**禁止再静默返回 0**。
+  - 实测修复后：PRD-T005 ×1（含子件 T003×4、T004×2）preview 返回子件 720 + 440 = finalAmount 1160（母件行 0 为正确口径——BOM 母件不独立计价，价值由子件承载）。
+  - 说明：修复前已创建的历史订单 SO-20260829-00003 仍保留旧的 0 金额快照（订单提交后价格已落快照，不会自动重算）；新下单的 BOM 组合品计价正确。
+- **【问题3·越权】移动端审批详情对非指派人也显示「同意/驳回」按钮，点击后后端 403 `only assignee can process task`**：审批节点配置了多名指派人（含超级管理员、林管理员及一批测试用户），`MApprovalDetail.vue` 的 `myPendingTasks` 只按 `status==='PENDING'` 过滤，未校验当前登录人是否为该任务 assignee，导致非指派人看到按钮、点击报 403。
+  - 修复 `frontend-vue/.../mobile/MApprovalDetail.vue`：引入 `useUserStore`，`myPendingTasks` 改为 `t.status==='PENDING' && (t.assigneeId==null || Number(t.assigneeId)===Number(userStore.user.id))`，与 PC 端 `ApprovalDetailDrawer.vue` 口径一致；非指派人不再渲染操作按钮（后端 `/api/approval` 仍有 assignee 校验兜底，前后端双重门禁）。
+
+### 优化
+- **【问题2】客户/产品/代金券选择列表分页展示**：原产品搜索只列前 10 个、客户列前 30 个，超出部分无法触达。`MSmartOrder.vue` 新增统一分页机制：每批显示 **5** 个（`PAGE_SIZE=5`），选项编号全局连续（第二批从 6 开始），列表底部提供「‹ 上一批」「下一批 ›（还有 N 个）」导航按钮；标题实时显示「第 x/y 批 · 共 N 个」。
+  - 产品搜索 `limit` 由 20 提升到 100，覆盖更多搜索结果；客户（经销商）、代金券列表同样改为 5 个/批分页；「进入下一步/不使用券」等非数据操作按钮以 `_pin` 固定在分页按钮之前，翻页不丢失。
+- **【问题4】数量步快捷填写**：数量输入步新增 `.qty-bar` 快捷条 —— 「−/+」步进按钮、常用数量 [1, 5, 10, 20, 50, 100] 一键点选、大号当前数量显示、「确定 N 件」主按钮；同时保留原输入框可直接键盘输入，两者双向同步。
+
+### 验证（测试环境 http://dms-dev.mysolmed.com/dms）
+- 铁律9 部署后首检：根 `/` 302→/dms/、`/dms/`、`/dms/admin/`、`/dms/mobile/login`、`/dms/mobile/register`、`/brochure/`、`/brochure/mobile.html`、`/brochure/print.html` 全部 200/302 且 title 各异无静默回退，`/actuator/health` UP。
+- 分页/数量 `automation_test/v446_paging.js`（真实移动浏览器）：**15/15 通过** —— 客户 12 个分 3 批、首批 ≤5 个、翻到第 2 批有上一批、翻回第 1 批；产品搜 PRD 命中 24 个分 5 批、第二批编号从 6 全局连续；数量步进 10→11、常用数量点选、确定后进入第五步；走到第九步确认摘要后取消；全程 Console 无红错、Network 无 5xx。
+- 计价：PRD-T005 BOM 组合 preview 子件计价 720+440=1160（非 0）；母件行 0 为 BOM 正确口径。
+- 移动审批门禁：非指派人 sales（id=32）my-todo 不含该单、详情页**不显示**同意/驳回按钮（不再 403）；指派人 admin（id=1）正常显示按钮。
+- 深度冒烟回归 `tools/smoke-test.cjs`（PC+Admin+Mobile）：**272/272 通过**。
 ## v4.4.4 (2026-08-29) - 移动端「智能下单」对话式向导 + 零金额订单 BOM 子件计价修复
 
 > PATCH 版本（移动端新增功能 + 后端计价缺陷修复）。移动端新增对话式（点选为主）下单向导，并修复补货/样品等零金额订单在 BOM 组合品下子件仍计价、导致整单金额不为 0 的问题。
@@ -1640,4 +1663,5 @@ v3.8.7 沉淀了 D13 规范和基础设施（platform_button_configs 表、v-has
 - Layer 2 §18 列表页布局规范保持冻结（v3.8.7 入冻结区，本版未变更规范文字）。
 - Layer 4 D13：本版本正式落地 D13（CrudView 接入、菜单按权限过滤、admin-vue 维护入口完善）。
 - D12 状态：原文 2026-08-06 已因 PowerShell 编码异常丢失；按上下文重写并锁定 deploy-fast 流程。
+
 

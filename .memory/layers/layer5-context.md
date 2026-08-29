@@ -1,6 +1,7 @@
 # Layer 5: 当前上下文（临时）
 
-> 会话级临时记忆。最近刷新：2026-08-29（v4.4.4 PATCH：移动端「智能下单」对话式向导上线测试环境 + 修复零金额订单 BOM 子件未归零；新增铁律11 文档及时更新；无 Flyway 变更）
+> 会话级临时记忆。最近刷新：2026-08-29（v4.4.5 PATCH：智能下单 4 项反馈修复——BOM 组件未配组件价回退单品价/禁静默0、客户产品代金券列表 5个/批分页、数量快捷条、移动审批按 assignee 门禁；无 Flyway 变更；铁律11 文档同步）
+> 上一刷：2026-08-29（v4.4.4 PATCH：移动端「智能下单」对话式向导上线测试环境 + 修复零金额订单 BOM 子件未归零；新增铁律11 文档及时更新；无 Flyway 变更）
 > 上一刷：2026-08-28（v4.4.0 MINOR 寄售库存/补货开票订单/样品订单/经销商资信账期 + 进销存开关精细化；Flyway V136/V137）
 
 ---
@@ -116,4 +117,5 @@ eleases/dms-4.2.1-prod-deploy-20260822-231940/。
 - 兼容问题：生产 docker-compose v1.29.2 对 backend `--force-recreate` 报 `KeyError: 'ContainerConfig'`，且会停止 postgres/redis/minio；修复方式为 `docker start` 三个依赖容器，等待 healthy 后 `docker rm -f dms-prod-backend`，再执行 `docker-compose -f /opt/dms/prod/docker-compose.yml up -d --no-deps backend`。
 - 验证：`/actuator/health` 返回 UP；PC/admin/mobile 入口 200；登录态核心订单 API 200；Playwright 生产 UI 冒烟 9/9 PASS，无 Console 错误和 5xx。
 - 清理：删除 8 月 22/24 的旧 jar、旧前端目录和完整旧发布目录；保留 `221518` 与 `021234` 两套回滚备份；Docker 无停止容器、无悬空镜像、构建缓存为 0；根分区 11G/28% → 9.9G/27%。
+
 

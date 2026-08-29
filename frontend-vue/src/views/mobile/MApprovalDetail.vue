@@ -36,14 +36,17 @@
 </template>
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/store/user'
 import { useRoute } from 'vue-router'
 import { showToast, showSuccessToast, showFailToast } from 'vant'
 import request from '@/utils/request'
 import { approveTask, rejectTask } from '@/api/approval'
+const userStore = useUserStore()
 import { BUSINESS_LABELS, INSTANCE_STATUS_LABELS, formatTime } from '@/views/approval/dict'
 const route=useRoute(); const detail=ref(null); const summary=ref({}); const comment=ref(''); const commentVisible=ref(false); const loading=ref(false); const submitting=ref(false); let action=''
 const instance=computed(()=>detail.value?.instance||{}); const tasks=computed(()=>detail.value?.tasks||[]); const records=computed(()=>detail.value?.records||[])
-const myPendingTasks=computed(()=>tasks.value.filter(t=>t.status==='PENDING'))
+const currentUid=computed(()=>userStore.user&&userStore.user.id)
+const myPendingTasks=computed(()=>tasks.value.filter(t=>t.status==='PENDING'&&(t.assigneeId==null||Number(t.assigneeId)===Number(currentUid.value))))
 function businessLabel(t){return BUSINESS_LABELS[t]||t}
 function statusLabel(s){return INSTANCE_STATUS_LABELS[s]||s}
 function statusType(s){return s==='APPROVED'||s==='AUTO_APPROVED'?'success':s==='REJECTED'||s==='TERMINATED'?'danger':'warning'}

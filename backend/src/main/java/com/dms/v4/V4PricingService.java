@@ -26,10 +26,21 @@ public class V4PricingService {
 
     public Price salesPrice(UUID tenantId, Long productId, Long dealerId, PriceUse use, Long bomParentProductId) {
         if (use == PriceUse.BOM_COMPONENT) {
+            // v4.4.5：BOM 组件优先取 BOM 专属组件价（经销商价 > 全局价）；
+            // 未维护组件价时回退到该组件的单品销售价（与 STANDALONE 一致：合同价 > 经销商价 > 全局价），
+            // 仍取不到价格时抛业务异常，禁止静默按 0 计价（否则整套 BOM 免费）。
             Price p = findPrice(tenantId, productId, "DEALER", dealerId, "BOM_COMPONENT", bomParentProductId);
             if (p == null) p = findPrice(tenantId, productId, "GLOBAL", 0L, "BOM_COMPONENT", bomParentProductId);
             if (p == null) p = findPrice(tenantId, productId, "GLOBAL", null, "BOM_COMPONENT", bomParentProductId);
-            return p == null ? zeroPrice(tenantId, productId) : p;
+            if (p != null) return p;
+            p = findPrice(tenantId, productId, "DEALER", dealerId, "STANDALONE", null);
+            if (p == null) p = findPrice(tenantId, productId, "GLOBAL", 0L, "STANDALONE", null);
+            if (p == null) p = findPrice(tenantId, productId, "GLOBAL", null, "STANDALONE", null);
+            if (p != null) return p;
+            String label = productLabel(tenantId, productId);
+            String parentLabel = bomParentProductId == null ? "" : ("（BOM 组合 " + productLabel(tenantId, bomParentProductId) + "）");
+            throw new com.dms.common.BusinessException(com.dms.common.ErrorCode.BUSINESS_RULE_VIOLATION,
+                "产品 [" + label + "]" + parentLabel + " 没有维护有效销售价格（BOM 组件价或单品价），请先在「产品价格」中维护");
         }
         Price p = findPrice(tenantId, productId, "DEALER", dealerId, "STANDALONE", null);
         if (p == null) p = findPrice(tenantId, productId, "GLOBAL", 0L, "STANDALONE", null);
