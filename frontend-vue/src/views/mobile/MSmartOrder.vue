@@ -46,7 +46,7 @@
                 </div>
                 <div class="sl-meta">
                   <span>x{{ l.qty }}</span>
-                  <span v-if="l.lineDiscountType">行折扣：{{ l.lineDiscountType === 'PERCENT' ? l.lineDiscountValue + '%' : '¥' + Number(l.lineDiscountValue || 0).toFixed(2) }}</span>
+                  <span v-if="l.lineDiscountType">行折扣：{{ l.lineDiscountType === 'PERCENT' ? (Number(l.lineDiscountValue)/10).toFixed(1).replace('.0','') + ' 折' : '减 ¥' + Number(l.lineDiscountValue || 0).toFixed(2) }}</span>
                 </div>
               </div>
             </div>
@@ -665,7 +665,7 @@ async function askConfirm() {
       ? (data.payableAmount != null ? data.payableAmount : num(data.finalAmount) - num(data.voucherAmount))
       : (state.pricingMode === 'FIXED_PRICE' ? num(state.fixedPrice) : num(data.finalAmount))
     const headerText = state.headerDiscountType
-      ? (state.headerDiscountType === 'PERCENT' ? '百分比 ' + state.headerDiscountValue + '%' : '减免 ¥' + num(state.headerDiscountValue).toFixed(2))
+      ? (state.headerDiscountType === 'PERCENT' ? (Number(state.headerDiscountValue)/10).toFixed(1).replace('.0','') + ' 折' : '减 ¥' + num(state.headerDiscountValue).toFixed(2))
       : ''
     const summary = {
       orderType: state.orderType,

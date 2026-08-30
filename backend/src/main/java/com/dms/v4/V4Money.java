@@ -44,8 +44,20 @@ public class V4Money {
         if (magnitude.signum() == 0) return BigDecimal.ZERO;
         BigDecimal amt;
         if ("PERCENT".equalsIgnoreCase(type) || "RATE".equalsIgnoreCase(type)) {
-            if (magnitude.compareTo(BigDecimal.ONE) > 0) magnitude = magnitude.divide(HUNDRED, 6, RoundingMode.HALF_UP);
-            amt = base.multiply(magnitude);
+            // 输入统一折算成系数：>1 视为 0~100 的折数/百分比（如 90→0.90），<=1 视为小数系数（如 0.90）。
+            BigDecimal factor = magnitude.compareTo(BigDecimal.ONE) > 0
+                    ? magnitude.divide(HUNDRED, 6, RoundingMode.HALF_UP)
+                    : magnitude;
+            if (add) {
+                // 加价（高开）：factor 即加价比例，如 5 → +5%。
+                amt = base.multiply(factor);
+            } else {
+                // 折扣（减）：中文「折数」语义——factor 为实付比例（90 折 = 实付 90%），
+                // 减免额 = 基数 ×(1 - 实付比例)。例：98 折填 98 → 实付 98%、减免 2%（不是减免 98%）。
+                BigDecimal reduceRate = BigDecimal.ONE.subtract(factor);
+                if (reduceRate.signum() < 0) reduceRate = BigDecimal.ZERO;
+                amt = base.multiply(reduceRate);
+            }
         } else {
             amt = magnitude;
         }
