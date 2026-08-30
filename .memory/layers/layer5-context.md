@@ -1,6 +1,7 @@
 # Layer 5: 当前上下文（临时）
 
-> 会话级临时记忆。最近刷新：2026-08-30（v4.4.7 PATCH：百分比折扣语义颠倒修复——手动行/整单折扣 PERCENT 从误按"减免比例"(98→减98%)改为中文"折数=实付比例"(98折→付98%/减2%)，V4Money.signedDiscount；移动端摘要显示 9.8 折；PC/移动同一后端一次修复；全局折扣/促销 rate 不受影响；无 Flyway 变更；铁律11 文档同步）
+> 会话级临时记忆。最近刷新：2026-08-30（**v4.4.7 已发布生产** http://8.133.193.238/dms/ 20:27，v4.4.5+v4.4.6+v4.4.7 三批 PATCH 一并上线；无 Flyway 迁移（本地=生产=V139）；DB 备份 dms-db-pre-v447-prod-20260830-202615.sql.gz；铁律9 八入口+health 全 200、容器全 healthy；旧 jar 备份 /opt/dms/backups/app-prod-20260830-202629.jar 可回滚；生产已清理过期备份+截断大日志，根分区 9.7G/40G）
+> 上一刷：2026-08-30（v4.4.7 PATCH：百分比折扣语义颠倒修复——手动行/整单折扣 PERCENT 从误按"减免比例"(98→减98%)改为中文"折数=实付比例"(98折→付98%/减2%)，V4Money.signedDiscount；移动端摘要显示 9.8 折；PC/移动同一后端一次修复；全局折扣/促销 rate 不受影响；无 Flyway 变更；铁律11 文档同步）
 > 上一刷：2026-08-30（v4.4.6 PATCH：移动端"很慢/刷不出来"根因——前端令牌刷新误打 /auth/refresh 应为 /api/auth/refresh（404 致 token 过期后整页挂起），已修并加移动端登录跳转；op_log varchar 超长 @PrePersist 截断；无 Flyway 变更；铁律11 文档同步）
 > 上一刷：2026-08-29（工程化：引入 Ponytail 极简工程模式——项目级 skill ponytail/ponytail-review/ponytail-debt + layer1【铁律12 极简优先】；不改业务代码/不加依赖/不动部署；无 Flyway 变更；铁律11 文档同批更新）
 > 再上刷：2026-08-29（v4.4.5 PATCH：智能下单 BOM 组件价回退/禁静默0、客户产品代金券列表 5个/批分页、数量快捷条、移动审批按 assignee 门禁；无 Flyway 变更）
@@ -18,7 +19,7 @@
 | 业务前台 | http://43.128.145.141/dms/ （admin / Sh123456，租户 default；sys_admin / Dms@123456 为厂商超管） |
 | 移动端 H5 | http://43.128.145.141/dms/mobile/login |
 | 平台后台 | http://43.128.145.141/dms/admin/ （admin / Sh123456，token 与前台隔离） |
-| 正式环境 | http://8.133.193.238/dms/（**v4.3.1，2026-08-27 22:19 已部署**；Flyway 至 V134；webgate 直供 /dms/ 与 /dms/admin/，前端 VITE_BASE=/dms/；备份 stamp 20260827-221851，DB 备份 dms-db-pre-v431-prod-20260827-221839.sql.gz；铁律9 五入口浏览器首检 + 8 个 v4.3 API + V4 计价三模式均通过；已推送 GitHub vinkinyyx/dms-demo main b30896d） |
+| 正式环境 | http://8.133.193.238/dms/（**v4.4.7，2026-08-30 20:27 已部署**，含 v4.4.5/v4.4.6/v4.4.7 三批 PATCH；Flyway 至 V139，本次**无 DB 迁移**（本地=生产=V139，纯应用层升级，历史订单价格快照不重算）；webgate(nginx) 直供 /dms/ 与 /dms/admin/，前端 VITE_BASE=/dms/；发布前 DB 备份 /opt/dms/backups/dms-db-pre-v447-prod-20260830-202615.sql.gz，旧 jar 备份 /opt/dms/backups/app-prod-20260830-202629.jar 可回滚；铁律9 八入口（/、/dms/、/dms/admin/、/dms/mobile/login、/dms/mobile/register、/brochure/、/brochure/mobile.html、/brochure/print.html）+ /actuator/health 全 200，backend/postgres/redis/minio 四容器 healthy；登录、/api/auth/refresh（400 可达非 404）、/api/sales-orders、/api/approval-instances 均正常，preview 98 折计价正确） |
 | 记忆体系 | v2.0，五层结构（rules/conventions/lessons/decisions/context） |
 
 ### v4.3.0 MINOR 功能包（R1–R9，2026-08-27，Flyway V121–V133）

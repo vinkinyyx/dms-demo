@@ -16,6 +16,14 @@
 - 真实浏览器智能下单端到端：选 PRD-T001 ×10 → 行折扣填 98 → 确认摘要显示"行折扣：9.8 折"、应付金额正确，Console 无红错、无 5xx（末尾取消，不产生脏单）。
 - 分页/数量回归 `v446_paging.js` 15/15；铁律9 八入口 + health 全 200。
 - 说明：历史已提交订单（如 SO-20260830-00001）价格为快照、不会自动重算；修复对**新下订单**生效。
+
+### 生产发布（2026-08-30 20:27，http://8.133.193.238/dms/）
+- v4.4.5 + v4.4.6 + v4.4.7 三批 PATCH 一并推送到生产（用户明确指令），生产后端容器 `dms-prod-backend` 于 2026-08-30 20:27 重启，镜像内 `/app/app.jar` 为本次新构建（117,092,641 字节，20:26）；旧版本 jar 备份至 `/opt/dms/backups/app-prod-20260830-202629.jar` 供回滚。
+- **无 DB 迁移**：本地 Flyway 最高 V139 = 生产 V139，本次纯应用层升级，不涉及表结构/历史单据改价（历史订单价格快照不重算）。
+- 发布前已备份生产数据库：`/opt/dms/backups/dms-db-pre-v447-prod-20260830-202615.sql.gz`（1.3M）。
+- 铁律9 生产入口首检全过：`/`、`/dms/`、`/dms/admin/`、`/dms/mobile/login`、`/dms/mobile/register`、`/brochure/`、`/brochure/mobile.html`、`/brochure/print.html` 全部 HTTP 200（裸根 302→/dms/），`/actuator/health` 200 UP；4 个容器（backend/postgres/redis/minio）均 healthy。
+- 功能冒烟（生产真实接口）：`admin/Sh123456` 登录成功（token 300 字符）；`POST /api/auth/refresh` 返回 400（端点可达、非 404，验证 v4.4.6 令牌刷新路径修复已上线）；前端构建产物含 `api/auth/refresh`；`GET /api/sales-orders`、`GET /api/approval-instances` 均 200；移动端智能下单 preview 行折扣 98 折减免 2%、整单 98 折减免 2% 计算正确，Console 无红错、Network 无 5xx。
+- 生产清理：删除过期备份 jar/前端目录、截断 >2M 的 docker json 日志；保留当前版本产物与两份 DB dump；备份目录由 241M 降至约 122M，根分区 9.7G/40G。
 ## v4.4.6 (2026-08-30) - 修复移动端"很慢/页面刷不出来"：令牌刷新路径错误 + op_log 超长写入失败
 
 > PATCH 版本（线上性能/可用性缺陷修复）。用户反馈移动端整体变慢、搜产品和页面都加载不出。诊断后端接口本身很快（80–145ms）、无长慢查询，根因在前端令牌刷新与操作日志写入两处。
