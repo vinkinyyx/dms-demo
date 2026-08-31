@@ -69,6 +69,7 @@ temp/
 .local/
 .memory/
 .trae/
+.codex/
 dms-dev-team/
 .backend.pid
 _probe.txt

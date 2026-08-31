@@ -23,7 +23,8 @@ class PromotionControllerIntegrationTest extends BaseIntegrationTest {
 
     private String setupTenantAndLogin(String code) throws Exception {
         Tenant t = createTestTenant(code);
-        createTestUser(t.getId(), "promoAdmin", "Admin@1234");
+        com.dms.user.entity.User promoAdmin = createTestUser(t.getId(), "promoAdmin", "Admin@1234");
+        grantPermissions(promoAdmin, "promotion:view", "promotion:search", "promotion:edit");
         return loginAndGetToken(code, "promoAdmin", "Admin@1234");
     }
 

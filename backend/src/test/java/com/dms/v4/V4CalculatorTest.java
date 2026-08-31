@@ -67,7 +67,7 @@ class V4CalculatorTest {
                 .thenReturn(new V4PricingService.Price(new BigDecimal("442.4779"), new BigDecimal("0.13"), new BigDecimal("500")));
 
         V4CalcResult result = calculator.expand(tid, dealerId, List.of(
-                Map.of("productId", 2L, "qty", new BigDecimal("1"), "lineDiscountType", "PERCENT", "lineDiscountValue", new BigDecimal("20")),
+                Map.of("productId", 2L, "qty", new BigDecimal("1"), "lineDiscountType", "PERCENT", "lineDiscountValue", new BigDecimal("80")),
                 Map.of("productId", 1L, "qty", new BigDecimal("1"))
         ), false, "AMOUNT", new BigDecimal("270"));
 

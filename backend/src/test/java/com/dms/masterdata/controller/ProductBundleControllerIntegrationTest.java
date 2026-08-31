@@ -18,7 +18,9 @@ class ProductBundleControllerIntegrationTest extends BaseIntegrationTest {
 
     private String setupTenantAndLogin(String code) throws Exception {
         Tenant t = createTestTenant(code);
-        createTestUser(t.getId(), "pbAdmin", "Admin@1234");
+        com.dms.user.entity.User pbAdmin = createTestUser(t.getId(), "pbAdmin", "Admin@1234");
+        grantPermissions(pbAdmin, "product:view", "product:search", "product:create", "product:edit",
+                "product_bundle:view", "product_bundle:create", "product_bundle:edit");
         return loginAndGetToken(code, "pbAdmin", "Admin@1234");
     }
 

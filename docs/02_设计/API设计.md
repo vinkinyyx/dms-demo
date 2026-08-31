@@ -1243,3 +1243,16 @@ GET /api/admin/api-call-logs?path=/api/orders/transfer&statusCode=200
 
 - 编辑/重开回显：订单行载荷中产品主键可能为 `productId` 或 `id`（列表/详情/快照来源不同），前端 makeLine 统一 `p.productId ?? p.id ?? null` 兼容。
 - 报表/库存/财务类多表查询 SQL 必须使用 WITH CTE + LEFT JOIN，禁止 SELECT 子句/聚合参数/JOIN ON 中的嵌套相关子查询（见 project_rules.md §13 五）。
+
+---
+
+## v4.5.0（2026-08-30）跨租户订单协同相关接口
+
+> 不新增对外 HTTP 接口；跨租户转换由既有接口在服务端内部触发。完整契约见独立文档 `docs/03_接口文档/cross-tenant-collab-api.md`。
+
+| 接口 | 变更 | 说明 |
+|---|---|---|
+| `POST /api/purchase-orders/{id}/submit` | 新增副作用 | 经销商采购单提交后，若供应商＝平台厂家（`suppliers.manufacturer_tenant_id` 非空），在厂家租户自动生成草稿销售订单并回写厂家销售单号（`purchase_orders.vendor_order_code` → 列表/详情 `vendorOrderCode`）。对码缺失/未绑定返回业务错误并整体回滚。 |
+| `POST /api/sales-outs/{id}/partial-ship` | 新增副作用 | 厂家销售出库发货后，向绑定经销商租户回传待收货入库单（转经销商产品编码、带批次/序列号、不带价）；无来源采购单时先自动补建一张 `APPROVED` 采购单。对码缺失返回业务错误并整笔发货回滚。 |
+| `GET /api/tenant/features` | 行为说明 | 返回 `{inventoryEnabled, purchaseEnabled}`；厂家关闭进销存时前端隐藏采购/库存菜单（仅 vendor 用户），dealer 用户不受影响。v4.5.0 起 MANUFACTURER 租户默认 false（Flyway V140）。 |
+| `GET /api/purchase-orders`、`/api/purchase-orders/{id}` | 返回字段新增 | `vendorOrderCode`（厂家销售订单号，路径 A 回写）。 |
