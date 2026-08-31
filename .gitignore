@@ -69,6 +69,7 @@ temp/
 .local/
 .memory/
 .trae/
+.codex/
 dms-dev-team/
 .backend.pid
 _probe.txt
@@ -140,3 +141,5 @@ _incoming/
 /_ui*.cjs
 /_gate*.cjs
 /_pgate*.cjs
+# 变更清单比对快照（一次性交付物，非源码）
+dms-changes-*/

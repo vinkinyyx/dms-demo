@@ -1,3 +1,11 @@
+## v4.5.3（2026-08-31）- PC 工作台 UI 增强：面包屑导航 + 多菜单页签 Tags-View
+
+- **当前测试环境版本**：v4.5.3（前端静态部署 stamp 20260831-165944），纯前端 UI 版本，**无 Flyway、无接口变更**（Flyway 仍至 V142）；**正式环境最新为 v4.4.7**，v4.5.x 推送待明确指令。
+- **面包屑导航**：内容区顶栏展示「首页 / 菜单分组 / 菜单 / 详情」完整路径，中间层级可点击回跳、末级为当前页。
+- **多菜单页签**：已打开页面以页签 chip 横向排列，点击即切换、×/中键关闭、右键菜单（刷新页面/关闭页签/关闭其他/关闭全部）；「工作台首页」固定不可关；F5 刷新后页签从 sessionStorage 完整恢复；配合 keep-alive（max 12）缓存页面状态。
+- **新增文件**：`layout/Breadcrumb.vue`、`layout/TagsBar.vue`、`utils/pageMeta.js`（菜单元信息扁平化 + 27 条详情页父菜单正则映射）、`store/tags.js`（Pinia + sessionStorage 持久化）；改动 `layout/index.vue`。
+- **测试成绩**：本地前端 vitest 36/36 + vite build 通过；铁律 9 真实浏览器终验全过（面包屑/页签切换/关闭/右键四项/关闭其他/关闭全部/F5 恢复/深色模式/必检 6 入口 URL 全 200/Console 无 error）。
+
 ## v4.3.1（2026-08-27）- 销退单返工 / 代金券审批返还 / 销售订单重开回显 修复
 
 - **当前测试环境版本**：v4.3.1（v433 镜像），Flyway 已执行至 V134。
@@ -81,8 +89,8 @@ ullable=false，默认 ZERO。
 - 回归工具 tools/_e2e_v389_final.py。
 # 通用 DMS 经销商管理系统 — 项目入口
 
-**当前版本**: v4.4.2
-**最后更新**: 2026-08-28
+**当前版本**: 测试环境 v4.5.3（2026-08-31，PC 面包屑+多菜单页签 UI 增强）｜正式环境 v4.4.7
+**最后更新**: 2026-08-31
 **正式环境**: 业务前台/PC http://8.133.193.238/dms/ ｜ 移动端 http://8.133.193.238/dms/mobile/login ｜ 平台后台 http://8.133.193.238/dms/admin/ ｜ 健康检查 http://8.133.193.238/actuator/health
 **测试环境（域名）**: PC http://dms-dev.mysolmed.com/dms/ ｜ 移动 H5 http://dms-dev.mysolmed.com/dms/mobile/login ｜ 经销商准入注册 http://dms-dev.mysolmed.com/dms/mobile/register ｜ 平台后台 http://dms-dev.mysolmed.com/dms/admin/ ｜ API/健康检查 http://dms-dev.mysolmed.com/api、http://dms-dev.mysolmed.com/actuator/health ｜ 产品宣传手册 http://dms-dev.mysolmed.com/brochure/（移动页 /brochure/mobile.html、打印页 /brochure/print.html）
 **测试环境（IP 直连，行为同域名）**: 把 `dms-dev.mysolmed.com` 替换为 `43.128.145.141` 即可；裸域名/根路径 `/` 已配置 302 跳转 `/dms/` 直达系统

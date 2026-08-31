@@ -40,6 +40,7 @@ public class PurchaseOrderService {
     private final AutoDocGenerator autoDocGenerator;
     private final com.dms.common.util.DocNoGenerator docNoGenerator;
     private final ApprovalService approvalService;
+    private final com.dms.collab.CrossTenantCollabService crossTenantCollab;
 
     /** 分页列表 */
     @Transactional(readOnly = true)
@@ -117,7 +118,7 @@ public class PurchaseOrderService {
         var q = em.createNativeQuery(
                 "SELECT po.id, po.code, po.order_type, po.supplier_id, COALESCE(NULLIF(po.supplier_name,''), s.name) AS supplier_name, po.warehouse_id, " +
                 "w.name AS warehouse_name, u.name AS audit_user_name, po.approved_at AS audit_at, " +
-                "po.amount_incl_tax, po.final_amount, po.expected_date, po.status, po.extra, po.created_at, po.updated_at " +
+                "po.amount_incl_tax, po.final_amount, po.expected_date, po.status, po.extra, po.vendor_order_code, po.created_at, po.updated_at " +
                 "FROM purchase_orders po LEFT JOIN warehouses w ON w.id = po.warehouse_id LEFT JOIN suppliers s ON s.id = po.supplier_id LEFT JOIN users u ON u.id = po.approved_by " +
                 where +
                 orderSql + " LIMIT " + limitParam + " OFFSET " + offsetParam,
@@ -349,6 +350,15 @@ public class PurchaseOrderService {
             request.setBusinessSnapshot(buildApprovalSnapshot(id));
             ApprovalInstance instance = approvalService.start(request);
             boolean approved = "APPROVED".equals(instance.getStatus().name()) || "AUTO_APPROVED".equals(instance.getStatus().name());
+            // v4.5.0 跨租户：供应商为平台厂家时，自动转厂家草稿销售订单（对码缺失会抛错并整体回滚）
+            try {
+                crossTenantCollab.onPurchaseOrderSubmitted(id);
+            } catch (com.dms.common.BusinessException be) {
+                throw be;
+            } catch (Exception ce) {
+                log.error("跨租户采购转销售失败 poId={}", id, ce);
+                throw ce;
+            }
             return ApiResponse.ok(ApprovalResponseSupport.submitResult(id, instance, true));
         } catch (Exception e) {
             em.createNativeQuery("UPDATE purchase_orders SET status='DRAFT', updated_at=now() WHERE id=?1 AND tenant_id=?2")
@@ -604,7 +614,7 @@ public class PurchaseOrderService {
             var q = em.createNativeQuery(
                     "SELECT id, code, order_type, supplier_id, COALESCE(NULLIF(supplier_name,''), (SELECT name FROM suppliers WHERE id=supplier_id)) AS supplier_name, warehouse_id, " +
                     "amount_incl_tax, final_amount, expected_date, status, remark, extra, " +
-                    "created_at, updated_at, submitted_at, approved_at, completed_at " +
+                    "vendor_order_code, created_at, updated_at, submitted_at, approved_at, completed_at " +
                     "FROM purchase_orders WHERE id = ?1 AND tenant_id = ?2", Tuple.class);
             q.setParameter(1, id).setParameter(2, tid);
             @SuppressWarnings("unchecked")
@@ -629,6 +639,7 @@ public class PurchaseOrderService {
         m.put("finalAmount", t.get("final_amount"));
         try { m.put("expectedDate", com.dms.common.util.DateFmt.fmt(t.get("expected_date"))); } catch (Exception ignored) {}
         m.put("status", t.get("status"));
+        try { m.put("vendorOrderCode", t.get("vendor_order_code")); } catch (Exception ignored) {}
         try { m.put("remark", t.get("remark")); } catch (Exception ignored) {}
         try { m.put("extra", t.get("extra")); } catch (Exception ignored) {}
         try { m.put("createdAt", com.dms.common.util.DateFmt.fmt(t.get("created_at"))); } catch (Exception ignored) {}

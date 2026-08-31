@@ -54,6 +54,7 @@ class SalesOrderApprovalOutboundChainTest extends BaseIntegrationTest {
         Product product = createTestProduct(tenant.getId(), "CHAIN-P1", "链路测试产品");
         Dealer dealer = dealerRepository.saveAndFlush(Dealer.builder()
                 .tenantId(tenant.getId()).code("CHAIN-D1").name("链路经销商").level("A").status("active")
+                .consignmentEnabled(false).consignmentLimit(BigDecimal.ZERO).creditLimit(BigDecimal.ZERO).paymentDays(0)
                 .updatedAt(java.time.OffsetDateTime.now()).build());
         Long dealerId = dealer.getId();
         Long productId = product.getId();
@@ -185,6 +186,7 @@ class SalesOrderApprovalOutboundChainTest extends BaseIntegrationTest {
         Product product = createTestProduct(tenant.getId(), "CHAIN-P2", "缺货产品");
         Dealer dealer = dealerRepository.saveAndFlush(Dealer.builder()
                 .tenantId(tenant.getId()).code("CHAIN-D2").name("缺货经销商").level("A").status("active")
+                .consignmentEnabled(false).consignmentLimit(BigDecimal.ZERO).creditLimit(BigDecimal.ZERO).paymentDays(0)
                 .updatedAt(java.time.OffsetDateTime.now()).build());
 
         Object whId = em.createNativeQuery(
@@ -246,6 +248,7 @@ class SalesOrderApprovalOutboundChainTest extends BaseIntegrationTest {
         Product gift = createTestProduct(tenant.getId(), "CHAIN-GIFT", "促销赠品");
         Dealer dealer = dealerRepository.saveAndFlush(Dealer.builder()
                 .tenantId(tenant.getId()).code("CHAIN-D3").name("含赠品经销商").level("A").status("active")
+                .consignmentEnabled(false).consignmentLimit(BigDecimal.ZERO).creditLimit(BigDecimal.ZERO).paymentDays(0)
                 .updatedAt(java.time.OffsetDateTime.now()).build());
 
         Object whId = em.createNativeQuery(
@@ -344,6 +347,7 @@ class SalesOrderApprovalOutboundChainTest extends BaseIntegrationTest {
         Product gift = createTestProduct(tenant.getId(), "S-GIFT", "实物赠品");
         Dealer dealer = dealerRepository.saveAndFlush(Dealer.builder()
                 .tenantId(tenant.getId()).code("S-DLR").name("S经销商").level("A").status("active")
+                .consignmentEnabled(false).consignmentLimit(BigDecimal.ZERO).creditLimit(BigDecimal.ZERO).paymentDays(0)
                 .updatedAt(java.time.OffsetDateTime.now()).build());
 
         Object whId = em.createNativeQuery(

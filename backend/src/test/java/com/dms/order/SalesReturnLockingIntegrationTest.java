@@ -119,6 +119,7 @@ class SalesReturnLockingIntegrationTest extends BaseIntegrationTest {
         Product gift = createTestProduct(tenant.getId(), "GFT2", "赠品");
         Dealer dealer = dealerRepository.saveAndFlush(Dealer.builder()
                 .tenantId(tenant.getId()).code("DLR-G2").name("G2经销商").level("A").status("active")
+                .consignmentEnabled(false).consignmentLimit(BigDecimal.ZERO).creditLimit(BigDecimal.ZERO).paymentDays(0)
                 .updatedAt(java.time.OffsetDateTime.now()).build());
 
         Object whId = em.createNativeQuery(
@@ -168,6 +169,7 @@ class SalesReturnLockingIntegrationTest extends BaseIntegrationTest {
         Product product = createTestProduct(tenant.getId(), "RL-P1", "锁测试产品");
         Dealer dealer = dealerRepository.saveAndFlush(Dealer.builder()
                 .tenantId(tenant.getId()).code("RL-D1").name("锁经销商").level("A").status("active")
+                .consignmentEnabled(false).consignmentLimit(BigDecimal.ZERO).creditLimit(BigDecimal.ZERO).paymentDays(0)
                 .updatedAt(java.time.OffsetDateTime.now()).build());
         long outLineId = setupShippedLine(tenant, user, dealer, product);
         // Manual approval template for SALES_RETURN so submit leaves the RMA PENDING_APPROVAL and holds the lock

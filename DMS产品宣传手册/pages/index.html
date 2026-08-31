@@ -6,6 +6,9 @@
 <title>DMS 通用经销商管理系统 · 让每一条渠道都清晰可见</title>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
 <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jura:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --brand: #002fa7;
@@ -30,10 +33,29 @@
   .border-brand { border-color: var(--brand); }
 
   .nav-glass {
-    background: rgba(255,255,255,0.78);
+    background: rgba(255,255,255,0.82);
     backdrop-filter: saturate(180%) blur(14px);
     -webkit-backdrop-filter: saturate(180%) blur(14px);
     border-bottom: 1px solid rgba(15,23,42,0.06);
+  }
+  .logo-wm {
+    font-family: 'Jura', 'Segoe UI', system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 26px;
+    color: var(--brand);
+    letter-spacing: 0.06em;
+    display: inline-flex;
+    align-items: baseline;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .logo-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #00B4D8;
+    margin-left: 3px;
   }
 
   .browser-chrome {
@@ -265,8 +287,8 @@
 
 <header class="nav-glass fixed top-0 left-0 right-0 z-50">
   <div class="max-w-7xl mx-auto px-5 md:px-8 h-16 flex items-center justify-between">
-    <a href="#top" class="flex items-center gap-3 font-extrabold text-xl tracking-tight">
-      <img src="assets/00-mysolmed-logo.png" alt="mysolmed" class="h-9 object-contain" />
+    <a href="#top" class="flex items-center gap-3">
+      <span class="logo-wm">mysolmed<span class="logo-dot"></span></span>
     </a>
     <nav class="hidden md:flex items-center gap-8 text-sm text-slate-600 font-medium">
       <a href="#capabilities" class="hover:text-brand transition">产品能力</a>

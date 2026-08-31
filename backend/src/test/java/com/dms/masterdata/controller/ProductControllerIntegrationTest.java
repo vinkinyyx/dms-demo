@@ -41,7 +41,8 @@ class ProductControllerIntegrationTest extends BaseIntegrationTest {
     @DisplayName("产品类型与分类在创建/更新后可正确保存并在详情/列表回显")
     void should_persistProductTypeAndCategory_when_createAndUpdate() throws Exception {
         Tenant t = createTestTenant("T-PROD-TC");
-        createTestUser(t.getId(), "prodAdmin", "Admin@1234");
+        com.dms.user.entity.User prodAdmin = createTestUser(t.getId(), "prodAdmin", "Admin@1234");
+        grantPermissions(prodAdmin, "product:view", "product:search", "product:create", "product:edit");
         String token = loginAndGetToken("T-PROD-TC", "prodAdmin", "Admin@1234");
 
         Long categoryId = createCategory(t, "CAT-TC", "耗材分类");

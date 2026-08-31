@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#001f73" />
 <title>DMS 通用经销商管理系统 | 让每一条渠道都清晰可见</title>
 <meta name="description" content="DMS 通用经销商管理系统，面向医疗器械生产企业与经销商，覆盖经销商档案、医院产品、合同授权、销售订单、仓储库存、手术报台、数据分析、审批工作流与平台后台管理的全链路数字化平台。" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jura:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --brand:#002fa7;
@@ -49,6 +52,10 @@
   .brand{display:flex;align-items:center;gap:9px;}
   .brand-name{font-weight:700;font-size:15px;letter-spacing:.3px;color:#fff;transition:color .25s;}
   .topbar.scrolled .brand-name{color:var(--ink);}
+  .logo-wm{font-family:'Jura','Segoe UI',system-ui,sans-serif;font-weight:700;font-size:24px;letter-spacing:.04em;color:#fff;display:inline-flex;align-items:baseline;line-height:1;transition:color .25s;white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .topbar.scrolled .logo-wm{color:var(--brand);text-shadow:none;}
+  .menu-head .logo-wm{color:var(--brand);text-shadow:none;}
+  .logo-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#00B4D8;margin-left:3px;}
   .menu-btn{
     width:44px;height:44px;border:none;background:transparent;
     display:flex;align-items:center;justify-content:center;cursor:pointer;
@@ -350,7 +357,7 @@
 <!-- ===== 顶部固定导航 ===== -->
 <header class="topbar" id="topbar">
   <a class="brand" href="#top" aria-label="DMS 首页">
-    <img src="assets/00-mysolmed-logo.png" alt="mysolmed" class="h-8 object-contain" style="max-width: 180px;" />
+    <span class="logo-wm">mysolmed<span class="logo-dot"></span></span>
   </a>
   <button class="menu-btn" id="menuOpen" aria-label="打开菜单">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -361,7 +368,7 @@
 <div class="menu-mask" id="menuMask">
   <div class="menu-head">
     <div class="brand">
-      <img src="assets/00-mysolmed-logo.png" alt="mysolmed" class="h-8 object-contain" style="max-width: 160px;" />
+      <span class="logo-wm">mysolmed<span class="logo-dot"></span></span>
     </div>
     <button class="menu-close" id="menuClose" aria-label="关闭菜单">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>

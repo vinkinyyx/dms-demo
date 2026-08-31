@@ -1,0 +1,40 @@
+const { chromium } = require('playwright');
+const BASE='http://dms-dev.mysolmed.com';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+(async()=>{
+  const b=await chromium.launch({headless:true});
+  const ctx=await b.newContext({viewport:{width:1440,height:900}});
+  const p=await ctx.newPage();
+  const errs=[];p.on('pageerror',e=>errs.push(String(e).slice(0,180)));
+  p.on('console',m=>{if(m.type()==='error'){const t=m.text();if(!/favicon|cdn/i.test(t))errs.push(t.slice(0,180));}});
+  const s5=[];p.on('response',r=>{if(r.status()>=500)s5.push(r.url()+' '+r.status());});
+  await p.goto(BASE+'/dms/login',{waitUntil:'networkidle'}); await sleep(1000);
+  await p.evaluate(()=>localStorage.clear());
+  await p.reload({waitUntil:'networkidle'}); await sleep(800);
+  const ins=p.locator('input');
+  await ins.nth(0).fill('default');
+  await ins.nth(1).fill('sys_admin');
+  await ins.nth(2).fill('Dms@123456');
+  await p.locator('button:has-text("登"), .login-btn, button[type=submit]').first().click();
+  await sleep(5000);
+  console.log('after login url:', p.url());
+  await p.goto(BASE+'/dms/product-mappings',{waitUntil:'networkidle'}); await sleep(2500);
+  // table rows
+  const rowCount=await p.locator('.el-table__body-wrapper tbody tr').count();
+  const bodyText=await p.locator('.el-table__body-wrapper').innerText().catch(()=>'(no table)');
+  const hasPRD=bodyText.includes('PRD-T001');
+  const hasDealer=bodyText.includes('默认厂家经销商');
+  const emptyVisible=await p.locator('.el-empty').count();
+  console.log('ROW_COUNT:',rowCount);
+  console.log('HAS_PRD_T001:',hasPRD);
+  console.log('HAS_DEALER_NAME:',hasDealer);
+  console.log('EMPTY_BLOCKS:',emptyVisible);
+  console.log('BODY_SNIPPET:',bodyText.replace(/\s+/g,' ').slice(0,400));
+  // dealer tenant dropdown loaded?
+  const ctxText=await p.locator('.ctx-card').innerText().catch(()=>'(no ctx card)');
+  console.log('CTX_CARD:',ctxText.replace(/\s+/g,' ').slice(0,120));
+  console.log('PAGE_ERRORS:',JSON.stringify(errs.slice(0,8)));
+  console.log('5XX:',JSON.stringify(s5.slice(0,8)));
+  await p.screenshot({path:'automation_test/v4-browser-results/v451-product-mappings-default.png',fullPage:true});
+  await b.close();
+})();

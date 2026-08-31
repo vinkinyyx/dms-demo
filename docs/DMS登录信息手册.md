@@ -195,6 +195,7 @@ docker exec "$c" pg_dump -U dms dms | gzip > /tmp/dms_prod_$(date +%Y%m%d_%H%M%S
 | `dealer_a1_admin` | `Sh123456` | `DEALER_A1` | 经销商 A1 管理员 |
 | `dealer_a2_admin` | `Sh123456` | `DEALER_A2` | 经销商 A2 管理员 |
 | `dealer_b1_admin` | `Sh123456` | `DEALER_B1` | 经销商 B1 管理员 |
+| `dealer_d1_admin` | `Sh123456` | `DEALER_D1` | **default 厂家**的下游经销商管理员（v4.5.1 新增；产品对码在 default/sys_admin 下查看） |
 
 ---
 

@@ -1,3 +1,111 @@
+## v4.5.4 (2026-08-31) - 跨租户反向退货协同：经销商采退 ↔ 厂家销退、红字出库 → 红字入库
+
+> 后端协同版本（无 Flyway——复用现有 orders.is_red/receipts.is_red/cross_tenant_doc_links 结构）。在 v4.5.0 正向协同（采购→销售、出库→收货）基础上，补齐**退货方向**的自动协同，与正向逐表对称。接口文档见 `docs/03_接口文档/cross-tenant-collab-api.md`。
+
+### 新增（反向链路）
+- **路径C：经销商采退 → 厂家红字销退草稿** `CrossTenantCollabService.onPurchaseReturnSubmitted`：经销商提交采退单（`purchase_orders.is_red=true`，供应商=平台厂家）后，在厂家租户生成一张红字销售订单草稿（`orders.is_red=true, status=DRAFT`，金额 0），产品按对码转厂家产品；厂家销退单号回写采退单 `vendor_order_code`；台账新增 `link_type=PR_TO_RED_SALES_ORDER`。对码缺失/未绑定厂家客户主数据一律阻断回滚。
+- **路径D：红字出库发货 → 厂家红字销退入库（待收货）** `CrossTenantCollabService.onRedSalesOutShipped`：经销商红字销售出库（采退自动生成的 RGI）批次发货确认后，在厂家租户生成红字销退入库单（`receipts.is_red=true, receipt_type=SALES_RETURN, ref_doc_type=sales_return, status=PENDING`），产品转厂家产品、批次/序列号透传；台账新增 `link_type=RED_OUT_TO_RED_RECEIPT`。按"出库单+发货执行行"幂等，分批每批一张。
+
+### 变更
+- `PurchaseReturnController.submit`：注入协同服务，采退提交审批后调用路径C（BusinessException 透传、其余异常回滚为 DRAFT）。
+- `SalesOutBatchService.confirmBatch`：红字发货循环收集 ShippedLine，确认后按 `is_red` 调用路径D；对码缺失随发货事务回滚。
+- 红字库存冲销仍由各租户既有红字流程负责（经销商红字出库 `deductBatch(isRed)`、厂家红字入库确认 `+PENDING` 待检），跨租户层只自动建对方红字单据、不重复记库存。
+
+### 测试
+- `CrossTenantCollabIntegrationTest` 新增 6 个反向用例（路径C 转单/幂等/对码缺失阻断；路径D 红字入库生成/发货幂等/无路径C台账静默跳过），共 **17/17 通过**（内嵌 PG + 全量 Flyway）。
+## v4.5.3 (2026-08-31) - PC 工作台 UI 增强：面包屑导航 + 多菜单页签 Tags-View
+
+> 纯前端 UI 版本（无 Flyway、无接口变更）。参考主流后台系统，在 PC 工作台内容区顶部增加「菜单路径面包屑」与「多菜单页签」，用户无需反复展开左侧菜单即可定位当前位置与切换已打开页面。已部署测试环境（stamp 20260831-165944）；生产环境仍为 v4.4.7，v4.5.x 推送待明确指令。
+
+### 新增
+- **面包屑导航** `frontend-vue/src/layout/Breadcrumb.vue`：el-breadcrumb（separator="/"）+ transition-group，展示「首页 / 菜单分组 / 菜单 / 详情」完整路径；中间层级为可点击链接回跳，末级为当前页纯文本。
+- **多菜单页签栏** `frontend-vue/src/layout/TagsBar.vue`：el-scrollbar 横向 chip 栏（激活页签自动滚动居中）；页签支持——点击切换、×关闭、鼠标中键关闭、右键菜单四项（刷新页面 / 关闭页签 / 关闭其他 / 关闭全部，固定首页的「关闭页签」置灰）；「工作台首页」页签 affix 固定不可关闭。
+- **页面元信息解析器** `frontend-vue/src/utils/pageMeta.js`：由 `config/menu.js` 的 MENU_GROUPS 扁平化出 FLAT_MENU；`resolvePageMeta(route)` 返回 `{title, isMenu, crumbs}`，匹配链：/home 特判（单面包屑「首页」）→ fullPath/path 精确匹配 → 前缀匹配 → 27 条 DETAIL_PARENT 正则映射详情页父菜单 → 兜底标题「业务模块」；`tagKeyOf(route)` 菜单页用 `route.fullPath`（保留报表 query 区分），非菜单页用 `'name:'+route.name`。
+- **页签状态 store** `frontend-vue/src/store/tags.js`：Pinia options store，state `{tags, activeKey, reloading}`；**sessionStorage key `dms:tags-view` 持久化**（持久化值为 tag 数组本身，F5 整页刷新后页签与激活项完整恢复）；actions：addRoute（跳过 public/print/mobile 路由）、closeTag（返回应跳转 fullPath，关闭当前页自动跳相邻页）、closeOthers、closeAll（回 /home）、setActive、refreshSignal/refreshDone、reset（退出登录清场）。
+
+### 变更
+- **布局集成** `frontend-vue/src/layout/index.vue`：顶栏 `<Breadcrumb />` 替换原 page-title；header 与 main 之间挂 `<TagsBar />`；router-view 用 `<template v-if="!tagsStore.reloading">` 包裹 + `<keep-alive :max="12">`（`meta.noCache` 路由除外）实现页面状态缓存与「刷新页面」销毁重建（watch reloading → 60ms 后 refreshDone）；退出登录时 tagsStore.reset()；清理旧 currentTitle/.page-title 与无用导入。
+- **样式**：页签/面包屑全部使用 DMS CSS 变量（--dms-color-primary / --dms-bg-container / --dms-border-2 等），深色模式经 `:global(html[data-mode='dark'])` 覆盖（栏底 #111827、芯片 #1a2334、右键菜单 #1a2334、边框 #2c3a52）。
+
+### 构建与部署
+- 业务前端必须 **`VITE_BASE=/dms/`** 构建（vite.config.js `base: process.env.VITE_BASE || '/'`，默认 / 会致资源路径与服务器 /dms/ 不符）。
+- 测试服纯静态部署：备份 frontend → 解压 dist 到 `frontend/dms/`（保留 `dms/admin/` 独立后台）→ chown root:root → `docker exec dms-test-nginx nginx -t && nginx -s reload`（无需重建镜像/force-recreate）。
+
+### 验证（2026-08-31）
+- 本地：vitest **36/36** 通过、`vite build` 成功。
+- 铁律 9 真实浏览器终验（sys_admin 厂商视角）全过：面包屑三级路径与详情页四级路径（「首页/基础数据/经销商管理/经销商详情」父级可点击）；页签新增/点击切换/×关闭非当前页/×关闭当前页自动跳相邻/右键菜单四项/关闭其他/关闭全部（只剩固定首页并跳 /home）/F5 后 sessionStorage 页签完整恢复且激活项正确/深色模式栏底·边框·芯片·文字对比度正常；面包屑「首页」链接点击回跳；列表数据加载正常（产品 24 行、经销商 13 行）。
+- 必检 URL 全 200：`/`（302→/dms/home）、`/dms/`、`/dms/home`、`/dms/admin/`（后台登录页）、`/dms/mobile/login`、`/dms/mobile/register`；Console 无 error（仅 1 条与本次无关的 el-radio 弃用 warn）。
+
+## v4.5.2 (2026-08-31) - 接入 GitHub Actions CI 流水线 + 全量测试基线修复
+
+> 工程化版本（无生产行为变更，未推送生产）。接入 GitHub Actions：push/PR 到 main 自动并行跑后端全量测试与前端单测+构建；同时把全量 `mvn test` 暴露的 12 个历史失败全部修复，建立绿色基线。
+
+### 新增
+- **CI 工作流** `.github/workflows/ci.yml`：两个并行 job——
+  - `backend-test`（ubuntu-latest + Temurin JDK17 + Maven 缓存）：`mvn -B verify` 跑全量后端测试；无需 Docker/PG/Redis service（测试用 zonky embedded-postgres 14 内嵌库 + Redis MockBean）；失败上传 surefire-reports 制品。
+  - `frontend-build`（ubuntu-latest + Node 20 + npm 缓存）：`npm ci` → `npm test`（vitest 36 例）→ `npm run build`；上传 dist 制品。
+  - 触发：push / pull_request 到 main。
+
+### 修复（全量测试基线，mvn -B test：147 例，此前 12 Failures → 现 0）
+- **【测试基建】3 个 Controller 集成测试 403（11 例）**：ProductControllerIntegrationTest(1)、PromotionControllerIntegrationTest(6)、ProductBundleControllerIntegrationTest(4) 写于方法级 `@PreAuthorize` 引入之前，造用户后从未授权。补 `grantPermissions(...)` 显式权限码（product:view/search/create/edit、promotion:view/search/edit、product_bundle:*）。注意 `grantPermissions(user,"*")` 中 `"*"` **不是通配符**（PermissionChecker 精确匹配、PermissionQueryService 不展开），CoreDomainEndpointTest 用 `"*"` 能"过"只是断言集 isNotIn(404,5xx) 漏掉了 403。
+- **【测试过时】V4CalculatorTest 行折扣 PERCENT 语义（1 例）**：v4.4.7 已把百分比折扣改为中文"折数"语义（填 90=9折=付90%、减免 10%），测试仍按旧"减免比例"语义造数（填 20 期望减免 200）。改为填 80（8折=减免 20%，折扣额 200 不变），全部金额断言保持原值通过；生产代码无回归。
+
+### 验证（2026-08-31）
+- 后端：本地 `mvn -B test` → **Tests run: 147, Failures: 0, Errors: 0**（3:34）。
+- 前端：Node 20 环境 `npm ci`（299 包）→ vitest **4 文件 / 36 例全过** → `vite build` 成功（28.51s），退出码 0。
+
+## v4.5.1 (2026-08-31) - 跨租户协同自动化回归补齐 + 分批/幂等/幽灵库存缺陷修复
+
+> PATCH 版本。v4.5.0 跨租户协同首版仅手工测试，本次补齐双层自动化回归（端到端脚本 56 例 + 后端集成测试 11 例），并在过程中修复 4 个协同链路缺陷与 1 个测试基建缺陷。修复已部署测试环境（stamp 20260831-122753，Flyway 至 V142）。
+
+### 修复
+- **【High】第二次部分发货被整笔跳过**：路径B（厂家出库→经销商收货）幂等判断只按出库单 ID 查台账，首张出库单回传后，同销售订单的第二张出库单所有行被误判为"已回传"而跳过。改为 outLineId 行级粒度去重（从台账 line_refs 收集 doneOutLineIds，只过滤真正回传过的行）。
+- **【High】路径B 分批发货重复补建采购单**：未命中路径A台账时，每次发货都新建一张自动 PO。统一补建/复用逻辑：先按销售订单链路（linkRowBySalesOrder）、再按历史出库台账（linkRowBySalesOut）查找已有自动 PO，命中则 upsertPoLineQty 累加数量（5+3=8），无则才补建。
+- **【Medium】upsertPoLineQty SQL 无效列**：自动 PO 行 INSERT 带了 purchase_order_lines 不存在的 updated_at 列（该表仅 created_at），分批累加时抛错。删除无效列。
+- **【High】路径B 收货单缺 dealer_id/warehouse_id（幽灵库存）**：自动补建的收货单两列为空，经销商收货确认后库存维度残缺。新增 resolveOrCreateDealerSelf（自动补建 DEALER-SELF/本企业 主体）与 resolveOrCreateDefaultWarehouse（COLLAB-DEFAULT-WH/main 默认仓），收货单与后续入库均落正确主体/仓库。
+- **【测试基建】集成测试造经销商撞 V136 NOT NULL**：V136 为 dealers 增加 consignment_enabled/consignment_limit/credit_limit/payment_days 四个 NOT NULL 列（有 DEFAULT），但 Hibernate 显式插 null 不生效；BaseIntegrationTest.createTestDealer 工厂及 SalesReturnLockingIntegrationTest(2处)、SalesOrderApprovalOutboundChainTest(4处) 直接 Dealer.builder() 造数均未赋值，导致全部集成测试造经销商即 DataIntegrityViolation。统一补 false/0/0/0 默认值。
+
+### 新增
+- **端到端自动化脚本** `automation_test/v450_collab.py`：接口调用 + 数据库回读，TAG 标记种子数据并自清理，覆盖 10 个测试缺口（路径A/B 正常链路、重复幂等、未对码/未绑定阻断、分批累计、路径A台账复用、未绑定静默跳过），**56/56 通过**。
+- **后端集成测试** `backend/src/test/java/com/dms/collab/CrossTenantCollabIntegrationTest.java`：zonky 内嵌 PostgreSQL 14 + Flyway 全量迁移，直接调 CrossTenantCollabService 双租户切换，**11 例全部通过**；既有 Inventory/Order/SalesReturn/Chain 共 20 例回归全绿（合计 31 例）。
+- **Flyway**：V141（演示数据迁移，补回本地代码库）、V142（collab 部分发货多链路索引，ux 唯一索引改 ix 非唯一，支持同销售订单多张出库单回传）。
+
+### 验证（2026-08-31）
+- 后端集成测试 31/31 通过（含新增 collab 11 例）；v450_collab.py 对修复后测试环境 56/56 通过。
+- 测试报告：`docs/03_测试/测试报告_v4.5.0_20260830_跨租户协同.md` §8 自动化回归章节。
+
+## v4.5.0 (2026-08-30) - 厂家关闭进销存（开关持久化）+ 厂家↔经销商跨租户订单协同
+
+> MINOR 版本。两件事：① 修复"厂家环境进销存菜单关闭后重建库又复原"的回归；② 新增同一 SaaS 下厂家与下游经销商的采购↔销售↔出库↔收货自动协同。
+
+### 修复
+- **厂家租户进销存菜单开关持久化（回归修复）**：菜单过滤机制本就存在（`layout/index.vue` 按 `/api/tenant/features` 的 `inventoryEnabled/purchaseEnabled` 隐藏 `inventoryOnly/purchaseOnly` 菜单，仅约束厂家用户），但 `default` 厂家租户种子（V7）写的是旧键 `modules_enabled.inventory=true`，新代码读 `inventoryEnabled` 读不到即默认全开；上次关闭是直接改库、未固化进迁移，重建库后丢失。本次用 **Flyway V140** 对所有 `tenant_type=MANUFACTURER` 租户置 `inventoryEnabled/purchaseEnabled=false`，重建库不再复发；经销商租户（dealer 用户）不受 `TenantFeatureGuard` 限制，采购/收货菜单照常可用。
+  - 厂家保留菜单：销售订单、销退订单、销售出库、寄售库存；隐藏：采购订单、采退、库存查询、收货入库、库存移动/调整、效期预警、盘点、序列号追溯、仓库、供应商。
+
+### 新增（跨租户协同）
+- **路径 A（经销商先下单）**：经销商在自己租户下采购订单，且供应商＝「平台厂家」（`suppliers.manufacturer_tenant_id` 指向厂家租户）时，采购单提交即在**厂家租户自动生成一张草稿(DRAFT)销售订单**，客户＝该经销商绑定的厂家侧 dealer 主数据；物料经 `product_mappings` 由经销商编码转厂家编码；只带物料/数量/交期/备注与**经销商采购单号+行号**，不带价格（价格/折扣由厂家销售补后提交审批）。厂家销售订单号回写经销商采购单 `vendor_order_code`（列表新增「厂家销售单号」列）。
+- **路径 B（厂家直接开单）**：厂家未经经销商采购单直接给经销商开销售订单并出库时，出库回传经销商侧**先自动生成一张「已审批(APPROVED)」采购订单**（不再走审批），再生成待收货入库单。
+- **出库→收货回传（两路径共用）**：厂家销售出库发货后，向绑定的经销商租户推送**待收货(PENDING)入库单**，只带产品（转经销商编码）、数量(1:1)、批次、序列号，**不带价格**；经销商在自己租户做收货确认（复用现有收货流程）。
+- **对码与阻断**：对码全部在厂家端维护（复用 `product_mappings`）。采购转单或出库回传时若有物料无 active 对码，**阻断并明确提示缺哪个产品编码**，由厂家补对码后重试。
+- **溯源与幂等**：新增台账 `cross_tenant_doc_links`（厂家销售单/行 ↔ 经销商采购单/行 ↔ 出库单 ↔ 收货单，`line_refs` JSON 存行级批次/序列号），`sales_out_id`、`po_id` 唯一约束保证重复推送不重复建单。
+- 新增字段：`suppliers.manufacturer_tenant_id`、`purchase_orders.vendor_order_code`、`orders.customer_po_code`；V140 同时为现有经销商租户自动补建「平台厂家」系统供应商。
+- 后端新增 `com.dms.collab.CrossTenantCollabService`（`onPurchaseOrderSubmitted` / `onSalesOutShipped`），挂钩 `PurchaseOrderService.submit` 与 `SalesOutService.partialShip`；跨租户写入通过切换 `TenantContext` + 显式 tenantId 原生 SQL 完成。
+
+### 边界（本期不做）
+- 不做单据**取消**的跨租户联动；不做**红冲**（销退/采退）跨租户联动（均另行设计）。
+- 不做价格/折扣跨租户传递、不做库存跨租户共享；经销商不可直接编辑厂家租户销售单。
+- 包装换算率固定 1:1（`product_mappings.conversion_rate` 字段保留，默认 1）。
+
+### 验证（2026-08-30 测试环境 http://dms-dev.mysolmed.com/dms 端到端）
+- 后端 `mvn clean package -DskipTests` 通过；前端 `VITE_BASE=/dms/ npm run build` 通过；Flyway V140 启动成功（日志 `Migrating ... to version 140` / `Successfully applied 1 migration`）。
+- **R0 菜单**：sys_admin（default 厂家）登录后 `/api/tenant/features` 返回 `{inventoryEnabled:false,purchaseEnabled:false}`；左侧菜单仅保留 订单业务=销售订单/销退订单、库存业务=销售出库/寄售库存，采购订单/库存查询/收货入库/库存调整/序列号追溯/仓库/供应商全部隐藏，Console 无红错、无 5xx。dealer 用户 features 仍为 true（采购/收货不受限）。
+- **路径A（API 端到端，演示对 MFR_A↔DEALER_A1）**：经销商 PO-20260830-00001（供应商=平台厂家）提交后，厂家租户自动生成草稿销售单 SO-20260830-00005（dealerId=绑定客户、明细物料=厂家编码 COLLAB-MFR-001、`customer_po_code`=采购单号）；采购单回写 `vendorOrderCode=SO-20260830-00005`。厂家补价格→提交（自动审批）→部分出库 5（GI-COLLAB-294，批次 BATCH-COLLAB-001）→ 经销商租户自动生成待收货 RK-20260830-00001（明细=经销商编码 COLLAB-DEA-001、expected=5、received=0、无单价、`source_po_id`=241）。
+- **路径B（厂家直接出库）**：无采购单的 GI-COLLAB-PATHB（产品 COLLAB-MFR-002）出库 → 经销商租户自动生成"已审批"采购单 PO-20260830-00002（supplier=平台厂家，明细=经销商编码 COLLAB-DEA-002 ×8）+ 待收货 RK-20260830-00002。
+- **对码缺失阻断**：未对码产品 COLLAB-MFR-NOMAP 出库返回 40006「…尚未对码，出库回传失败…[COLLAB-MFR-NOMAP]」，整笔发货事务回滚（出库单停留 DRAFT、库存未扣减、无回传单）。
+- **幂等**：`cross_tenant_doc_links` 对 sales_out_id / po_id 唯一约束，重复出库不重复回传（台账各 1 行）。
+- 铁律9 八入口 + health 全部 200（/、/dms/、/dms/admin/、/dms/mobile/login、/dms/mobile/register、/brochure/、/brochure/mobile.html、/brochure/print.html，title 各自正确、DOM 非空、Console 无红错、Network 无 5xx）。
+- 注：演示经销商账号 dealer_a1_admin 的左侧菜单偏少属 V52 种子在该测试库未完全播种 RBAC 菜单资源的既有数据问题（无 4xx/5xx/JS 错误），与本次改动无关；跨租户链路用真实接口与数据回读验证通过。
+
 ## v4.4.7 (2026-08-30) - 修复百分比折扣语义颠倒：98折/90折被错误算成"减98%/减90%"
 
 > PATCH 版本（计价缺陷修复，PC + 移动端同时受益）。用户在移动端智能下单第二行填行折扣 98（提示"9折填90"，即 98=98折=原价×0.98），系统却按"减 98%、只付 2%"计价，导致订单金额严重偏低。

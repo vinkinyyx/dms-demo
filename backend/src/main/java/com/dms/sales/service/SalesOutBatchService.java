@@ -22,6 +22,7 @@ import java.util.*;
 public class SalesOutBatchService {
 
     private final EntityManager em;
+    private final com.dms.collab.CrossTenantCollabService crossTenantCollab;
 
     @Transactional
     public Map<String, Object> createBatch(Long salesOutId) {
@@ -40,14 +41,17 @@ public class SalesOutBatchService {
         int seq = ((Number) maxSeq).intValue() + 1;
         String code = r.get("code") + "-" + seq;
 
-        em.createNativeQuery(
+        Object bid = em.createNativeQuery(
                 "INSERT INTO sales_out_batches (tenant_id, sales_out_id, code, seq, status, created_at, updated_at, created_by) " +
-                "VALUES (?1, ?2, ?3, ?4, 'DRAFT', now(), now(), ?5)")
+                "VALUES (?1, ?2, ?3, ?4, 'DRAFT', now(), now(), ?5) RETURNING id")
           .setParameter(1, tid).setParameter(2, salesOutId).setParameter(3, code)
           .setParameter(4, seq).setParameter(5, TenantContext.getUserId())
-          .executeUpdate();
+          .getSingleResult();
+        Long batchId = ((Number) bid).longValue();
 
         Map<String, Object> res = new LinkedHashMap<>();
+        res.put("id", batchId);
+        res.put("salesOutId", salesOutId);
         res.put("code", code);
         res.put("seq", seq);
         res.put("status", "DRAFT");
@@ -136,6 +140,7 @@ public class SalesOutBatchService {
         validateLoadedLines(tid, soId, lines, isRed);
 
         Long userId = TenantContext.getUserId();
+        java.util.List<com.dms.collab.ShippedLine> collabRedLines = new java.util.ArrayList<>();
         for (Tuple l : lines) {
             Long productId = ((Number) l.get("product_id")).longValue();
             Long lineWh = l.get("warehouse_id") == null ? warehouseId : ((Number) l.get("warehouse_id")).longValue();
@@ -166,6 +171,16 @@ public class SalesOutBatchService {
               .setParameter(5, batchNo).setParameter(6, serialNo).setParameter(7, qty).setParameter(8, unitPrice)
               .setParameter(9, isRed)
               .executeUpdate();
+
+            if (isRed) {
+                com.dms.collab.ShippedLine sl = new com.dms.collab.ShippedLine();
+                sl.setProductId(productId);
+                sl.setQty(qty);
+                sl.setBatchNo(batchNo);
+                sl.setSerialNo(serialNo);
+                sl.setOutLineId(((Number) l.get("id")).longValue());
+                collabRedLines.add(sl);
+            }
         }
 
         Map<Long, BigDecimal> addByExpLine = new HashMap<>();
@@ -199,6 +214,18 @@ public class SalesOutBatchService {
         res.put("status", "CONFIRMED");
         res.put("salesOutStatus", newStatus);
         log.info("Sales-out batch {} confirmed, parent status={}", batchId, newStatus);
+
+        // v4.5.4 跨租户反向：经销商红字销售出库（采退发货）-> 厂家红字销退入库待收货（对码缺失随发货事务回滚）
+        if (isRed && !collabRedLines.isEmpty()) {
+            try {
+                crossTenantCollab.onRedSalesOutShipped(soId, collabRedLines);
+            } catch (com.dms.common.BusinessException be) {
+                throw be;
+            } catch (Exception ce) {
+                log.error("跨租户红字出库回传失败 soId={}", soId, ce);
+                throw ce;
+            }
+        }
         return res;
     }
 

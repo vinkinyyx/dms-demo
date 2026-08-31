@@ -162,6 +162,10 @@ public abstract class BaseIntegrationTest {
                 .name(name)
                 .level("A")
                 .status("active")
+                .consignmentEnabled(false)
+                .consignmentLimit(BigDecimal.ZERO)
+                .creditLimit(BigDecimal.ZERO)
+                .paymentDays(0)
                 .updatedAt(OffsetDateTime.now())
                 .build();
         return dealerRepository.saveAndFlush(dealer);

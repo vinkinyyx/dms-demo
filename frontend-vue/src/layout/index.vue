@@ -30,7 +30,7 @@
         <el-icon class="collapse-btn" @click="toggleSidebar">
           <Fold v-if="!collapsed" /><Expand v-else />
         </el-icon>
-        <span class="page-title">{{ currentTitle }}</span>
+        <Breadcrumb />
         <div class="spacer" />
         <el-button text circle title="命令面板 (Ctrl/Cmd+K)" @click="commandOpen = true">
           <el-icon><Search /></el-icon>
@@ -62,12 +62,15 @@
           </template>
         </el-dropdown>
       </el-header>
+      <TagsBar />
       <el-main class="main">
         <router-view v-slot="{ Component, route: viewRoute }">
-          <keep-alive :max="10" v-if="!viewRoute.meta.noCache">
-            <component :is="Component" :key="viewRoute.fullPath" />
-          </keep-alive>
-          <component :is="Component" v-else :key="viewRoute.fullPath" />
+          <template v-if="!tagsStore.reloading">
+            <keep-alive :max="12" v-if="!viewRoute.meta.noCache">
+              <component :is="Component" :key="viewRoute.fullPath" />
+            </keep-alive>
+            <component :is="Component" v-else :key="viewRoute.fullPath" />
+          </template>
         </router-view>
       </el-main>
     </el-container>
@@ -86,7 +89,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { MENU_GROUPS } from '@/config/menu'
@@ -94,12 +97,24 @@ import { unreadCount } from '@/api/notification'
 import request from '@/utils/request'
 import { Bell, Moon, Sunny, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
+import { useTagsStore } from '@/store/tags'
 import { ensurePermissions } from '@/directives/has'
 import { THEME_PRESETS as themePresets, currentThemePreset as currentPreset, setPreset as setThemePreset, toggleMode as applyThemeMode, initTheme } from '@/config/theme-runtime'
+import Breadcrumb from './Breadcrumb.vue'
+import TagsBar from './TagsBar.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const tagsStore = useTagsStore()
+
+watch(
+  () => tagsStore.reloading,
+  (val) => {
+    if (!val) return
+    setTimeout(() => tagsStore.refreshDone(), 60)
+  }
+)
 const collapsed = ref(localStorage.getItem('dms:sidebar:collapsed') === '1')
 const commandOpen = ref(false)
 const commandQuery = ref('')
@@ -156,16 +171,6 @@ const userTypeLabel = computed(() => (userStore.userType === 'vendor' ? '厂商�
 
 function menuIndex(it) { return it.route || '/m/' + it.key }
 
-const currentTitle = computed(() => {
-  if (route.path === '/home') return '工作台首页'
-  const key = route.params.key
-  for (const g of MENU_GROUPS) {
-    const it = g.items.find((i) => i.key === key)
-    if (it) return it.label
-  }
-  return 'DMS'
-})
-
 const commandItems = computed(() => {
   const items = [
     { title: '工作台首页', path: '/home' },
@@ -218,6 +223,7 @@ function onCommand(cmd) {
   if (cmd === 'logout') {
     ElMessageBox.confirm('确认退出登录？', '提示', { type: 'warning' })
       .then(async () => {
+        tagsStore.reset()
         await userStore.logout()
         router.replace('/login')
       })
@@ -293,7 +299,6 @@ function onCommand(cmd) {
 }
 .collapse-btn { font-size: 20px; cursor: pointer; color: #606266; transition: color var(--dms-motion-duration-fast) var(--dms-motion-ease-out); }
 .collapse-btn:hover { color: var(--dms-color-primary); }
-.page-title { font-size: var(--dms-font-size-md); font-weight: var(--dms-font-weight-semibold); color: #1f2d3d; }
 .spacer { flex: 1; }
 .theme-tools {
   display: flex;
@@ -318,6 +323,5 @@ function onCommand(cmd) {
 .user-info:hover { color: var(--dms-color-primary); }
 .main { background: var(--dms-bg-page); padding: var(--dms-padding-page); }
 :global(html[data-mode='dark']) .topbar { background: #111827; border-color: #243044; }
-:global(html[data-mode='dark']) .page-title { color: #f8fafc; }
 .command-hint { margin-top: 10px; color: var(--dms-text-3); font-size: 12px; }
 </style>

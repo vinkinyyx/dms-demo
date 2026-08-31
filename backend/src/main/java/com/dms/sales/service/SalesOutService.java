@@ -69,6 +69,8 @@ public class SalesOutService {
     private final EntityManager em;
     @Lazy
     private final ConsignmentService consignmentService;
+    @Lazy
+    private final com.dms.collab.CrossTenantCollabService crossTenantCollab;
 
     @Transactional(readOnly = true)
     public PageResult<SalesOut> list(PageQuery pageQuery) {
@@ -289,6 +291,7 @@ public class SalesOutService {
 
         BigDecimal totalAmount = BigDecimal.ZERO;
         List<ConsignmentService.StdLine> consignLines = new ArrayList<>();
+        List<com.dms.collab.ShippedLine> collabShippedLines = new ArrayList<>();
 
         for (SalesOutPartialShipRequest.ShipLineRequest req : ships) {
             if (req.getProductId() == null || req.getWarehouseId() == null
@@ -362,6 +365,18 @@ public class SalesOutService {
                     .build();
             factRepository.save(fact);
             consignLines.add(new ConsignmentService.StdLine(req.getProductId(), req.getBatchNo(), req.getSerialNo(), req.getWarehouseId(), req.getQty()));
+
+            com.dms.collab.ShippedLine sl = new com.dms.collab.ShippedLine();
+            sl.setProductId(req.getProductId());
+            sl.setQty(req.getQty());
+            sl.setBatchNo(req.getBatchNo());
+            sl.setSerialNo(req.getSerialNo());
+            sl.setOutLineId(savedLine.getId());
+            Object pc = em.createNativeQuery("SELECT code FROM products WHERE id=?1 AND tenant_id=?2")
+                    .setParameter(1, req.getProductId()).setParameter(2, tenantId).getResultList().stream().findFirst().orElse(null);
+            sl.setProductCode(pc == null ? String.valueOf(req.getProductId()) : String.valueOf(pc));
+            collabShippedLines.add(sl);
+
             log.info("部分出库 soId={} execLineId={} product={} qty={}", soId, savedLine.getId(), req.getProductId(), req.getQty());
         }
 
@@ -422,6 +437,15 @@ public class SalesOutService {
         } catch (Exception cex) {
             log.error("补货寄售库存回写失败 soId={}: {}", soId, cex.getMessage(), cex);
             throw cex;
+        }
+        // v4.5.0 跨租户：向绑定的经销商租户回传待收货入库单（对码缺失抛错，随发货事务回滚）
+        try {
+            crossTenantCollab.onSalesOutShipped(soId, collabShippedLines);
+        } catch (com.dms.common.BusinessException be) {
+            throw be;
+        } catch (Exception ce) {
+            log.error("跨租户出库回传失败 soId={}: {}", soId, ce.getMessage(), ce);
+            throw ce;
         }
         return saved;
     }
@@ -592,5 +616,3 @@ public class SalesOutService {
         }
     }
 }
-
-

@@ -370,6 +370,7 @@ const purchaseOrders = {
     { k: 'code', l: '采购单号', w: 170, filter: { type: 'text' } }, 
     { k: 'orderType', l: '类型', w: 90, filter: { type: 'select', options: [{ value: 'NORMAL', label: '常规采购' }, { value: 'URGENT', label: '紧急采购' }] } }, 
     { k: 'supplierName', l: '供应商', filter: { type: 'resource', resource: 'suppliers', paramKey: 'supplierId' } }, 
+    { k: 'vendorOrderCode', l: '厂家销售单号', w: 170 }, 
     { k: 'warehouseName', l: '入库仓库', w: 120, filter: { type: 'resource', resource: 'warehouses', paramKey: 'warehouseId' } }, 
     { k: 'totalAmount', l: '总金额', w: 120, filter: { type: 'number', range: true } }, 
     { k: 'finalAmount', l: '实付金额', w: 120, filter: { type: 'number', range: true } }, 

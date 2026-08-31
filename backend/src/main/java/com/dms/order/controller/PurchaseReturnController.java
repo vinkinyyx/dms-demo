@@ -36,6 +36,7 @@ public class PurchaseReturnController {
     private final AutoDocGenerator autoDocGenerator;
     private final com.dms.common.util.DocNoGenerator docNoGenerator;
     private final ApprovalService approvalService;
+    private final com.dms.collab.CrossTenantCollabService crossTenantCollab;
 
     @GetMapping
     @Transactional(readOnly = true)
@@ -238,6 +239,15 @@ public class PurchaseReturnController {
             request.setBusinessSnapshot(buildApprovalSnapshot(id));
             ApprovalInstance instance = approvalService.start(request);
             boolean approved = "APPROVED".equals(instance.getStatus().name()) || "AUTO_APPROVED".equals(instance.getStatus().name());
+            // v4.5.4 跨租户反向：供应商为平台厂家时，自动转厂家红字销退草稿（对码缺失抛错整体回滚）
+            try {
+                crossTenantCollab.onPurchaseReturnSubmitted(id);
+            } catch (com.dms.common.BusinessException be) {
+                throw be;
+            } catch (Exception ce) {
+                log.error("跨租户采退转销退失败 prPoId={}", id, ce);
+                throw ce;
+            }
             return ApiResponse.ok(Map.of("id", id, "newStatus", approved ? "APPROVED" : "PENDING_APPROVAL", "approvalInstanceId", instance.getId(), "autoApproved", approved));
         } catch (Exception e) {
             em.createNativeQuery("UPDATE purchase_orders SET status='DRAFT', updated_at=now() WHERE id=?1 AND tenant_id=?2").setParameter(1, id).setParameter(2, tid).executeUpdate();
