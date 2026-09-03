@@ -7,14 +7,21 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node tools/run-tests.js",
     "lint:static": "node tools/lint-static.js",
-    "test:api": "python automation_test/api_smoke.py",
-    "test:smoke": "node tools/smoke-test.cjs",
-    "test:e2e": "node automation_test/e2e/run-all.js",
-    "test:all": "node tools/run-tests.js",
     "test:frontend": "cd frontend-vue && npm test",
-    "test:backend": "cd backend && mvn test"
+    "test:frontend:cov": "cd frontend-vue && npm run test:coverage",
+    "test:backend": "cd backend && mvn test",
+    "test:backend:it": "cd backend && mvn verify",
+    "test:smoke": "node tools/smoke-test.cjs",
+    "test:e2e": "playwright test --config tests/playwright.config.js",
+    "test:gate": "playwright test --config tests/playwright.config.js --project=gate",
+    "test:api": "playwright test --config tests/playwright.config.js --project=api",
+    "test:ui": "playwright test --config tests/playwright.config.js --project=pc --project=admin --project=mobile",
+    "test:perf": "k6 run tests/performance/smoke-load.js",
+    "test:security": "echo \"ZAP baseline 见 tests/security/README.md（需 Docker，发版前手动）\"",
+    "test:all": "node tools/run-tests.js",
+    "test:report": "echo \"报告: backend/target/site/jacoco  frontend-vue/coverage  reports/playwright/html\""
   },
   "repository": {
     "type": "git",
@@ -27,5 +34,9 @@
   "bugs": {
     "url": "https://github.com/vinkinyyx/dms-demo/issues"
   },
-  "homepage": "https://github.com/vinkinyyx/dms-demo#readme"
+  "homepage": "https://github.com/vinkinyyx/dms-demo#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "pg": "^8.23.0"
+  }
 }

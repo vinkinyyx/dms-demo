@@ -109,6 +109,7 @@ public class OpenApiAuthFilter extends OncePerRequestFilter {
             TenantContext.set("appKey", appKey);
             TenantContext.set("appName", app.get("app_name"));
             TenantContext.set("appSystem", app.get("system"));
+            TenantContext.set("openAppId", app.get("id"));
             wrapped.setAttribute("openAppId", app.get("id"));
             chain.doFilter(wrapped, response);
         } finally {
@@ -132,14 +133,14 @@ public class OpenApiAuthFilter extends OncePerRequestFilter {
         return r.getRemoteAddr();
     }
 
-    static String sha256Hex(byte[] data) {
+    public static String sha256Hex(byte[] data) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             return HexFormat.of().formatHex(md.digest(data == null ? new byte[0] : data));
         } catch (Exception e) { throw new RuntimeException(e); }
     }
 
-    static String hmacSha256Hex(String secret, String data) {
+    public static String hmacSha256Hex(String secret, String data) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));

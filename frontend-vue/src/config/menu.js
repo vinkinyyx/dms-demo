@@ -20,7 +20,7 @@ export const MENU_GROUPS = [
     items: [
       { key: 'contracts-workbench', icon: 'Document', label: '合同工作台', route: '/contracts', permissionCode: 'contract:view' },
       { key: 'contract-templates', icon: 'Files', label: '合同模板', route: '/contracts/templates', permissionCode: 'contract_template:manage' },
-      { key: 'authorizations', icon: 'Key', label: '授权管理', permissionCode: 'authorization:view' }
+      { key: 'authorizations', icon: 'Key', label: '授权管理', route: '/authorizations', permissionCode: 'authorization:view' }
     ]
   },
   {

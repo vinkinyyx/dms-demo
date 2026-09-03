@@ -775,6 +775,9 @@ $border-radius-max: 9999px;
 }
 ```
 
+
+> **v4.5.7（2026-09-01）移动端简约重设计补充**：全局移动端统一类落在 `frontend-vue/src/styles/app.scss`（锚点「移动端简约统一类」），新增 `.m-hero`（渐变头部+safe-top）、`.m-sec-title`、`.m-primary-actions/.m-primary-btn`、`.m-stats/.m-stat`、`.m-quick-grid/.m-quick-item`（单色蓝底图标，禁用彩虹配色）、`.m-list-card`、`.m-amt/.m-sub`，全部基于本节 token。底部 tabbar 收敛为 5 项（首页/订单/报台/审批/我的），消息入口收进首页铃铛（消息页保留）。语义色（促销橙、代金券红、扫码黑、登录页渐变）不参与归一。
+
 ---
 
 ### 12. CSS 变量统一注册（:root）

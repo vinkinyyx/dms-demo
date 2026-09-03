@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="m-layout">
     <div class="m-content">
       <router-view v-slot="{ Component }">
@@ -17,7 +17,6 @@
         报台
       </van-tabbar-item>
       <van-tabbar-item to="/mobile/approvals" icon="todo-list-o" :badge="approvalBadge || ''">审批</van-tabbar-item>
-      <van-tabbar-item to="/mobile/messages" icon="bell" :badge="messageBadge || ''">消息</van-tabbar-item>
       <van-tabbar-item to="/mobile/profile" icon="user-o">我的</van-tabbar-item>
     </van-tabbar>
   </div>
@@ -29,16 +28,11 @@ import request from '@/utils/request'
 import SurgeryIcon from '@/components/SurgeryIcon.vue'
 
 const approvalBadge = ref(0)
-const messageBadge = ref(0)
 
 async function loadBadges() {
   try {
-    const [todo, unread] = await Promise.all([
-      request({ url: '/api/approval/tasks/my-todo', method: 'get', params: { page: 1, size: 1 } }),
-      request({ url: '/api/notifications/unread-count', method: 'get' })
-    ])
+    const todo = await request({ url: '/api/approval/tasks/my-todo', method: 'get', params: { page: 1, size: 1 } })
     approvalBadge.value = Number(todo?.data?.total || 0)
-    messageBadge.value = Number(unread?.data?.count || 0)
   } catch (e) {
     // ignore badge load errors
   }

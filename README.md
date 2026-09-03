@@ -1,3 +1,19 @@
+## v4.5.5（2026-09-01）- 平台外下游经销商报文式开放接口：厂家 DMS ↔ 经销商自有 ERP（4 接口 + HMAC 机器凭证）
+
+- **当前测试环境版本**：v4.6.1（2026-09-02 部署，定时邮件发送运行时开关），Flyway 已执行至 **V146**；**正式环境已同步至 v4.6.1（2026-09-03 部署，Flyway V143→V146 迁移成功）**。
+- **定位**：面向**平台外**、拥有自有系统/ERP 的下游经销商的报文对接（与"同 SaaS 内跨租户协同 v4.5.0/v4.5.4"、"厂家 ERP 出库回传 /open/api/erp"为三套相互独立的能力）。
+- **4 个接口**：①经销商采购订单提交 `POST /open/api/collab/purchase-orders/submit`（建 DRAFT 销售订单）；②销售出库发货通知（厂家 → 经销商 webhook，SHIP_NOTICE）；③经销商采购退货单提交 `POST /open/api/collab/purchase-returns/submit`（建 DRAFT 红字销退单）；④红字销退出库通知（webhook，RED_SHIP_NOTICE）。单据号在报文 header、header+lines 结构、日期仅 yyyy-MM-dd。
+- **鉴权**：HMAC-SHA256 机器凭证（X-App-Key / X-Timestamp / X-Nonce / X-Signature 四头，±5 分钟时钟窗），OpenApiAuthFilter 拦截 `/open/api/**`；统一响应壳 code=0 成功。
+- **新增代码包** `com.dms.openapi`：OpenApiAuthFilter、OpenCollabController、ExternalCollabOpenService（入站）、ExternalCollabWebhookService（出站：发货事务内登记 + afterCommit 异步推送，**推送失败绝不阻断发货**，退避补偿最多 8 次）。
+- **数据库**：V143（open_app 加 partner_type/dealer_code/webhook 等、open_partner_materials 物料映射、open_collab_messages 报文台账幂等 ux_ocm_in_idem、sales_outs 加物流字段）+ V144（物料映射种子修正，NOT EXISTS 幂等）。
+- **测试成绩**：入站 E2E 20/20（HMAC 签名/幂等/错误码反例）、出站 E2E 13/13（webhook 接收端 + 发货触发 + 重试补偿）、铁律 9 真实浏览器八入口终验全过。
+- **接口文档**：`docs/03_接口文档/跨租户订单协同接口文档_v4.5.5.docx`（联调 AppKey：dms-ext-dealer-d1）。
+- **版本号说明**：开发期曾标号 v4.5.4，因 v4.5.4 已被 2026-08-31 同 SaaS 内反向退货协同占用，正式顺延为 v4.5.5；入站测试脚本文件名 v454_open_collab_e2e.py 保留。
+
+## v4.5.4（2026-08-31）- 同 SaaS 内跨租户反向退货协同（路径 C/D）
+
+- 纯后端迭代，**无 Flyway、无接口变更**；CrossTenantCollabService 新增路径 C（经销商采退单 → 厂家红字销售订单 PR_TO_RED_SALES_ORDER）与路径 D（厂家红字销退出库 → 经销商红字收货 RED_OUT_TO_RED_RECEIPT），TenantContext 切换 + cross_tenant_doc_links 台账；集成测试 17/17 通过。
+
 ## v4.5.3（2026-08-31）- PC 工作台 UI 增强：面包屑导航 + 多菜单页签 Tags-View
 
 - **当前测试环境版本**：v4.5.3（前端静态部署 stamp 20260831-165944），纯前端 UI 版本，**无 Flyway、无接口变更**（Flyway 仍至 V142）；**正式环境最新为 v4.4.7**，v4.5.x 推送待明确指令。
@@ -20,7 +36,7 @@
 - MINOR 版本，9 个核心需求 R1–R9，Flyway V121–V133。
 - 后端新增 voucher（代金券）、user/registration（客户注册）、v4 定价引擎（V4PriceEngine）、contract ContractPrice、masterdata 联系人/地址/全局折扣、rma 多出库单、authz SalesScopeService 数据权限。
 - 前端新增 6 个 API 封装、v430-modules.js、订单计价区重构、代金券/折扣/经销商/注册维护页、合同价格 Tab、销退多选发货单；Admin 新增首页总览与报表总览；H5 新增客户注册与自助下单。
-- 设计文档：docs/02_设计/v4.3.0/总体设计.md、订单折扣与促销规则说明书.md；测试报告：docs/03_测试/测试报告_v4.3.0_20260827.md（API 51/51 通过）。
+- 设计文档：docs/02_设计/v4.3.0/总体设计.md、订单折扣与促销规则说明书.md；测试报告：docs/04_测试/测试报告_v4.3.0_20260827.md（API 51/51 通过）。
 
 ## v4.2.1（2026-08-22）- 冒烟脚本 element-plus overlay 适配 / 覆盖层残留重置
 
@@ -50,7 +66,7 @@ ullable=false，默认 ZERO。
 - 母件金额始终为 0，不计总价、不平摊折扣、不参与出库；整单折扣+促销满减按「行折扣后金额占比」一次性分摊，2 位小数 HALF_UP，尾差吸收到最大行。
 - 价格列表新增「价格用途」列及「经销商」「价格类型」过滤，默认隐藏 BOM_COMPONENT 子件行；产品价格只读页 SKU/经销商/BOM 母件统一显示编码+名称。
 - Flyway V108 新增字段与上下文隔离唯一索引并迁移历史数据；后端 V4CalculatorTest 覆盖 BOM 子件专用价/不回退单品价、行折扣优先级、行后金额占比分摊。
-- 文档：docs/01_需求/v4.1.0/、docs/02_设计/v4.1.0/、docs/03_测试/v4.1.0/。
+- 文档：docs/01_需求/v4.1.0/、docs/02_设计/v4.1.0/、docs/04_测试/v4.1.0/。
 
 ## v4.0.x（2026-08-19 ~ 2026-08-21）- V4 计价引擎 / BOM 与促销 / ERP 字段打通
 
@@ -89,11 +105,11 @@ ullable=false，默认 ZERO。
 - 回归工具 tools/_e2e_v389_final.py。
 # 通用 DMS 经销商管理系统 — 项目入口
 
-**当前版本**: 测试环境 v4.5.3（2026-08-31，PC 面包屑+多菜单页签 UI 增强）｜正式环境 v4.4.7
-**最后更新**: 2026-08-31
+**当前版本**: 测试环境 v4.6.1（2026-09-02，定时邮件发送运行时开关，Flyway V146）｜正式环境 v4.6.1（2026-09-03 部署，Flyway V146）
+**最后更新**: 2026-09-03
 **正式环境**: 业务前台/PC http://8.133.193.238/dms/ ｜ 移动端 http://8.133.193.238/dms/mobile/login ｜ 平台后台 http://8.133.193.238/dms/admin/ ｜ 健康检查 http://8.133.193.238/actuator/health
-**测试环境（域名）**: PC http://dms-dev.mysolmed.com/dms/ ｜ 移动 H5 http://dms-dev.mysolmed.com/dms/mobile/login ｜ 经销商准入注册 http://dms-dev.mysolmed.com/dms/mobile/register ｜ 平台后台 http://dms-dev.mysolmed.com/dms/admin/ ｜ API/健康检查 http://dms-dev.mysolmed.com/api、http://dms-dev.mysolmed.com/actuator/health ｜ 产品宣传手册 http://dms-dev.mysolmed.com/brochure/（移动页 /brochure/mobile.html、打印页 /brochure/print.html）
-**测试环境（IP 直连，行为同域名）**: 把 `dms-dev.mysolmed.com` 替换为 `43.128.145.141` 即可；裸域名/根路径 `/` 已配置 302 跳转 `/dms/` 直达系统
+**测试环境（域名，推荐）**: PC http://dms-dev.mysolmed.com/dms/ ｜ 移动 H5 http://dms-dev.mysolmed.com/dms/mobile/login ｜ 经销商准入注册 http://dms-dev.mysolmed.com/dms/mobile/register ｜ 平台后台 http://dms-dev.mysolmed.com/dms/admin/ ｜ API/健康检查 http://dms-dev.mysolmed.com/api、http://dms-dev.mysolmed.com/actuator/health ｜ 产品宣传手册 http://dms-dev.mysolmed.com/brochure/（移动页 /brochure/mobile.html、打印页 /brochure/print.html）
+**测试环境（IP 直连）**: `43.128.145.141` 与域名同机；自 2026-09-03 起**网页路径** IP 访问会 301 自动跳转到域名（旧 IP 书签/缓存无需手动改，点开即跳域名），**API 路径**（/api/、/auth/、/actuator/、/open/）走 IP 不跳转，自动化脚本不受影响；裸域名/根路径 `/` 已配置 302 跳转 `/dms/` 直达系统
 
 ---
 
@@ -178,7 +194,7 @@ v3.7.0 迭代中反复出现4个问题（下拉选择、弹窗、删除报500、
 | 4 | DELETE /api/products/4 | 200 ✅（业务错误码40904，非500） |
 | 5 | Nginx proxy_pass 验证 | ✅ 指向 8082 |
 
-详见：[测试报告](docs/03_测试/) `v3.7.1` 章节
+详见：[测试报告](docs/04_测试/) `v3.7.1` 章节
 
 ---
 
@@ -197,7 +213,7 @@ v3.7.0 迭代中反复出现4个问题（下拉选择、弹窗、删除报500、
 - 3 个新增集成测试类
 - 5 份文档同步（需求/数据库/测试 + 增量 README）
 
-详见：[需求文档](docs/01_需求/DMS需求文档_汇总版.md) `v3.7.0` 章节、[数据库设计](docs/02_设计/数据库设计.md)、[测试报告](docs/03_测试/)
+详见：[需求文档](docs/01_需求/DMS需求文档_汇总版.md) `v3.7.0` 章节、[数据库设计](docs/02_设计/数据库设计.md)、[测试报告](docs/04_测试/)
 
 ---
 
@@ -213,7 +229,7 @@ v3.7.0 迭代中反复出现4个问题（下拉选择、弹窗、删除报500、
 - 异步队列：避免日志记录阻塞主业务流程
 - 管理后台下载：`GET /api/admin/op-logs/download?date=YYYY-MM-DD`，仅 admin 可访问
 
-**验收结果**：7/7 ✅ 全部通过，详见 [测试报告](docs/03_测试/) `v3.6.2` 章节
+**验收结果**：7/7 ✅ 全部通过，详见 [测试报告](docs/04_测试/) `v3.6.2` 章节
 
 ### 二、4个产品模块 BUG 修复 + 部署缺陷修复
 **采用JAR直投模式 3.7分钟部署完成，通过Playwright浏览器模拟操作验证**：
@@ -227,7 +243,7 @@ v3.7.0 迭代中反复出现4个问题（下拉选择、弹窗、删除报500、
 
 **Playwright 浏览器端到端验证**：✅12 通过 | ⚠️2 数据限制（生产种子无 DRAFT 状态）| ❌0 失败
 
-完整验证报告：详见 [测试报告](docs/03_测试/) `v3.6.2 (2026-07-24)` 章节。
+完整验证报告：详见 [测试报告](docs/04_测试/) `v3.6.2 (2026-07-24)` 章节。
 
 > ⚠️ 查看 [CHANGELOG.md](./CHANGELOG.md) 了解全部版本历史 | [DMS 登录信息手册](./docs/DMS登录信息手册.md) 与 [服务器迁移复刻清单](./docs/07_部署方案/服务器迁移复刻清单.md) 查看访问与部署详情
 

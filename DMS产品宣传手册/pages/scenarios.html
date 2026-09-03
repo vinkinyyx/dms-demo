@@ -58,56 +58,6 @@
     margin-left: 3px;
   }
 
-  .browser-chrome {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    box-shadow: 0 25px 60px -20px rgba(15,23,42,0.25), 0 8px 20px -12px rgba(15,23,42,0.15);
-    overflow: hidden;
-  }
-  .browser-bar {
-    height: 40px;
-    background: linear-gradient(#fafafa, #f1f1f3);
-    border-bottom: 1px solid #e5e7eb;
-    display: flex;
-    align-items: center;
-    padding: 0 14px;
-    gap: 8px;
-  }
-  .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
-  .dot.r { background: #ff5f57; }
-  .dot.y { background: #febc2e; }
-  .dot.g { background: #28c840; }
-  .browser-url {
-    flex: 1;
-    height: 24px;
-    margin-left: 10px;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    padding: 0 10px;
-    font-size: 12px;
-    color: #64748b;
-  }
-  .browser-chrome img { display: block; width: 100%; height: auto; }
-
-  .phone-chrome {
-    display: inline-block;
-    background: #0f172a;
-    border-radius: 32px;
-    padding: 12px;
-    box-shadow: 0 30px 70px -20px rgba(15,23,42,0.45);
-    border: 1px solid rgba(255,255,255,0.06);
-    width: 100%;
-    max-width: 300px;
-  }
-  .phone-top { height: 22px; display: flex; align-items: center; justify-content: center; position: relative; }
-  .phone-notch { width: 60px; height: 6px; background: #1f2937; border-radius: 4px; }
-  .phone-screen { background: #fff; border-radius: 22px; overflow: hidden; }
-  .phone-screen img { display: block; width: 100%; height: auto; }
-
   .scene-num {
     font-size: 72px;
     font-weight: 900;
@@ -214,14 +164,6 @@
   }
   .dark-section .section-num { background: rgba(245,158,11,0.15); color: var(--accent); }
 
-  .scene-row {
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    padding: 12px;
-    box-shadow: 0 12px 40px -24px rgba(15,23,42,0.25);
-  }
-
   .cta-band { background: linear-gradient(120deg, var(--brand) 0%, #0a3fc0 100%); }
 
   .pill-link {
@@ -241,8 +183,235 @@
     border-top: 3px solid var(--accent);
   }
 
+  /* === Flow Chain (业务流程图) === */
+  .flow-chain {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    flex-wrap: wrap;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .flow-step {
+    flex: 1 1 0;
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    padding: 0 4px;
+  }
+  .flow-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(0,47,167,0.08);
+    color: var(--brand);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 2px solid rgba(0,47,167,0.15);
+  }
+  .flow-step:nth-child(even) .flow-icon { background: rgba(245,158,11,0.10); color: var(--accent); border-color: rgba(245,158,11,0.2); }
+  .flow-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-top: 8px; }
+  .flow-desc { font-size: 11px; color: #64748b; margin-top: 2px; line-height: 1.4; }
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    flex-shrink: 0;
+    padding: 0 2px;
+    align-self: center;
+    height: 44px;
+  }
+  .flow-arrow svg { width: 20px; height: 20px; }
+  .dark-section .flow-icon { background: rgba(245,158,11,0.12); color: var(--accent); border-color: rgba(245,158,11,0.2); }
+  .dark-section .flow-step:nth-child(even) .flow-icon { background: rgba(0,180,216,0.12); color: #00B4D8; border-color: rgba(0,180,216,0.2); }
+  .dark-section .flow-title { color: #e2e8f0; }
+  .dark-section .flow-desc { color: #94a3b8; }
+  .dark-section .flow-arrow { color: #475569; }
+  @media (max-width: 768px) {
+    .flow-chain { flex-wrap: nowrap; overflow-x: auto; }
+    .flow-step { min-width: 100px; }
+  }
+
+  /* === UI Mockup (界面模拟) === */
+  .ui-mockup {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .ui-mockup-header {
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ui-mockup-title { font-weight: 700; color: var(--ink); font-size: 13px; }
+  .ui-mockup-body { padding: 12px 14px; }
+  .mock-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .mock-row:last-child { border-bottom: none; }
+  .mock-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .mock-tag.green { background: #dcfce7; color: #166534; }
+  .mock-tag.amber { background: #fef3c7; color: #92400e; }
+  .mock-tag.red { background: #fee2e2; color: #991b1b; }
+  .mock-tag.blue { background: #dbeafe; color: #1e40af; }
+  .mock-tag.gray { background: #f1f5f9; color: #475569; }
+  .mock-tag.cyan { background: #cffafe; color: #155e75; }
+  .mock-table { width: 100%; border-collapse: collapse; }
+  .mock-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    padding: 6px 8px;
+    border-bottom: 1px solid #e2e8f0;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .mock-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 12px;
+    color: #334155;
+  }
+  .mock-table tr:last-child td { border-bottom: none; }
+  .mock-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #475569;
+  }
+  .mock-btn.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .mock-btn.danger { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+  .mock-btn.success { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+  .mock-progress {
+    height: 6px;
+    border-radius: 3px;
+    background: #e2e8f0;
+    overflow: hidden;
+  }
+  .mock-progress-bar {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--brand);
+  }
+  .mock-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .mock-kpi {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .mock-kpi-label { font-size: 10px; color: #64748b; }
+  .mock-kpi-value { font-size: 18px; font-weight: 800; color: var(--brand); }
+  .mock-phone-frame {
+    background: #0f172a;
+    border-radius: 20px;
+    padding: 8px;
+    max-width: 240px;
+    margin: 0 auto;
+  }
+  .mock-phone-screen {
+    background: #fff;
+    border-radius: 14px;
+    overflow: hidden;
+    min-height: 200px;
+  }
+  .mock-tab-bar {
+    display: flex;
+    border-top: 1px solid #e2e8f0;
+    background: #fff;
+  }
+  .mock-tab {
+    flex: 1;
+    text-align: center;
+    padding: 6px 0;
+    font-size: 10px;
+    color: #64748b;
+  }
+  .mock-tab.active { color: var(--brand); font-weight: 700; }
+
+  /* === Pain-Point Card (痛点对比) === */
+  .pain-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .pain-card-head {
+    padding: 14px 18px;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pain-card-head.before { background: #fef2f2; color: #991b1b; }
+  .pain-card-head.after { background: #f0fdf4; color: #166534; }
+  .pain-card-body { padding: 12px 18px; font-size: 13px; color: #475569; line-height: 1.6; }
+
+  /* === Scene detail layout === */
+  .scene-block {
+    padding: 48px 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .scene-block:nth-child(odd) { background: #fff; }
+  .scene-block:nth-child(even) { background: var(--cream); }
+  .scene-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .scene-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--brand);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
   @media (max-width: 768px) {
     .scene-num { font-size: 54px; }
+    .scene-block { padding: 32px 0; }
   }
 </style>
 </head>
@@ -297,12 +466,24 @@
       </div>
     </div>
     <div class="relative">
-      <div class="browser-chrome">
-        <div class="browser-bar">
-          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-          <div class="browser-url"><i data-lucide="lock" style="width:12px;height:12px;margin-right:6px"></i> dms.example.com/inventory</div>
+      <div class="ui-mockup shadow-2xl">
+        <div class="ui-mockup-header">
+          <i data-lucide="layout" style="width:16px;height:16px;color:var(--brand)"></i>
+          <span class="ui-mockup-title">库存查询 · 批号 / 序列号追溯</span>
+          <span class="ml-auto mock-tag green">U 合格</span>
+          <span class="mock-tag amber">Q 待检</span>
+          <span class="mock-tag red">B 不合格</span>
         </div>
-        <img src="../assets/14-pc-inventory-new.png" alt="DMS 库存与批号追溯" />
+        <div class="ui-mockup-body">
+          <table class="mock-table">
+            <thead><tr><th>产品</th><th>批号</th><th>序列号</th><th>状态</th><th>数量</th></tr></thead>
+            <tbody>
+              <tr><td>冠脉支架 X1</td><td>LOT2026-001</td><td>SN-A001</td><td><span class="mock-tag green">合格 U</span></td><td>1</td></tr>
+              <tr><td>导管 C2</td><td>LOT2026-008</td><td>—</td><td><span class="mock-tag amber">待检 Q</span></td><td>50</td></tr>
+              <tr><td>球囊 B3</td><td>LOT2026-010</td><td>—</td><td><span class="mock-tag green">合格 U</span></td><td>200</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
       <div class="hidden md:block absolute -left-6 -bottom-6 bg-white rounded-xl shadow-xl border border-slate-100 p-4 w-56">
         <div class="flex items-center gap-2 text-xs text-slate-500"><i data-lucide="scan-line" style="width:14px;height:14px;color:var(--accent)"></i> 序列号一件一码</div>
@@ -334,12 +515,13 @@
   </div>
 </section>
 
+<!-- Overview section -->
 <section id="overview" class="py-20 md:py-24">
   <div class="max-w-7xl mx-auto px-5 md:px-8">
     <div class="max-w-2xl">
       <span class="section-num">★</span>
       <h2 class="mt-4 text-3xl md:text-4xl font-extrabold tracking-tight">十大特色场景总览</h2>
-      <p class="mt-3 text-slate-600">按业务价值 × 行业差异化 × 系统依赖度排序，覆盖业务主干、交易正确性、行业场景与 SaaS 运营底座。</p>
+      <p class="mt-3 text-slate-600">按业务价值 × 行业差异化 × 系统依赖度排序。每个场景含三层详情：业务流程图 · 界面模拟 · 痛点对比。点击卡片直达详情。</p>
     </div>
     <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
@@ -347,77 +529,88 @@
         <div class="flex items-center gap-3"><span class="idx">01</span><span class="industry-badge blue"><i data-lucide="shield-check" style="width:13px;height:13px"></i> 监管追溯</span></div>
         <h3 class="mt-4 font-bold text-lg">进销存全闭环 · 批号序列号追溯</h3>
         <p class="mt-2 text-sm text-slate-600 leading-relaxed flex-1">采购到发货每一件耗材有据可查，满足医疗器械强监管红线。</p>
-        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-down" style="width:13px;height:13px"></i> 查看场景</span>
+        <div class="mt-3 flex flex-wrap gap-1.5"><span class="mock-tag gray">三态库存</span><span class="mock-tag gray">一件一码</span><span class="mock-tag gray">流水台账</span></div>
+        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-right" style="width:13px;height:13px"></i> 点击展开详情</span>
       </a>
 
       <a href="#scene-2" class="scene-card">
         <div class="flex items-center gap-3"><span class="idx">02</span><span class="industry-badge"><i data-lucide="sparkles" style="width:13px;height:13px"></i> 行业特色</span></div>
         <h3 class="mt-4 font-bold text-lg">厂家↔经销商跨租户订单协同</h3>
         <p class="mt-2 text-sm text-slate-600 leading-relaxed flex-1">一套 SaaS 串起供应链上下游，单据自动流转、物料自动转码。</p>
-        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-down" style="width:13px;height:13px"></i> 查看场景</span>
+        <div class="mt-3 flex flex-wrap gap-1.5"><span class="mock-tag gray">对码转码</span><span class="mock-tag gray">单据自动流转</span><span class="mock-tag gray">行级溯源</span></div>
+        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-right" style="width:13px;height:13px"></i> 点击展开详情</span>
       </a>
 
       <a href="#scene-3" class="scene-card">
-        <div class="flex items-center gap-3"><span class="idx">03</span><span class="industry-badge blue"><i data-lucide="calculator" style="width:13px;height:13px"></i> 交易正确性</span></div>
+        <div class="flex items-center gap-3"><span class="idx">03</span><span class="industry-badge blue"><i data-lucide="receipt" style="width:13px;height:13px"></i> 交易正确性</span></div>
         <h3 class="mt-4 font-bold text-lg">V4 智能计价引擎</h3>
         <p class="mt-2 text-sm text-slate-600 leading-relaxed flex-1">合同价 → 折扣 → 促销 → 代金券，下单实时试算、分毫不差。</p>
-        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-down" style="width:13px;height:13px"></i> 查看场景</span>
+        <div class="mt-3 flex flex-wrap gap-1.5"><span class="mock-tag gray">固定优先级</span><span class="mock-tag gray">实时试算</span><span class="mock-tag gray">驳回释放</span></div>
+        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-right" style="width:13px;height:13px"></i> 点击展开详情</span>
       </a>
 
       <a href="#scene-4" class="scene-card">
         <div class="flex items-center gap-3"><span class="idx">04</span><span class="industry-badge"><i data-lucide="sparkles" style="width:13px;height:13px"></i> 行业特色</span></div>
         <h3 class="mt-4 font-bold text-lg">寄售代销闭环</h3>
         <p class="mt-2 text-sm text-slate-600 leading-relaxed flex-1">先铺货后开票，台账细到批号序列号，额度风险可控。</p>
-        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-down" style="width:13px;height:13px"></i> 查看场景</span>
+        <div class="mt-3 flex flex-wrap gap-1.5"><span class="mock-tag gray">0金额铺货</span><span class="mock-tag gray">寄售台账</span><span class="mock-tag gray">额度管控</span></div>
+        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-right" style="width:13px;height:13px"></i> 点击展开详情</span>
       </a>
 
       <a href="#scene-5" class="scene-card">
-        <div class="flex items-center gap-3"><span class="idx">05</span><span class="industry-badge blue"><i data-lucide="shield-check" style="width:13px;height:13px"></i> 交易正确性</span></div>
+        <div class="flex items-center gap-3"><span class="idx">05</span><span class="industry-badge blue"><i data-lucide="shield-check" style="width:13px;height:13px"></i> 业务正确性</span></div>
         <h3 class="mt-4 font-bold text-lg">统一审批工作流 + 资源回滚</h3>
         <p class="mt-2 text-sm text-slate-600 leading-relaxed flex-1">审批通过自动建单，驳回自动回滚库存、代金券与寄售预占。</p>
-        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-down" style="width:13px;height:13px"></i> 查看场景</span>
+        <div class="mt-3 flex flex-wrap gap-1.5"><span class="mock-tag gray">结构化摘要</span><span class="mock-tag gray">通过建单</span><span class="mock-tag gray">驳回回滚</span></div>
+        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-right" style="width:13px;height:13px"></i> 点击展开详情</span>
       </a>
 
       <a href="#scene-6" class="scene-card">
         <div class="flex items-center gap-3"><span class="idx">06</span><span class="industry-badge"><i data-lucide="sparkles" style="width:13px;height:13px"></i> 行业特色</span></div>
         <h3 class="mt-4 font-bold text-lg">手术报台 · 终端流向追溯</h3>
         <p class="mt-2 text-sm text-slate-600 leading-relaxed flex-1">手术室现场扫码拍照，产品用到哪位患者、哪个批号全程留痕。</p>
-        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-down" style="width:13px;height:13px"></i> 查看场景</span>
+        <div class="mt-3 flex flex-wrap gap-1.5"><span class="mock-tag gray">扫码带出</span><span class="mock-tag gray">拍照留证</span><span class="mock-tag gray">终端追溯</span></div>
+        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-right" style="width:13px;height:13px"></i> 点击展开详情</span>
       </a>
 
       <a href="#scene-7" class="scene-card">
         <div class="flex items-center gap-3"><span class="idx">07</span><span class="industry-badge blue"><i data-lucide="smartphone" style="width:13px;height:13px"></i> 移动抓手</span></div>
         <h3 class="mt-4 font-bold text-lg">移动销售工作台</h3>
         <p class="mt-2 text-sm text-slate-600 leading-relaxed flex-1">下单、报台、看业绩，一部手机搞定，含智能下单对话向导。</p>
-        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-down" style="width:13px;height:13px"></i> 查看场景</span>
+        <div class="mt-3 flex flex-wrap gap-1.5"><span class="mock-tag gray">四Tab</span><span class="mock-tag gray">行内编辑</span><span class="mock-tag gray">智能向导</span></div>
+        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-right" style="width:13px;height:13px"></i> 点击展开详情</span>
       </a>
 
       <a href="#scene-8" class="scene-card">
         <div class="flex items-center gap-3"><span class="idx">08</span><span class="industry-badge blue"><i data-lucide="bar-chart-3" style="width:13px;height:13px"></i> 经营分析</span></div>
         <h3 class="mt-4 font-bold text-lg">经销商画像与报表中心</h3>
         <p class="mt-2 text-sm text-slate-600 leading-relaxed flex-1">13 张报表 + 360 画像 + 可拖拽驾驶舱，渠道经营一屏看透。</p>
-        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-down" style="width:13px;height:13px"></i> 查看场景</span>
+        <div class="mt-3 flex flex-wrap gap-1.5"><span class="mock-tag gray">8KPI驾驶舱</span><span class="mock-tag gray">13张报表</span><span class="mock-tag gray">360画像</span></div>
+        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-right" style="width:13px;height:13px"></i> 点击展开详情</span>
       </a>
 
       <a href="#scene-9" class="scene-card">
         <div class="flex items-center gap-3"><span class="idx">09</span><span class="industry-badge blue"><i data-lucide="file-signature" style="width:13px;height:13px"></i> 商务管控</span></div>
         <h3 class="mt-4 font-bold text-lg">合同模板驱动 + 授权前置</h3>
         <p class="mt-2 text-sm text-slate-600 leading-relaxed flex-1">商务政策落到系统硬约束，超范围根本下不了单。</p>
-        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-down" style="width:13px;height:13px"></i> 查看场景</span>
+        <div class="mt-3 flex flex-wrap gap-1.5"><span class="mock-tag gray">模板成稿</span><span class="mock-tag gray">版本留痕</span><span class="mock-tag gray">前置门禁</span></div>
+        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-right" style="width:13px;height:13px"></i> 点击展开详情</span>
       </a>
 
       <a href="#scene-10" class="scene-card">
         <div class="flex items-center gap-3"><span class="idx">10</span><span class="industry-badge blue"><i data-lucide="building-2" style="width:13px;height:13px"></i> SaaS 底座</span></div>
         <h3 class="mt-4 font-bold text-lg">多租户运营底座</h3>
         <p class="mt-2 text-sm text-slate-600 leading-relaxed flex-1">自助注册、租户开通、RBAC、日志审计，规模化运营地基。</p>
-        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-down" style="width:13px;height:13px"></i> 查看场景</span>
+        <div class="mt-3 flex flex-wrap gap-1.5"><span class="mock-tag gray">自助注册</span><span class="mock-tag gray">RBAC</span><span class="mock-tag gray">日志审计</span></div>
+        <span class="mt-4 pill-link self-start"><i data-lucide="arrow-right" style="width:13px;height:13px"></i> 点击展开详情</span>
       </a>
 
       <a href="#highlight" class="scene-card" style="border-top:3px solid var(--accent)">
         <div class="flex items-center gap-3"><span class="idx" style="background:rgba(245,158,11,0.14);color:#b45309">★</span><span class="industry-badge"><i data-lucide="sparkles" style="width:13px;height:13px"></i> 组合</span></div>
         <h3 class="mt-4 font-bold text-lg">行业差异化组合</h3>
         <p class="mt-2 text-sm text-slate-600 leading-relaxed flex-1">跨租户协同 + 寄售代销 + 手术报台，最能体现「医疗器械经销 DMS」。</p>
-        <span class="mt-4 pill-link self-start" style="background:rgba(245,158,11,0.12);color:#b45309"><i data-lucide="arrow-down" style="width:13px;height:13px"></i> 查看组合</span>
+        <div class="mt-3 flex flex-wrap gap-1.5"><span class="mock-tag gray">协同→代销→报台</span></div>
+        <span class="mt-4 pill-link self-start" style="background:rgba(245,158,11,0.12);color:#b45309"><i data-lucide="arrow-right" style="width:13px;height:13px"></i> 点击展开详情</span>
       </a>
 
     </div>
@@ -425,40 +618,72 @@
 </section>
 
 <!-- 场景 1 -->
-<section id="scene-1" class="py-16 md:py-20 bg-white border-y border-slate-100 grid-pattern">
+<section id="scene-1" class="scene-block">
   <div class="max-w-7xl mx-auto px-5 md:px-8">
-    <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+    <div class="scene-head">
+      <div class="scene-badge">01</div>
       <div>
-        <div class="flex items-center gap-4">
-          <span class="scene-num">01</span>
-          <span class="industry-badge blue"><i data-lucide="shield-check" style="width:13px;height:13px"></i> 监管追溯 · 系统骨架</span>
-        </div>
-        <h3 class="mt-4 text-2xl md:text-3xl font-bold">进销存全闭环，批号 / 序列号 / UDI 全程可追溯</h3>
-        <div class="mt-5 value-quote">
-          <p class="text-base md:text-lg text-slate-800 font-medium leading-relaxed">从采购下单到终端发货，每一箱、每一件耗材都有据可查，满足医疗器械强监管追溯要求。</p>
-        </div>
-        <p class="mt-5 text-slate-600 leading-relaxed">
-          医疗器械经销的核心是「账实相符、流向可追」。DMS 打通采购、收货、库存、销售、出库、退换货全链路：采购订单审批后自动生成收货单，支持多次分批收货并进入待检状态；库存按合格、待检、不合格三态管理，配合跨仓移动、状态调整、盘点与效期预警；销售订单审批通过自动生成出库单，发货时按批号、序列号逐件扣减，序列号产品一件一码全程留痕。销退、采退自动生成对应出入库单，每一笔库存变动都写入不可篡改的流水台账。
-        </p>
-        <div class="mt-6 flex flex-wrap gap-2">
-          <span class="feature-tag"><i data-lucide="shopping-cart"></i>采购订单 / 采退订单</span>
-          <span class="feature-tag"><i data-lucide="package-check"></i>收货入库 / 销售出库（多次部分收发）</span>
-          <span class="feature-tag"><i data-lucide="warehouse"></i>三态库存 + 隔离态</span>
-          <span class="feature-tag"><i data-lucide="hash"></i>批号 / 序列号 / 效期一物一码</span>
-          <span class="feature-tag"><i data-lucide="move"></i>库存移动 / 调整 / 盘点</span>
-          <span class="feature-tag"><i data-lucide="alert-triangle"></i>效期预警与呆滞分析</span>
-          <span class="feature-tag"><i data-lucide="search"></i>序列号追溯</span>
-          <span class="feature-tag"><i data-lucide="layers"></i>BOM 组合品 / 产品分类</span>
+        <h3 class="text-2xl font-extrabold">进销存全闭环 · 批号/序列号/UDI 追溯</h3>
+        <p class="text-slate-600 mt-1">采购到发货每一件耗材有据可查，满足医疗器械强监管红线</p>
+      </div>
+    </div>
+    <div class="flow-chain">
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="shopping-cart" style="width:22px;height:22px"></i></div><div class="flow-title">采购下单</div><div class="flow-desc">审批通过</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="package-check" style="width:22px;height:22px"></i></div><div class="flow-title">收货入库</div><div class="flow-desc">待检 Q 态</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="shield-check" style="width:22px;height:22px"></i></div><div class="flow-title">质检合格</div><div class="flow-desc">转 U 态</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="file-text" style="width:22px;height:22px"></i></div><div class="flow-title">销售订单</div><div class="flow-desc">审批通过</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="truck" style="width:22px;height:22px"></i></div><div class="flow-title">按批号发货</div><div class="flow-desc">序列号扣减</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="archive" style="width:22px;height:22px"></i></div><div class="flow-title">销退</div><div class="flow-desc">RGR 入待检</div></div>
+    </div>
+    <div class="mt-8 grid lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-3">
+        <div class="ui-mockup">
+          <div class="ui-mockup-header">
+            <i data-lucide="layout" style="width:16px;height:16px;color:var(--brand)"></i>
+            <span class="ui-mockup-title">库存查询 · 多仓多批号</span>
+          </div>
+          <div class="ui-mockup-body">
+            <table class="mock-table">
+              <thead><tr><th>产品</th><th>批号</th><th>序列号</th><th>状态</th><th>数量</th><th>仓库</th></tr></thead>
+              <tbody>
+                <tr><td>冠脉支架 X1</td><td>LOT2026-001</td><td>SN-A001</td><td><span class="mock-tag green">合格 U</span></td><td>1</td><td>上海仓</td></tr>
+                <tr><td>冠脉支架 X1</td><td>LOT2026-002</td><td>—</td><td><span class="mock-tag amber">待检 Q</span></td><td>50</td><td>上海仓</td></tr>
+                <tr><td>导管 C2</td><td>LOT2026-008</td><td>SN-B120</td><td><span class="mock-tag red">不合格 B</span></td><td>1</td><td>隔离仓</td></tr>
+                <tr><td>球囊 B3</td><td>LOT2026-010</td><td>—</td><td><span class="mock-tag green">合格 U</span></td><td>200</td><td>北京仓</td></tr>
+              </tbody>
+            </table>
+            <div class="mt-3 pt-3 border-t border-slate-100">
+              <div class="flex items-center gap-2 text-xs text-slate-500 mb-2"><i data-lucide="scan-line" style="width:14px;height:14px;color:var(--accent)"></i> 序列号追溯时间线 · SN-A001</div>
+              <div class="flex items-center gap-2 text-[11px] flex-wrap">
+                <span class="mock-tag blue">采购 PO-001</span>
+                <i data-lucide="chevron-right" style="width:14px;height:14px;color:#94a3b8"></i>
+                <span class="mock-tag blue">收货 GR-001</span>
+                <i data-lucide="chevron-right" style="width:14px;height:14px;color:#94a3b8"></i>
+                <span class="mock-tag green">质检合格</span>
+                <i data-lucide="chevron-right" style="width:14px;height:14px;color:#94a3b8"></i>
+                <span class="mock-tag cyan">出库 SO-001</span>
+                <i data-lucide="chevron-right" style="width:14px;height:14px;color:#94a3b8"></i>
+                <span class="mock-tag amber">手术报台</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="space-y-5">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/inventory</div></div>
-          <img src="../assets/14-pc-inventory-new.png" alt="库存管理 · 多仓多批号" />
-        </div>
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/serial-trace</div></div>
-          <img src="../assets/16-pc-serial-trace-new.png" alt="序列号追溯" />
+      <div class="lg:col-span-2">
+        <div class="grid grid-cols-1 gap-4">
+          <div class="pain-card">
+            <div class="pain-card-head before"><i data-lucide="x-circle" style="width:16px;height:16px"></i> 传统方式</div>
+            <div class="pain-card-body">Excel 记库存、批号靠手写纸条、效期靠人工盯、追溯要翻采购/仓库/销售 3 个系统。</div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-card-head after"><i data-lucide="check-circle" style="width:16px;height:16px"></i> DMS 方案</div>
+            <div class="pain-card-body">合格/待检/不合格三态库存 + 一件一码 + 批号效期预警 + 不可篡改流水台账，一条链追到底。</div>
+          </div>
         </div>
       </div>
     </div>
@@ -466,38 +691,87 @@
 </section>
 
 <!-- 场景 2 -->
-<section id="scene-2" class="py-16 md:py-20">
+<section id="scene-2" class="scene-block">
   <div class="max-w-7xl mx-auto px-5 md:px-8">
-    <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-      <div class="md:order-2">
-        <div class="flex items-center gap-4">
-          <span class="scene-num">02</span>
-          <span class="industry-badge"><i data-lucide="sparkles" style="width:13px;height:13px"></i> 行业特色 · v4.5.0</span>
-        </div>
-        <h3 class="mt-4 text-2xl md:text-3xl font-bold">厂家与经销商跨租户协同，一套平台串起供应链</h3>
-        <div class="mt-5 value-quote">
-          <p class="text-base md:text-lg text-slate-800 font-medium leading-relaxed">厂家和下游经销商在同一平台上做生意，采购、销售、出库、收货单据自动流转，物料编码自动转换。</p>
-        </div>
-        <p class="mt-5 text-slate-600 leading-relaxed">
-          传统模式下，厂家与经销商各用一套系统，订单靠电话、对账靠 Excel。DMS 以多租户 SaaS 模式把双方放在同一平台：经销商向「平台厂家」下采购单，系统自动在厂家租户生成销售订单并完成物料编码转换；厂家发货出库后，经销商租户自动收到待确认的入库单。整个过程通过产品对码自动转码、行级台账溯源、幂等防重，缺对码会明确阻断并提示是哪个产品。
-        </p>
-        <div class="mt-6 flex flex-wrap gap-2">
-          <span class="feature-tag"><i data-lucide="git-compare"></i>产品对码（厂家↔经销商一对一映射）</span>
-          <span class="feature-tag"><i data-lucide="arrow-left-right"></i>采购单 ↔ 销售单自动生成</span>
-          <span class="feature-tag"><i data-lucide="truck"></i>出库单 ↔ 收货单自动流转</span>
-          <span class="feature-tag"><i data-lucide="link"></i>跨租户单据台账行级溯源</span>
-          <span class="feature-tag"><i data-lucide="shield"></i>幂等防重 + 缺对码阻断</span>
-          <span class="feature-tag"><i data-lucide="building-2"></i>租户开通与一对一绑定</span>
+    <div class="scene-head">
+      <div class="scene-badge">02</div>
+      <div>
+        <h3 class="text-2xl font-extrabold">厂家↔经销商跨租户订单协同</h3>
+        <p class="text-slate-600 mt-1">一套 SaaS 串起供应链上下游，单据自动流转、物料自动转码</p>
+      </div>
+    </div>
+    <div class="flow-chain">
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="shopping-cart" style="width:22px;height:22px"></i></div><div class="flow-title">经销商下采购单</div><div class="flow-desc">DS-001 编码</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="git-branch" style="width:22px;height:22px"></i></div><div class="flow-title">产品对码转码</div><div class="flow-desc">→ MFR-001</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="file-text" style="width:22px;height:22px"></i></div><div class="flow-title">厂家销售单</div><div class="flow-desc">自动生成</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="package-check" style="width:22px;height:22px"></i></div><div class="flow-title">厂家审批出库</div><div class="flow-desc">发货</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="truck" style="width:22px;height:22px"></i></div><div class="flow-title">经销商收货单</div><div class="flow-desc">自动收到</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="search" style="width:22px;height:22px"></i></div><div class="flow-title">行级台账溯源</div><div class="flow-desc">行行可追</div></div>
+    </div>
+    <div class="mt-8 grid lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-3">
+        <div class="ui-mockup">
+          <div class="ui-mockup-header">
+            <i data-lucide="network" style="width:16px;height:16px;color:var(--brand)"></i>
+            <span class="ui-mockup-title">跨租户协同面板 · 经销商 → 厂家</span>
+          </div>
+          <div class="ui-mockup-body">
+            <div class="grid grid-cols-3 gap-3 text-center items-center">
+              <div>
+                <div class="text-[11px] text-slate-500 mb-1">经销商采购单</div>
+                <div class="bg-white border border-slate-200 rounded-lg p-2 text-left">
+                  <div class="text-[11px] font-semibold">PO-2026-0001</div>
+                  <div class="text-[10px] text-slate-500 mt-1">产品 A · DS-001</div>
+                  <div class="text-[10px] text-slate-500">数量 100</div>
+                  <div class="mt-1"><span class="mock-tag blue">已提交</span></div>
+                </div>
+              </div>
+              <div>
+                <div class="text-[11px] text-slate-500 mb-1">对码映射</div>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 text-center">
+                  <div class="text-[10px] text-slate-600">DS-001</div>
+                  <i data-lucide="arrow-right" style="width:16px;height:16px;color:var(--accent);margin:4px auto"></i>
+                  <div class="text-[10px] text-slate-600">MFR-001</div>
+                  <div class="mt-1"><span class="mock-tag green">对码命中</span></div>
+                </div>
+              </div>
+              <div>
+                <div class="text-[11px] text-slate-500 mb-1">厂家销售单</div>
+                <div class="bg-white border border-slate-200 rounded-lg p-2 text-left">
+                  <div class="text-[11px] font-semibold">SO-2026-0099</div>
+                  <div class="text-[10px] text-slate-500 mt-1">产品 A · MFR-001</div>
+                  <div class="text-[10px] text-slate-500">数量 100</div>
+                  <div class="mt-1"><span class="mock-tag green">自动生成</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-slate-100">
+              <div class="text-[11px] text-slate-500">缺对码阻断示例：</div>
+              <div class="mt-1 flex items-center gap-2 text-[11px]">
+                <span class="mock-tag red">产品 Z · 编码 DS-099</span>
+                <i data-lucide="chevron-right" style="width:14px;height:14px;color:#94a3b8"></i>
+                <span class="mock-tag red">缺对码 · 阻断</span>
+                <span class="text-slate-500">→ 提示补建对码</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="md:order-1 space-y-5">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/sales-orders</div></div>
-          <img src="../assets/10-pc-sales-orders-new.png" alt="销售订单协同" />
-        </div>
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">admin.example.com/tenants</div></div>
-          <img src="../assets/25-admin-tenants-new.png" alt="租户管理与绑定" />
+      <div class="lg:col-span-2">
+        <div class="grid grid-cols-1 gap-4">
+          <div class="pain-card">
+            <div class="pain-card-head before"><i data-lucide="x-circle" style="width:16px;height:16px"></i> 传统方式</div>
+            <div class="pain-card-body">电话下单、对账靠 Excel、厂家和经销商编码不一致靠人工翻译，错单错货常态化。</div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-card-head after"><i data-lucide="check-circle" style="width:16px;height:16px"></i> DMS 方案</div>
+            <div class="pain-card-body">一套平台单据自动流转、物料自动转码、缺对码阻断提示，幂等防重不重下。</div>
+          </div>
         </div>
       </div>
     </div>
@@ -505,38 +779,63 @@
 </section>
 
 <!-- 场景 3 -->
-<section id="scene-3" class="py-16 md:py-20 bg-white border-y border-slate-100 grid-pattern">
+<section id="scene-3" class="scene-block">
   <div class="max-w-7xl mx-auto px-5 md:px-8">
-    <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+    <div class="scene-head">
+      <div class="scene-badge">03</div>
       <div>
-        <div class="flex items-center gap-4">
-          <span class="scene-num">03</span>
-          <span class="industry-badge blue"><i data-lucide="calculator" style="width:13px;height:13px"></i> 交易正确性</span>
-        </div>
-        <h3 class="mt-4 text-2xl md:text-3xl font-bold">智能计价引擎，合同价、折扣、促销、代金券一键算清</h3>
-        <div class="mt-5 value-quote">
-          <p class="text-base md:text-lg text-slate-800 font-medium leading-relaxed">复杂商务政策交给系统，下单即实时试算，价格优先级清晰、金额分毫不差。</p>
-        </div>
-        <p class="mt-5 text-slate-600 leading-relaxed">
-          医疗器械价格体系复杂：合同协议价、客户专属折扣、产品全局折扣、满减促销、代金券层层叠加。DMS 的 V4 计价引擎按「合同价格 → 产品/客户全局折扣 → 促销规则 → 标准价」的固定优先级自动计算，下单时实时预览试算结果。支持满减、数量折扣、赠品、一口价、零金额订单、代金券等多种模式；代金券从模板、发放到核销全链路管理，订单提交即占用、审批通过核销、审批驳回自动返还。BOM 组合产品由子件承载价值、组件价智能回退。
-        </p>
-        <div class="mt-6 flex flex-wrap gap-2">
-          <span class="feature-tag"><i data-lucide="file-check-2"></i>合同价格协议（计价最高优先级）</span>
-          <span class="feature-tag"><i data-lucide="percent"></i>产品 / 客户全局折扣</span>
-          <span class="feature-tag"><i data-lucide="gift"></i>满减 / 数量折扣 / 赠品促销</span>
-          <span class="feature-tag"><i data-lucide="ticket"></i>代金券模板 / 发放 / 核销 / 审批回滚</span>
-          <span class="feature-tag"><i data-lucide="eye"></i>下单实时计价试算 + 价格快照</span>
-          <span class="feature-tag"><i data-lucide="layers-3"></i>BOM 母件 0 金额 / 子件承载价值</span>
+        <h3 class="text-2xl font-extrabold">V4 智能计价引擎</h3>
+        <p class="text-slate-600 mt-1">合同价、折扣、促销、代金券一键算清，下单实时试算、分毫不差</p>
+      </div>
+    </div>
+    <div class="flow-chain">
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="user-check" style="width:22px;height:22px"></i></div><div class="flow-title">选客户选产品</div><div class="flow-desc">带入价格体系</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="file-text" style="width:22px;height:22px"></i></div><div class="flow-title">合同价优先</div><div class="flow-desc">最高优先级</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="trending-up" style="width:22px;height:22px"></i></div><div class="flow-title">全局折扣叠加</div><div class="flow-desc">产品/客户</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="sparkles" style="width:22px;height:22px"></i></div><div class="flow-title">促销规则</div><div class="flow-desc">满减/折扣/赠品</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="wallet" style="width:22px;height:22px"></i></div><div class="flow-title">代金券核销</div><div class="flow-desc">占用→核销</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="eye" style="width:22px;height:22px"></i></div><div class="flow-title">实时试算</div><div class="flow-desc">预览最终价</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="shield-check" style="width:22px;height:22px"></i></div><div class="flow-title">提交/审批</div><div class="flow-desc">占用/核销/释放</div></div>
+    </div>
+    <div class="mt-8 grid lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-3">
+        <div class="ui-mockup">
+          <div class="ui-mockup-header">
+            <i data-lucide="receipt" style="width:16px;height:16px;color:var(--brand)"></i>
+            <span class="ui-mockup-title">销售订单计价预览 · SO-2026-0007</span>
+          </div>
+          <div class="ui-mockup-body">
+            <table class="mock-table">
+              <thead><tr><th>产品</th><th>标准价</th><th>合同价</th><th>折扣</th><th>促销</th><th>券</th><th>最终价</th></tr></thead>
+              <tbody>
+                <tr><td>支架 X1 ×10</td><td>¥1,000</td><td class="text-brand font-bold">¥920</td><td>-5%</td><td>-¥50</td><td>-¥100</td><td class="font-bold">¥8,570</td></tr>
+                <tr><td>导管 C2 ×20</td><td>¥200</td><td>—</td><td>-5%</td><td>-¥100</td><td>—</td><td class="font-bold">¥3,700</td></tr>
+                <tr><td>球囊 B3 ×5</td><td>¥500</td><td class="text-brand font-bold">¥480</td><td>—</td><td>—</td><td>-¥50</td><td class="font-bold">¥2,350</td></tr>
+              </tbody>
+            </table>
+            <div class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+              <span class="text-xs text-slate-500">合计金额（已含合同价 + 折扣 + 促销 + 代金券）</span>
+              <span class="text-xl font-extrabold text-brand">¥14,620</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="space-y-5">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/promotions</div></div>
-          <img src="../assets/43-pc-promotions-new.png" alt="促销引擎与计价" />
-        </div>
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/sales-orders</div></div>
-          <img src="../assets/10-pc-sales-orders-new.png" alt="销售订单实时试算" />
+      <div class="lg:col-span-2">
+        <div class="grid grid-cols-1 gap-4">
+          <div class="pain-card">
+            <div class="pain-card-head before"><i data-lucide="x-circle" style="width:16px;height:16px"></i> 传统方式</div>
+            <div class="pain-card-body">业务员靠记忆报价、价格层叠算不清、代金券用了不返还、月底对账一团乱。</div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-card-head after"><i data-lucide="check-circle" style="width:16px;height:16px"></i> DMS 方案</div>
+            <div class="pain-card-body">固定优先级自动计算、实时试算预览、驳回自动释放代金券，价格快照防篡改。</div>
+          </div>
         </div>
       </div>
     </div>
@@ -544,38 +843,63 @@
 </section>
 
 <!-- 场景 4 -->
-<section id="scene-4" class="py-16 md:py-20">
+<section id="scene-4" class="scene-block">
   <div class="max-w-7xl mx-auto px-5 md:px-8">
-    <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-      <div class="md:order-2">
-        <div class="flex items-center gap-4">
-          <span class="scene-num">04</span>
-          <span class="industry-badge"><i data-lucide="sparkles" style="width:13px;height:13px"></i> 行业特色 · v4.4.0</span>
-        </div>
-        <h3 class="mt-4 text-2xl md:text-3xl font-bold">寄售代销闭环，先铺货后开票，额度风险可控</h3>
-        <div class="mt-5 value-quote">
-          <p class="text-base md:text-lg text-slate-800 font-medium leading-relaxed">支持「先发货铺货、按实际使用开票」的高值耗材代销模式，寄售台账细到批号序列号。</p>
-        </div>
-        <p class="mt-5 text-slate-600 leading-relaxed">
-          高值耗材普遍采用寄售模式：厂家先把货铺到经销商处，实际消耗后才开票结算。DMS 完整覆盖这一业务：补货订单以 0 金额铺货发货，自动计入经销商寄售台账（按经销商 + 产品 + 批号 + 序列号维度）；开票订单必须从寄售库存中整行拣选，提交即预占、审批通过实扣、驳回自动释放；错补、撤回可开红字补货单红冲。系统同时管理经销商信用额度、账期与寄售额度，超额或超账期自动触发审批而非简单拦截。
-        </p>
-        <div class="mt-6 flex flex-wrap gap-2">
-          <span class="feature-tag"><i data-lucide="repeat"></i>补货订单（0 金额铺货，禁折扣/促销/券）</span>
-          <span class="feature-tag"><i data-lucide="box-select"></i>开票订单从寄售库存整行拣选</span>
-          <span class="feature-tag"><i data-lucide="lock"></i>提交预占 / 审批实扣 / 驳回释放</span>
-          <span class="feature-tag"><i data-lucide="rotate-ccw"></i>红字补货单红冲（SOR）</span>
-          <span class="feature-tag"><i data-lucide="wallet"></i>信用额度 / 账期 / 寄售额度</span>
-          <span class="feature-tag"><i data-lucide="alert-triangle"></i>超额超期触发审批（非硬拦截）</span>
+    <div class="scene-head">
+      <div class="scene-badge">04</div>
+      <div>
+        <h3 class="text-2xl font-extrabold">寄售代销闭环</h3>
+        <p class="text-slate-600 mt-1">先铺货后开票，台账细到批号序列号，额度风险可控</p>
+      </div>
+    </div>
+    <div class="flow-chain">
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="package" style="width:22px;height:22px"></i></div><div class="flow-title">补货订单</div><div class="flow-desc">0 金额铺货</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="truck" style="width:22px;height:22px"></i></div><div class="flow-title">发货铺货</div><div class="flow-desc">到经销商</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="layers" style="width:22px;height:22px"></i></div><div class="flow-title">寄售台账</div><div class="flow-desc">SKU+批号+序列号</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="file-text" style="width:22px;height:22px"></i></div><div class="flow-title">开票订单</div><div class="flow-desc">从寄售库存拣选</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="shield-check" style="width:22px;height:22px"></i></div><div class="flow-title">预占/实扣</div><div class="flow-desc">审批通过实扣</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="archive" style="width:22px;height:22px"></i></div><div class="flow-title">红字补货单</div><div class="flow-desc">红冲撤回</div></div>
+    </div>
+    <div class="mt-8 grid lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-3">
+        <div class="ui-mockup">
+          <div class="ui-mockup-header">
+            <i data-lucide="layers" style="width:16px;height:16px;color:var(--brand)"></i>
+            <span class="ui-mockup-title">寄售库存台账 · 经销商维度</span>
+          </div>
+          <div class="ui-mockup-body">
+            <table class="mock-table">
+              <thead><tr><th>经销商</th><th>产品</th><th>批号</th><th>序列号</th><th>状态</th><th>数量</th><th>金额</th></tr></thead>
+              <tbody>
+                <tr><td>德康医疗</td><td>支架 X1</td><td>LOT-001</td><td>SN-A001</td><td><span class="mock-tag green">可用</span></td><td>1</td><td>¥0 铺货</td></tr>
+                <tr><td>德康医疗</td><td>支架 X1</td><td>LOT-002</td><td>SN-A002</td><td><span class="mock-tag blue">已开票</span></td><td>1</td><td>¥920</td></tr>
+                <tr><td>仁爱器械</td><td>导管 C2</td><td>LOT-008</td><td>—</td><td><span class="mock-tag amber">预占</span></td><td>5</td><td>¥0 铺货</td></tr>
+                <tr><td>仁爱器械</td><td>球囊 B3</td><td>LOT-010</td><td>SN-C050</td><td><span class="mock-tag red">红冲</span></td><td>1</td><td>¥0 撤回</td></tr>
+              </tbody>
+            </table>
+            <div class="mt-3 pt-3 border-t border-slate-100 flex gap-4 text-[11px]">
+              <span class="text-slate-500">额度管控：</span>
+              <span class="mock-tag green">信用 ¥50万 / 已用 ¥12万</span>
+              <span class="mock-tag amber">寄售 ¥20万 / 已铺 ¥8万</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="md:order-1 space-y-5">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/sales-orders</div></div>
-          <img src="../assets/10-pc-sales-orders-new.png" alt="寄售开票订单" />
-        </div>
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/dealers/profile</div></div>
-          <img src="../assets/04b-pc-dealer-profile.png" alt="经销商资信与寄售额度" />
+      <div class="lg:col-span-2">
+        <div class="grid grid-cols-1 gap-4">
+          <div class="pain-card">
+            <div class="pain-card-head before"><i data-lucide="x-circle" style="width:16px;height:16px"></i> 传统方式</div>
+            <div class="pain-card-body">铺货靠手动记账、用了多少靠月底盘点、开票金额靠人工核算、超额超期靠人盯。</div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-card-head after"><i data-lucide="check-circle" style="width:16px;height:16px"></i> DMS 方案</div>
+            <div class="pain-card-body">0 金额铺货 + 寄售台账细到序列号 + 开票从寄售库存拣选 + 额度超额触发审批。</div>
+          </div>
         </div>
       </div>
     </div>
@@ -583,42 +907,79 @@
 </section>
 
 <!-- 场景 5 -->
-<section id="scene-5" class="py-16 md:py-20 bg-white border-y border-slate-100 grid-pattern">
+<section id="scene-5" class="scene-block">
   <div class="max-w-7xl mx-auto px-5 md:px-8">
-    <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+    <div class="scene-head">
+      <div class="scene-badge">05</div>
       <div>
-        <div class="flex items-center gap-4">
-          <span class="scene-num">05</span>
-          <span class="industry-badge blue"><i data-lucide="shield-check" style="width:13px;height:13px"></i> 业务正确性闸门</span>
-        </div>
-        <h3 class="mt-4 text-2xl md:text-3xl font-bold">统一审批工作流，关键动作有把控、关联资源自动回滚</h3>
-        <div class="mt-5 value-quote">
-          <p class="text-base md:text-lg text-slate-800 font-medium leading-relaxed">销售、采购、合同、退换货全部走统一审批，审批通过自动建单，驳回自动回滚库存与代金券。</p>
-        </div>
-        <p class="mt-5 text-slate-600 leading-relaxed">
-          DMS 把所有关键单据纳入统一工作流：销售订单、采购订单、销退、采退、合同都可配置审批节点与审批人。审批通过后系统自动触发下游动作（如销售订单自动生成出库单）；审批卡片以结构化方式展示金额、对方、产品明细等关键信息，审批人一目了然。更重要的是，审批驳回、退回、撤回时，系统会自动回滚已占用的代金券、锁定的库存、预占的寄售额度和可退数量，绝不出现「单据退回了、资源却没释放」的账务错乱。
-        </p>
-        <div class="mt-6 flex flex-wrap gap-2">
-          <span class="feature-tag"><i data-lucide="workflow"></i>审批流配置 / 节点 / 策略</span>
-          <span class="feature-tag"><i data-lucide="git-branch"></i>条件分支 / 会签 / 或签</span>
-          <span class="feature-tag"><i data-lucide="package-check"></i>通过自动建单（GI 出库等）</span>
-          <span class="feature-tag"><i data-lucide="rotate-ccw"></i>驳回回滚：券 / 库存 / 寄售预占 / 可退量</span>
-          <span class="feature-tag"><i data-lucide="bell"></i>超时催办升级 + 委托代理</span>
-          <span class="feature-tag"><i data-lucide="smartphone"></i>PC + 移动端审批闭环</span>
+        <h3 class="text-2xl font-extrabold">统一审批工作流 + 关联资源回滚</h3>
+        <p class="text-slate-600 mt-1">关键动作有把控，审批通过自动建单，驳回自动回滚所有资源</p>
+      </div>
+    </div>
+    <div class="flow-chain">
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="file-text" style="width:22px;height:22px"></i></div><div class="flow-title">提交单据</div><div class="flow-desc">占用券/库存/额度</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="layout" style="width:22px;height:22px"></i></div><div class="flow-title">审批卡片</div><div class="flow-desc">结构化摘要</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="eye" style="width:22px;height:22px"></i></div><div class="flow-title">审批人查看</div><div class="flow-desc">金额/对方/明细</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="shield-check" style="width:22px;height:22px"></i></div><div class="flow-title">通过</div><div class="flow-desc">自动建单 GI 出库</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="archive" style="width:22px;height:22px"></i></div><div class="flow-title">驳回</div><div class="flow-desc">回滚券/库存/额度</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="smartphone" style="width:22px;height:22px"></i></div><div class="flow-title">移动审批</div><div class="flow-desc">超时催办/委托</div></div>
+    </div>
+    <div class="mt-8 grid lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-3">
+        <div class="ui-mockup">
+          <div class="ui-mockup-header">
+            <i data-lucide="layout" style="width:16px;height:16px;color:var(--brand)"></i>
+            <span class="ui-mockup-title">审批卡片 · 销售订单 SO-2026-0007</span>
+          </div>
+          <div class="ui-mockup-body">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <div class="text-[11px] text-slate-500">单据类型</div>
+                <div class="text-sm font-semibold">销售订单</div>
+              </div>
+              <div>
+                <div class="text-[11px] text-slate-500">金额</div>
+                <div class="text-sm font-bold text-brand">¥14,620</div>
+              </div>
+              <div>
+                <div class="text-[11px] text-slate-500">对方</div>
+                <div class="text-sm">德康医疗</div>
+              </div>
+              <div>
+                <div class="text-[11px] text-slate-500">产品明细</div>
+                <div class="text-sm">支架 X1 ×10 / 导管 C2 ×20</div>
+              </div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-slate-100">
+              <div class="text-[11px] text-slate-500 mb-2">资源占用状态</div>
+              <div class="flex flex-wrap gap-2">
+                <span class="mock-tag amber">代金券 ¥100 预占</span>
+                <span class="mock-tag amber">库存 35 预占</span>
+                <span class="mock-tag amber">寄售额度 ¥8,000 预占</span>
+              </div>
+            </div>
+            <div class="mt-3 flex gap-2">
+              <button class="mock-btn success"><i data-lucide="check-circle" style="width:12px;height:12px"></i> 通过</button>
+              <button class="mock-btn danger"><i data-lucide="x-circle" style="width:12px;height:12px"></i> 驳回（回滚）</button>
+              <button class="mock-btn"><i data-lucide="chevron-right" style="width:12px;height:12px"></i> 退回修改</button>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="space-y-5">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/workflow</div></div>
-          <img src="../assets/39-pc-approval-workflow-new.png" alt="审批工作流配置" />
-        </div>
-        <div class="flex justify-center gap-5">
-          <div class="flex flex-col items-center text-center">
-            <div class="phone-chrome">
-              <div class="phone-top"><div class="phone-notch"></div></div>
-              <div class="phone-screen"><img src="../assets/51-mobile-approvals-new.png" alt="移动审批待办" /></div>
-            </div>
-            <h4 class="mt-3 font-semibold text-sm">移动审批</h4>
+      <div class="lg:col-span-2">
+        <div class="grid grid-cols-1 gap-4">
+          <div class="pain-card">
+            <div class="pain-card-head before"><i data-lucide="x-circle" style="width:16px;height:16px"></i> 传统方式</div>
+            <div class="pain-card-body">审批靠微信截图、驳回了券没释放、审批通过后手动建单、超时没人催。</div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-card-head after"><i data-lucide="check-circle" style="width:16px;height:16px"></i> DMS 方案</div>
+            <div class="pain-card-body">统一审批 + 结构化摘要 + 通过自动建单 + 驳回自动回滚券/库存/寄售预占/可退量。</div>
           </div>
         </div>
       </div>
@@ -627,42 +988,73 @@
 </section>
 
 <!-- 场景 6 -->
-<section id="scene-6" class="py-16 md:py-20">
+<section id="scene-6" class="scene-block">
   <div class="max-w-7xl mx-auto px-5 md:px-8">
-    <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-      <div class="md:order-2">
-        <div class="flex items-center gap-4">
-          <span class="scene-num">06</span>
-          <span class="industry-badge"><i data-lucide="sparkles" style="width:13px;height:13px"></i> 行业特色 · 合规证据</span>
-        </div>
-        <h3 class="mt-4 text-2xl md:text-3xl font-bold">手术报台，移动端扫码拍照记录产品真实流向</h3>
-        <div class="mt-5 value-quote">
-          <p class="text-base md:text-lg text-slate-800 font-medium leading-relaxed">销售在手术室现场扫码填报，产品用到哪位患者、哪个批号全程留痕，合规追溯到终端。</p>
-        </div>
-        <p class="mt-5 text-slate-600 leading-relaxed">
-          植入类耗材要求记录产品在手术中的真实使用情况。DMS 手术报台让销售人员在手术现场用手机完成填报：扫描产品条码或 UDI 自动带出产品、批号、序列号，现场拍照上传凭证，填写医院、医生、患者与使用数量。系统按销售授权范围过滤经销商与医院，销售只能看到自己负责的客户数据。报台数据与出库、库存追溯关联，成为产品流向终端医院的最终凭证；管理层可通过手术报台统计报表，按医院、产品穿透到每一台手术明细。
-        </p>
-        <div class="mt-6 flex flex-wrap gap-2">
-          <span class="feature-tag"><i data-lucide="scan-line"></i>扫码自动带出产品 / 批号 / 序列号</span>
-          <span class="feature-tag"><i data-lucide="camera"></i>现场拍照上传凭证</span>
-          <span class="feature-tag"><i data-lucide="hospital"></i>医院 / 医生 / 患者 / 仓库登记</span>
-          <span class="feature-tag"><i data-lucide="filter"></i>按销售授权范围过滤</span>
-          <span class="feature-tag"><i data-lucide="bar-chart-3"></i>手术报台统计报表（穿透明细）</span>
-          <span class="feature-tag"><i data-lucide="link"></i>与出库 / 库存追溯链路关联</span>
+    <div class="scene-head">
+      <div class="scene-badge">06</div>
+      <div>
+        <h3 class="text-2xl font-extrabold">手术报台 · 终端流向追溯</h3>
+        <p class="text-slate-600 mt-1">手术室现场扫码拍照，产品用到哪位患者、哪个批号全程留痕</p>
+      </div>
+    </div>
+    <div class="flow-chain">
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="smartphone" style="width:22px;height:22px"></i></div><div class="flow-title">手术室</div><div class="flow-desc">手机打开报台</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="user-check" style="width:22px;height:22px"></i></div><div class="flow-title">选医院医生</div><div class="flow-desc">患者/手术日期</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="scan-line" style="width:22px;height:22px"></i></div><div class="flow-title">扫码带出</div><div class="flow-desc">产品/批号/序列号</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="package" style="width:22px;height:22px"></i></div><div class="flow-title">填使用数量</div><div class="flow-desc">逐件登记</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="eye" style="width:22px;height:22px"></i></div><div class="flow-title">拍照上传</div><div class="flow-desc">凭证留痕</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="shield-check" style="width:22px;height:22px"></i></div><div class="flow-title">提交报台</div><div class="flow-desc">统计穿透</div></div>
+    </div>
+    <div class="mt-8 grid lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-2">
+        <div class="mock-phone-frame">
+          <div class="mock-phone-screen">
+            <div class="p-3">
+              <div class="text-xs font-bold text-slate-800 mb-2">手术报台 · 现场录入</div>
+              <div class="space-y-2">
+                <div class="flex items-center gap-2 bg-slate-50 rounded p-2">
+                  <i data-lucide="scan-line" style="width:16px;height:16px;color:var(--accent)"></i>
+                  <div class="text-[10px]"><div class="font-semibold">冠脉支架 X1</div><div class="text-slate-500">LOT-001 / SN-A001</div></div>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-50 rounded p-2">
+                  <i data-lucide="scan-line" style="width:16px;height:16px;color:var(--accent)"></i>
+                  <div class="text-[10px]"><div class="font-semibold">导管 C2</div><div class="text-slate-500">LOT-008 / SN-B120</div></div>
+                </div>
+                <div class="flex items-center gap-2 bg-blue-50 rounded p-2 border border-blue-200">
+                  <i data-lucide="plus" style="width:16px;height:16px;color:var(--brand)"></i>
+                  <div class="text-[10px] text-brand font-semibold">继续扫码添加</div>
+                </div>
+              </div>
+              <div class="mt-2 text-[10px] text-slate-500">医院：仁济医院 · 医生：张主任</div>
+              <div class="text-[10px] text-slate-500">患者：张三 / 日期：2026-09-01</div>
+              <div class="mt-2 flex gap-1">
+                <button class="mock-btn primary text-[10px] flex-1 justify-center"><i data-lucide="eye" style="width:12px;height:12px"></i> 拍照</button>
+                <button class="mock-btn success text-[10px] flex-1 justify-center"><i data-lucide="check-circle" style="width:12px;height:12px"></i> 提交</button>
+              </div>
+            </div>
+            <div class="mock-tab-bar">
+              <div class="mock-tab"><i data-lucide="smartphone" style="width:12px;height:12px"></i> 首页</div>
+              <div class="mock-tab"><i data-lucide="file-text" style="width:12px;height:12px"></i> 订单</div>
+              <div class="mock-tab active"><i data-lucide="scan-line" style="width:12px;height:12px"></i> 报台</div>
+              <div class="mock-tab"><i data-lucide="user-check" style="width:12px;height:12px"></i> 我的</div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="md:order-1 space-y-5">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/surgery-reports</div></div>
-          <img src="../assets/19-pc-surgery-reports-new.png" alt="手术报台管理" />
-        </div>
-        <div class="flex justify-center gap-5">
-          <div class="flex flex-col items-center text-center">
-            <div class="phone-chrome">
-              <div class="phone-top"><div class="phone-notch"></div></div>
-              <div class="phone-screen"><img src="../assets/37-mobile-surgery-new.png" alt="移动手术报台" /></div>
-            </div>
-            <h4 class="mt-3 font-semibold text-sm">现场扫码报台</h4>
+      <div class="lg:col-span-3">
+        <div class="grid grid-cols-1 gap-4">
+          <div class="pain-card">
+            <div class="pain-card-head before"><i data-lucide="x-circle" style="width:16px;height:16px"></i> 传统方式</div>
+            <div class="pain-card-body">手术记录靠纸笔、产品批号靠手抄、事后追溯找不到记录、与库存出库完全脱节。</div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-card-head after"><i data-lucide="check-circle" style="width:16px;height:16px"></i> DMS 方案</div>
+            <div class="pain-card-body">手机扫码自动带出产品/批号/序列号 + 拍照留证 + 与出库库存链路关联，终端追溯闭环。</div>
           </div>
         </div>
       </div>
@@ -671,45 +1063,81 @@
 </section>
 
 <!-- 场景 7 -->
-<section id="scene-7" class="dark-section py-16 md:py-20">
+<section id="scene-7" class="scene-block">
   <div class="max-w-7xl mx-auto px-5 md:px-8">
-    <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+    <div class="scene-head">
+      <div class="scene-badge">07</div>
       <div>
-        <div class="flex items-center gap-4">
-          <span class="scene-num" style="color:rgba(245,158,11,0.25)">07</span>
-          <span class="industry-badge"><i data-lucide="smartphone" style="width:13px;height:13px"></i> 移动抓手 · 高频场景</span>
-        </div>
-        <h3 class="mt-4 text-2xl md:text-3xl font-bold text-white">移动销售工作台，手机上完成下单、报台、看业绩</h3>
-        <div class="mt-5 value-quote" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.12);border-left-color:var(--accent)">
-          <p class="text-base md:text-lg text-slate-100 font-medium leading-relaxed">销售人员真正高频的三件事——下单、报台、看业绩，一部手机全部搞定。</p>
-        </div>
-        <p class="mt-5 text-slate-300 leading-relaxed">
-          销售常年在医院和客户现场，PC 不在手边。DMS 移动端围绕销售真实场景精简设计：首页展示个人今日/本月订单与报台 KPI；订单模块支持手机下单，选客户、选仓库、选产品，行内直接编辑数量、单价、税率，底部实时合计；报台模块扫码即录；「我的」查看个人业绩与待办。v4.4.4 更推出「智能下单」对话式向导，销售跟着提示一步步就能完成复杂订单。
-        </p>
-        <div class="mt-6 flex flex-wrap gap-2">
-          <span class="feature-tag" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.12);color:#cbd5e1"><i data-lucide="layout-dashboard" style="color:var(--accent)"></i>首页：个人 KPI + 快捷入口</span>
-          <span class="feature-tag" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.12);color:#cbd5e1"><i data-lucide="shopping-cart" style="color:var(--accent)"></i>移动下单 · 行内编辑 · 实时合计</span>
-          <span class="feature-tag" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.12);color:#cbd5e1"><i data-lucide="scan-line" style="color:var(--accent)"></i>扫码报台 / 拍照</span>
-          <span class="feature-tag" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.12);color:#cbd5e1"><i data-lucide="bot" style="color:var(--accent)"></i>智能下单对话向导</span>
-          <span class="feature-tag" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.12);color:#cbd5e1"><i data-lucide="refresh-cw" style="color:var(--accent)"></i>令牌静默续期 · 弱网防重</span>
+        <h3 class="text-2xl font-extrabold">移动销售工作台</h3>
+        <p class="text-slate-600 mt-1">手机上完成下单、报台、看业绩，含智能下单对话向导</p>
+      </div>
+    </div>
+    <div class="flow-chain">
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="smartphone" style="width:22px;height:22px"></i></div><div class="flow-title">手机登录</div><div class="flow-desc">H5 静默续期</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="layout-grid" style="width:22px;height:22px"></i></div><div class="flow-title">首页</div><div class="flow-desc">个人 KPI + 入口</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="shopping-cart" style="width:22px;height:22px"></i></div><div class="flow-title">订单 Tab</div><div class="flow-desc">选客户/仓库/产品</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="receipt" style="width:22px;height:22px"></i></div><div class="flow-title">行内编辑</div><div class="flow-desc">数量/单价/税率</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="scan-line" style="width:22px;height:22px"></i></div><div class="flow-title">报台 Tab</div><div class="flow-desc">扫码录入</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="sparkles" style="width:22px;height:22px"></i></div><div class="flow-title">智能下单</div><div class="flow-desc">对话向导</div></div>
+    </div>
+    <div class="mt-8 grid lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-2">
+        <div class="mock-phone-frame">
+          <div class="mock-phone-screen">
+            <div class="p-3">
+              <div class="text-xs font-bold text-slate-800 mb-2">移动销售工作台</div>
+              <div class="mock-kpi-grid mb-2">
+                <div class="mock-kpi"><div class="mock-kpi-label">本月订单</div><div class="mock-kpi-value">28</div></div>
+                <div class="mock-kpi"><div class="mock-kpi-label">本月报台</div><div class="mock-kpi-value">15</div></div>
+              </div>
+              <div class="text-[10px] font-semibold text-slate-700 mb-1">订单列表</div>
+              <div class="space-y-1">
+                <div class="flex items-center justify-between bg-slate-50 rounded p-1.5">
+                  <div class="text-[10px]"><div class="font-semibold">SO-0007 · 德康</div><div class="text-slate-500">¥14,620</div></div>
+                  <span class="mock-tag amber">待审批</span>
+                </div>
+                <div class="flex items-center justify-between bg-slate-50 rounded p-1.5">
+                  <div class="text-[10px]"><div class="font-semibold">SO-0006 · 仁爱</div><div class="text-slate-500">¥3,700</div></div>
+                  <span class="mock-tag green">已通过</span>
+                </div>
+              </div>
+              <div class="mt-2 text-[10px] font-semibold text-slate-700 mb-1">下单 · 行内编辑</div>
+              <div class="bg-blue-50 rounded p-1.5 border border-blue-200">
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="font-semibold">支架 X1</span>
+                  <span class="text-brand font-bold">¥920 ×10</span>
+                </div>
+                <div class="text-[9px] text-slate-500">税率 13% · 合同价</div>
+              </div>
+              <div class="mt-1 flex justify-between items-center bg-brand text-white rounded p-1.5">
+                <span class="text-[10px]">合计</span>
+                <span class="text-xs font-bold">¥14,620</span>
+              </div>
+            </div>
+            <div class="mock-tab-bar">
+              <div class="mock-tab active"><i data-lucide="layout-grid" style="width:12px;height:12px"></i> 首页</div>
+              <div class="mock-tab"><i data-lucide="file-text" style="width:12px;height:12px"></i> 订单</div>
+              <div class="mock-tab"><i data-lucide="scan-line" style="width:12px;height:12px"></i> 报台</div>
+              <div class="mock-tab"><i data-lucide="user-check" style="width:12px;height:12px"></i> 我的</div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-5">
-        <div class="flex flex-col items-center text-center">
-          <div class="phone-chrome">
-            <div class="phone-top"><div class="phone-notch"></div></div>
-            <div class="phone-screen"><img src="../assets/34-mobile-home-new.png" alt="移动首页" /></div>
+      <div class="lg:col-span-3">
+        <div class="grid grid-cols-1 gap-4">
+          <div class="pain-card">
+            <div class="pain-card-head before"><i data-lucide="x-circle" style="width:16px;height:16px"></i> 传统方式</div>
+            <div class="pain-card-body">销售在外跑客户、下单回公司再录入、错过成单时机、PC 端不方便带出门。</div>
           </div>
-          <h4 class="mt-3 font-semibold text-white text-sm">首页 · KPI</h4>
-          <p class="text-xs text-slate-400 mt-1">订单 / 报台 快捷入口</p>
-        </div>
-        <div class="flex flex-col items-center text-center">
-          <div class="phone-chrome">
-            <div class="phone-top"><div class="phone-notch"></div></div>
-            <div class="phone-screen"><img src="../assets/35-mobile-orders-new.png" alt="移动订单" /></div>
+          <div class="pain-card">
+            <div class="pain-card-head after"><i data-lucide="check-circle" style="width:16px;height:16px"></i> DMS 方案</div>
+            <div class="pain-card-body">手机直接下单/报台/看业绩 + 智能下单对话向导 + 令牌静默续期不中断 + 弱网防重。</div>
           </div>
-          <h4 class="mt-3 font-semibold text-white text-sm">订单 · 下单</h4>
-          <p class="text-xs text-slate-400 mt-1">行内编辑 · 底部合计</p>
         </div>
       </div>
     </div>
@@ -717,38 +1145,71 @@
 </section>
 
 <!-- 场景 8 -->
-<section id="scene-8" class="py-16 md:py-20 bg-white border-y border-slate-100 grid-pattern">
+<section id="scene-8" class="scene-block">
   <div class="max-w-7xl mx-auto px-5 md:px-8">
-    <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+    <div class="scene-head">
+      <div class="scene-badge">08</div>
       <div>
-        <div class="flex items-center gap-4">
-          <span class="scene-num">08</span>
-          <span class="industry-badge blue"><i data-lucide="bar-chart-3" style="width:13px;height:13px"></i> 经营分析</span>
-        </div>
-        <h3 class="mt-4 text-2xl md:text-3xl font-bold">经销商画像与报表中心，经营状况一屏看透</h3>
-        <div class="mt-5 value-quote">
-          <p class="text-base md:text-lg text-slate-800 font-medium leading-relaxed">13 张报表 + 经销商 360 画像 + 可拖拽驾驶舱，厂家对渠道经营了如指掌。</p>
-        </div>
-        <p class="mt-5 text-slate-600 leading-relaxed">
-          管理经销商网络，靠的是数据。DMS 报表中心提供销售业绩排行、产品销售 TOP10、库存周转、呆滞超期、订单追溯、应收账龄、返利折扣对账、合同授权借货、手术报台统计等 13 张报表，统一筛选、一键导出 Excel、行内点击穿透到明细。经销商 360 画像聚焦「目标 vs 结果」：销售目标达成率、月度趋势、返利、订单、合同、报台、往来记录一页呈现。数据驾驶舱提供 8 项核心 KPI 与 6 张图表，卡片可拖拽布局、按需隐藏。
-        </p>
-        <div class="mt-6 flex flex-wrap gap-2">
-          <span class="feature-tag"><i data-lucide="line-chart"></i>13 张报表 · 统一筛选 / 导出 / 穿透</span>
-          <span class="feature-tag"><i data-lucide="target"></i>经销商 360 画像 · 目标达成</span>
-          <span class="feature-tag"><i data-lucide="pie-chart"></i>数据驾驶舱 8 KPI + 6 图表</span>
-          <span class="feature-tag"><i data-lucide="move"></i>vuedraggable 自定义布局</span>
-          <span class="feature-tag"><i data-lucide="wallet"></i>应收账龄 / 返利对账</span>
-          <span class="feature-tag"><i data-lucide="bell"></i>报表订阅</span>
+        <h3 class="text-2xl font-extrabold">经销商画像 + 报表中心 + 仪表盘</h3>
+        <p class="text-slate-600 mt-1">13 张报表 + 360 画像 + 可拖拽驾驶舱，渠道经营一屏看透</p>
+      </div>
+    </div>
+    <div class="flow-chain">
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="layout-grid" style="width:22px;height:22px"></i></div><div class="flow-title">打开仪表盘</div><div class="flow-desc">8 KPI + 6 图表</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="bar-chart-3" style="width:22px;height:22px"></i></div><div class="flow-title">报表中心</div><div class="flow-desc">13 张报表</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="filter" style="width:22px;height:22px"></i></div><div class="flow-title">统一筛选</div><div class="flow-desc">时间/客户/产品</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="download" style="width:22px;height:22px"></i></div><div class="flow-title">导出 xlsx</div><div class="flow-desc">一键下载</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="eye" style="width:22px;height:22px"></i></div><div class="flow-title">行内穿透</div><div class="flow-desc">到明细</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="user-check" style="width:22px;height:22px"></i></div><div class="flow-title">经销商画像</div><div class="flow-desc">目标达成率</div></div>
+    </div>
+    <div class="mt-8 grid lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-3">
+        <div class="ui-mockup">
+          <div class="ui-mockup-header">
+            <i data-lucide="bar-chart-3" style="width:16px;height:16px;color:var(--brand)"></i>
+            <span class="ui-mockup-title">数据驾驶舱 · 经销商画像</span>
+          </div>
+          <div class="ui-mockup-body">
+            <div class="mock-kpi-grid mb-3">
+              <div class="mock-kpi"><div class="mock-kpi-label">本月销售额</div><div class="mock-kpi-value">¥1.2M</div></div>
+              <div class="mock-kpi"><div class="mock-kpi-label">订单数</div><div class="mock-kpi-value">86</div></div>
+              <div class="mock-kpi"><div class="mock-kpi-label">库存周转</div><div class="mock-kpi-value">4.2次</div></div>
+              <div class="mock-kpi"><div class="mock-kpi-label">报台数</div><div class="mock-kpi-value">42</div></div>
+            </div>
+            <div class="text-[11px] text-slate-500 mb-2">经销商画像 · 目标 vs 实际</div>
+            <div class="space-y-2">
+              <div>
+                <div class="flex justify-between text-[11px] mb-1"><span>德康医疗</span><span class="font-semibold text-brand">92%</span></div>
+                <div class="mock-progress"><div class="mock-progress-bar" style="width:92%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-[11px] mb-1"><span>仁爱器械</span><span class="font-semibold text-amber-600">68%</span></div>
+                <div class="mock-progress"><div class="mock-progress-bar" style="width:68%;background:var(--accent)"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-[11px] mb-1"><span>康达医疗</span><span class="font-semibold text-brand">105%</span></div>
+                <div class="mock-progress"><div class="mock-progress-bar" style="width:100%"></div></div>
+              </div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500">报表中心：13 张报表 · 统一筛选 · 一键导出 · 行内穿透</div>
+          </div>
         </div>
       </div>
-      <div class="space-y-5">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/dashboard</div></div>
-          <img src="../assets/20-pc-dashboard-new.png" alt="数据驾驶舱" />
-        </div>
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/dealers/profile</div></div>
-          <img src="../assets/04b-pc-dealer-profile.png" alt="经销商 360 画像" />
+      <div class="lg:col-span-2">
+        <div class="grid grid-cols-1 gap-4">
+          <div class="pain-card">
+            <div class="pain-card-head before"><i data-lucide="x-circle" style="width:16px;height:16px"></i> 传统方式</div>
+            <div class="pain-card-body">数据散在多个 Excel、没有实时仪表盘、经销商经营状况不透明、月底才出报表。</div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-card-head after"><i data-lucide="check-circle" style="width:16px;height:16px"></i> DMS 方案</div>
+            <div class="pain-card-body">8 项 KPI 驾驶舱 + 13 张报表一键导出 + 360 画像 + 可拖拽布局 + 行内穿透到明细。</div>
+          </div>
         </div>
       </div>
     </div>
@@ -756,43 +1217,68 @@
 </section>
 
 <!-- 场景 9 -->
-<section id="scene-9" class="py-16 md:py-20">
+<section id="scene-9" class="scene-block">
   <div class="max-w-7xl mx-auto px-5 md:px-8">
-    <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-      <div class="md:order-2">
-        <div class="flex items-center gap-4">
-          <span class="scene-num">09</span>
-          <span class="industry-badge blue"><i data-lucide="file-signature" style="width:13px;height:13px"></i> 商务管控</span>
-        </div>
-        <h3 class="mt-4 text-2xl md:text-3xl font-bold">合同模板驱动 + 授权前置，商务政策落到系统硬约束</h3>
-        <div class="mt-5 value-quote">
-          <p class="text-base md:text-lg text-slate-800 font-medium leading-relaxed">合同从模板成稿到审批生效全线上管理，授权范围决定能订什么货，超范围根本下不了单。</p>
-        </div>
-        <p class="mt-5 text-slate-600 leading-relaxed">
-          商务政策不能只停留在纸面上。DMS 合同工作台管理合同全生命周期：基于 Word 模板自动回填字段生成合同成稿，版本快照与审批轮次全程留痕，生效后合同价格明细自动成为计价的最高优先级。授权管理记录每个经销商可经营的产品范围与有效期，支持临时授权；下单和出库时系统前置过滤，超出授权范围或已过期的产品根本无法选择，从源头防止超范围、超期经营。
-        </p>
-        <div class="mt-6 flex flex-wrap gap-2">
-          <span class="feature-tag"><i data-lucide="file-signature"></i>合同工作台 · 全生命周期</span>
-          <span class="feature-tag"><i data-lucide="library"></i>Word 模板 · 字段自动回填成稿</span>
-          <span class="feature-tag"><i data-lucide="git-compare"></i>版本快照 + 审批轮次留痕</span>
-          <span class="feature-tag"><i data-lucide="badge-dollar-sign"></i>合同价格协议（计价最高优先级）</span>
-          <span class="feature-tag"><i data-lucide="scroll-text"></i>授权管理 / 临时授权</span>
-          <span class="feature-tag"><i data-lucide="ban"></i>下单出库前置过滤 · 超范围拦截</span>
+    <div class="scene-head">
+      <div class="scene-badge">09</div>
+      <div>
+        <h3 class="text-2xl font-extrabold">合同模板驱动 + 授权前置管控</h3>
+        <p class="text-slate-600 mt-1">商务政策落到系统硬约束，超范围根本下不了单</p>
+      </div>
+    </div>
+    <div class="flow-chain">
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="file-text" style="width:22px;height:22px"></i></div><div class="flow-title">合同申请</div><div class="flow-desc">选模板</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="file-signature" style="width:22px;height:22px"></i></div><div class="flow-title">模板成稿</div><div class="flow-desc">字段自动回填</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="layers" style="width:22px;height:22px"></i></div><div class="flow-title">审批留痕</div><div class="flow-desc">版本快照</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="shield-check" style="width:22px;height:22px"></i></div><div class="flow-title">合同生效</div><div class="flow-desc">合同价最高优先</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="lock" style="width:22px;height:22px"></i></div><div class="flow-title">授权管理</div><div class="flow-desc">可订什么货</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="filter" style="width:22px;height:22px"></i></div><div class="flow-title">下单前置过滤</div><div class="flow-desc">超范围不可选</div></div>
+    </div>
+    <div class="mt-8 grid lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-3">
+        <div class="ui-mockup">
+          <div class="ui-mockup-header">
+            <i data-lucide="file-signature" style="width:16px;height:16px;color:var(--brand)"></i>
+            <span class="ui-mockup-title">合同工作台 · 状态流转 + 授权范围</span>
+          </div>
+          <div class="ui-mockup-body">
+            <div class="text-[11px] text-slate-500 mb-2">合同状态流转</div>
+            <div class="flex items-center gap-2 mb-3 flex-wrap">
+              <span class="mock-tag gray">草稿</span>
+              <i data-lucide="chevron-right" style="width:14px;height:14px;color:#94a3b8"></i>
+              <span class="mock-tag amber">审批中</span>
+              <i data-lucide="chevron-right" style="width:14px;height:14px;color:#94a3b8"></i>
+              <span class="mock-tag green">生效</span>
+              <i data-lucide="chevron-right" style="width:14px;height:14px;color:#94a3b8"></i>
+              <span class="mock-tag red">终止</span>
+            </div>
+            <div class="text-[11px] text-slate-500 mb-2">授权范围 · 德康医疗</div>
+            <table class="mock-table">
+              <thead><tr><th>产品</th><th>有效期</th><th>状态</th><th>下单可选</th></tr></thead>
+              <tbody>
+                <tr><td>冠脉支架 X1</td><td>2026-12-31</td><td><span class="mock-tag green">有效</span></td><td>✓</td></tr>
+                <tr><td>导管 C2</td><td>2026-09-30</td><td><span class="mock-tag amber">临期</span></td><td>✓</td></tr>
+                <tr><td>球囊 B3</td><td>2026-06-30</td><td><span class="mock-tag red">过期</span></td><td class="text-red-600 font-bold">✗ 阻断</td></tr>
+                <tr><td>起搏器 P1</td><td>—</td><td><span class="mock-tag gray">未授权</span></td><td class="text-red-600 font-bold">✗ 阻断</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-      <div class="md:order-1 space-y-5">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">dms.example.com/contracts</div></div>
-          <img src="../assets/07-pc-contracts-new.png" alt="合同管理" />
-        </div>
-        <div class="grid grid-cols-2 gap-5">
-          <div class="browser-chrome">
-            <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">contract-templates</div></div>
-            <img src="../assets/08-pc-contract-templates-new.png" alt="合同模板" />
+      <div class="lg:col-span-2">
+        <div class="grid grid-cols-1 gap-4">
+          <div class="pain-card">
+            <div class="pain-card-head before"><i data-lucide="x-circle" style="width:16px;height:16px"></i> 传统方式</div>
+            <div class="pain-card-body">合同靠 Word 手动填、授权靠人工核查、超范围经营事后才发现、版本改了无留痕。</div>
           </div>
-          <div class="browser-chrome">
-            <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">authorizations</div></div>
-            <img src="../assets/09-pc-authorizations-new.png" alt="授权管理" />
+          <div class="pain-card">
+            <div class="pain-card-head after"><i data-lucide="check-circle" style="width:16px;height:16px"></i> DMS 方案</div>
+            <div class="pain-card-body">模板自动成稿 + 版本快照留痕 + 合同价自动入计价 + 授权前置门禁从源头阻断。</div>
           </div>
         </div>
       </div>
@@ -801,43 +1287,75 @@
 </section>
 
 <!-- 场景 10 -->
-<section id="scene-10" class="py-16 md:py-20 bg-white border-y border-slate-100 grid-pattern">
+<section id="scene-10" class="scene-block">
   <div class="max-w-7xl mx-auto px-5 md:px-8">
-    <div class="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+    <div class="scene-head">
+      <div class="scene-badge">10</div>
       <div>
-        <div class="flex items-center gap-4">
-          <span class="scene-num">10</span>
-          <span class="industry-badge blue"><i data-lucide="building-2" style="width:13px;height:13px"></i> SaaS 运营底座</span>
-        </div>
-        <h3 class="mt-4 text-2xl md:text-3xl font-bold">多租户运营底座，平台可开通、权限可管控、操作可审计</h3>
-        <div class="mt-5 value-quote">
-          <p class="text-base md:text-lg text-slate-800 font-medium leading-relaxed">从经销商自助注册到租户开通、角色权限、日志审计，SaaS 规模化运营的地基一应俱全。</p>
-        </div>
-        <p class="mt-5 text-slate-600 leading-relaxed">
-          作为面向厂家和经销商的多租户 SaaS，DMS 提供完整的平台运营底座：经销商可通过 H5 自助注册，平台审核后自动开通租户、创建管理员并套用角色模板；RBAC 权限精细到菜单、按钮和数据范围，销售岗位只能看到自己负责的经销商；操作日志、登录日志、接口报文统一归集到日志中心，敏感字段脱敏、按保留期自动清理；平台可为租户按需开关进销存模块。
-        </p>
-        <div class="mt-6 flex flex-wrap gap-2">
-          <span class="feature-tag"><i data-lucide="user-plus"></i>H5 自助注册 → 审核 → 自动开通</span>
-          <span class="feature-tag"><i data-lucide="building-2"></i>租户管理 / 开通 / 一对一绑定</span>
-          <span class="feature-tag"><i data-lucide="toggle-left"></i>租户进销存模块开关（双重门禁）</span>
-          <span class="feature-tag"><i data-lucide="menu"></i>RBAC：菜单 / 按钮 / 数据权限</span>
-          <span class="feature-tag"><i data-lucide="shield-alert"></i>操作 / 登录 / 接口日志审计</span>
-          <span class="feature-tag"><i data-lucide="book-open"></i>全局字典 · 消息待办</span>
+        <h3 class="text-2xl font-extrabold">多租户运营底座</h3>
+        <p class="text-slate-600 mt-1">平台可开通、权限可管控、操作可审计，SaaS 规模化运营地基</p>
+      </div>
+    </div>
+    <div class="flow-chain">
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="smartphone" style="width:22px;height:22px"></i></div><div class="flow-title">H5 自助注册</div><div class="flow-desc">经销商申请</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="shield-check" style="width:22px;height:22px"></i></div><div class="flow-title">平台审核</div><div class="flow-desc">资质核验</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="building-2" style="width:22px;height:22px"></i></div><div class="flow-title">自动建租户</div><div class="flow-desc">管理员+角色模板</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="lock" style="width:22px;height:22px"></i></div><div class="flow-title">RBAC 权限</div><div class="flow-desc">菜单/按钮/数据</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="database" style="width:22px;height:22px"></i></div><div class="flow-title">日志中心</div><div class="flow-desc">操作/登录/接口</div></div>
+      <div class="flow-arrow"><i data-lucide="chevron-right" style="width:20px;height:20px"></i></div>
+      <div class="flow-step"><div class="flow-icon"><i data-lucide="settings" style="width:22px;height:22px"></i></div><div class="flow-title">模块开关</div><div class="flow-desc">按需启停</div></div>
+    </div>
+    <div class="mt-8 grid lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-3">
+        <div class="ui-mockup">
+          <div class="ui-mockup-header">
+            <i data-lucide="building-2" style="width:16px;height:16px;color:var(--brand)"></i>
+            <span class="ui-mockup-title">平台后台 · 租户管理 + RBAC + 日志</span>
+          </div>
+          <div class="ui-mockup-body">
+            <div class="text-[11px] text-slate-500 mb-2">租户列表</div>
+            <table class="mock-table">
+              <thead><tr><th>租户</th><th>类型</th><th>状态</th><th>模块</th></tr></thead>
+              <tbody>
+                <tr><td>德康医疗</td><td>经销商</td><td><span class="mock-tag green">正常</span></td><td>进销存全开</td></tr>
+                <tr><td>仁爱器械</td><td>经销商</td><td><span class="mock-tag amber">待审核</span></td><td>—</td></tr>
+                <tr><td>微创厂家</td><td>厂家</td><td><span class="mock-tag green">正常</span></td><td>进销存关闭</td></tr>
+              </tbody>
+            </table>
+            <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-3">
+              <div>
+                <div class="text-[11px] text-slate-500 mb-1">RBAC 权限矩阵</div>
+                <div class="space-y-1 text-[10px]">
+                  <div class="flex justify-between"><span>销售岗</span><span class="mock-tag blue">菜单+数据范围</span></div>
+                  <div class="flex justify-between"><span>仓管岗</span><span class="mock-tag blue">菜单+按钮</span></div>
+                  <div class="flex justify-between"><span>管理员</span><span class="mock-tag green">全权</span></div>
+                </div>
+              </div>
+              <div>
+                <div class="text-[11px] text-slate-500 mb-1">日志中心时间线</div>
+                <div class="space-y-1 text-[10px] text-slate-600">
+                  <div>09:12 登录 · admin</div>
+                  <div>09:15 创建订单 SO-0007</div>
+                  <div>09:20 审批通过</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="space-y-5">
-        <div class="browser-chrome">
-          <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">admin.example.com/tenants</div></div>
-          <img src="../assets/25-admin-tenants-new.png" alt="租户管理" />
-        </div>
-        <div class="grid grid-cols-2 gap-5">
-          <div class="browser-chrome">
-            <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">admin/roles</div></div>
-            <img src="../assets/28-admin-roles-new.png" alt="平台角色" />
+      <div class="lg:col-span-2">
+        <div class="grid grid-cols-1 gap-4">
+          <div class="pain-card">
+            <div class="pain-card-head before"><i data-lucide="x-circle" style="width:16px;height:16px"></i> 传统方式</div>
+            <div class="pain-card-body">每个客户独立部署、权限靠人工配置、操作无审计、出问题查不到谁干的。</div>
           </div>
-          <div class="browser-chrome">
-            <div class="browser-bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="browser-url">admin/operation-logs</div></div>
-            <img src="../assets/31-admin-operation-logs-new.png" alt="操作日志" />
+          <div class="pain-card">
+            <div class="pain-card-head after"><i data-lucide="check-circle" style="width:16px;height:16px"></i> DMS 方案</div>
+            <div class="pain-card-body">SaaS 多租户 + 自助注册自动开通 + RBAC 精细到按钮 + 操作日志可审计。</div>
           </div>
         </div>
       </div>
@@ -850,36 +1368,54 @@
   <div class="max-w-7xl mx-auto px-5 md:px-8">
     <div class="max-w-2xl">
       <span class="section-num">★</span>
-      <h2 class="mt-4 text-3xl md:text-4xl font-extrabold tracking-tight text-white">最能体现「医疗器械经销 DMS」的特色组合</h2>
-      <p class="mt-3 text-slate-300">不是通用进销存，而是把这三个行业场景拧成一股绳：上下游协同 + 高值耗材代销 + 终端手术追溯，构成医疗器械经销的差异化护城河。</p>
+      <h2 class="mt-4 text-3xl md:text-4xl font-extrabold tracking-tight text-white">医疗器械经销的行业差异化组合</h2>
+      <p class="mt-3 text-slate-300">不是通用进销存，而是把跨租户协同、寄售代销、手术报台三个行业场景拧成一股绳，构成完整闭环。</p>
     </div>
     <div class="mt-14 grid md:grid-cols-3 gap-6">
       <div class="highlight-trio">
         <div class="flex items-center gap-3">
           <span class="w-10 h-10 rounded-xl bg-accent/15 text-accent flex items-center justify-center"><i data-lucide="network" style="width:20px;height:20px"></i></span>
-          <span class="text-xs font-bold text-accent tracking-wider">SCENE 02</span>
+          <span class="text-xs font-bold text-accent tracking-wider">SCENE 02 · 协同</span>
         </div>
         <h3 class="mt-4 text-xl font-bold text-slate-900">跨租户订单协同</h3>
-        <p class="mt-2 text-sm text-slate-600 leading-relaxed">厂家与经销商同一平台，采购/销售/出库/收货单据自动流转、物料自动转码，数据隔离但业务协同。</p>
-        <a href="#scene-2" class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand hover:gap-2 transition-all">了解场景 <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+        <div class="mt-4 flow-chain">
+          <div class="flow-step"><div class="flow-icon"><i data-lucide="shopping-cart" style="width:18px;height:18px"></i></div><div class="flow-title">采购单</div></div>
+          <div class="flow-arrow"><i data-lucide="chevron-right" style="width:16px;height:16px"></i></div>
+          <div class="flow-step"><div class="flow-icon"><i data-lucide="git-branch" style="width:18px;height:18px"></i></div><div class="flow-title">对码转码</div></div>
+          <div class="flow-arrow"><i data-lucide="chevron-right" style="width:16px;height:16px"></i></div>
+          <div class="flow-step"><div class="flow-icon"><i data-lucide="file-text" style="width:18px;height:18px"></i></div><div class="flow-title">销售单自动</div></div>
+        </div>
+        <p class="mt-4 text-sm text-slate-600 leading-relaxed">厂家与经销商同一平台，采购/销售/出库/收货单据自动流转、物料自动转码。</p>
       </div>
       <div class="highlight-trio">
         <div class="flex items-center gap-3">
-          <span class="w-10 h-10 rounded-xl bg-accent/15 text-accent flex items-center justify-center"><i data-lucide="repeat" style="width:20px;height:20px"></i></span>
-          <span class="text-xs font-bold text-accent tracking-wider">SCENE 04</span>
+          <span class="w-10 h-10 rounded-xl bg-accent/15 text-accent flex items-center justify-center"><i data-lucide="package" style="width:20px;height:20px"></i></span>
+          <span class="text-xs font-bold text-accent tracking-wider">SCENE 04 · 代销</span>
         </div>
         <h3 class="mt-4 text-xl font-bold text-slate-900">寄售代销闭环</h3>
-        <p class="mt-2 text-sm text-slate-600 leading-relaxed">先铺货后开票，台账细到批号序列号，预占/实扣/释放/红冲全程自动化，额度风险关进规则笼子。</p>
-        <a href="#scene-4" class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand hover:gap-2 transition-all">了解场景 <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+        <div class="mt-4 flow-chain">
+          <div class="flow-step"><div class="flow-icon"><i data-lucide="truck" style="width:18px;height:18px"></i></div><div class="flow-title">0金额铺货</div></div>
+          <div class="flow-arrow"><i data-lucide="chevron-right" style="width:16px;height:16px"></i></div>
+          <div class="flow-step"><div class="flow-icon"><i data-lucide="layers" style="width:18px;height:18px"></i></div><div class="flow-title">寄售台账</div></div>
+          <div class="flow-arrow"><i data-lucide="chevron-right" style="width:16px;height:16px"></i></div>
+          <div class="flow-step"><div class="flow-icon"><i data-lucide="file-text" style="width:18px;height:18px"></i></div><div class="flow-title">开票拣选</div></div>
+        </div>
+        <p class="mt-4 text-sm text-slate-600 leading-relaxed">先铺货后开票，台账细到批号序列号，预占/实扣/释放/红冲全程自动化。</p>
       </div>
       <div class="highlight-trio">
         <div class="flex items-center gap-3">
-          <span class="w-10 h-10 rounded-xl bg-accent/15 text-accent flex items-center justify-center"><i data-lucide="stethoscope" style="width:20px;height:20px"></i></span>
-          <span class="text-xs font-bold text-accent tracking-wider">SCENE 06</span>
+          <span class="w-10 h-10 rounded-xl bg-accent/15 text-accent flex items-center justify-center"><i data-lucide="scan-line" style="width:20px;height:20px"></i></span>
+          <span class="text-xs font-bold text-accent tracking-wider">SCENE 06 · 报台</span>
         </div>
         <h3 class="mt-4 text-xl font-bold text-slate-900">手术报台追溯</h3>
-        <p class="mt-2 text-sm text-slate-600 leading-relaxed">手术室现场扫码拍照，产品流向终端医院的最终凭证，满足 UDI 与不良事件追溯的合规要求。</p>
-        <a href="#scene-6" class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand hover:gap-2 transition-all">了解场景 <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+        <div class="mt-4 flow-chain">
+          <div class="flow-step"><div class="flow-icon"><i data-lucide="smartphone" style="width:18px;height:18px"></i></div><div class="flow-title">现场扫码</div></div>
+          <div class="flow-arrow"><i data-lucide="chevron-right" style="width:16px;height:16px"></i></div>
+          <div class="flow-step"><div class="flow-icon"><i data-lucide="eye" style="width:18px;height:18px"></i></div><div class="flow-title">拍照留证</div></div>
+          <div class="flow-arrow"><i data-lucide="chevron-right" style="width:16px;height:16px"></i></div>
+          <div class="flow-step"><div class="flow-icon"><i data-lucide="shield-check" style="width:18px;height:18px"></i></div><div class="flow-title">终端追溯</div></div>
+        </div>
+        <p class="mt-4 text-sm text-slate-600 leading-relaxed">手术室现场扫码拍照，产品流向终端医院的最终凭证，满足 UDI 合规要求。</p>
       </div>
     </div>
     <div class="mt-12 bg-white/5 border border-white/10 rounded-2xl p-8 flex flex-col md:flex-row items-center gap-6">

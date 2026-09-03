@@ -88,6 +88,7 @@
       <el-button v-if="detail.status === 'draft' || detail.status === 'rejected'" type="primary" @click="$router.push('/contracts/' + detail.id + '/edit')">编辑</el-button>
       <el-button v-if="detail.status === 'draft'" type="warning" @click="doSubmit">提交审批</el-button>
       <el-button v-if="detail.status === 'pending'" @click="doWithdraw">撤回</el-button>
+      <el-button v-if="detail.status === 'effective'" v-has="'contract:submit'" type="danger" @click="doTerminate">发起合同终止</el-button>
     </div>
   </div>
 </template>
@@ -98,7 +99,7 @@ import { useRoute, useRouter } from 'vue-router'
 import FilePreview from '@/components/FilePreview.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getToken } from '@/utils/auth'
-import { getContract, submitContract, withdrawContract, addContractAttachment, deleteContractAttachment } from './api'
+import { getContract, submitContract, withdrawContract, terminateContract, addContractAttachment, deleteContractAttachment } from './api'
 import { categoryLabel, appTypeLabel, statusMeta } from './dict'
 import { formatDate } from '@/utils/format'
 import { getOperationLogs } from '@/api/crud'
@@ -162,6 +163,15 @@ async function doWithdraw() {
   await ElMessageBox.confirm('确认撤回审批？', '提示', { type: 'warning' })
   await withdrawContract(route.params.id)
   ElMessage.success('已撤回')
+  load()
+}
+async function doTerminate() {
+  const { value } = await ElMessageBox.prompt('请输入合同终止原因', '合同终止', {
+    confirmButtonText: '提交终止审批', cancelButtonText: '取消', type: 'warning',
+    inputValidator: (v) => (v && v.trim()) ? true : '终止原因必填'
+  })
+  await terminateContract(route.params.id, { reason: value })
+  ElMessage.success('已提交合同终止审批')
   load()
 }
 function actionLabel(a) {

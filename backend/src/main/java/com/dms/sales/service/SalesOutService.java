@@ -71,6 +71,8 @@ public class SalesOutService {
     private final ConsignmentService consignmentService;
     @Lazy
     private final com.dms.collab.CrossTenantCollabService crossTenantCollab;
+    @Lazy
+    private final com.dms.openapi.service.ExternalCollabWebhookService externalCollabWebhook;
 
     @Transactional(readOnly = true)
     public PageResult<SalesOut> list(PageQuery pageQuery) {
@@ -120,11 +122,11 @@ public class SalesOutService {
         List<AuthorizationCheckResult> checks = authorizationService.check(authReq);
         List<String> unauth = checks.stream()
                 .filter(r -> !Boolean.TRUE.equals(r.getAuthorized()))
-                .map(r -> "product=" + r.getProductId())
+                .map(r -> "商品 [" + productLabel(r.getProductId()) + "] " + r.getReason())
                 .toList();
         if (!unauth.isEmpty()) {
             throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
-                    "销售授权校验失败: " + String.join(",", unauth));
+                    "销售出库授权校验失败: " + String.join("; ", unauth));
         }
 
         salesOut.setId(null);
@@ -447,6 +449,12 @@ public class SalesOutService {
             log.error("跨租户出库回传失败 soId={}: {}", soId, ce.getMessage(), ce);
             throw ce;
         }
+        // v4.5.4 平台外经销商：发货报文 webhook 回传（事务提交后异步推送，失败仅落台账重试，不阻断发货）
+        try {
+            externalCollabWebhook.registerOutbound(soId, collabShippedLines, Boolean.TRUE.equals(so.getIsRed()));
+        } catch (Exception we) {
+            log.warn("外部经销商发货回传登记失败 soId={}: {}", soId, we.getMessage());
+        }
         return saved;
     }
 
@@ -614,5 +622,19 @@ public class SalesOutService {
             log.warn("查询产品 is_serial_managed 失败: {}", e.getMessage());
             return false;
         }
+    }
+    private String productLabel(Long productId) {
+        if (productId == null) return "未知产品";
+        try {
+            Object[] row = (Object[]) em.createNativeQuery(
+                    "SELECT code, name_cn FROM products WHERE id = ?1")
+                    .setParameter(1, productId).getResultStream().findFirst().orElse(null);
+            if (row != null) {
+                String code = row[0] == null ? "" : String.valueOf(row[0]);
+                String name = row[1] == null ? "" : String.valueOf(row[1]);
+                return (code + " " + name).trim();
+            }
+        } catch (Exception ignored) {}
+        return String.valueOf(productId);
     }
 }

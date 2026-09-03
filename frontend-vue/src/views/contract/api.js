@@ -22,6 +22,9 @@ export function submitContract(id) {
 export function withdrawContract(id) {
   return request({ url: '/api/contracts/' + id + '/withdraw', method: 'post' })
 }
+export function terminateContract(id, data) {
+  return request({ url: '/api/contracts/' + id + '/terminate', method: 'post', data })
+}
 export function addContractAttachment(id, data) {
   return request({ url: '/api/contracts/' + id + '/attachments', method: 'post', params: data })
 }

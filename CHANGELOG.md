@@ -1,3 +1,182 @@
+## v4.6.2 (2026-09-03) - 授权模块产品线化重构 + 授权-下单挂钩开关 + 合同/授权终止与续约（Flyway V147）
+
+> 背景：审查合同模块与授权功能后修复多项缺陷，并按业务要求把授权从「产品/分类维度」重构为「厂家授权给经销商：产品线 + 终端医院 + 有效期」，同时提供授权与下单是否挂钩的租户级开关，补齐授权/合同的终止与续约流程。
+
+### 授权-下单挂钩开关（R1）
+- 新增租户级系统配置 `order.authz.enforce`（`system_settings` scope='tenant'），默认 **false=解耦**：关闭时下单/销售出库不受授权限制，可直接下单；开启（true）后无有效授权则下单/出库被拦截。
+- `SystemSettingService` 扩展租户级读写（缓存 key 带租户，写后 evict）；`AuthorizationService.isOrderAuthzEnforced()` 统一判定。
+- 接口：`GET/POST /api/authorizations/order-enforce`；授权列表页顶部提供开关（含二次确认）。
+
+### 授权产品线维度（R2/R3/R4）
+- 授权主体明确为「厂家 → 经销商」，字段维度：经销商 + 产品线（多选，`product_lines` CSV）+ 终端医院（多选，`terminal_ids` CSV）+ 有效期开始/结束。
+- **修复通配误放行缺陷**：原 `check()` 因 `product_id=null` 恒通配导致分类校验被短路；现按订单产品的 `product_line_id` 命中授权 `product_lines`，ORDER 校验产品线、SALES_TO_HOSPITAL 额外校验终端医院；`AuthorizationCheckRequest.Line` 增加 `productLineId`。
+- 终端批量选择：`GET /api/authorizations/terminals?regionId=&keyword=`（`regions` 递归子树 + `hospitals.region_id`），支持按省份/区域筛选后整省全选；产品线选项 `GET /api/authorizations/product-lines`。
+- **排他唯一性**：同一医院 × 同一产品线在时间段重叠内不得授权给不同经销商；`assertNoOverlap` 对 pending_approval/active/not_started 状态跨经销商预检（集合交集 + 时间重叠），冲突时提示已授权经销商名称；同经销商续约不冲突。
+
+### 终止 / 续约流程（R5/R6/R7）
+- 授权终止：对 active/not_started 授权 `POST /api/authorizations/{id}/terminate` 走审批（业务类型 `AUTHORIZATION_TERMINATE`），通过置 terminated、驳回/撤回恢复原状态。
+- 授权续约：`POST /api/authorizations/{id}/renew` 复制经销商+产品线+终端，按新有效期生成新授权并走审批（source='renew'）。
+- 合同终止：对已生效合同 `POST /api/contracts/{id}/terminate` 走审批（业务类型 `CONTRACT_TERMINATE`），通过置 terminated、驳回恢复 effective；前端合同详情新增「发起合同终止」。
+- 审批回调统一为状态唯一落库点：合同/授权 Controller 不再重复 markApproved/markRejected，消除双写与 revision 重复；回调补齐 `@Transactional`，revision action 语义修正。
+- 新增授权到期任务 `AuthorizationExpiryTask`（每日 00:10，active 且 valid_to<today 置 expired）。
+
+### 其他修复（审查高风险项 R8）
+- 合同/授权跨租户越权修复：`ContractService.get(id)` 与授权 `getOwned` 统一租户校验，详情/编辑/删除/提交/终止等全部按 id 操作收敛到租户内；授权删除限定草稿/驳回。
+- 下单/出库授权失败错误信息改带产品编码+名称（原仅抛数字 id）。
+- 授权回调补 `@Transactional`；授权列表/详情补产品线名称、状态中文（statusLabel）。
+
+### 数据库
+- Flyway `V147__authorization_line_enforce.sql`：为每个租户插入 `order.authz.enforce=false` 默认开关；新增 authorizations 排他/有效期查询辅助索引。复用既有 `product_lines`/`terminal_ids`/`status` 字段（新增状态值 not_started/terminate_pending 无需改表）。
+
+### 前端
+- 新增授权管理：`views/authorization/AuthorizationList.vue`（列表+开关+终止/续约）、`AuthorizationEdit.vue`（经销商远程选择、产品线多选、医院按省批量选+整省全选、有效期）、`AuthorizationDetail.vue`（详情+终止/续约）；`api.js` 封装；路由 `/authorizations`、`/authorizations/new`、`/authorizations/:id`；菜单「授权管理」接上路由。
+
+### 验证
+- 后端 `mvn -o compile` 通过；前端 `npm run build` 通过（AuthorizationList/Edit/Detail 产物正常）。
+- 以上「待办」已于 2026-09-03 晚全部完成，详见下方「测试与部署（2026-09-03 晚）」：Flyway V147 测试环境迁移成功、铁律9 八入口 GATE 通过、开关开/关两态下单链路 + 排他冲突 + 终止/续约审批回调 + 产品线命中/不命中均已实测验证。
+
+### 测试与部署（2026-09-03 晚）
+- 新增集成测试 `AuthorizationServiceIntegrationTest`（12 用例，嵌入式 PG + mock Redis）：开关默认关闭放行、开启无授权拦截、产品线命中/不命中、SALES_TO_HOSPITAL 终端匹配（H1 放行/H2 拦截）、跨经销商排他冲突拦截、时间段不重叠放行、同经销商续约复制维度、终止自动通过/回调 terminated、终止驳回恢复 active、缺产品线报错、开关读写一致性。`mvn test -Dtest=AuthorizationServiceIntegrationTest` 12/12 通过。
+- 测试驱动修复 2 个真实缺陷：① `authorizations.status` 为 VARCHAR(16)，新增状态 `terminate_pending`（17 字符）超长——V147 已将该列扩为 VARCHAR(32)；② **授权-下单开关写入后读不到新值**——租户级配置读取缓存 key 带 `tenant:` 前缀，但写后失效用的是全局 key，导致缓存不失效；新增 `SystemSettingService.evictTenant()` 按租户 key 失效，并补一致性回归测试。
+- 测试环境（dms-dev.mysolmed.com）已部署 v4.6.2：Flyway V147 迁移成功（status 列扩 32、为 115 个租户播种 `order.authz.enforce=false`、索引创建）；后端健康 UP。
+- 铁律9 GATE（真实浏览器）：8 入口全部 200/302 且宣传页 title 正确无静默回退；授权管理页 `/dms/authorizations`、合同工作台 DOM 完整；Console 无红错、Network 无 5xx。
+- API 实测（真实 token）：开关查询/翻转读写一致；开启开关后未授权下单 check 返回 authorized=false「产品所属产品线未授权」，关闭后放行；授权产品线/终端选择器、区域子树过滤（regionId=1 返回 8 家医院）正常；跨经销商排他冲突被拦截且错误信息带已授权经销商名称；pending_approval 状态终止被门禁正确拒绝。测试授权数据已清理。
+
+## 文档治理 (2026-09-02) - 文档评审 6 项缺口整改（纯文档/目录，无代码变更、无 Flyway）
+
+> 背景：对全仓代码量（约 9.5 万行）与文档量（约 3 万行）做齐全性评审后发现 6 个缺口，本次逐项闭合。仅改动文档与目录结构，不涉及前后端代码、数据库与部署。
+
+### 变更
+- **缺口1：根目录 `doc/` 两份跨会话指针文档补维护约定**：`doc/AI开发文档.md`、`doc/项目设计文档.md` 明确定位为"跨会话上下文快照入口"，补充与 `docs/AI开发文档.md`、`docs/项目设计文档.md` 的主从关系与维护同步约定。
+- **缺口2：内部 API 文档补齐**：新增 [docs/03_接口文档/内部API清单.md](docs/03_接口文档/内部API清单.md)，约 110 个 Controller 按 15 个业务域分组，标注路径前缀与鉴权三区（`/api/**` 业务 JWT、`/api/admin/**` 平台 JWT、`/open/api/**` HMAC）。
+- **缺口3：docs 目录编号冲突修复**：原 `03_接口文档` 与 `03_测试` 同用 03 重号。目录迁移为 **01_需求 / 02_设计 / 03_接口文档 / 04_测试 / 05_接管运维**（35 个文件物理迁移），并全仓更新引用：AGENTS.md、README.md、CHANGELOG.md、docs/项目设计文档.md、docs/AI开发文档.md、docs/01_需求/v4.4.0 需求规格、docs/04_测试/v4.0.0 bugfix.1 发布说明、tools/run-tests.js；其中 4 处既有死链一并修正（项目设计文档 3 条测试链接改指真实文件、run-tests.js 改指 `docs/02_设计/test-strategy.md`）。
+- **缺口4：冗余快照目录删除**：删除 `dms-20260901-v45x-testfwk-changes/`（61 个文件）；删除前三方核查 tests/、automation_test/、两份 docx 等内容在主仓库均有同名副本，无独有文件。
+- **缺口5：数据库设计文档充实**：[docs/02_设计/数据库设计.md](docs/02_设计/数据库设计.md) 补「v4.5.1 / v4.6.x 数据库变更（Flyway V141–V146）」迁移清单章节（V141 演示租户、V142 分批发货多收货单索引重构、V143/V144 外部经销商报文协同两表、V145 经销商按钮权限补录、V146 定时邮件开关），并新增「附录 A：全量表清单」——由 146 个迁移脚本 CREATE TABLE 机械汇总，约 110 张活表按 12 个业务域分组。
+- **缺口6：文档索引重写**：[docs/文档索引.md](docs/文档索引.md) 全量重写——16 处旧路径全部修正；补登此前漏登的 test-strategy.md、reviews/ 3 份代码评审、prod-deploy-report v4.2.1/v4.2.9、01_需求/02_设计/04_测试 各版本子目录、v4.5.4/v4.5.5 接口 docx、内部API清单.md；整理日期更新为 2026-09-02，整理规则新增"目录编号不得重号、引用路径必须与索引一致"条款。
+
+### 验证
+- 全文 grep 复检：`03_测试`、`04_接管运维` 旧路径在活文件中**零残留**；文档索引中全部链接逐一对照磁盘实存文件核对，无死链。
+- 本次为纯文档整改，未改代码，无需回归测试与部署；后续代码迭代引用文档时须使用新编号路径。
+
+## v4.6.1 (2026-09-02) - 定时邮件发送运行时开关（Flyway V146）
+
+> 用户反馈：系统每天定时自动发邮件太多，希望通过开关控制是否有必要发送。要求运行时可切换、**无需重启服务**、后台可视化操作。本版开发期曾标号 v4.5.7，因 v4.5.7 已分配给 2026-09-01 移动端 H5 简约重设计、v4.6.0 已分配给同日统一测试框架重构，正式定版 **v4.6.1**；Flyway 迁移编号 V146 不受影响（V145 之后无冲突）。
+
+### 定时发信点盘点
+- 全库 `@Scheduled` + `MailSender`/`JavaMailSender` 排查，**真实定时自动发邮件入口仅 2 个**：
+  - 每日 08:00 `ReportSubscriptionService.scheduleDispatch()`：向报表订阅人发送订阅报表（CSV 附件）。
+  - 每日 09:00 `ApprovalTimeoutReminderTask.remindOverdueTasks()`：向待办审批人发送审批超时提醒。
+- 审批流转通知等**业务即时邮件不在控制范围**（用户场景是"定时邮件太多"，即时邮件由业务动作触发）。
+
+### 变更
+- **开关模型（复用 `system_settings` 表，scope='global'、tenant_id=NULL）**：3 个布尔 key——
+  - `mail.schedule.enabled`：定时邮件**总开关**，关闭后所有定时自动邮件全部停发；
+  - `mail.schedule.report.enabled`：报表订阅邮件子开关（每日 08:00）；
+  - `mail.schedule.approval.enabled`：审批超时提醒子开关（每日 09:00）。
+  - 生效逻辑：**子开关生效值 = 总开关 && 子开关**；优先级 **DB 值 > yml `dms.mail.enabled`（默认 true）兜底**，子开关 DB 缺失默认 true。
+- **新增 `SystemSettingService`**（`com.dms.system.service`，该包首个 service）：EntityManager 原生 SQL 读写；写操作用「UPDATE affected-rows==0 再 INSERT」upsert（刻意规避既有 IntegrationController 中 `ON CONFLICT (scope,key)` 与真实约束 `UNIQUE(scope,tenant_id,key)` + Postgres NULL distinct 不匹配的隐患，SQL 显式 `tenant_id IS NULL`）；Redisson RBucket 缓存 key 前缀 `dms:cfg:setting:`、TTL 30 分钟、写后 evict（仿 UiConfigService `dms:cfg:page:` 模式）；`parseBoolean` 兼容 true/false/1/0/带引号；缓存/DB 异常静默降级不阻断业务；三个公开读方法均显式 `@Transactional(readOnly = true)`（定时任务线程外部调用，Spring 自调用代理不生效）；`updateMailSwitch` 做 key 白名单校验。
+- **发信点接入**：
+  - `ReportSubscriptionService`：删除原 `@Value dms.mail.enabled` 字段，改注入 SystemSettingService；`scheduleDispatch()` 开头开关关闭即 return（关开关时报表仍照常生成、last_run_at/last_status 仍更新，**仅跳过 SMTP 发信**）；`dispatch()` 内 sendMail 前同样判断。
+  - `ApprovalTimeoutReminderTask`：保留原 yml `dms.approval.reminder.enabled` 最外层硬熔断，其后追加 DB 开关 `isApprovalReminderMailEnabled()` 短路。
+- **后台接口 `AdminMailConfigController`**（`@RequestMapping("/api/admin/mail-config")`）：`GET /switches` 返回 3 项视图（key/label/description/enabled 生效值/value 存储值/configured/defaultValue）；`POST /switches` body `{key, enabled}` 更新（空值/非法 key 返回业务码 40001）；走 `/api/admin/**` 平台后台鉴权链（SecurityConfig authenticated + AdminJwtFilter 平台 token），仅平台管理员可操作。
+- **admin-vue 管理界面**：新增「平台配置 → 通知设置」页（`views/config/NotifySettings.vue` + `/notify-settings` 懒加载路由 + AdminLayout 菜单项，置于 ui-configs 之后）：el-alert 说明仅控制定时自动邮件；3 张开关卡片，总开关行高亮 + 红色「总开关」tag，关闭总开关弹 ElMessageBox.confirm 二次确认；总开关关闭时两个子开关 disabled 置灰；每开关 loading 防重复提交 + 状态 tag「当前：发送/已停止」；`api/admin.js` 增 getMailSwitches/updateMailSwitch。
+
+### 数据库
+- **Flyway V146**（`V146__mail_schedule_switch.sql`）：`INSERT ... SELECT FROM (VALUES ...) WHERE NOT EXISTS` 幂等种子 3 行（value_json=CAST('true' AS jsonb)，含中文描述），**无表结构变更**；V145→V146 连续。
+
+### 验证状态
+- 代码全部完成并逐行人肉自检；因本会话本机命令通道故障（RunCommand/CheckCommandStatus 返回 command_id not found），后端 `mvn compile` 与 admin-vue `vite build` **未本地验证**，部署测试环境时由服务器 Maven/Node 容器补编译验证。
+- **尚未部署**：待部署测试环境（http://dms-dev.mysolmed.com）验证 V146 自动迁移 + 通知设置页切换 + 定时任务停发/恢复；**生产环境仍为 v4.4.7，v4.5.x+（含本版）推送待用户明确指令**。
+
+## v4.6.0 (2026-09-01) - 统一测试框架重构：每层唯一工具 + 全栈分级测试 + 真实 Redis 集成 + 部署 GATE 固化
+
+> 目标：建立一套「全面、不重复、每个关注点只用最合适工具」的测试框架，并给出完整分级触发矩阵。不改业务代码；仅测试基建/依赖/文档。
+
+### 工具选型与去重（同一关注点只留一个工具）
+- **后端单测/集成**：JUnit5 + Mockito + AssertJ；PostgreSQL 集成统一用已在用的 **zonky 嵌入式 PostgreSQL14**（免 Docker 起真实 PG），**删除从未使用的 H2 依赖**，不重复引 testcontainers-postgresql。
+- **真实 Redis 集成**：新增 **Testcontainers（仅 Redis7）** + maven-failsafe-plugin 跑 `*IT.java`（`backend/src/test/java/com/dms/it/`）；无 Docker 时用 JUnit assumption 自动跳过，CI/部署机有 Docker 时真实执行。补上「登录限流 / token 黑名单」此前 Redis 全 mock 的盲区。
+- **覆盖率**：新增 **JaCoCo** 插件（`mvn verify` 出报告 + 初始门禁阈值）。
+- **前端单测**：沿用 **Vitest + @vue/test-utils**，加覆盖率阈值门禁；新增全站唯一金额工具 `frontend-vue/src/utils/money.js`（元/分整数运算、按行分摊不超额不负数），配 `money.spec.js` 9 用例（覆盖 D1~D8 折扣/代金券场景）。
+- **黑盒 API + 三端 UI + 部署 GATE**：统一为 **Playwright Test**（`tests/`，5 个 project：api/pc/admin/mobile/gate），含 Console/Network 错误守卫、`pg` SQL 回读 helper、三端登录 fixture；铁律9 的 8 入口 + health 检查固化为 `tests/gate/deploy-gate.spec.js`。Python `api_smoke.py` 与散装 `.cjs` 审计脚本**退出主编排**（等价能力由 tests/ 覆盖），旧文件保留备查。
+- **性能**：新增 **k6** 脚本 `tests/performance/smoke-load.js`（p95<800ms、错误率<1%）。
+- **安全**：新增 **OWASP ZAP** baseline 运行手册 `tests/security/README.md`（多租户越权/注入/XSS/token 越权）。
+
+### 编排
+- 根 `package.json` 新增/统一脚本：`test:gate / test:api / test:ui / test:e2e / test:backend:it / test:frontend:cov / test:perf / test:security`。
+- `tools/run-tests.js` 重排为 L1 静态 → L2 后端 → L3 前端 → L4 Playwright；支持 `BACKEND_IT=1`（真实 Redis）、`SKIP_E2E=1`、`--module=`（透传 grep）。
+- 文档：`docs/02_设计/test-strategy.md` 新增 §9 工具选型 / §10 分级触发矩阵 / §11 五维落位。
+
+### 验证
+- 后端 `mvn test-compile` 通过（failsafe/jacoco 解析、`*IT` 编译通过）；前端 Vitest 9 用例通过；`playwright test --list` 收集 19 用例/5 project。
+- 本机无 Docker：真实 Redis `*IT` 设计为自动跳过；在有 Docker 的 CI/部署机 `BACKEND_IT=1 npm run test:all` 真实执行。
+
+## v4.5.7 (2026-09-01) - 移动端 H5 简约重设计：首页重构 + tabbar 精简 + 全站视觉归一（纯前端，无 Flyway）
+
+> 用户反馈「移动端页面太臃肿」，本版对移动 H5 做简约化重设计：统一视觉语言（蓝色单色 + 白卡片 + 充足留白）、首页信息分层重组、底部导航 6→5 项。**纯前端改动，无后端/Flyway 变更；2026-09-01 22:08 已前端-only 部署测试环境（备份 `/opt/dms/backups/frontend-dms-20260901-220838`，未动 nginx/后端/admin）。**
+
+### 变更
+- **共享样式层** `frontend-vue/src/styles/app.scss`：新增移动端统一类（锚点「移动端简约统一类」）——`.m-hero`（品牌渐变头部 + safe-area 顶部适配）、`.m-sec-title`、`.m-primary-actions/.m-primary-btn`（主/次双主操作）、`.m-stats/.m-stat`（概览数字卡）、`.m-quick-grid/.m-quick-item/.m-quick-ic/.m-quick-l`（单色蓝底快捷入口，替代原彩虹色图标）、`.m-list-card`（白卡列表容器）、`.m-amt/.m-sub`。全部引用既有 design token（`--dms-blue-*`、`--dms-bg-container/page`、`--dms-text-1/4`、`--dms-radius-xl`、`--dms-shadow-sm`、`--dms-spacing-*`），不引新依赖。
+- **首页重写** `MHome.vue`：头部问候区（铃铛消息入口 van-badge → `/mobile/messages`）+ 2 个主操作（智能下单 / 下销售订单）+ 本月概览（2 个核心数字，点击进工作台）+ 常用功能（8 个单色快捷入口）+ 最近订单列表。移除原彩虹配色、SurgeryIcon 装饰、「今日业绩」冗余块。
+- **底部导航精简** `MLayout.vue`：tabbar 6→5 项（首页 / 订单 / 报台 / 审批 / 我的），移除「消息」tab（消息页 `MMessages` 仍保留，由首页铃铛进入），仅保留审批角标 approvalBadge。
+- **列表页统一** `MOrders / MSurgeryReports / MApprovals / MMessages`：统一 pull-refresh + `.m-list-card` 白卡样式，去除硬编码灰底与彩色块。
+- **详情/我的/业绩** `MOrderDetail / MApprovalDetail / MProfile / MDashboard`：硬编码色值全部替换为 token（`--dms-divider-color`、`--dms-gray-200/400`、`--dms-text-1`、`--dms-bg-container` 等）；MProfile 头部改渐变 + safe-top；金额/标题色归一。
+- **表单页轻量归一** `MOrderCreate / MSmartOrder / components/ReceiptConfirm.vue`：卡片与头像色改 token（如用户头像 `#52c41a` → `var(--dms-blue-300)`）。
+- **语义色保留不动**：促销橙、代金券红、扫码黑、登录页深色渐变维持原样。
+
+### 验证（2026-09-01，本地 vite dev + Playwright，393×852 移动视口）
+- `npm run build` 通过（exit 0）。
+- 11 个移动页面真实浏览器审计（`tmp-changes/mobile_audit.py`，账号 DEALER_D1/dealer_d1_admin）：`/mobile/home`、`/mobile/orders`、`/mobile/surgery-reports`、`/mobile/approvals`、`/mobile/messages`、`/mobile/profile`、`/mobile/dashboard`、`/mobile/smart-order`、`/mobile/orders/create`、`/mobile/scan-receive`、`/mobile/scan-inventory` —— DOM 正常渲染，**Console 无红色 error，API 无 4xx/5xx**；截图存 `tmp-changes/mobile-shots/`。
+- ⚠️ 部署测试环境后须按【铁律9】重跑浏览器 GATE（含 `/dms/mobile/login`、`/dms/mobile/register` 等全部入口）。
+
+#### v4.5.7 补丁（2026-09-01，验收反馈三件套，纯前端；23:04 已前端-only 部署，备份 `/opt/dms/backups/frontend-dms-20260901-230428`）
+- **首页常用功能图标替换**（`MHome.vue`）：原 vant 图标不契合，改为内联线性 SVG（剪贴板心搏/单据/勾选框/折线图/气泡/用户），`v-html` 渲染，保持蓝色单色简约风格；`.m-quick-ic` 调整为 44px 容器 + 23px svg（`app.scss`）。
+- **常用功能入口精简 8→6**：移除「扫码收货」「库存查询」两个首页入口（页面文件保留）。
+- **报台批序信息扫码**（新增 `mobile/components/BarcodeScanner.vue` + `MSurgeryReportCreate.vue` 接入）：底部弹窗 78%，HTTPS/localhost 下 `getUserMedia({facingMode:'environment'})` + `BarcodeDetector` 循环识读；批号/序列号字段均提供「扫码」按钮（此前仅序列号产品可扫）；结果回填批号字段；关闭释放摄像头 tracks。
+- **⚠️ HTTP 环境限制（重要）**：`navigator.mediaDevices.getUserMedia` 仅在安全上下文（HTTPS 或 localhost）可用。测试站当前为纯 HTTP（`http://dms-dev.mysolmed.com`），真机浏览器无法调起摄像头——组件检测到非安全上下文时显示「当前环境无法调用摄像头…请手动输入或改用 HTTPS」提示，并始终保留手动输入框兜底。**真机扫码需为测试域名配置 nginx TLS（HTTPS）**；本轮按【铁律10】未动 nginx。
+- 验证：本地 vite（localhost 安全上下文）扫码弹窗打开、video 元素存在、手动输入回填批号 OK；部署环境（HTTP）弹窗显示降级提示、手动输入回填 OK；铁律9 GATE 8 入口 + health + 8 移动页全 200、0 console error、0 API 4xx/5xx。
+## v4.5.6 (2026-09-01) - 补丁：经销商租户 button 权限资源补全（Flyway V145）+ 跨租户协同收货单前缀修复
+
+> 测试数据联调（2 个经销商租户各自下采购单 → 厂家销售订单 → 分别发货）中发现的两个缺陷修复，已部署测试环境（Flyway 已执行至 V145）；生产环境仍为 v4.4.7，推送待明确指令。
+
+### 修复
+- **经销商租户业务菜单全部不可见 / 业务路由 403（平台级 RBAC 缺陷，Flyway V145）**：根因——开户预置器 `TenantRoleProvisioner` 为新租户只创建 `type='menu'` 资源（码为连字符 `:menu` 后缀），不创建 `type='button'` 资源（码为下划线 `module:action`，如 `purchase_order:view`、`receipt:view`、`sales_order:view`）；而前端菜单显隐与路由守卫检查的是 button 权限码。早期 V61 的 button 补种只覆盖当时已存在租户，之后新开户的经销商（如 DEALER_D1、苏州康宁 DEALER_D2）均缺 215 个 button 资源，导致登录后无业务菜单、/dms/m/receipts 等页面 403。**V145** 以模板经销商租户 DEALER_A1 的 215 个 button 资源为基准，DO 块循环所有 `tenant_type='DEALER'` 且无 button 资源的租户，幂等复制 button 资源（resources 按 tenant_id+code 去重）并以 `operations={view}` 绑定各租户 DEALER_ADMIN 角色关联的管理员策略（strategy_resources 按 strategy_id+resource_id 去重）；同时惠及全部缺 button 的历史测试经销商租户。中期根治方向：开户流程直接预置 button 资源（TenantRoleProvisioner 改造），本版未做。
+- **跨租户协同收货单号前缀 RK → GR**：`CrossTenantCollabService.onSalesOutShipped`（路径B，厂家发货回传经销商 PENDING 收货单）原取号 `docNoGenerator.next("RK")`，与经销商租户收货单 GR 序列撞段（前端列表按 GR 前缀渲染/查询），修复后正向收货单取 `next("GR")`、红字收货单取 `next("RGR")`。修复前已生成的历史单据号（如 RK-20260901-00001）为数据残留，功能不受影响。
+
+### 数据库（Flyway V145）
+- `V145__dealer_button_permissions.sql`：单 DO $$ 块，无表结构变更；模板租户 `22222222-0000-0000-0000-000000000001`（DEALER_A1）；幂等可重复执行。
+
+### 验证（2026-09-01，测试环境）
+- Flyway：flyway_schema_history 出现 `145 | dealer button permissions | success`。
+- DB：DEALER_D1 / DEALER_D2 resources 各 215 button + 21 menu；`GET /api/me/permissions` 各返回 243 个权限码，purchase_order:view / receipt:view / sales_order:view / inventory:view / sales_out:view / purchase_return:view / sales_return:view 七个关键码齐全。
+- 真实浏览器端到端（铁律9）：两经销商租户登录后业务菜单全部可见；D2 收货入库页见 GR-20260901-00003（待处理，来源 PO-20260901-00002）与 GR-20260901-00002（草稿），采购订单页见 PO-20260901-00002（已审批，厂家销售单号 SO-20260901-00005 回写，20300.00）；D1 收货页见 RK-20260901-00001（待处理，历史前缀残留）/ GR-20260901-00001（草稿），采购页见 PO-20260901-00001（SO-20260901-00004 回写，18600.00）。
+
+## v4.5.5 (2026-09-01) - 平台外下游经销商报文式开放接口：厂家 DMS ↔ 经销商自有 ERP（4 接口 + HMAC 机器凭证）
+
+> 面向**不在 DMS 平台内、拥有自有系统/ERP 的下游经销商**的单据报文协同。与"同 SaaS 内跨租户协同"（com.dms.collab，JWT 业务接口内部触发、TenantContext 切租户直写对方表）是**两套相互独立的能力**；与厂家 ERP 对接（/open/api/erp，ErpOutboundOpenService）亦无关。接口规范见 `docs/03_接口文档/跨租户订单协同接口文档_v4.5.5.docx`。Flyway **V143–V144**。已部署测试环境；生产环境仍为 v4.4.7，推送待明确指令。
+>
+> 版本号说明：本特性开发期曾标号 v4.5.4（测试脚本 v454_open_collab_e2e.py 命名保留），因 v4.5.4 已分配给 2026-08-31 的同 SaaS 内反向退货协同（见下条），正式顺延为 **v4.5.5**。
+
+### 新增（4 个接口）
+- **接口1（入站）经销商采购订单报文** `POST /open/api/collab/purchase-orders/submit`：经销商系统推送采购订单（header 含 poNo/dealerCode/orderDate/expectedDate/warehouseCode，lines 含 externalCode/qty），DMS 校验物料对码后建 **DRAFT 销售订单**（tax_rate=0.13、单价缺省 0，价格由厂家补录），返回 salesOrderNo。
+- **接口2（出站）发货通知 webhook（SHIP_NOTICE）**：厂家发货确认后，DMS 主动 POST 经销商配置的 webhook_url，回传出库单号、发货日期（yyyy-MM-dd）、物流公司/运单号、行明细（物料/数量/批号/序列号），即经销商的收货依据。
+- **接口3（入站）经销商采购退货报文** `POST /open/api/collab/purchase-returns/submit`：经销商推送采购退货单（header 含 returnNo/refOutboundNo/dealerCode，is_red 链路），DMS 建 **DRAFT 红字销退单**，返回 redSalesReturnNo。
+- **接口4（出站）红字发货通知 webhook（RED_SHIP_NOTICE）**：厂家红字出库后回传红字出库信息，结构同接口2。
+
+### 新增（代码包 com.dms.openapi）
+- `OpenApiAuthFilter`：拦截 /open/api/**，HMAC-SHA256 机器凭证校验——四头 `X-App-Key/X-Timestamp(毫秒)/X-Nonce/X-Signature`；签名串 `METHOD大写\nREQUEST_URI\ntimestamp\nnonce\nsha256Hex(body)`；时钟偏移 ±5 分钟；失败统一 ApiResponse 业务码（HTTP 401=40501、HTTP 403=40403）；CachedBodyRequest 包装保证 body 可重复读。
+- `OpenCollabController`：接口1/3 入站端点；`dto/collab/`（CollabPurchaseOrderRequest/CollabPurchaseReturnRequest/CollabSubmitResult）。
+- `ExternalCollabOpenService`：入站建单——物料对码 open_partner_materials（外部编码→产品，缺失 40006 阻断）、dealerCode 与应用绑定校验（40301）、collab 版仓库查找查不到静默 null；**入站幂等**：open_collab_messages 唯一索引 ux_ocm_in_idem (app_id,msg_type,partner_doc_no) WHERE direction='IN'，重复报文返回首次结果（IDEMPOTENT）不重复建单。
+- `ExternalCollabWebhookService`：出站——发货事务内登记 open_collab_messages(OUT,PENDING)，`afterCommit` 异步推送，**推送成败绝不阻断发货主流程**；定时任务扫描 PENDING/到期重试；退避序列 5/15/30/60/120/360/720/1440 分钟，MAX_RETRY=8 后 next_retry_at=NULL 停止；物料映射缺失等可恢复错误 markRetryable 固定 30 分钟重试不计数；对端成功判定宽松（HTTP 2xx 且 body 空/非 JSON/无 code/code=0）；签名密钥优先 webhook_secret、为空回退 app_secret。
+
+### 数据库（Flyway V143 / V144）
+- **V143**：open_app 加 5 列（partner_type 默认 'ERP'、dealer_code、dealer_id、webhook_url、webhook_secret）；新建 `open_partner_materials`（物料对码，ux_opm_ext_code 唯一 (app_id,external_code) WHERE deleted_at IS NULL）；新建 `open_collab_messages`（报文台账：direction IN/OUT、msg_type PURCHASE_ORDER/SHIP_NOTICE/PURCHASE_RETURN/RED_SHIP_NOTICE、partner_doc_no/local_doc_no、line_refs JSONB、request_body/response_body、status、http_status、error_msg、retry_count、next_retry_at、last_sent_at；入站幂等索引 ux_ocm_in_idem + 出站重试索引 idx_ocm_out）；sales_outs 加 logistics_company/tracking_no；种子 dealer EXT-D1 + DEALER 型 open_app（AppKey `dms-ext-dealer-d1`、webhook 占位 http://127.0.0.1:9999/webhook/collab、system='DEALER_ERP'）。
+- **V144**：物料映射种子修复——V143 误用臆造编码 PROD-000001..003（产品真实编码前缀为 PRD-），补种 EXT-MAT-001→PRD-J001、EXT-MAT-002→PRD-J002、EXT-MAT-003→PRD-M001（NOT EXISTS 幂等）。
+
+### 验证（2026-09-01）
+- 入站 E2E `automation_test/v454_open_collab_e2e.py` **20/20 通过**：正确签名建单、错误签名 40501、时间戳过期、nonce 重放、重复报文幂等、物料未对码 40006、dealerCode 不匹配 40301、缺必填 40001 等。
+- 出站 E2E `automation_test/v455_open_collab_outbound_e2e.py` **13/13 通过**：本地 webhook 接收端验签、发货触发 SHIP_NOTICE、红字出库触发 RED_SHIP_NOTICE、对端非 2xx 退避重试、对端返回业务错误码标记 FAILED、webhook 未配置静默跳过。
+- 铁律 9 真实浏览器终验 8 个用户入口 URL 全过（/、/dms/、/dms/home、/dms/admin/、/dms/mobile/login、/dms/mobile/register、/brochure/、/actuator/health）。
+
 ## v4.5.4 (2026-08-31) - 跨租户反向退货协同：经销商采退 ↔ 厂家销退、红字出库 → 红字入库
 
 > 后端协同版本（无 Flyway——复用现有 orders.is_red/receipts.is_red/cross_tenant_doc_links 结构）。在 v4.5.0 正向协同（采购→销售、出库→收货）基础上，补齐**退货方向**的自动协同，与正向逐表对称。接口文档见 `docs/03_接口文档/cross-tenant-collab-api.md`。
@@ -72,7 +251,7 @@
 
 ### 验证（2026-08-31）
 - 后端集成测试 31/31 通过（含新增 collab 11 例）；v450_collab.py 对修复后测试环境 56/56 通过。
-- 测试报告：`docs/03_测试/测试报告_v4.5.0_20260830_跨租户协同.md` §8 自动化回归章节。
+- 测试报告：`docs/04_测试/测试报告_v4.5.0_20260830_跨租户协同.md` §8 自动化回归章节。
 
 ## v4.5.0 (2026-08-30) - 厂家关闭进销存（开关持久化）+ 厂家↔经销商跨租户订单协同
 
@@ -336,7 +515,7 @@
 
 ## v4.3.0 (2026-08-27) - 订单计价体系升级、促销扩展、客户代金券、全局折扣、客户自助注册下单、多出库销退
 
-> MINOR 版本，基线 v4.2.9。需求见 `docs/01_需求/v4.3.0/DMS_v4.3.0_需求规格.md`，设计见 `docs/02_设计/v4.3.0/总体设计.md`、`docs/02_设计/v4.3.0/订单折扣与促销规则说明书.md`，测试见 `docs/03_测试/v4.3.0/DMS_v4.3.0_测试报告.md`。前端版本号升至 4.3.0（`frontend-vue/package.json`）。已部署测试环境，三端冒烟 0 FAIL（PC 224 项 / 平台后台 / Mobile 17 项），计价 A–L 折扣场景集全部通过。
+> MINOR 版本，基线 v4.2.9。需求见 `docs/01_需求/v4.3.0/DMS_v4.3.0_需求规格.md`，设计见 `docs/02_设计/v4.3.0/总体设计.md`、`docs/02_设计/v4.3.0/订单折扣与促销规则说明书.md`，测试见 `docs/04_测试/v4.3.0/DMS_v4.3.0_测试报告.md`。前端版本号升至 4.3.0（`frontend-vue/package.json`）。已部署测试环境，三端冒烟 0 FAIL（PC 224 项 / 平台后台 / Mobile 17 项），计价 A–L 折扣场景集全部通过。
 
 ### 新增功能（R1–R9）
 - **R1 一张销退单关联同经销商多张出库单**：销退可一次关联同一经销商多张销售出库单；可退量按来源出库单行维度锁定（已退+在途+本次），跨单不可挪用；混经销商拦截；审批后按来源行回写库存，退货价按 EA 快照；销退列表统一展示新 RMA 单与历史红字单（unified）
@@ -823,7 +1002,7 @@
 ### 文档
 - 需求：`docs/01_需求/v4.1.0/DMS_v4.1.0_需求规格.md`
 - 设计：`docs/02_设计/v4.1.0/DMS_v4.1.0_技术设计.md`
-- 测试：`docs/03_测试/v4.1.0/DMS_v4.1.0_测试场景.md`
+- 测试：`docs/04_测试/v4.1.0/DMS_v4.1.0_测试场景.md`
 - 版本决策：今后 bugfix 自动升 PATCH；MINOR/MAJOR 升级由用户决定（见 `.memory/layers/layer4-decisions.md`）。
 ## v4.0.3 (2026-08-21) - 促销赠品手动刷新 / 幂等 / 标准金额占比分摊
 
@@ -837,7 +1016,7 @@
 - 销售订单明细卡片头部「刷新赠品及价格」按钮与命中促销提示条（买赠/满减文案）。
 - 明细列新增「出库单价」。
 - `POST /api/sales-orders/preview` 支持 `applyPromotions` 开关，全量试算时返回 `promotionMessages`；创建/更新/提交始终走全量试算，保证落库一致。
-- 需求/设计/测试文档：`docs/01_需求/v4.0.0/DMS_v4.0.0-bugfix.9_需求规格.md`、`docs/02_设计/v4.0.0/DMS_v4.0.0-bugfix.9_技术设计.md`、`docs/03_测试/v4.0.0/DMS_v4.0.0-bugfix.9_测试场景.md`。
+- 需求/设计/测试文档：`docs/01_需求/v4.0.0/DMS_v4.0.0-bugfix.9_需求规格.md`、`docs/02_设计/v4.0.0/DMS_v4.0.0-bugfix.9_技术设计.md`、`docs/04_测试/v4.0.0/DMS_v4.0.0-bugfix.9_测试场景.md`。
 
 ### 自动化
 - 扩展 `automation_test/e2e/specs/12-orders-promo-bom-return.spec.js`：价格预览不产生赠品、刷新幂等、命中文案、标准金额占比分摊（800/400、出库单价）、赠品持久化与锁定。
@@ -855,7 +1034,7 @@
 
 ### 自动化
 - 新增 `automation_test/e2e/specs/12-orders-promo-bom-return.spec.js`，覆盖：PRD-J002 买2送5生成 PRD-J003 赠品 15、赠品持久化、BOM 审批后一键出库完成、销退平摊单价和汇总金额、Console 无报错。
-- 新增需求/设计/测试文档：`docs/01_需求/v4.0.0/DMS_v4.0.0-bugfix.8_需求规格.md`、`docs/02_设计/v4.0.0/DMS_v4.0.0-bugfix.8_技术设计.md`、`docs/03_测试/v4.0.0/DMS_v4.0.0-bugfix.8_测试场景.md`。
+- 新增需求/设计/测试文档：`docs/01_需求/v4.0.0/DMS_v4.0.0-bugfix.8_需求规格.md`、`docs/02_设计/v4.0.0/DMS_v4.0.0-bugfix.8_技术设计.md`、`docs/04_测试/v4.0.0/DMS_v4.0.0-bugfix.8_测试场景.md`。
 - `.memory/layers/layer3-lessons.md` 新增 L50-L52：促销/赠品必须后端试算并回读持久化，BOM 母件不得参与出库完成度，销退金额必须由原出库行后端重算。
 
 ## v4.0.1 (2026-08-21) - 促销启用 / 引用字段显示 / 销售定价一致性 / 审批流修复
@@ -1834,7 +2013,6 @@ v3.8.7 沉淀了 D13 规范和基础设施（platform_button_configs 表、v-has
 - Layer 2 §18 列表页布局规范保持冻结（v3.8.7 入冻结区，本版未变更规范文字）。
 - Layer 4 D13：本版本正式落地 D13（CrudView 接入、菜单按权限过滤、admin-vue 维护入口完善）。
 - D12 状态：原文 2026-08-06 已因 PowerShell 编码异常丢失；按上下文重写并锁定 deploy-fast 流程。
-
 
 
 

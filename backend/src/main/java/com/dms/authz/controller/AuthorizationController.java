@@ -94,4 +94,53 @@ public class AuthorizationController {
         service.delete(id);
         return ApiResponse.ok();
     }
+
+    @PostMapping("/api/authorizations/{id}/renew")
+    @OperationLog(businessType = "authorization", action = OperationAction.CREATE, remark = "授权-续约")
+    public ApiResponse<Authorization> renew(@PathVariable Long id, @RequestBody(required = false) Authorization request) {
+        return ApiResponse.ok(service.renew(id, request));
+    }
+
+    @PostMapping("/api/authorizations/{id}/terminate")
+    @OperationLog(businessType = "authorization", action = OperationAction.APPROVE, remark = "授权-发起终止")
+    public ApiResponse<Authorization> terminate(@PathVariable Long id,
+                                                @RequestBody(required = false) java.util.Map<String, Object> body) {
+        String reason = body == null ? null : String.valueOf(body.getOrDefault("reason", ""));
+        return ApiResponse.ok(service.terminate(id, reason));
+    }
+
+    /**
+     * 终端医院选择：按区域（省/市）子树 + 关键字查询医院，供授权页批量选择。
+     * regionId 为空时返回关键字命中的医院；返回 id/name/region 信息。
+     */
+    @GetMapping("/api/authorizations/terminals")
+    public ApiResponse<List<java.util.Map<String, Object>>> terminals(
+            @RequestParam(required = false) Long regionId,
+            @RequestParam(required = false) String keyword) {
+        return ApiResponse.ok(service.listTerminals(regionId, keyword));
+    }
+
+    /** 产品线选项（全部启用的产品线，供授权多选） */
+    @GetMapping("/api/authorizations/product-lines")
+    public ApiResponse<List<java.util.Map<String, Object>>> productLines() {
+        return ApiResponse.ok(service.listProductLines());
+    }
+
+    /** 授权-下单挂钩开关：查询当前租户是否强制 */
+    @GetMapping("/api/authorizations/order-enforce")
+    public ApiResponse<java.util.Map<String, Object>> orderEnforce() {
+        boolean enforced = service.isOrderAuthzEnforced();
+        return ApiResponse.ok(java.util.Map.of(
+                "enforced", enforced,
+                "label", enforced ? "授权与下单已挂钩：无有效授权不能下单/出库" : "授权与下单解耦：可直接下单"));
+    }
+
+    /** 授权-下单挂钩开关：更新（业务前台租户配置） */
+    @PostMapping("/api/authorizations/order-enforce")
+    @OperationLog(businessType = "authorization", action = OperationAction.UPDATE, remark = "授权-下单开关设置")
+    public ApiResponse<java.util.Map<String, Object>> setOrderEnforce(@RequestBody java.util.Map<String, Object> body) {
+        boolean enabled = Boolean.parseBoolean(String.valueOf(body.getOrDefault("enabled", false)));
+        service.setOrderAuthzEnforced(enabled);
+        return ApiResponse.ok(java.util.Map.of("enforced", enabled));
+    }
 }

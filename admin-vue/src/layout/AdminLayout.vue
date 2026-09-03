@@ -17,6 +17,7 @@
           <el-menu-item index="/role-templates">角色模板</el-menu-item>
           <el-menu-item index="/menus">平台菜单</el-menu-item>
           <el-menu-item index="/ui-configs">页面配置</el-menu-item>
+          <el-menu-item index="/notify-settings">通知设置</el-menu-item>
           <el-menu-item index="/dicts">全局字典</el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="logs">

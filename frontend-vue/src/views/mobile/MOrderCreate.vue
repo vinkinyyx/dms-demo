@@ -712,9 +712,9 @@ onMounted(async () => {
 
 <style scoped>
 .m-order-create { padding-bottom: 110px; }
-.line-card { padding: 10px 16px; border-bottom: 1px solid var(--van-gray-2); background: #fff; }
+.line-card { padding: 10px 16px; border-bottom: 1px solid var(--dms-divider-color); background: var(--dms-bg-container); }
 .line-card:last-child { border-bottom: 0; }
-.line-card.is-child { background: #fafbfc; padding-left: 28px; }
+.line-card.is-child { background: var(--dms-gray-50); padding-left: 28px; }
 .line-card.is-gift { background: #fff7f7; }
 .line-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .line-no { font-size: 13px; color: var(--van-text-color-2); display: flex; gap: 6px; align-items: center; }

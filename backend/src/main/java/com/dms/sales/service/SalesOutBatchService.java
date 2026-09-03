@@ -23,6 +23,8 @@ public class SalesOutBatchService {
 
     private final EntityManager em;
     private final com.dms.collab.CrossTenantCollabService crossTenantCollab;
+    @org.springframework.context.annotation.Lazy
+    private final com.dms.openapi.service.ExternalCollabWebhookService externalCollabWebhook;
 
     @Transactional
     public Map<String, Object> createBatch(Long salesOutId) {
@@ -129,7 +131,7 @@ public class SalesOutBatchService {
 
         var lq = em.createNativeQuery(
                 "SELECT bl.id, bl.expected_line_id, bl.product_id, bl.warehouse_id, bl.qty, bl.stock_batch_id, bl.batch_no, bl.serial_no, bl.unit_price, " +
-                "       p.is_serial_managed " +
+                "       p.is_serial_managed, p.code AS product_code " +
                 "FROM sales_out_batch_lines bl LEFT JOIN products p ON p.id = bl.product_id " +
                 "WHERE bl.batch_id = ?1 ORDER BY bl.ship_line_no, bl.id", Tuple.class);
         lq.setParameter(1, batchId);
@@ -141,6 +143,7 @@ public class SalesOutBatchService {
 
         Long userId = TenantContext.getUserId();
         java.util.List<com.dms.collab.ShippedLine> collabRedLines = new java.util.ArrayList<>();
+        java.util.List<com.dms.collab.ShippedLine> webhookLines = new java.util.ArrayList<>();
         for (Tuple l : lines) {
             Long productId = ((Number) l.get("product_id")).longValue();
             Long lineWh = l.get("warehouse_id") == null ? warehouseId : ((Number) l.get("warehouse_id")).longValue();
@@ -161,20 +164,31 @@ public class SalesOutBatchService {
               .setParameter(8, ((Number) l.get("id")).longValue()).setParameter(9, userId)
               .executeUpdate();
 
-            em.createNativeQuery(
+            Object newSolRow = em.createNativeQuery(
                 "INSERT INTO sales_out_lines (sales_out_id, seq, product_id, warehouse_id, stock_batch_id, batch_no, serial_no, " +
                 "  qty, quantity, shipped_qty, expected_qty, unit_price, subtotal, is_red, created_at) " +
                 "VALUES (?1, COALESCE((SELECT MAX(seq) FROM sales_out_lines s2 WHERE s2.sales_out_id = ?1),0)+1, " +
-                "  ?2, ?3, ?4, ?5, ?6, CAST(?7 AS numeric), CAST(?7 AS numeric), CAST(?7 AS numeric), 0, CAST(?8 AS numeric), CAST(?7 AS numeric) * CAST(?8 AS numeric), ?9, now())")
+                "  ?2, ?3, ?4, ?5, ?6, CAST(?7 AS numeric), CAST(?7 AS numeric), CAST(?7 AS numeric), 0, CAST(?8 AS numeric), CAST(?7 AS numeric) * CAST(?8 AS numeric), ?9, now()) RETURNING id")
               .setParameter(1, soId).setParameter(2, productId).setParameter(3, lineWh)
               .setParameter(4, l.get("stock_batch_id") == null ? null : ((Number) l.get("stock_batch_id")).longValue())
               .setParameter(5, batchNo).setParameter(6, serialNo).setParameter(7, qty).setParameter(8, unitPrice)
               .setParameter(9, isRed)
-              .executeUpdate();
+              .getSingleResult();
+            Long newSalesOutLineId = ((Number) newSolRow).longValue();
+
+            com.dms.collab.ShippedLine wl = new com.dms.collab.ShippedLine();
+            wl.setProductId(productId);
+            wl.setProductCode(l.get("product_code") == null ? null : String.valueOf(l.get("product_code")));
+            wl.setQty(qty);
+            wl.setBatchNo(batchNo);
+            wl.setSerialNo(serialNo);
+            wl.setOutLineId(newSalesOutLineId);
+            webhookLines.add(wl);
 
             if (isRed) {
                 com.dms.collab.ShippedLine sl = new com.dms.collab.ShippedLine();
                 sl.setProductId(productId);
+                sl.setProductCode(wl.getProductCode());
                 sl.setQty(qty);
                 sl.setBatchNo(batchNo);
                 sl.setSerialNo(serialNo);
@@ -224,6 +238,15 @@ public class SalesOutBatchService {
             } catch (Exception ce) {
                 log.error("跨租户红字出库回传失败 soId={}", soId, ce);
                 throw ce;
+            }
+        }
+
+        // v4.5.4 平台外经销商：发货报文 webhook 回传（正常+红字批次发货均触发；事务提交后异步推送，失败仅落台账重试，不阻断发货）
+        if (!webhookLines.isEmpty()) {
+            try {
+                externalCollabWebhook.registerOutbound(soId, webhookLines, isRed);
+            } catch (Exception we) {
+                log.warn("外部经销商发货回传登记失败 batchId={}: {}", batchId, we.getMessage());
             }
         }
         return res;

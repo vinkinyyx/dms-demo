@@ -143,3 +143,22 @@ _incoming/
 /_pgate*.cjs
 # 变更清单比对快照（一次性交付物，非源码）
 dms-changes-*/
+
+# ---- 本地运维/打包脚本：含明文 SSH/SMTP 凭据，禁止入库（2026-09-03）----
+tools/_prod_deploy.bat
+tools/_prod_probe.bat
+tools/_prod_probe.sh
+tools/_prod_remote_build.sh
+tools/_env_cleanup.bat
+tools/_env_cleanup.sh
+tools/_mcp_fix/
+tools/_send_changes_by_mail.bat
+tools/_send_changes_by_mail.ps1
+# 含真实服务器 SSH 密码的 v4.5.x 协同 e2e 脚本（凭据外置前不入库）
+automation_test/v454_open_collab_e2e.py
+automation_test/v455_open_collab_outbound_e2e.py
+
+# Playwright 运行产物
+tests/reports/
+test-results/
+playwright-report/

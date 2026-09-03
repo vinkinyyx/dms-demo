@@ -925,7 +925,7 @@ onMounted(async () => {
 .msg-row.is-user { flex-direction: row-reverse; }
 .avatar { flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; }
 .bot-avatar { background: var(--dms-color-primary, #1677ff); }
-.user-avatar { background: #52c41a; }
+.user-avatar { background: var(--dms-blue-300); }
 .bubble { max-width: 78%; padding: 10px 12px; border-radius: 10px; font-size: 14px; line-height: 1.6; word-break: break-word; }
 .bubble.bot { background: #fff; color: var(--dms-text-1, #1f2329); border: 1px solid var(--van-gray-2, #ebedf0); border-top-left-radius: 2px; }
 .bubble.user { background: var(--dms-color-primary, #1677ff); color: #fff; border-top-right-radius: 2px; }

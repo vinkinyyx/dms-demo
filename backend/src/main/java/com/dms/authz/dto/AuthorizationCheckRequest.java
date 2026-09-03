@@ -19,6 +19,7 @@ public class AuthorizationCheckRequest {
     @Data
     public static class Line {
         private Long productId;
+        private Long productLineId;
         private Long terminalId;
     }
 }

@@ -9,9 +9,14 @@
     </van-tabs>
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
       <van-list v-model:loading="loading" :finished="finished" finished-text="没有更多了" @load="loadMore">
-        <van-cell v-for="r in rows" :key="r.id" :title="(r.businessCode || r.title || ('审批#'+r.id))" :label="label(r)" is-link @click="open(r)" >
-          <template #value><van-tag type="warning" v-if="active==='todo'">待处理</van-tag><van-tag plain type="primary" class="amt">{{ bizLabel(r.businessType) }}</van-tag></template>
-        </van-cell>
+        <div class="m-list-card" v-if="rows.length">
+          <van-cell v-for="r in rows" :key="r.id" :title="(r.businessCode || r.title || ('审批#'+r.id))" :label="label(r)" is-link @click="open(r)">
+            <template #value>
+              <van-tag type="warning" v-if="active==='todo'">待处理</van-tag>
+              <van-tag plain type="primary" class="biz-tag">{{ bizLabel(r.businessType) }}</van-tag>
+            </template>
+          </van-cell>
+        </div>
         <van-empty v-if="!loading && !rows.length" description="暂无审批" />
       </van-list>
     </van-pull-refresh>
@@ -22,14 +27,31 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { myTodoTasks, myDoneTasks, mySubmitted, myCc } from '@/api/approval'
 import { BUSINESS_LABELS } from '@/views/approval/dict'
-const router=useRouter(); const active=ref('todo'); const rows=ref([]); const page=ref(1); const size=ref(20); const total=ref(0); const loading=ref(false); const finished=ref(false); const refreshing=ref(false); const inFlight=ref(false)
-function bizLabel(t){return BUSINESS_LABELS[t]||t||'审批'}
-function label(r){ return (r.submitterName? '发起人：'+r.submitterName+'  ':'') + (r.nodeName||'') + '  ' + fmt(r.createdAt||r.startedAt) }
-function fmt(v){ return v ? String(v).replace('T',' ').slice(0,16) : '' }
-async function loadMore(){ if(inFlight.value)return; inFlight.value=true; loading.value=true; try{ const params={page:page.value,size:size.value}; const res=active.value==='todo'?await myTodoTasks(params):active.value==='done'?await myDoneTasks(params):active.value==='submitted'?await mySubmitted(params):await myCc(params); const d=res.data||{}; const list=d.list||[]; rows.value.push(...list); total.value=d.total||0; if(rows.value.length>=total.value||!list.length)finished.value=true; page.value++ }catch(e){ finished.value=true }finally{ loading.value=false; refreshing.value=false; inFlight.value=false } }
-function reload(p=1){ page.value=p; rows.value=[]; finished.value=false; loading.value=false; loadMore(); }
-function onRefresh(){ reload(1) }
-function open(r){ const id=r.instanceId||r.id; if(id) router.push('/mobile/approvals/'+id) }
+const router = useRouter()
+const active = ref('todo'); const rows = ref([]); const page = ref(1); const size = ref(20); const total = ref(0)
+const loading = ref(false); const finished = ref(false); const refreshing = ref(false); const inFlight = ref(false)
+function bizLabel(t) { return BUSINESS_LABELS[t] || t || '审批' }
+function label(r) { return (r.submitterName ? '发起人：' + r.submitterName + '  ' : '') + (r.nodeName || '') + '  ' + fmt(r.createdAt || r.startedAt) }
+function fmt(v) { return v ? String(v).replace('T', ' ').slice(0, 16) : '' }
+async function loadMore() {
+  if (inFlight.value) return
+  inFlight.value = true; loading.value = true
+  try {
+    const params = { page: page.value, size: size.value }
+    const res = active.value === 'todo' ? await myTodoTasks(params) : active.value === 'done' ? await myDoneTasks(params) : active.value === 'submitted' ? await mySubmitted(params) : await myCc(params)
+    const d = res.data || {}
+    const list = d.list || []
+    rows.value.push(...list)
+    total.value = d.total || 0
+    if (rows.value.length >= total.value || !list.length) finished.value = true
+    page.value++
+  } catch (e) { finished.value = true } finally { loading.value = false; refreshing.value = false; inFlight.value = false }
+}
+function reload(p = 1) { page.value = p; rows.value = []; finished.value = false; loading.value = false; loadMore() }
+function onRefresh() { reload(1) }
+function open(r) { const id = r.instanceId || r.id; if (id) router.push('/mobile/approvals/' + id) }
 onMounted(() => loadMore())
 </script>
-<style scoped>.amt{font-size:12px;color:#969799;margin-left:8px}</style>
+<style scoped>
+.biz-tag { font-size: 12px; margin-left: 8px; }
+</style>

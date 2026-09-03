@@ -6,6 +6,7 @@ import com.dms.approval.entity.ApprovalTaskStatus;
 import com.dms.approval.repository.ApprovalInstanceRepository;
 import com.dms.approval.repository.ApprovalTaskRepository;
 import com.dms.notification.mail.ApprovalMailNotifier;
+import com.dms.system.service.SystemSettingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +26,7 @@ public class ApprovalTimeoutReminderTask {
     private final ApprovalTaskRepository taskRepository;
     private final ApprovalInstanceRepository instanceRepository;
     private final ApprovalMailNotifier mailNotifier;
+    private final SystemSettingService systemSettingService;
 
     @Value("${dms.approval.reminder.interval-hours:24}")
     private int defaultIntervalHours;
@@ -39,6 +41,10 @@ public class ApprovalTimeoutReminderTask {
     @Transactional
     public void remindOverdueTasks() {
         if (!enabled) return;
+        if (!systemSettingService.isApprovalReminderMailEnabled()) {
+            log.info("定时审批提醒邮件已被开关关闭，跳过本次发送");
+            return;
+        }
         OffsetDateTime now = OffsetDateTime.now();
         List<ApprovalTask> overdue = taskRepository.findByStatusAndDueAtBefore(ApprovalTaskStatus.PENDING, now);
         int reminded = 0;

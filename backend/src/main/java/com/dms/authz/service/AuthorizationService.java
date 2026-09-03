@@ -19,7 +19,9 @@ import com.dms.common.PageQuery;
 import com.dms.common.PageResult;
 import com.dms.common.util.SpecUtil;
 import com.dms.common.util.TenantContext;
+import com.dms.system.service.SystemSettingService;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.Tuple;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +47,12 @@ public class AuthorizationService {
     private final AuthorizationRepository authorizationRepository;
     private final TempAuthorizationRepository tempAuthorizationRepository;
     private final ApprovalService approvalService;
+    private final SystemSettingService systemSettingService;
+
+    /** 授权创建/续约审批业务类型 */
+    public static final String BT_AUTHORIZATION = "AUTHORIZATION";
+    /** 授权终止审批业务类型 */
+    public static final String BT_AUTHORIZATION_TERMINATE = "AUTHORIZATION_TERMINATE";
 
     @PersistenceContext
     private EntityManager em;
@@ -167,6 +175,25 @@ public class AuthorizationService {
         a.setAuthorizedCategories(rowsForCsv("product_categories", a.getCategoryIds()));
         a.setAuthorizedTerminals(rowsForCsv("hospitals", a.getTerminalIds()));
         a.setTerminalNames(namesForCsv("hospitals", a.getTerminalIds()));
+        a.setProductLineNames(namesForCsv("product_lines", a.getProductLines()));
+        a.setAuthorizedProductLines(rowsForCsv("product_lines", a.getProductLines()));
+        // 状态中文展示
+        a.setStatusLabel(statusLabel(a.getStatus()));
+    }
+
+    private String statusLabel(String status) {
+        if (status == null) return null;
+        return switch (status) {
+            case "draft" -> "草稿";
+            case "pending_approval" -> "审批中";
+            case "terminate_pending" -> "终止审批中";
+            case "active" -> "生效中";
+            case "not_started" -> "未开始";
+            case "expired" -> "已到期";
+            case "terminated" -> "已终止";
+            case "rejected" -> "已驳回";
+            default -> status;
+        };
     }
 
     private String queryName(String sql, Long id) {
@@ -216,24 +243,25 @@ public class AuthorizationService {
         } catch (Exception e) { return result; }
         return result;
     }
+    /**
+     * 创建授权（厂家授权给经销商）：维度为 经销商 + 产品线(多选) + 终端医院(多选) + 有效期。
+     * 必须经过审批；审批通过由回调置为 active/not_started。创建前做跨经销商排他校验。
+     */
     @Transactional
     public Authorization create(Authorization req) {
         UUID tenantId = TenantContext.getTenantId();
         if (tenantId == null) {
             throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
         }
-        // 授权业务字段校验：经销商 / 产品分类 / 医院 / 有效期 必填
         if (req.getDealerId() == null) {
             throw new BusinessException(ErrorCode.PARAM_MISSING, "经销商必填");
         }
-        if ((req.getCategoryIds() == null || req.getCategoryIds().isBlank())
-                && (req.getProductLines() == null || req.getProductLines().isBlank())
-                && req.getProductLineId() == null && req.getProductId() == null) {
-            throw new BusinessException(ErrorCode.PARAM_MISSING, "授权产品分类必填");
+        normalizeScope(req);
+        if (req.getProductLines() == null || req.getProductLines().isBlank()) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "授权产品线必填（至少选择一个产品线）");
         }
-        if ((req.getTerminalIds() == null || req.getTerminalIds().isBlank())
-                && req.getTerminalId() == null) {
-            throw new BusinessException(ErrorCode.PARAM_MISSING, "授权医院/终端必填");
+        if (req.getTerminalIds() == null || req.getTerminalIds().isBlank()) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "授权终端医院必填（至少选择一家医院）");
         }
         if (req.getValidFrom() == null || req.getValidTo() == null) {
             throw new BusinessException(ErrorCode.PARAM_MISSING, "有效期开始和结束必填");
@@ -241,34 +269,25 @@ public class AuthorizationService {
         if (req.getValidTo().isBefore(req.getValidFrom())) {
             throw new BusinessException(ErrorCode.PARAM_MISSING, "有效期结束不能早于开始");
         }
+        assertNoOverlap(tenantId, req.getDealerId(), req.getProductLines(), req.getTerminalIds(),
+                req.getValidFrom(), req.getValidTo(), null);
+
         req.setId(null);
         req.setTenantId(tenantId);
         // 新增授权必须经过审批，忽略客户端传入的 status，防止绕过审批直接生效
         req.setStatus("pending_approval");
-        if (req.getSource() == null) req.setSource("contract");
+        if (req.getSource() == null) req.setSource("manual");
         if (req.getAuthType() == null) req.setAuthType("ORDER");
         req.setUpdatedAt(OffsetDateTime.now());
         Authorization saved = authorizationRepository.save(req);
         try {
             StartApprovalRequest request = new StartApprovalRequest();
-            request.setBusinessType("AUTHORIZATION");
+            request.setBusinessType(BT_AUTHORIZATION);
             request.setBusinessId(saved.getId());
             request.setBusinessCode("AUTH-" + saved.getId());
             request.setTitle("授权审批: AUTH-" + saved.getId());
-            Map<String, Object> snapshot = new HashMap<>();
-            snapshot.put("dealerId", saved.getDealerId());
-            snapshot.put("authType", saved.getAuthType());
-            snapshot.put("productLineId", saved.getProductLineId());
-            snapshot.put("terminalId", saved.getTerminalId());
-            snapshot.put("validFrom", saved.getValidFrom());
-            snapshot.put("validTo", saved.getValidTo());
-            request.setBusinessSnapshot(snapshot);
-            ApprovalInstance instance = approvalService.start(request);
-            if ("APPROVED".equals(instance.getStatus().name()) || "AUTO_APPROVED".equals(instance.getStatus().name())) {
-                saved.setStatus("active");
-                saved.setUpdatedAt(OffsetDateTime.now());
-                saved = authorizationRepository.save(saved);
-            }
+            request.setBusinessSnapshot(buildSnapshot(saved));
+            approvalService.start(request);
         } catch (Exception e) {
             saved.setStatus("draft");
             authorizationRepository.save(saved);
@@ -278,34 +297,288 @@ public class AuthorizationService {
     }
 
     /**
+     * 授权续约：基于已有的生效/未开始/已到期授权复制经销商+产品线+终端医院，按新时间段生成新授权并走审批。
+     * 同一经销商续约允许时间段相接/重叠（排他校验跳过本经销商）。
+     */
+    @Transactional
+    public Authorization renew(Long id, Authorization req) {
+        UUID tenantId = TenantContext.getTenantId();
+        Authorization src = getOwned(id, tenantId);
+        if (!"active".equals(src.getStatus()) && !"not_started".equals(src.getStatus())
+                && !"expired".equals(src.getStatus())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "仅生效中/未开始/已到期的授权可以续约");
+        }
+        Authorization copy = new Authorization();
+        copy.setDealerId(src.getDealerId());
+        copy.setContractId(src.getContractId());
+        copy.setAuthType(src.getAuthType());
+        copy.setProductLines(src.getProductLines());
+        copy.setTerminalIds(src.getTerminalIds());
+        copy.setCategoryIds(src.getCategoryIds());
+        copy.setSource("renew");
+        copy.setRemark(req != null && req.getRemark() != null ? req.getRemark()
+                : "续约自授权 AUTH-" + src.getId());
+        if (req != null && req.getValidFrom() != null) copy.setValidFrom(req.getValidFrom());
+        else copy.setValidFrom(java.time.LocalDate.now());
+        if (req != null && req.getValidTo() != null) copy.setValidTo(req.getValidTo());
+        else throw new BusinessException(ErrorCode.PARAM_MISSING, "续约必须指定新的有效期结束时间");
+        if (copy.getValidTo().isBefore(copy.getValidFrom())) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "续约有效期结束不能早于开始");
+        }
+        return create(copy);
+    }
+
+    /**
+     * 授权终止：对生效中(active)/未开始(not_started)的授权发起终止审批；通过后由回调置 terminated。
+     */
+    @Transactional
+    public Authorization terminate(Long id, String reason) {
+        UUID tenantId = TenantContext.getTenantId();
+        Authorization a = getOwned(id, tenantId);
+        if (!"active".equals(a.getStatus()) && !"not_started".equals(a.getStatus())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "仅生效中或未开始的授权可以终止");
+        }
+        String prevStatus = a.getStatus();
+        a.setStatus("terminate_pending");
+        a.setUpdatedAt(OffsetDateTime.now());
+        a = authorizationRepository.save(a);
+        try {
+            StartApprovalRequest request = new StartApprovalRequest();
+            request.setBusinessType(BT_AUTHORIZATION_TERMINATE);
+            request.setBusinessId(a.getId());
+            request.setBusinessCode("AUTH-TERM-" + a.getId());
+            request.setTitle("授权终止审批: AUTH-" + a.getId());
+            Map<String, Object> snapshot = buildSnapshot(a);
+            snapshot.put("prevStatus", prevStatus);
+            snapshot.put("terminateReason", reason);
+            request.setBusinessSnapshot(snapshot);
+            approvalService.start(request);
+        } catch (Exception e) {
+            a.setStatus(prevStatus);
+            authorizationRepository.save(a);
+            throw e;
+        }
+        return a;
+    }
+
+    /** 终端医院选项：可按区域子树(省/市)过滤 + 关键字，返回 id/name/region 等，供授权批量选择 */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listTerminals(Long regionId, String keyword) {
+        UUID tenantId = TenantContext.getTenantId();
+        StringBuilder sql = new StringBuilder(
+                "SELECT h.id, h.name, h.code, h.region_id, r.name AS region_name " +
+                "FROM hospitals h LEFT JOIN regions r ON r.id = h.region_id " +
+                "WHERE h.deleted_at IS NULL ");
+        List<Object> params = new ArrayList<>();
+        int idx = 1;
+        if (tenantId != null) { sql.append(" AND h.tenant_id = ?").append(idx++); params.add(tenantId); }
+        if (regionId != null) {
+            sql.append(" AND h.region_id IN (WITH RECURSIVE sub AS (")
+               .append(" SELECT id FROM regions WHERE id = ?").append(idx++)
+               .append(" UNION ALL SELECT c.id FROM regions c JOIN sub ON c.parent_id = sub.id)")
+               .append(" SELECT id FROM sub)");
+            params.add(regionId);
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            sql.append(" AND h.name ILIKE ?").append(idx++);
+            params.add("%" + keyword.trim() + "%");
+        }
+        sql.append(" ORDER BY h.id LIMIT 500");
+        var q = em.createNativeQuery(sql.toString(), Tuple.class);
+        for (int i = 0; i < params.size(); i++) q.setParameter(i + 1, params.get(i));
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", t.get("id", Long.class) == null ? null : ((Number) t.get("id")).longValue());
+            m.put("name", t.get("name", String.class));
+            m.put("code", t.get("code", String.class));
+            m.put("regionId", t.get("region_id") == null ? null : ((Number) t.get("region_id")).longValue());
+            m.put("regionName", t.get("region_name", String.class));
+            list.add(m);
+        }
+        return list;
+    }
+
+    /** 产品线选项：启用状态的产品线 id/name/code */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listProductLines() {
+        UUID tenantId = TenantContext.getTenantId();
+        var q = em.createNativeQuery(
+                "SELECT id, code, name FROM product_lines WHERE deleted_at IS NULL " +
+                "AND (status IS NULL OR status = 'active') " +
+                (tenantId != null ? "AND tenant_id = ?1 " : "") +
+                "ORDER BY sort_order NULLS LAST, id", Tuple.class);
+        if (tenantId != null) q.setParameter(1, tenantId);
+        @SuppressWarnings("unchecked")
+        List<Tuple> rows = q.getResultList();
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Tuple t : rows) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", ((Number) t.get("id")).longValue());
+            m.put("code", t.get("code", String.class));
+            m.put("name", t.get("name", String.class));
+            list.add(m);
+        }
+        return list;
+    }
+
+    /** 授权-下单挂钩开关（当前租户） */
+    @Transactional(readOnly = true)
+    public boolean isOrderAuthzEnforced() {
+        return systemSettingService.isOrderAuthzEnforced();
+    }
+
+    /** 更新授权-下单挂钩开关（当前租户） */
+    @Transactional
+    public void setOrderAuthzEnforced(boolean enabled) {
+        systemSettingService.setOrderAuthzEnforced(enabled);
+    }
+
+    /** 产品线/终端字段归一到 CSV 字段（兼容单值 productLineId/terminalId） */
+    private void normalizeScope(Authorization a) {
+        if ((a.getProductLines() == null || a.getProductLines().isBlank()) && a.getProductLineId() != null) {
+            a.setProductLines(String.valueOf(a.getProductLineId()));
+        }
+        if ((a.getTerminalIds() == null || a.getTerminalIds().isBlank()) && a.getTerminalId() != null) {
+            a.setTerminalIds(String.valueOf(a.getTerminalId()));
+        }
+    }
+
+    private Map<String, Object> buildSnapshot(Authorization a) {
+        Map<String, Object> snapshot = new HashMap<>();
+        snapshot.put("dealerId", a.getDealerId());
+        snapshot.put("authType", a.getAuthType());
+        snapshot.put("productLines", a.getProductLines());
+        snapshot.put("terminalIds", a.getTerminalIds());
+        snapshot.put("validFrom", a.getValidFrom());
+        snapshot.put("validTo", a.getValidTo());
+        return snapshot;
+    }
+
+    private Authorization getOwned(Long id, UUID tenantId) {
+        Authorization a = authorizationRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "授权不存在: " + id));
+        if (tenantId != null && !tenantId.equals(a.getTenantId())) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "授权不存在: " + id);
+        }
+        return a;
+    }
+
+    /**
+     * 排他校验：同一租户内，时间段重叠、产品线集合与终端医院集合均有交集，
+     * 且授权给「其他经销商」的、状态为 pending_approval/active/not_started 的授权视为冲突。
+     */
+    private void assertNoOverlap(UUID tenantId, Long dealerId, String productLinesCsv,
+                                 String terminalIdsCsv, LocalDate validFrom, LocalDate validTo, Long excludeId) {
+        List<Long> lineIds = parseIdList(productLinesCsv);
+        List<Long> termIds = parseIdList(terminalIdsCsv);
+        if (lineIds.isEmpty() || termIds.isEmpty()) return;
+        List<Authorization> blockers = authorizationRepository.findOverlapCandidates(
+                tenantId, validFrom, validTo,
+                java.util.List.of("pending_approval", "active", "not_started"));
+        for (Authorization b : blockers) {
+            if (excludeId != null && excludeId.equals(b.getId())) continue;
+            if (b.getDealerId() != null && b.getDealerId().equals(dealerId)) continue;
+            if (!intersects(lineIds, parseIdList(b.getProductLines()))) continue;
+            if (!intersects(termIds, parseIdList(b.getTerminalIds()))) continue;
+            String dealerName = queryName("SELECT name FROM dealers WHERE id = ?1", b.getDealerId());
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION,
+                    "授权冲突：所选部分终端医院在 " + b.getValidFrom() + "~" + b.getValidTo()
+                            + " 内已授权给经销商 [" + (dealerName != null ? dealerName : b.getDealerId())
+                            + "]，同一医院同一产品线在同一时间段不能重复授权给不同经销商");
+        }
+    }
+
+    private List<Long> parseIdList(String csv) {
+        List<Long> ids = new ArrayList<>();
+        if (csv == null || csv.isBlank()) return ids;
+        for (String s : csv.split("[,，]")) {
+            s = s.trim();
+            if (!s.isEmpty()) { try { ids.add(Long.parseLong(s)); } catch (NumberFormatException ignored) {} }
+        }
+        return ids;
+    }
+
+    private boolean intersects(List<Long> a, List<Long> b) {
+        if (a.isEmpty() || b.isEmpty()) return false;
+        for (Long x : a) if (b.contains(x)) return true;
+        return false;
+    }
+
+    /**
      * 授权检查：为每一行订单商品/终端判定是否被覆盖。
+     */
+    /**
+     * 授权检查：为每一行订单商品/终端判定是否被覆盖。
+     * 维度：订单产品的 product_line_id 命中授权 product_lines；终端医院命中 terminal_ids。
+     * 若租户关闭「授权-下单挂钩」开关，则直接全部放行（授权与下单解耦）。
      */
     @Transactional(readOnly = true)
     public List<AuthorizationCheckResult> check(AuthorizationCheckRequest request) {
         UUID tenantId = TenantContext.getTenantId();
-        LocalDate at = request.getAtTime() != null ? request.getAtTime() : LocalDate.now();
-        String authType = request.getAuthType() == null ? "ORDER" : request.getAuthType();
-
-        List<Authorization> active = authorizationRepository.findActive(
-                tenantId, request.getDealerId(), authType, at);
-
         List<AuthorizationCheckResult> results = new ArrayList<>();
         if (request.getLines() == null || request.getLines().isEmpty()) {
             return results;
         }
+        // 开关关闭：授权与下单无关，直接放行
+        if (!systemSettingService.isOrderAuthzEnforced(tenantId)) {
+            for (AuthorizationCheckRequest.Line line : request.getLines()) {
+                results.add(new AuthorizationCheckResult(line.getProductId(), line.getTerminalId(),
+                        true, "授权校验未启用"));
+            }
+            return results;
+        }
+
+        LocalDate at = request.getAtTime() != null ? request.getAtTime() : LocalDate.now();
+        String authType = request.getAuthType() == null ? "ORDER" : request.getAuthType();
+        List<Authorization> active = authorizationRepository.findActive(
+                tenantId, request.getDealerId(), authType, at);
+
+        boolean hospitalScope = "SALES_TO_HOSPITAL".equalsIgnoreCase(authType);
         for (AuthorizationCheckRequest.Line line : request.getLines()) {
-            Long catId = line.getProductId() != null ? productCategoryId(line.getProductId()) : null;
-            boolean matched = active.stream().anyMatch(a ->
-                    (matchScope(a.getProductId(), line.getProductId()) || matchCategory(a.getCategoryIds(), catId))
-                            && matchTerminal(a, line.getTerminalId()));
+            Long productLineId = line.getProductLineId() != null ? line.getProductLineId()
+                    : productLineId(line.getProductId());
+            // 必须存在「同一条」授权同时覆盖产品线与终端医院，避免跨授权交叉放行
+            boolean matched = active.stream().anyMatch(a -> {
+                if (!matchProductLine(a, productLineId)) return false;
+                if (hospitalScope) return matchTerminal(a, line.getTerminalId());
+                return true; // ORDER 下单时终端未定，只校验产品线
+            });
+
+            String reason;
+            if (matched) {
+                reason = "OK";
+            } else {
+                boolean lineMatched = active.stream().anyMatch(a -> matchProductLine(a, productLineId));
+                reason = lineMatched ? "终端医院未在授权范围" : "产品所属产品线未授权";
+            }
             AuthorizationCheckResult r = new AuthorizationCheckResult();
             r.setProductId(line.getProductId());
             r.setTerminalId(line.getTerminalId());
             r.setAuthorized(matched);
-            r.setReason(matched ? "OK" : "无有效授权");
+            r.setReason(reason);
             results.add(r);
         }
         return results;
+    }
+
+    /** 产品线匹配：授权 product_lines(CSV) 含该行产品线，或授权未限定产品线（通配） */
+    private boolean matchProductLine(Authorization a, Long productLineId) {
+        List<Long> lines = parseIdList(a.getProductLines());
+        if (lines.isEmpty()) return true; // 未限定产品线=通配
+        return productLineId != null && lines.contains(productLineId);
+    }
+
+
+    private Long productLineId(Long productId) {
+        if (productId == null) return null;
+        try {
+            Object r = em.createNativeQuery("SELECT product_line_id FROM products WHERE id = ?1")
+                    .setParameter(1, productId).getResultList().stream().findFirst().orElse(null);
+            return r == null ? null : Long.parseLong(String.valueOf(r));
+        } catch (Exception e) { return null; }
     }
 
     private Long productCategoryId(Long productId) {
@@ -370,8 +643,10 @@ public class AuthorizationService {
 
     @Transactional
     public void delete(Long id) {
-        Authorization a = authorizationRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "授权不存在"));
+        Authorization a = getOwned(id, TenantContext.getTenantId());
+        if (!"draft".equals(a.getStatus()) && !"rejected".equals(a.getStatus())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "仅草稿或已驳回的授权可以删除");
+        }
         a.setDeletedAt(OffsetDateTime.now());
         authorizationRepository.save(a);
     }

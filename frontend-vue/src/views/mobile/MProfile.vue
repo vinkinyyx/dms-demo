@@ -1,7 +1,7 @@
-﻿<template>
+<template>
   <div>
     <div class="profile-header">
-      <van-icon name="user-circle-o" size="56" color="#fff" />
+      <van-icon name="user-circle-o" size="56" color="#fff" class="pf-avatar" />
       <div class="name">{{ userStore.user?.displayName || userStore.user?.name || userStore.user?.username || userStore.username }}</div>
       <div class="meta" v-if="userTypeLabel">{{ userTypeLabel }}</div>
     </div>
@@ -78,9 +78,9 @@ async function onLogout() {
 
 <style scoped>
 .profile-header {
-  background: linear-gradient(135deg, var(--dms-color-primary), var(--dms-blue-700));
-  color: var(--dms-text-inverse);
-  padding: 36px 20px 48px;
+  background: linear-gradient(135deg, var(--dms-blue-700), var(--dms-color-primary));
+  color: var(--dms-text-inverse, #fff);
+  padding: calc(36px + var(--dms-mobile-safe-top)) 20px 48px;
   text-align: center;
 }
 .name { font-size: 20px; font-weight: 600; margin-top: 8px; }

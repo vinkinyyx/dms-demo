@@ -118,16 +118,16 @@ onMounted(loadAll)
 </script>
 
 <style scoped>
-.kpi-block { background: var(--dms-bg-container); margin: 10px 12px; border-radius: 12px; padding: 14px 8px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-.kpi-title { font-size: 14px; font-weight: 600; color: var(--dms-text-2); margin: 0 6px 8px; }
-.kpi-v { font-size: 22px; font-weight: 700; color: var(--dms-color-primary); }
+.kpi-block { background: var(--dms-bg-container); margin: var(--dms-spacing-3); border-radius: var(--dms-radius-xl); padding: var(--dms-spacing-4) 0; box-shadow: var(--dms-shadow-sm); }
+.kpi-title { font-size: 14px; font-weight: 600; color: var(--dms-text-1); margin: 0 var(--dms-spacing-4) var(--dms-spacing-2); }
+.kpi-v { font-size: 22px; font-weight: 700; color: var(--dms-text-1); }
 .kpi-l { font-size: 12px; color: var(--dms-text-4); margin-top: 4px; }
-.sec-title { font-size: 15px; font-weight: 600; margin: 16px 16px 8px; color: var(--dms-text-2); }
+.sec-title { font-size: 15px; font-weight: 600; margin: var(--dms-spacing-5) var(--dms-spacing-4) var(--dms-spacing-2); color: var(--dms-text-1); }
 .trend-body { padding: 8px 16px 12px; }
 .trend-row { display: flex; align-items: center; padding: 6px 0; font-size: 13px; }
 .trend-l { width: 64px; color: var(--dms-text-3); }
 .trend-bar-wrap { flex: 1; background: var(--dms-gray-100); height: 8px; border-radius: 4px; margin: 0 8px; overflow: hidden; }
-.trend-bar { background: linear-gradient(90deg, var(--dms-color-primary), var(--dms-color-primary)); height: 100%; }
-.trend-v { color: var(--dms-color-danger); font-weight: 600; min-width: 88px; text-align: right; }
-.amt { color: var(--dms-color-danger); font-weight: 600; }
+.trend-bar { background: var(--dms-color-primary); height: 100%; }
+.trend-v { color: var(--dms-text-1); font-weight: 600; min-width: 88px; text-align: right; }
+.amt { color: var(--dms-text-1); font-weight: 600; }
 </style>

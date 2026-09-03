@@ -23,6 +23,7 @@ const routes = [
       { path: 'role-templates', name: 'RoleTemplates', component: () => import('@/views/config/RoleTemplates.vue'), meta: { title: '角色模板' } },
       { path: 'menus', name: 'Menus', component: () => import('@/views/config/Menus.vue'), meta: { title: '平台菜单' } },
       { path: 'ui-configs', name: 'UiConfigs', component: () => import('@/views/config/UiConfigs.vue'), meta: { title: '页面配置' } },
+      { path: 'notify-settings', name: 'NotifySettings', component: () => import('@/views/config/NotifySettings.vue'), meta: { title: '通知设置' } },
       { path: 'dicts', name: 'Dicts', component: () => import('@/views/dict/Dicts.vue'), meta: { title: '全局字典' } },
       { path: 'logs/api', name: 'ApiLogs', component: () => import('@/views/log/ApiLogs.vue'), meta: { title: '接口日志' } },
       { path: 'logs/audits', name: 'AuditLogs', component: () => import('@/views/log/AuditLogs.vue'), meta: { title: '审计日志' } },

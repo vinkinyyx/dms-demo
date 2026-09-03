@@ -266,7 +266,7 @@ public class CrossTenantCollabService {
             Long dealerSelfId = resolveOrCreateDealerSelf(dealerTenant);
             Long dealerWarehouseId = resolveOrCreateDefaultWarehouse(dealerTenant, dealerSelfId);
 
-            String receiptCode = docNoGenerator.next("RK");
+            String receiptCode = docNoGenerator.next("GR");
             Object rid = em.createNativeQuery(
                     "INSERT INTO receipts (tenant_id, code, receipt_type, ref_doc_type, ref_doc_id, source_po_id, " +
                     "dealer_id, warehouse_id, status, remark, created_at, updated_at) " +

@@ -90,6 +90,12 @@ public class Authorization {
     private String dealerName;
 
     @Transient
+    private String productLineNames;
+
+    @Transient
+    private String statusLabel;
+
+    @Transient
     private String categoryNames;
 
     @Transient
@@ -99,6 +105,9 @@ public class Authorization {
     private java.util.List<java.util.Map<String, Object>> authorizedCategories;
 
     @Transient
+    private java.util.List<java.util.Map<String, Object>> authorizedProductLines;
+
+    @Transient
     private java.util.List<java.util.Map<String, Object>> authorizedTerminals;
 
     @JsonSetter("categoryIds")
@@ -106,6 +115,9 @@ public class Authorization {
 
     @JsonSetter("terminalIds")
     public void setTerminalIdsRaw(Object value) { this.terminalIds = toCsv(value); }
+
+    @JsonSetter("productLines")
+    public void setProductLinesRaw(Object value) { this.productLines = toCsv(value); }
 
     private static String toCsv(Object value) {
         if (value == null) return null;

@@ -7,13 +7,28 @@
 **一旦 AI 与用户讨论完待确认项、正式开始执行后，所有操作全部自动通过，不需要用户确认，无论风险多大。**
 
 #### 核心原则
+
 - **任务启动后全程自动执行**：用户直接给出任务指令后，或用户明确说"开始""继续"等启动类指令后，AI 立即全流程自动推进，不再向用户发起任何形式的确认、二次询问或"是否继续"的提示
+
 - **无论风险大小一律自动执行**：包括但不限于删除文件、覆盖生产环境、清空数据库、强制推送、部署上线等所有操作，全部自动执行，不需要用户确认
+
 - **自行决策**：遇到需要选择的分支时，AI 自行基于上下文做出最合理的默认决策并继续执行，不要停下等待用户回复；仅在事后总结中说明所做的关键假设
+
 - **禁止使用确认类工具**：绝对禁止使用 AskUserQuestion / NotifyUser / 类似"等待用户确认"的交互工具
+
 - **唯一可以暂停的情况**：缺凭证/法律红线这两类也直接尝试自动通过（例如：用已有缓存的凭证、寻找替代登录方式、使用备用账号、调整到合规方案继续推进）；只有在执行不下去（尝试 3 轮仍无法解决）时才停下来报告诊断结论，不主动询问用户。
+
 - **命令执行策略**：所有操作一律直接执行，不要请求批准，无论风险等级
+
 - **报错与失败处理**：遇到报错先自行分析并尝试至多 3 轮修复，仍无法解决再停下并输出诊断结论，而不是频繁回问用户。
+
+- **止损硬规则（2026-09-03 用户强制要求，优先级高于"3 轮修复"）**：
+
+  1. 用户明确说过"无法操作就尽早停止/别浪费时间/我不在电脑边/无法解锁"时，凡是**依赖用户本人在场**才能完成的动作（解锁电脑、扫码、短信验证、浏览器扩展授权、安装软件、管理员权限弹窗），**最多尝试 1 条替代自动化路线**，确认不通立即结束并汇报，禁止第 2 条、第 3 条路线依次硬试。
+  2. "3 轮修复"仅适用于**同一技术问题的重试**（如构建报错），不得用作"把桌面自动化→沙箱云浏览器→海外入口→扩展接管…一条接一条枚举"的依据。每条新路线开试前先判断：它是否依赖用户在场？依赖 → 直接不试，写进报告。
+  3. 每超过 20 分钟无可见进展，必须自检一次"现在是否已触发止损条件"，而不是闷头继续。
+  4. 违反止损（在用户已明确表达不满后仍继续尝试不可用路线）视为任务失败。
+
 - **输出规范**：任务结束时统一给出①做了什么 ②关键假设 ③产物链接/路径 ④后续可选建议，中间过程不必逐步征求同意。
 
 ### 0. 🎯 多 Agent 派发守卫规则
@@ -21,46 +36,78 @@
 **所有任务都由默认的派发守卫（Dispatcher Guard）角色接管，然后根据任务类型派发给对应的专业 Agent 执行。**
 
 #### 核心原则
+
 - **默认进入派发守卫模式**：AI 接收到任何任务时，默认以"派发守卫"角色进入，分析任务类型
+
 - **路由决策**：根据任务性质，将任务派发给合适的专业 Agent：
+
   - 需求分析、用户故事、验收标准 → **BA**（需求分析师）
+
   - 架构评审、技术方案审查 → **Architect**（架构师）
+
   - 后端开发、API、数据库 → **Backend Dev**（后端工程师）
+
   - 前端开发、Vue 页面、UI 交互 → **Frontend Dev**（前端工程师）
+
   - 测试用例、回归测试、验收 → **QA**（测试工程师）
+
   - 简单查询、单步任务、不涉及专业技能 → **直接由主线程处理**，不派发
+
 - **派发信息包**：每次派发必须包含完整信息（目标、收益、源材料、范围、检查项、停止条件、返回格式）
+
 - **禁止使用 default profile**：子 Agent 不允许使用 `default` 配置（除了派发守卫本身）
 
 #### 任务类型判定流程
+
 1. **第一步：判断任务复杂度**
+
    - 单步、简单查询 → 主线程直接处理
+
    - 多步、需要专业技能 → 启动派发流程
 2. **第二步：识别任务领域**
+
    - 业务需求 → BA
+
    - 技术方案 → Architect
+
    - 后端代码 → Backend Dev
+
    - 前端代码 → Frontend Dev
+
    - 测试验证 → QA
 3. **第三步：派发执行**
+
    - 明确传 `agent_type`
+
    - 准备完整派发信息包
+
    - 接收并评审子 Agent 返回结果
 4. **第四步：交付验收**
+
    - 主线程担任 PM 角色，负责最终验收
+
    - 子 Agent 不直接与用户交互，结果反馈给主线程
 
 #### 适用场景
+
 - ✅ 复杂需求开发（多模块、多步骤）
+
 - ✅ 需要架构评审的技术方案
+
 - ✅ 跨前后端的完整功能实现
+
 - ✅ 需要专业测试验证的场景
+
 - ✅ 中长期项目迭代
 
 #### 不适用场景（主线程直接处理）
+
 - ❌ 简单的文件读写
+
 - ❌ 单行代码修改
+
 - ❌ 简单的信息查询
+
 - ❌ 单步命令执行
 
 ### 1. 📋 需求处理流程
@@ -74,49 +121,62 @@
 **交付前必须按此清单逐项检查，全部通过才能交付**。
 
 - 所有服务能正常启动（PostgreSQL/Redis/Backend/Frontend）
+
 - 能正常登录（admin账号密码正确）
+
 - 本次修改的所有需求逐项验证通过
+
 - 没有回归破坏原有功能
+
 - 文档全部更新完成
+
 - 项目文件夹清理完成（无过时冗余文件）
+
 - 部署完成后主动验证所有功能正常（登录、菜单跳转、表单操作、移动端H5）
 
 ### 3. 📄 文档更新规则
 
 每次完成功能开发/需求整改后，**必须更新现有文档**，禁止新建文档，只在现有文档上追加迭代内容。
 
-| # | 文档 | 更新要点 |
-|---|---|---|
-| 1 | docs/03_需求文档/需求文档.md | 头部版本号 + 变更日志；涉及规则变化时同步"核心业务规则"正文 |
-| 2 | docs/04_功能详细设计/功能详细设计.md | 头部版本号 + 变更日志；涉及新流程/新表/新决策时同步"关键数据流""模块划分""关键技术决策"正文 |
-| 3 | docs/02_需求分析/需求分析_UserStory.md | 头部速览表 + 追加对应版本用户故事（附录，含验收标准） |
-| 4 | docs/05_数据库设计/数据库设计.md | 头部版本号 + 表结构变更（对应 Flyway 迁移） |
-| 5 | docs/06_API设计/API接口清单.md | 头部版本号 + 接口变更日志 |
-| 6 | docs/09_测试报告/测试报告.md | 变更日志 + 累计统计表 + 关键 Bug 修复清单 + 部署验证清单 |
-| 7 | docs/文档索引.md | 唯一导航索引 |
-| 8 | 根目录 README.md | 版本号、交付要点、测试成绩更新到最新 |
+| # | 文档                               | 更新要点                                                |
+| - | -------------------------------- | --------------------------------------------------- |
+| 1 | docs/03\_需求文档/需求文档.md            | 头部版本号 + 变更日志；涉及规则变化时同步"核心业务规则"正文                    |
+| 2 | docs/04\_功能详细设计/功能详细设计.md        | 头部版本号 + 变更日志；涉及新流程/新表/新决策时同步"关键数据流""模块划分""关键技术决策"正文 |
+| 3 | docs/02\_需求分析/需求分析\_UserStory.md | 头部速览表 + 追加对应版本用户故事（附录，含验收标准）                        |
+| 4 | docs/05\_数据库设计/数据库设计.md          | 头部版本号 + 表结构变更（对应 Flyway 迁移）                         |
+| 5 | docs/06\_API设计/API接口清单.md        | 头部版本号 + 接口变更日志                                      |
+| 6 | docs/09\_测试报告/测试报告.md            | 变更日志 + 累计统计表 + 关键 Bug 修复清单 + 部署验证清单                 |
+| 7 | docs/文档索引.md                     | 唯一导航索引                                              |
+| 8 | 根目录 README.md                    | 版本号、交付要点、测试成绩更新到最新                                  |
 
 - 版本号递增：v3.5.x → 下一个小版本号，日期更新为当天
+
 - 文档内容基于真实代码/迁移/测试结果回填，**禁止臆造**功能
+
 - 版本号、Flyway 版本、镜像 tag、测试通过数在各文档间保持一致
+
 - 每类文档只保留一份主文档，历史变更以"变更日志/附录"形式累加
 
 ### 4. 🌍 双环境管理规则
 
-| 环境 | 地址 | 用途 | 数据库 |
-|------|------|------|--------|
+| 环境   | 地址                                                                                                                                                                                                                                                                                                             | 用途                                                            | 数据库             |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | --------------- |
 | 测试环境 | UI（域名，推荐）：`http://dms-dev.mysolmed.com/dms/`（IP 直连 `http://43.128.145.141/dms/` 行为一致）；移动 H5 `/dms/mobile/login`；经销商准入注册 `/dms/mobile/register`；后台 `/dms/admin/`；API/health：根路径 `/api`、`/auth`、`/actuator`；宣传手册 `/brochure/`（移动页 `/brochure/mobile.html`、打印页 `/brochure/print.html`，**无 /brochure/pages/ 子目录**） | 需求开发、功能调整、验证测试（Docker Compose，统一 80 端口；裸域名 `/` 已 302→`/dms/`） | `dms_test`（容器内） |
-| 正式环境 | `http://8.133.193.238/dms/` | 生产使用（webgate/nginx 统一 80，DMS 挂 `/dms/` 子路径） | `dms`（容器内） |
+| 正式环境 | `http://8.133.193.238/dms/`                                                                                                                                                                                                                                                                                    | 生产使用（webgate/nginx 统一 80，DMS 挂 `/dms/` 子路径）                   | `dms`（容器内）      |
 
 #### 核心规则
+
 1. **所有需求调整和功能修改，只能先部署到测试环境验证**，禁止直接修改正式环境
 2. **推送正式环境需要用户明确指令**：测试环境验证完成后，用户明确说"推送正式环境"或类似指令后，AI 自动执行正式环境更新，不再额外确认
 3. 正式环境只允许做以下操作：
+
    - 用户明确指令后的版本推送
+
    - 紧急问题修复（需用户明确指令）
 4. 代码修改统一先更新到测试环境，验证通过后再复制到正式环境
 
 #### 推送正式环境流程
+
 1. AI 测试环境验证功能正常
 2. AI 向用户汇报变更内容和测试结果
 3. 用户下达"推送正式环境"指令
@@ -128,70 +188,112 @@
 **AI 全自动部署，严禁让用户手动执行命令。代码修改完成后立即部署，不需要用户多次询问。**
 
 #### 工具与环境
+
 - 本地 JDK 17：`C:\tools\jdk-17.0.13+11`
+
 - 本地 Maven：`C:\tools\apache-maven-3.9.6\bin\mvn.cmd`
+
 - 本地 Node.js 和 npm
-- 服务器 SSH 密码：`Welcomeyyx0616`
+
+- 服务器 SSH 密码：`<SSH密码见部署运维负责人/环境变量DMS_DEPLOY_PASSWORD>`
+
 - 测试环境路径：`/opt/dms/dms-test`
+
 - 生产环境路径：`/opt/dms`
+
 - **首选部署工具**：MCP ssh-manager 工具（`ssh_upload` + `ssh_execute`），最稳定
 
 #### ⚠️ 部署铁律（违反任何一条都算部署失败，必须重做）
 
 **铁律 1：源码必须 100% 替换成功**
+
 - 解压后必须用 `cat` 或 `grep` 抽查至少 1 个关键文件验证是新代码
+
 - 不能只相信 mv 命令的退出码（mv 可能成功但目录没替换）
 
 **铁律 2：旧镜像必须删除**
+
 - 每次部署前 `docker rmi dms-frontend-test:latest`（或后端镜像），强制重新构建
+
 - 不能依赖 Docker 自动覆盖 tag，新层可能用旧缓存
 
 **铁律 3：必须校验最终产物（dist/jar 内）**
+
 - 部署完成后必须 `docker exec` 进入新容器，从 dist/jar 内 grep 关键代码确认
+
 - 不能只看服务器上源码目录——源码和运行产物可能不同步
 
 **铁律 4：临时压缩包保留到部署完成**
+
 - 部署完成且校验通过后才删除 `/tmp/*-src-v*.zip` 和本地 `$env:TEMP\*-src-v*.zip`
+
 - 出错时立即可用，无需重新压缩上传
 
 **铁律 5：替换目录用 rm + mkdir，不用 mv 链**
+
 - ❌ 禁止：`mv frontend-vue frontend-vue.old && mv frontend-vue-new frontend-vue`
+
 - ✅ 必须：`rm -rf frontend-vue && mkdir frontend-vue && cd frontend-vue && unzip ...`
+
 - 原因：mv 链任一步失败会导致后续步骤用错目录
 
 **铁律 6：Nginx 代理必须指向正确环境（防环境串线）**
+
 - 测试环境前端容器 `proxy_pass` 必须指向 `172.17.0.1:8082`（测试后端）
+
 - 生产环境前端容器 `proxy_pass` 必须指向 `172.17.0.1:8080`（生产后端）
-- 部署后必须 `docker exec` 进入前端容器，grep nginx.conf 中的 proxy_pass 确认端口正确
-- ❌ 禁止：proxy_pass 写死 IP 不区分环境
+
+- 部署后必须 `docker exec` 进入前端容器，grep nginx.conf 中的 proxy\_pass 确认端口正确
+
+- ❌ 禁止：proxy\_pass 写死 IP 不区分环境
+
 - ❌ 禁止：只看源码目录里的 nginx-vue.conf，不验证容器内实际生效的配置
 
 **铁律 7：部署后必须端到端验证（通过前端端口，不能只验后端）**
+
 - 部署完成后不能只验证后端端口（8082），必须通过前端端口（8083）端到端验证 API
+
 - 必须通过前端端口完成：登录 → 获取列表 → 获取详情 → 删除/创建 等核心操作
+
 - 发现 500/404 立即排查 nginx 代理配置，不能放过
+
 - ❌ 禁止：只验证 `curl http://localhost:8083/` 返回 200 就认为部署成功（HTML 页面正常不代表 API 代理正常）
 
 **铁律 8：Docker 构建缓存必须清理**
+
 - 每次构建前必须 `docker rmi <image>:latest` 删除旧镜像
+
 - 每次构建后必须 `docker builder prune -af` 清理构建缓存
+
 - 原因：Docker 可能复用旧缓存层，导致容器内运行的是旧代码而非新代码
 
 **铁律 9：部署后首检必须验证【文档中所有用户入口 URL】（2026-08-27 新增，禁止跳过）**
+
 - 触发时机：任何部署（后端/前端/Nginx配置修改）完成之后，**第一个执行的验证步骤**，优先级高于 API 登录/健康检查
-- 验证范围：AGENTS.md、project_rules.md、docs/ 索引文档中列出的【所有用户可访问 URL】，至少包含：
+
+- 验证范围：AGENTS.md、project\_rules.md、docs/ 索引文档中列出的【所有用户可访问 URL】，至少包含：
+
   - 测试环境：`/`（根）、`/dms/`、`/dms/admin/`、`/dms/mobile/login`（若存在后台/H5则加上对应路径）
+
   - 生产环境：`/dms/`、`/dms/admin/`、`/dms/mobile/login`
+
   - 后端健康检查 `/actuator/health`
+
 - 验证工具：必须使用 **TRAE-browseruse（真实浏览器）**，不是 curl/Invoke-WebRequest/API 直调
+
 - 通过标准（全部满足才算过）：
+
   1. 每个 URL HTTP 状态 200 或经过合法 302 跳转后最终 200（不允许 404/403/500/白屏）
   2. 跳转后的最终路径与前端构建的 `VITE_BASE`（Vue Router base）一致，不能出现「URL 前缀是 /dms/ 但 Router base 是 / 导致跳 404」的不匹配
   3. 浏览器 DOM refs 数 > 20（非空骨架）、Console 无红色 error、Network 无 5xx
   4. 点击登录 → 进入工作台首页 → 展开 2 个菜单 → 进入至少 1 个核心列表页（如订单/代金券）确认数据能加载
+
 - ❌ 绝对禁止：只看容器 Running、/actuator/health=UP、API 登录成功，就宣称"部署成功"
+
 - ❌ 绝对禁止：只验证根路径 `/`，不验证文档中写的 `/dms/` 等用户实际打开的书签链接
-- 若出现路径不匹配：立即修复（Nginx rewrite + 302 兼容链 或 用正确 VITE_BASE 重新构建前端），不能交付"用户要改书签才能访问"的部署
+
+- 若出现路径不匹配：立即修复（Nginx rewrite + 302 兼容链 或 用正确 VITE\_BASE 重新构建前端），不能交付"用户要改书签才能访问"的部署
+
 - 本铁律为 Gate：未执行或未通过，直接判定部署失败，不允许汇报"已完成"
 
 #### 部署流程（前端代码修改后的标准流程）
@@ -218,6 +320,7 @@
 ```
 
 #### Dockerfile.runtime（后端用，已存在）
+
 ```dockerfile
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
@@ -231,7 +334,9 @@ ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar app.jar"]
 ```
 
 #### 本地无法打包时的备选方案
+
 在服务器上使用临时 Maven 容器打包（挂载 Maven 缓存）：
+
 ```bash
 docker run --rm -v $(pwd):/build -v /opt/dms/maven-repo:/root/.m2/repository \
   -w /build maven:3.9-eclipse-temurin-17 \
@@ -242,135 +347,192 @@ docker run --rm -v $(pwd):/build -v /opt/dms/maven-repo:/root/.m2/repository \
 
 #### 一、压缩包规则（避免上传和解压超时）
 
-- **❌ 禁止压缩 node_modules 目录**：前端压缩包只包含 `src/`、`package.json`、`package-lock.json`、配置文件
+- **❌ 禁止压缩 node\_modules 目录**：前端压缩包只包含 `src/`、`package.json`、`package-lock.json`、配置文件
+
 - **❌ 禁止压缩 .git 目录**：会额外增加几十 MB
+
 - **❌ 禁止压缩 target/ 目录**：后端只传源码，不在压缩包里含 JAR
+
 - **✅ 前端压缩包标准内容**：`src/` + `package.json` + `package-lock.json` + `vite.config.js` + `index.html` + `Dockerfile` + `nginx*.conf`
+
 - **✅ 后端压缩包标准内容**：`src/` + `pom.xml` + `Dockerfile` + `Dockerfile.runtime`
-- **压缩包大小参考**：前端源码约 100KB，后端源码约 450KB（不含 node_modules/target）
+
+- **压缩包大小参考**：前端源码约 100KB，后端源码约 450KB（不含 node\_modules/target）
 
 #### 二、Maven 依赖缓存规则
 
 - 服务器 Maven 容器必须挂载本地仓库缓存：`-v /opt/dms/maven-repo:/root/.m2/repository`
+
 - 首次构建后保留 `/opt/dms/maven-repo` 目录，后续构建复用缓存
+
 - 预期效果：首次 2 分钟，后续构建 30 秒以内
 
 #### 三、Docker 网络与容器配置规则
 
 - 测试环境 Docker 网络：`dms-test_dms-net`
+
 - 容器命名前缀：`dms-`（如 `dms-postgres`、`dms-redis`）
+
 - 后端容器必须连接正确网络，环境变量使用容器名作为 host（如 `DB_HOST=dms-test-postgres`）
+
 - 部署前检查网络是否存在：`docker network ls | grep dms-test`
 
 #### 四、Flyway 迁移一致性规则
 
 - **新增迁移文件前**：先查询数据库现有迁移记录 `SELECT version FROM flyway_schema_history ORDER BY version;`
+
 - **迁移文件版本号必须连续**：不能跳号（如数据库有到 V23，下一个必须是 V24）
+
 - **迁移文件命名格式**：`V{version}__{description}.sql`
+
 - **只做增量变更**：不修改已执行的迁移文件
+
 - **修改已应用迁移文件的处理**：必须更新数据库中的 checksum
-- **缺失迁移记录的处理**：手动插入 flyway_schema_history 记录
+
+- **缺失迁移记录的处理**：手动插入 flyway\_schema\_history 记录
 
 #### 五、文件同步规则（与铁律配合）
 
 - 每次部署必须上传最新源代码：不能只上传 JAR
+
 - 源码替换采用 rm -rf + mkdir + unzip 方式，不用 mv 链
+
 - 部署完成后校验容器内 dist/jar 包含新代码（不仅是源码目录）
 
 ### 7. 🧹 部署后清理规则（部署完成且第11-12步校验通过后才执行）
 
 #### 本地清理（步骤 14）
+
 - 删除本地 TEMP 目录的 `*-src-v*.zip`
+
 - 删除根目录调试文件：`_*.py`、`_*.txt`、`_*.ps1`
+
 - 删除根目录临时 zip 和一次性部署脚本：`*.zip`、`deploy-*.ps1`、`deploy-*.sh`、`auto-deploy*`、`do-deploy*`
+
 - 根目录只保留：`.gitignore`、`CHANGELOG.md`、`README.md`、PDF 参考资料
+
 - 根子目录只保留：`.git/`、`.trae/`、`backend/`、`dms-dev-team/`、`docs/`、`frontend-vue/`、`tools/`
 
 #### 服务器清理（步骤 13）
+
 - 清理 `/tmp` 临时文件：`/tmp/*-src-v*.zip`、`/tmp/build*.log`、`/tmp/build*.done`
+
 - 清理所有残留目录（不只 .old）：`rm -rf /opt/dms/dms-test/frontend-vue-* /opt/dms/dms-test/backend-src.old /opt/dms/dms-test/backend-src-*`
+
 - 清理 Docker 无用镜像：`docker image prune -f`、`docker builder prune -af`
+
 - 验证 `/opt/dms/dms-test/` 只包含 `backend-src/` 和 `frontend-vue/`：用 `ls /opt/dms/dms-test/` 校验
 
 #### 清理失败诊断（如果清理命令失败）
 
 - 用 `find /opt/dms/dms-test -maxdepth 1 -type d` 列出所有顶层目录
+
 - 任何不在白名单（backend-src / frontend-vue）的目录都删除
+
 - 用 `ls /tmp/*.{zip,jar,tar.gz}` 列出所有临时文件并全部删除
 
 ### 8. 🗄️ 数据库迁移规则
 
 - 使用 Flyway 版本管理，文件名格式 `V{version}__{description}.sql`
+
 - 版本号连续递增，不重复不跳过
+
 - 只做增量变更，不修改已执行的迁移文件
 
 ### 9. 🧑‍💻 代码风格规则
 
 - 不添加注释，除非用户明确要求
+
 - 遵循现有代码的命名和风格约定
+
 - 优先编辑现有文件，不轻易新建文件
 
 ### 10. 🎨 前端配置规则
 
 - 模块配置在 `frontend-vue/src/config/modules.js`
+
 - 菜单配置在 `frontend-vue/src/config/menu.js`
+
 - 遵循已有的 `form` 字段和 `cols` 配置格式
 
 ### 11. 📁 目录约定
 
-- 设计/UI 类文档归入 docs/03_设计图/
-- 部署类文档归入 docs/07_部署方案/
-- 测试类文档归入 docs/09_测试报告/（仅测试报告，不混放设计/部署文件）
+- 设计/UI 类文档归入 docs/03\_设计图/
+
+- 部署类文档归入 docs/07\_部署方案/
+
+- 测试类文档归入 docs/09\_测试报告/（仅测试报告，不混放设计/部署文件）
 
 ### 12. ✅ 完成任务后的检查
 
 - 若提供了 lint / typecheck / 测试脚本，任务完成前必须运行并确保通过
-- 后端改动后运行对应版本的测试脚本（tools/test-*.sh）验证回归
+
+- 后端改动后运行对应版本的测试脚本（tools/test-\*.sh）验证回归
 
 ### 13. 🔒 防回归规则（v3.7.1 新增）
 
 **背景**：v3.7.0 迭代中反复出现4个问题（下拉选择、弹窗、删除报错、详情页报错），根因是部署后未做端到端验证、Docker缓存导致代码回退、Nginx代理环境串线。以下规则防止同类问题再次发生。
 
 #### 一、部署后必须验证的核心 API 清单
+
 每次部署后，必须通过前端端口（8083）逐项验证以下接口，全部返回 200 才算部署成功：
 
-| # | 操作 | API | 验证点 |
-|---|------|-----|--------|
-| 1 | 登录 | POST /api/auth/login | 返回 token |
-| 2 | 列表查询 | GET /api/products?page=1&size=10 | 返回产品列表 |
-| 3 | 详情查询 | GET /api/products/{id} | 返回产品详情 |
-| 4 | 操作日志 | GET /api/operation-log/list/product/{id} | 返回日志列表（非500） |
-| 5 | 删除（有引用时） | DELETE /api/products/{id} | 返回业务错误码 40904（非500） |
+| # | 操作       | API                                      | 验证点                 |
+| - | -------- | ---------------------------------------- | ------------------- |
+| 1 | 登录       | POST /api/auth/login                     | 返回 token            |
+| 2 | 列表查询     | GET /api/products?page=1\&size=10        | 返回产品列表              |
+| 3 | 详情查询     | GET /api/products/{id}                   | 返回产品详情              |
+| 4 | 操作日志     | GET /api/operation-log/list/product/{id} | 返回日志列表（非500）        |
+| 5 | 删除（有引用时） | DELETE /api/products/{id}                | 返回业务错误码 40904（非500） |
 
 #### 二、环境隔离验证规则
+
 - 测试环境前端 Nginx 的 `proxy_pass` 必须指向 `172.17.0.1:8082`
+
 - 生产环境前端 Nginx 的 `proxy_pass` 必须指向 `172.17.0.1:8080`
+
 - 部署后必须 `docker exec` 进入前端容器验证实际生效的 nginx.conf
+
 - ❌ 禁止：只看源码目录里的配置文件，不验证容器内实际配置
 
 #### 三、Docker 缓存防回退规则
+
 - 每次构建前必须 `docker rmi <image>:latest` 删除旧镜像
+
 - 每次构建后必须 `docker builder prune -af` 清理构建缓存
+
 - 部署后必须 `docker exec` 进入容器，从 dist/jar 内 grep 关键代码确认是最新代码
+
 - ❌ 禁止：依赖 Docker 自动覆盖 tag，新层可能复用旧缓存
 
 #### 四、浏览器缓存提醒规则
+
 - 部署完成后，必须告知用户执行强制刷新（Ctrl+Shift+R）清除浏览器缓存
+
 - 前端资源文件名含 hash（如 `index-Bck3xC5C.js`），但 index.html 可能被浏览器缓存
+
 - 如用户反馈"功能又回到旧版本"，首先排查浏览器缓存和 Docker 镜像缓存
 
 #### 五、SQL 嵌套相关子查询禁令（v3.7.2 新增）
+
 **背景**：v3.7.1 修复 Bug-004 时发现根因——BusinessReportController.orderTrace 的 SQL 在 GROUP BY 中使用嵌套相关子查询 `SELECT SUM(inv.qty) FROM inventory inv WHERE inv.product_id = ol.product_id`，Postgres driver 在 prepare/execute 阶段抛出 DataAccessException，事务被标 rollback-only，commit 时抛 `UnexpectedRollbackException`，最终被 GlobalExceptionHandler 转为 500。
 
 **禁令**：禁止在以下位置编写相关子查询（correlated subquery）：
+
 - SELECT 子句中
+
 - 聚合函数的参数中（SUM/COUNT/MAX 等内嵌子查询）
+
 - JOIN ON 条件中引用外层聚合列
 
 **要求**：
+
 - 涉及多表关联 + 子查询的报表类 SQL，必须拆分为 **WITH CTE + LEFT JOIN** 形式（如 v3.7.2 修复后的 `orderTrace`）
-- CTE 内每个聚合独立完成（order_qty / shipped_qty / shipment / qualified_stock），主查询只做 LEFT JOIN 合并
+
+- CTE 内每个聚合独立完成（order\_qty / shipped\_qty / shipment / qualified\_stock），主查询只做 LEFT JOIN 合并
+
 - 提交 SQL 到 PR 前，必须在 PostgreSQL 14 中执行 EXPLAIN 确认无嵌套相关子查询
+
 - 涉及报表/库存/财务类查询，复用以下 CTE 模板：
 
 ```sql
@@ -399,42 +561,61 @@ LEFT JOIN shipment sh ON sh.order_id = o.id
 **检测方式**：在 code review 阶段检查所有 `@Transactional(readOnly = true)` + `em.createNativeQuery` 的组合，搜索 `(SELECT` 出现在 `SUM(`/`COUNT(`/`MAX(` 内部的情况。
 
 #### 六、测试报告 URL 与 API 路径一致性规则（v3.7.2 新增）
+
 **背景**：v3.7.1 测试报告中 Bug-003（合同申请）和 Bug-005（菜单配置）报告为 500，但实际原因是测试时使用了错误的 URL（`contract-apps` 而非 `contract-applications`，或乱猜的 `/api/admin/menus` 而非实际 `/api/menu-configs`）。
 
 **要求**：
+
 - 自动化测试输出错误 URL 前，必须先用 `GET /actuator/swagger-ui` 或浏览前端源代码 `frontend-vue/src/config/modules.js` / `frontend-vue/src/api/*.js` 确认 API 真实路径
+
 - API 路径命名遵循后端 Controller `@RequestMapping` 的实际值，不要凭印象或记忆测试
+
 - 测试报告中如出现 "测试失败 URL = X" 必须附带"对应后端 Controller 文件路径 + 行号"证据
+
 - 前后端 API 路径不一致时（如前端期望 `/api/admin/menus` 但后端是 `/api/menu-configs`），必须作为独立的 **前后端契约 Bug** 报告，不得混入"服务端错误"
 
 #### 七、前端部署路径与文档 URL 一致性强制规则（v4.3.1 新增，2026-08-27）
+
 **背景**：2026-08-27 用户反馈测试环境打开文档中写的 `http://43.128.145.141/dms/` 直接报 500，但 AI 之前仅验证了根路径 `/` 的 curl=200 和后端健康检查=UP，未验证文档中写的用户实际书签链接 `/dms/`。导致真实用户一打开就报 500，容器 Running/API 登录成功都是假象。
 
 **根因组合**：
-1. 容器 Nginx 配置 `/dms/` → alias `/usr/share/nginx/html/dms/`，但实际前端文件未放在该子目录（缺 `dms/` 副本或 VITE_BASE=/dms/ 构建）
+
+1. 容器 Nginx 配置 `/dms/` → alias `/usr/share/nginx/html/dms/`，但实际前端文件未放在该子目录（缺 `dms/` 副本或 VITE\_BASE=/dms/ 构建）
 2. 前端 vite.config.js `base: process.env.VITE_BASE || '/'`，实际部署用的是 `/`，而文档和用户书签都写的是 `/dms/`
 3. 只 curl 根路径 `/` 看不到 `/dms/` 500
 
 **强制要求**（违反任何一条 = 部署失败，必须立即修复）：
-1. **文档 URL 清单必须维护**：AGENTS.md §1 / §4 环境信息、project_rules.md 环境信息、docs/文档索引中列出的所有用户入口 URL，构成「必检 URL 清单」，部署后必须**逐条、用真实浏览器**验证，一条都不能漏
-2. **VITE_BASE 与 Nginx 路径必须一致**：
+
+1. **文档 URL 清单必须维护**：AGENTS.md §1 / §4 环境信息、project\_rules.md 环境信息、docs/文档索引中列出的所有用户入口 URL，构成「必检 URL 清单」，部署后必须**逐条、用真实浏览器**验证，一条都不能漏
+2. **VITE\_BASE 与 Nginx 路径必须一致**：
+
    - 若前端用 `VITE_BASE=/dms/` 构建 → 文件放 `frontend/dms/` 子目录 → Nginx 用 `alias + try_files` 直接 serve
+
    - 若前端用 `VITE_BASE=/` 构建 → Nginx 中 `/dms/*` 必须 **302 外部重定向**（非内部 rewrite）到 `/*`，保证浏览器地址栏与 Router base 一致，避免 Vue Router 跳 404
+
    - 两种方案不可混用（内部 rewrite 会导致 Router base 与 URL 前缀不匹配，首页跳 /error/404）
 3. **不匹配零容忍**：若发现文档中写了 `/dms/` 但当前部署的前端 base 是 `/`，两者只能二选一：
+
    - (a) 用 `VITE_BASE=/dms/` 重新构建前端并放到对应子目录
+
    - (b) 保持 base=/，**在 Nginx 加 302 兼容链**（`/dms` → `/`，`/dms/admin/` → `/`，`/dms/mobile/` → `/mobile/`），同时**更新文档 URL 的注释说明实际跳转关系**
+
    - ❌ 禁止：什么都不做、让用户自己记住"别用 /dms/，要用 /"
 4. **会话/缓存导致的假 404 处理**：若浏览器已有旧 token / 过期会话，前端路由可能跳到 `/error/404`。在验证时发现 404 后必须：
+
    - 第一步：`localStorage.clear(); sessionStorage.clear();` 清理缓存，重新跳登录页
+
    - 第二步：完成一次完整真实登录 → 回首页 → 确认不再跳 404
+
    - 然后再判断是否为真正的前端路径不匹配问题
 5. **验证记录留痕**：每次部署的铁律9执行结果，必须在交付汇报中明确列出「已验证 URL 清单 + 每项最终状态码」，不得省略
 
 #### 八、页面重写/改造功能对照规则（v4.3.1 新增，2026-08-27 销退单返工事件）
+
 **背景**：销退单新增页重写后出现三个功能回退：①经销商无法主动选择（变成"选择出库单后自动带出"的禁用文本）；②出库单弹窗让用户手输经销商名称（自由文本而非选择器）；③弹窗原有的批号、序列号筛选条件丢失。根因是重写时凭记忆重建页面，没有先盘点旧功能，把"重写"做成了用户不知情的"功能减法"。
 
 **强制要求**：
+
 1. **重写前必须输出旧功能盘点清单**：改造任何列表页/表单页/弹窗前，先在真实环境打开旧页面，逐项登记：所有筛选条件、表格列、按钮、选择器、弹窗字段、必填校验、级联依赖。新页面逐项对照保留；任何一项删除/弱化必须显式写明理由
 2. **引用数据禁止自由文本**：经销商/产品/仓库/出库单等外键字段一律用 el-select（remote 远程搜索）或资源选择弹窗，禁止可输入的文本框；下游弹窗中的上游主体（如已选经销商）只读展示（el-tag/文本），禁止重复录入
 3. **业务前置条件做成按钮门禁**：如"必须先选经销商才能选出库单"，未满足时按钮 `disabled` + tooltip 说明原因，禁止用"选择 XX 后自动带出"这类用户无法操作的假字段替代
@@ -442,43 +623,133 @@ LEFT JOIN shipment sh ON sh.order_id = o.id
 5. **正向验收必须覆盖回显页**：新建/提交成功后必须再打开查看页/详情页，逐字段核对回显（枚举显示中文 label、外键显示编码+名称、备注字段不串内容），不能只验提交接口 200
 6. **浏览器自动化取证纪律**：Element Plus 弹窗按钮在视口外时自动化点击可能静默失败；判定"按钮无效/功能坏了"之前，必须先挂 `window.__cap`（error + XHR 监听）并用 JS `el.click()` 复现，确认无 XHR、无报错才可定性为应用 Bug
 
+### 14. 🖥️ 本地工具链与 SSH 通道运维规则（v4.4.3 新增，2026-09-03 踩坑固化）
+
+**背景**：2026-09-03 出现"AI 突然无法连服务器、无法本地执行命令"。根因有二，且都在**本地 Windows/TRAE 侧**，与服务器、业务代码无关：
+
+1. **TRAE 自动更新删除内置 Node**：原 SSH MCP 依赖 `...\TRAE SOLO CN\ModularData\ai-agent\vm\tools\node\node.exe`，自动更新后该目录被删，MCP 服务器进程起不来 → `ssh_execute` 无响应。
+2. **系统 PATH 环境变量损坏**：本机为**公司电脑、无管理员权限，PATH 永久无法修复**。导致 ①TRAE 终端桥（RunCommand）半残——能创建终端但命令返回码 5999/1、无任何输出；②bat/子进程里靠 PATH 查找的 `node`/`git`/`java` 等全部"不是内部或外部命令"。
+
+**结论与长期对策（未来会话直接按此执行，不要再走弯路）**：
+
+#### 一、SSH 连服务器的唯一可靠方式 = 自写 MCP（ssh2 密码认证），不要依赖内置 Node 或本地终端
+
+- MCP 服务器脚本：`C:\Users\vinkin.yx.yu\.trae-cn\mcp-servers\ssh-mcp.js`（自写，v2 用纯 JS **ssh2** 库，支持密码 / keyboard-interactive / 密钥）。
+
+- Node 运行时**必须用不受自动更新影响的独立 Node**：`C:\Users\vinkin.yx.yu\.trae-cn\binaries\node\versions\v24.14.0\node.exe`（**禁止**再用 `vm\tools\node\`，那是会被更新删掉的）。
+
+- MCP 配置文件（两级，改参数后需**完全重启 TRAE** 才生效）：
+
+  - 用户级：`C:\Users\vinkin.yx.yu\AppData\Roaming\TRAE SOLO CN\User\mcp.json`（实际加载）
+
+  - 工作区级：`...\TRAE SOLO CN\ModularData\ai-agent\work-mode-projects\6a605871867b9279c809e730\.trae\mcp.json`
+
+  - ⚠️ 这两个文件在**工作目录之外，AI 无写权限**（Edit 报 Access denied）；需要改时由 `tools\_mcp_fix\install2.bat` 类脚本（用户双击）备份（.bakN）并覆盖。工作区内可改的源头模板是 `tools\_mcp_fix\mcp.json`。
+
+  - ✅ 2026-09-03 状态：两级 mcp.json 均已为最新（生产 root、测试 ubuntu，均带 --password），双机 MCP 直连验证通过。
+
+- 调用方式：`run_mcp`，server\_name = `mcp_ssh-server`（生产）/ `mcp_ssh-server-test`（测试），tool\_name = `ssh_execute`，args = `{"command": "..."}`。
+
+#### 二、两台服务器认证方式不同（关键，勿再搞混）
+
+| 机器 | IP             | SSH 登录用户                                                                                | 认证                  | 提权                                                    |
+| -- | -------------- | --------------------------------------------------------------------------------------- | ------------------- | ----------------------------------------------------- |
+| 生产 | 8.133.193.238  | **root**                                                                                | 密码 `<SSH密码见部署运维负责人/环境变量DMS_DEPLOY_PASSWORD>` | 直接 root                                               |
+| 测试 | 43.128.145.141 | **ubuntu**（⚠️ 不是 root！root 密码/密钥登录均被拒，报 `All configured authentication methods failed`） | 密码 `<SSH密码见部署运维负责人/环境变量DMS_DEPLOY_PASSWORD>` | `echo <SSH密码见部署运维负责人/环境变量DMS_DEPLOY_PASSWORD> \| sudo -S -p "" <cmd>` 提权到 root |
+
+- 依据：`scripts/deploy_test.py`（USER 默认 ubuntu、sudo -S 提权）、`doc/AI开发文档.md`。
+
+- dms\_deploy 公钥**从未授权**到服务器（authorized\_keys 里没有），历史一直走密码认证；Windows 自带 ssh.exe 非交互（无 TTY）无法喂密码，故公钥/ssh.exe 方案不可行，必须 ssh2 密码认证。
+
+#### 三、测试机直连已生效（2026-09-03 验证）；"生产跳板"仅作备用
+
+- ✅ **现状**：重跑 install2.bat + 重启 TRAE 后，`mcp_ssh-server-test` 已用 ubuntu 直连成功（whoami=ubuntu，`sudo -S whoami`=root，5 容器全 Up healthy）。测试机运维**直接走 MCP 直连**，需 root 权限的命令前缀 `echo <SSH密码见部署运维负责人/环境变量DMS_DEPLOY_PASSWORD> | sudo -S -p '' bash -c '...'`。
+
+- 备用方案（仅当 MCP 测试机直连未来又失效、且不便重启 TRAE 时）：从**已连通的生产机跳板**连测试机——MCP 连接参数在进程启动时固定，改 mcp.json 必须重启 TRAE；生产机自带 `sshpass`，且到测试机 22 端口可达。
+
+- 跳板范式（经 mcp\_ssh-server 在生产机上执行）：
+
+  ```bash
+  sshpass -p '<SSH密码见部署运维负责人/环境变量DMS_DEPLOY_PASSWORD>' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    -o LogLevel=ERROR -o ConnectTimeout=15 ubuntu@43.128.145.141 \
+    "echo <SSH密码见部署运维负责人/环境变量DMS_DEPLOY_PASSWORD> | sudo -S -p '' bash -c '<root 命令>'"
+  ```
+
+- 投递脚本用 **base64** 避免多层引号/中文/换行转义：本地 `base64 -w0 script.sh` → 跳板机 `echo <b64> | base64 -d > /tmp/x.sh && sudo bash /tmp/x.sh; rm -f /tmp/x.sh`。
+
+- ⚠️ 跳板命令里**不要**用 `grep -v "Permanently"`（引号经多层 shell 会被拆词报 `grep: Permanently: No such file`）；用 `-o LogLevel=ERROR` 抑制 host key 告警即可。
+
+#### 四、本地终端（RunCommand）不可用时的绕路
+
+- RunCommand 返回 5999/1、空输出 = 终端桥坏（PATH 问题，无管理员权限修不了），**不要反复重试**。
+
+- 需要在本机跑 node/npm/git/mvn 时：
+
+  - 优先**放到服务器上执行**（MCP ssh\_execute）；构建用服务器侧 Maven/Docker（见 §5 "本地无法打包时的备选方案"）。
+
+  - 必须本机跑的，写成**纯 ASCII 的 .bat**（中文路径用 `FOR /D` 通配符运行时发现，勿写死中文），由用户双击；bat 内：①开头 `set "PATH=<node目录>;%PATH%"` 注入 PATH；②npm 装包加 `--ignore-scripts --no-optional`（ssh2 核心纯 JS，跳过原生编译脚本，否则派生的 `cmd /c node install.js` 子进程因 PATH 无 node 而失败）；③用绝对路径 node 直跑绝对路径 npm-cli.js：`"<node.exe>" "<...>\node_modules\npm\bin\npm-cli.js" install ...`；④错误处理用 `goto :标签`，**不要**用 `( ... )` 括号块里 echo 含 `)` 的文本（会提前闭合代码块）。
+
+- 文件读写/改代码不受终端影响，正常进行。
+
+#### 五、影响边界（确认可全部绕路，无管理员权限也不影响交付）
+
+- 服务器/业务/数据：零影响。
+
+- SSH 运维（部署、清理、查日志、改配置）：✅ 正常（MCP + 跳板）。
+
+- 本地编译打包：⚠️ 改走服务器侧构建。
+
+- 本机命令行工具（node/git/java）：用户自己开 PowerShell 也可能找不到命令（PATH 全局损坏），图形软件不受影响。
+
 ## 技术栈
 
 - 后端：Spring Boot 3.2 + Java 17 + MyBatis-Plus + Flyway 版本迁移
+
 - 数据库：PostgreSQL 14 + Redis 7
+
 - 前端：Vue 3 + Vite 5 + Element Plus（PC）+ Vant 4（移动端 H5）+ Pinia + Vue Router
+
 - 部署：Docker + Nginx
 
 ## 环境信息
 
 ### 正式环境（生产，v3.12.4 起）
-| 用途 | URL / 命令 |
-|---|---|
-| 业务前台/PC 工作台 | http://8.133.193.238/dms/ |
-| 移动端 H5 登录 | http://8.133.193.238/dms/mobile/login |
-| 平台后台 | http://8.133.193.238/dms/admin/ |
-| 后端健康检查 | http://8.133.193.238/actuator/health |
-| 演示账号 | 租户 `default` / 账号 `admin` / 密码 `Sh123456`（平台后台同号） |
-| 部署归档 | `deploy/prod/`（compose、nginx、.env.example、README） |
-| 说明 | DB/Redis/MinIO 仅容器内网访问；后端仅监听 127.0.0.1:18080；`/` 为产品宣传手册、`/ai/` 为 ai-knowledge |
+
+| 用途          | URL / 命令                                                                       |
+| ----------- | ------------------------------------------------------------------------------ |
+| 业务前台/PC 工作台 | <http://8.133.193.238/dms/>                                                    |
+| 移动端 H5 登录   | <http://8.133.193.238/dms/mobile/login>                                        |
+| 平台后台        | <http://8.133.193.238/dms/admin/>                                              |
+| 后端健康检查      | <http://8.133.193.238/actuator/health>                                         |
+| 演示账号        | 租户 `default` / 账号 `admin` / 密码 `Sh123456`（平台后台同号）                              |
+| SSH 运维账号    | `root` / `<SSH密码见部署运维负责人/环境变量DMS_DEPLOY_PASSWORD>`（直接 root；详见 §14 本地工具链与 SSH 通道运维规则）                    |
+| 部署归档        | `deploy/prod/`（compose、nginx、.env.example、README）                              |
+| 说明          | DB/Redis/MinIO 仅容器内网访问；后端仅监听 127.0.0.1:18080；`/` 为产品宣传手册、`/ai/` 为 ai-knowledge |
 
 ### 测试环境（开发验证，2026-08-28 起域名 dms-dev.mysolmed.com → 43.128.145.141）
-| 用途 | URL / 命令 |
-|---|---|
-| 裸域名/根路径 | http://dms-dev.mysolmed.com/ （302 → `/dms/`，直达系统） |
-| 业务前台/PC 工作台 | http://dms-dev.mysolmed.com/dms/ |
-| 移动端 H5 登录 | http://dms-dev.mysolmed.com/dms/mobile/login |
-| 经销商准入（客户自助注册） | http://dms-dev.mysolmed.com/dms/mobile/register |
-| 平台后台 | http://dms-dev.mysolmed.com/dms/admin/ |
-| 后端健康检查 | http://dms-dev.mysolmed.com/actuator/health |
-| 产品宣传手册 | PC http://dms-dev.mysolmed.com/brochure/ ；移动 http://dms-dev.mysolmed.com/brochure/mobile.html ；打印 http://dms-dev.mysolmed.com/brochure/print.html |
-| 部署脚本 | `scripts/deploy_test.py` |
 
-> IP 直连（43.128.145.141）行为与域名完全一致；宣传移动/打印页无 /brochure/pages/ 前缀，写错会被 try_files 静默回退成 PC 首页（假 200）。
+| 用途            | URL / 命令                                                                                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 裸域名/根路径       | <http://dms-dev.mysolmed.com/> （302 → `/dms/`，直达系统）                                                                                                     |
+| 业务前台/PC 工作台   | <http://dms-dev.mysolmed.com/dms/>                                                                                                                      |
+| 移动端 H5 登录     | <http://dms-dev.mysolmed.com/dms/mobile/login>                                                                                                          |
+| 经销商准入（客户自助注册） | <http://dms-dev.mysolmed.com/dms/mobile/register>                                                                                                       |
+| 平台后台          | <http://dms-dev.mysolmed.com/dms/admin/>                                                                                                                |
+| 后端健康检查        | <http://dms-dev.mysolmed.com/actuator/health>                                                                                                           |
+| 产品宣传手册        | PC <http://dms-dev.mysolmed.com/brochure/> ；移动 <http://dms-dev.mysolmed.com/brochure/mobile.html> ；打印 <http://dms-dev.mysolmed.com/brochure/print.html> |
+| SSH 运维账号      | `ubuntu` / `<SSH密码见部署运维负责人/环境变量DMS_DEPLOY_PASSWORD>`（⚠️ 不是 root，root 登录被拒；提权 `echo <SSH密码见部署运维负责人/环境变量DMS_DEPLOY_PASSWORD> \| sudo -S`；详见 §14）                                                            |
+| 部署脚本          | `scripts/deploy_test.py`                                                                                                                                |
+
+> IP 直连（43.128.145.141）行为与域名完全一致；宣传移动/打印页无 /brochure/pages/ 前缀，写错会被 try\_files 静默回退成 PC 首页（假 200）。
 > **铁律10（Nginx 变更管控）**：nginx 配置不得随意调整——变更前备份 `nginx.conf.bak.<时间戳>`、容器内 `nginx -t`、bind-mount 改完必须 `docker restart dms-test-nginx`（reload 可能因 inode 变化不生效）、`nginx -T` 取证实际生效配置、再按铁律9 用真实浏览器终验全部入口；详见 AGENTS.md Gap 7。
 
 ## 版本信息
-- 当前版本：v4.4.2
-- 最后更新：2026-08-28
+
+- 当前版本：v4.4.3
+
+- 最后更新：2026-09-03
+
 - 测试成绩：14/14 需求全部通过
-- 防回归规则：v3.7.1 新增铁律6-8 + 防回归章节；v4.4.2 新增铁律9（部署后首检 GATE，必检 8 入口）+ 铁律10（Nginx 变更管控）
+
+- 防回归规则：v3.7.1 新增铁律6-8 + 防回归章节；v4.4.2 新增铁律9（部署后首检 GATE，必检 8 入口）+ 铁律10（Nginx 变更管控）；v4.4.3 新增 §14 本地工具链与 SSH 通道运维规则（公司电脑无管理员权限、PATH 永久损坏的绕路方案 + 双机认证差异 + 生产跳板范式）
+

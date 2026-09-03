@@ -109,15 +109,21 @@ public class ContractController {
         return ApiResponse.ok(service.withdraw(id));
     }
 
+    @PostMapping("/{id}/terminate")
+    @OperationLog(businessType = "contract", action = OperationAction.APPROVE, remark = "合同-发起终止")
+    public ApiResponse<Contract> terminate(@PathVariable Long id,
+                                           @RequestBody(required = false) Map<String, Object> body) {
+        String reason = body == null ? null : String.valueOf(body.getOrDefault("reason", ""));
+        return ApiResponse.ok(service.terminate(id, reason));
+    }
+
     @PostMapping("/{id}/approve")
     @OperationLog(businessType = "contract", action = OperationAction.APPROVE, remark = "合同-审批通过")
     public ApiResponse<Map<String, Object>> approve(@PathVariable Long id,
                                                     @RequestBody(required = false) Map<String, Object> body) {
         String comment = body == null ? null : String.valueOf(body.getOrDefault("comment", ""));
         ApprovalInstance instance = approvalService.approveBusiness("CONTRACT", id, comment);
-        if ("APPROVED".equals(instance.getStatus().name()) || "AUTO_APPROVED".equals(instance.getStatus().name())) {
-            service.markApproved(id);
-        }
+        // 状态落库统一由 ContractApprovalCallback.onApproved 处理，此处不再重复 markApproved
         return ApiResponse.ok(Map.of(
                 "id", id,
                 "approvalStatus", instance.getStatus().name(),
@@ -131,7 +137,7 @@ public class ContractController {
                                                    @RequestBody(required = false) Map<String, Object> body) {
         String comment = body == null ? null : String.valueOf(body.getOrDefault("comment", ""));
         ApprovalInstance instance = approvalService.rejectBusiness("CONTRACT", id, comment);
-        service.markRejected(id, comment);
+        // 状态落库统一由 ContractApprovalCallback.onRejected 处理，此处不再重复 markRejected
         return ApiResponse.ok(Map.of(
                 "id", id,
                 "approvalStatus", instance.getStatus().name(),

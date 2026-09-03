@@ -2,11 +2,11 @@ package com.dms.report.subscription;
 
 import com.dms.common.util.TenantContext;
 import com.dms.report.service.ReportService;
+import com.dms.system.service.SystemSettingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -26,13 +26,11 @@ public class ReportSubscriptionService {
     private final ReportSubscriptionRepository repository;
     private final ReportService reportService;
     private final JavaMailSender mailSender;
+    private final SystemSettingService systemSettingService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${dms.mail.from:${spring.mail.username:}}")
     private String from;
-
-    @Value("${dms.mail.enabled:true}")
-    private boolean mailEnabled;
 
     @Transactional(readOnly = true)
     public List<ReportSubscription> list() {
@@ -60,6 +58,10 @@ public class ReportSubscriptionService {
     /** 每天 08:00 检查并发送到期订阅（DAILY/WEEKLY/MONTHLY） */
     @Scheduled(cron = "0 0 8 * * *")
     public void scheduleDispatch() {
+        if (!systemSettingService.isReportMailEnabled()) {
+            log.info("定时报表邮件已被开关关闭，跳过本次发送");
+            return;
+        }
         List<ReportSubscription> actives = repository.findByActiveTrue();
         LocalDate today = LocalDate.now();
         for (ReportSubscription s : actives) {
@@ -86,7 +88,7 @@ public class ReportSubscriptionService {
             Map<String, Object> params = parseParams(s.getParams());
             List<Map<String, Object>> rows = reportService.query(s.getReportType(), params);
             String csv = toCsv(rows);
-            if (mailEnabled) sendMail(s, csv);
+            if (systemSettingService.isReportMailEnabled()) sendMail(s, csv);
             s.setLastRunAt(OffsetDateTime.now());
             s.setLastStatus("SUCCESS");
             s.setLastError(null);

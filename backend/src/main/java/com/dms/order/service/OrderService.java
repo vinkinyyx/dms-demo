@@ -153,7 +153,7 @@ public class OrderService {
         List<AuthorizationCheckResult> checks = authorizationService.check(authReq);
         List<String> unauth = checks.stream()
                 .filter(r -> !Boolean.TRUE.equals(r.getAuthorized()))
-                .map(r -> "商品 " + r.getProductId() + " " + r.getReason())
+                .map(r -> "商品 [" + productLabel(r.getProductId()) + "] " + r.getReason())
                 .toList();
         if (!unauth.isEmpty()) {
             throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "订单授权校验失败: " + String.join("; ", unauth));
@@ -388,5 +388,19 @@ public class OrderService {
             return value.min(base).setScale(2, RoundingMode.HALF_UP);
         }
         return BigDecimal.ZERO;
+    }
+    private String productLabel(Long productId) {
+        if (productId == null) return "未知产品";
+        try {
+            Object[] row = (Object[]) em.createNativeQuery(
+                    "SELECT code, name_cn FROM products WHERE id = ?1")
+                    .setParameter(1, productId).getResultStream().findFirst().orElse(null);
+            if (row != null) {
+                String code = row[0] == null ? "" : String.valueOf(row[0]);
+                String name = row[1] == null ? "" : String.valueOf(row[1]);
+                return (code + " " + name).trim();
+            }
+        } catch (Exception ignored) {}
+        return String.valueOf(productId);
     }
 }

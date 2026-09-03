@@ -72,7 +72,7 @@
           :placeholder="line.isSerialManaged ? '请输入或扫码序列号' : '请输入或扫码批号'"
           required
         >
-          <template #button v-if="line.isSerialManaged">
+          <template #button>
             <van-button size="small" type="primary" plain icon="scan" @click="scanLine(idx)">扫码</van-button>
           </template>
         </van-field>
@@ -131,6 +131,12 @@
         @confirm="onDateConfirm" @cancel="openDatePicker = false" title="选择手术日期"
       />
     </van-popup>
+
+    <BarcodeScanner
+      v-model:show="scanOpen"
+      :placeholder="scanIsSerial ? '请输入或扫码序列号' : '请输入或扫码批号'"
+      @scanned="onScanned"
+    />
   </div>
 </template>
 
@@ -141,6 +147,7 @@ import { showToast, showConfirmDialog } from 'vant'
 import { lookup } from '@/api/crud'
 import request from '@/utils/request'
 import { getToken } from '@/utils/auth'
+import BarcodeScanner from './components/BarcodeScanner.vue'
 
 const router = useRouter()
 
@@ -225,18 +232,20 @@ async function afterRead(file) {
   }
 }
 function beforeDelete(){ attachments.value = attachments.value.filter(x=>x.status!=='done'); form.attachmentFileId=null; form.attachmentUrl=''; form.attachmentName=''; return true }
-async function scanLine(idx) {
+const scanOpen = ref(false)
+const scanLineIdx = ref(-1)
+const scanIsSerial = ref(false)
+function scanLine(idx) {
   const line = lines.value[idx]
-  if ('BarcodeDetector' in window) {
-    try {
-      const detector = new window.BarcodeDetector({ formats: ['qr_code','ean_13','code_128','data_matrix'] })
-      showToast('请将摄像头对准条码/UDI')
-      // H5 无持续视频流时，提示使用设备扫码或手输；后续可接入视频扫描组件。
-      line.batchNo = line.batchNo || ''
-      return
-    } catch (e) {}
-  }
-  showToast('当前浏览器不支持网页扫码，请手动输入或使用微信/浏览器扫码')
+  scanLineIdx.value = idx
+  scanIsSerial.value = !!line.isSerialManaged
+  scanOpen.value = true
+}
+function onScanned(code) {
+  const idx = scanLineIdx.value
+  if (idx >= 0 && lines.value[idx]) lines.value[idx].batchNo = code
+  scanOpen.value = false
+  showToast('已填入扫码结果')
 }
 
 const submitting = ref(false)

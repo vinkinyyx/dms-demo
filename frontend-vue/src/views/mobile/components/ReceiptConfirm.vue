@@ -71,8 +71,8 @@ async function confirmFull() {
 </script>
 <style scoped>
 .loading { display: block; margin: 60px auto; }
-.line { padding: 8px 16px; border-bottom: 1px solid #f2f3f5; }
+.line { padding: 8px 16px; border-bottom: 1px solid var(--dms-divider-color); }
 .line-title { font-weight: 500; margin-bottom: 4px; }
-.line-meta { color: #969799; font-size: 12px; margin-bottom: 8px; }
+.line-meta { color: var(--dms-text-4); font-size: 12px; margin-bottom: 8px; }
 .actions { padding: 16px; display: grid; gap: 10px; }
 </style>

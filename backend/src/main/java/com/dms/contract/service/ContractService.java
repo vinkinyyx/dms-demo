@@ -270,8 +270,13 @@ public class ContractService {
 
     @Transactional(readOnly = true)
     public Contract get(Long id) {
-        return repository.findById(id)
+        Contract c = repository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "合同不存在"));
+        UUID tid = TenantContext.getTenantId();
+        if (tid != null && !tid.equals(c.getTenantId())) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "合同不存在");
+        }
+        return c;
     }
 
     @Transactional
@@ -423,6 +428,45 @@ public class ContractService {
                 .action("withdraw").operatorId(TenantContext.getUserId())
                 .operatorName(TenantContext.getUsername()).build());
         return repository.save(c);
+    }
+
+    /**
+     * 合同终止：对已生效(effective)合同发起终止审批；通过后由回调（CONTRACT_TERMINATE）置 terminated。
+     */
+    @Transactional
+    public Contract terminate(Long id, String reason) {
+        Contract c = get(id);
+        if (!"effective".equals(c.getStatus())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "只有已生效的合同可以终止");
+        }
+        String prevStatus = c.getStatus();
+        c.setStatus("terminate_pending");
+        c.setUpdatedAt(OffsetDateTime.now());
+        c = repository.save(c);
+        revisionRepository.save(ContractRevision.builder()
+                .tenantId(c.getTenantId()).contractId(c.getId())
+                .round((int) revisionRepository.countByContractId(c.getId()) + 1)
+                .action("terminate_request").operatorId(TenantContext.getUserId())
+                .operatorName(TenantContext.getUsername())
+                .snapshot(reason != null ? Map.of("reason", reason, "prevStatus", prevStatus) : Map.of("prevStatus", prevStatus))
+                .build());
+        try {
+            StartApprovalRequest request = new StartApprovalRequest();
+            request.setBusinessType("CONTRACT_TERMINATE");
+            request.setBusinessId(c.getId());
+            request.setBusinessCode(c.getCode());
+            request.setTitle("合同终止审批: " + (c.getName() != null ? c.getName() : c.getCode()));
+            Map<String, Object> snap = buildSnapshot(c);
+            snap.put("prevStatus", prevStatus);
+            snap.put("terminateReason", reason);
+            request.setBusinessSnapshot(snap);
+            approvalService.start(request);
+        } catch (Exception e) {
+            c.setStatus(prevStatus);
+            repository.save(c);
+            throw e;
+        }
+        return c;
     }
 
     @Transactional

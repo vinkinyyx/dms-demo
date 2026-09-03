@@ -53,3 +53,6 @@ export const listAuditLogs = (params) => request.get('/api/admin/logs/platform-a
 export const getButtonConfigs = (params) => request.get('/api/admin/buttons', { params })
 export const upsertButtonConfigs = (data) => request.post('/api/admin/buttons/batch', data)
 export const refreshButtonCache = () => request.post('/api/admin/buttons/refresh-cache')
+
+export const getMailSwitches = () => request.get('/api/admin/mail-config/switches')
+export const updateMailSwitch = (key, enabled) => request.post('/api/admin/mail-config/switches', { key, enabled })
