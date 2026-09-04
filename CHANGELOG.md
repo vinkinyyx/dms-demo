@@ -1,3 +1,11 @@
+## v4.6.7 (2026-09-05) - PC 端设计标准 DESIGN.md + 布局尺寸令牌化（纯前端，无 Flyway）
+
+> 目标：把 PC 端设计标准固化为单一事实源，后续 UI 颜色/布局调整只改令牌文件，不在业务组件写死色值/尺寸。
+
+- 新增仓库根 `DESIGN.md`：三层设计令牌架构（基础色板→语义令牌→组件）、色板/语义色/菜单深浅/字体/间距/圆角/阴影/动效/z-index/品牌预设/PC 布局尺寸/组件视觉规范，附「改哪里生效」对照表与变更流程；已登记 `docs/文档索引.md` 根目录表。
+- **PC 布局尺寸令牌化**：`frontend-vue/src/styles/tokens/semantic.scss` 新增 `--dms-layout-*` 8 个令牌（侧栏展开 230px/折叠 64px、顶栏 56px、Logo 块 60px、一级菜单 42px、子菜单 38px、菜单图标 17px、内容区内边距 16px）；`layout/index.vue` 由写死数值改为引用令牌（模板侧栏宽度经 `getComputedStyle` 读令牌 + CSS `var()`），调布局只需改令牌。
+- 前台 `npm run build` 通过。
+
 ## v4.6.6 (2026-09-04) - 登录页恢复深色 + 菜单深/浅切换（仅菜单区、logo 跟随、月亮按钮语义修正）+ TOP5 改排行榜全名 + 移动端首页升级（纯前端，无 Flyway）
 
 > **生产发布：2026-09-05 已部署正式环境 8.133.193.238**（生产 v4.6.1 → v4.6.6，Flyway V146 → V147/V148；webgate 新增 `/dms/admin/` 深链 fallback；发布报告 `docs/02_设计/prod-deploy-report-v4.6.6.md`，发布包归档服务器 `/opt/dms/backups/release-v4.6.6-20260905/` 与本地 `releases/dms-v4.6.6-20260905/`）。

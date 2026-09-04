@@ -197,6 +197,16 @@ html:root {
   --dms-mobile-safe-bottom: env(safe-area-inset-bottom);
   --dms-mobile-navbar-height-safe: calc(var(--dms-mobile-navbar-height) + var(--dms-mobile-safe-top));
   --dms-mobile-tabbar-height-safe: calc(var(--dms-mobile-tabbar-height) + var(--dms-mobile-safe-bottom));
+
+  /* ---------- PC 布局尺寸（改布局结构只动这里；layout/index.vue 引用这些令牌） ---------- */
+  --dms-layout-sider-width: 230px;        /* 侧栏展开宽度 */
+  --dms-layout-sider-collapsed-width: 64px; /* 侧栏折叠宽度 */
+  --dms-layout-header-height: 56px;       /* 顶部栏高度（logo 区与 topbar 视觉对齐，logo 块 60px） */
+  --dms-layout-logo-height: 60px;         /* 侧栏顶部 logo 块高度 */
+  --dms-layout-menu-item-height: 42px;    /* 一级菜单项高度 */
+  --dms-layout-submenu-item-height: 38px; /* 子菜单项高度 */
+  --dms-layout-menu-icon-size: 17px;      /* 菜单图标尺寸 */
+  --dms-layout-content-padding: var(--dms-spacing-4); /* 内容区内边距 */
 }
 
 /* ---------- 尊重 prefers-reduced-motion ---------- */

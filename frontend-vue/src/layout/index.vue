@@ -1,6 +1,6 @@
 <template>
   <el-container class="layout">
-    <el-aside :width="collapsed ? '64px' : '230px'" class="sidebar">
+    <el-aside :width="collapsed ? SIDER_COLLAPSED_W : SIDER_W" class="sidebar">
       <div class="logo" @click="$router.push('/home')">
         <DmsLogo :size="32" class="logo-icon" variant="auto" />
         <span v-show="!collapsed" class="logo-text">MySolMed DMS</span>
@@ -126,7 +126,10 @@ const unread = ref(0)
 const siderMode = ref(document.documentElement.dataset.sider || currentSiderMode.value || 'light')
 function toggleSiderMode(){ applyToggleSider(); siderMode.value = document.documentElement.dataset.sider || 'light' }
 function toggleSidebar(){ collapsed.value = !collapsed.value; persistSidebar(); applySidebarVar() }
-function applySidebarVar(){ document.documentElement.style.setProperty('--dms-sidebar-w', collapsed.value ? '64px' : '230px'); window.dispatchEvent(new Event('sidebar-toggle')) }
+function layoutVar(name, fallback){ try { const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); return v || fallback } catch(e){ return fallback } }
+const SIDER_W = layoutVar('--dms-layout-sider-width', '230px')
+const SIDER_COLLAPSED_W = layoutVar('--dms-layout-sider-collapsed-width', '64px')
+function applySidebarVar(){ document.documentElement.style.setProperty('--dms-sidebar-w', collapsed.value ? SIDER_COLLAPSED_W : SIDER_W); window.dispatchEvent(new Event('sidebar-toggle')) }
 async function loadUnread(){ try { const r=await unreadCount(); unread.value=Number(r.data?.count||0) } catch(e){ unread.value=0 } }
 function goNotifications(){ router.push('/notifications') }
 setInterval(loadUnread, 60000)
@@ -249,7 +252,7 @@ function onCommand(cmd) {
   box-shadow: none;
 }
 .logo {
-  height: 60px;
+  height: var(--dms-layout-logo-height, 60px);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -267,21 +270,21 @@ function onCommand(cmd) {
   justify-content: center;
 }
 .logo-text { font-size: 16px; white-space: nowrap; font-weight: 700; color: var(--dms-sider-text-hover, #0f172a); letter-spacing: .2px; }
-.menu-scroll { height: calc(100vh - 56px); }
+.menu-scroll { height: calc(100vh - var(--dms-layout-logo-height, 60px)); }
 :deep(.el-menu) {
   border-right: none;
   background: transparent;
   padding: 10px 8px;
 }
 :deep(.el-menu-item), :deep(.el-sub-menu__title) {
-  height: 42px;
+  height: var(--dms-layout-menu-item-height, 42px);
   margin: 3px 0;
   border-radius: 8px;
   color: var(--dms-sider-text);
   font-weight: 500;
   font-size: 14px;
 }
-:deep(.el-menu-item .el-icon), :deep(.el-sub-menu__title .el-icon) { color: inherit; font-size: 17px; }
+:deep(.el-menu-item .el-icon), :deep(.el-sub-menu__title .el-icon) { color: inherit; font-size: var(--dms-layout-menu-icon-size, 17px); }
 :deep(.el-menu-item:hover), :deep(.el-sub-menu__title:hover) {
   background: var(--dms-sider-bg-deep, #f5f7fa);
   color: var(--dms-sider-text-hover, #1f2937);
@@ -295,7 +298,7 @@ function onCommand(cmd) {
 :deep(.el-menu-item.is-active .el-icon) { color: var(--dms-sider-text-active, var(--dms-color-primary)); }
 :deep(.el-sub-menu.is-active > .el-sub-menu__title) { color: var(--dms-sider-text-active, var(--dms-color-primary)); }
 :deep(.el-sub-menu .el-menu) { background: transparent; padding: 2px 0 2px 14px; }
-:deep(.el-sub-menu .el-menu-item) { min-width: auto; height: 38px; margin: 2px 0; border-radius: 8px; }
+:deep(.el-sub-menu .el-menu-item) { min-width: auto; height: var(--dms-layout-submenu-item-height, 38px); margin: 2px 0; border-radius: 8px; }
 :deep(.el-menu--collapse .el-menu-item), :deep(.el-menu--collapse .el-sub-menu__title) { border-radius: 8px; }
 .topbar {
   display: flex;
@@ -304,7 +307,7 @@ function onCommand(cmd) {
   background: #fff;
   border-bottom: 1px solid var(--dms-border-2);
   padding: 0 var(--dms-spacing-5);
-  height: 56px;
+  height: var(--dms-layout-header-height, 56px);
   box-shadow: none;
   z-index: var(--dms-z-index-sticky);
 }
@@ -332,7 +335,7 @@ function onCommand(cmd) {
 .theme-chip.active { box-shadow: 0 0 0 1px #fff, 0 0 0 2px var(--chip); }
 .bell-badge{cursor:pointer;margin-right:12px}.bell-icon{font-size:20px;color:#606266}.bell-icon:hover{color:var(--dms-color-primary)}.user-info { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #606266; outline: none; }
 .user-info:hover { color: var(--dms-color-primary); }
-.main { background: var(--dms-bg-page); padding: var(--dms-padding-page); }
+.main { background: var(--dms-bg-page); padding: var(--dms-layout-content-padding, var(--dms-padding-page)); }
 :global(html[data-mode='dark']) .topbar { background: #111827; border-color: #243044; }
 .command-hint { margin-top: 10px; color: var(--dms-text-3); font-size: 12px; }
 </style>
