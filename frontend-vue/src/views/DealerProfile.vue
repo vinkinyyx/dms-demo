@@ -34,7 +34,7 @@
           <el-tab-pane label="月度达成" name="achievement" />
           <el-tab-pane label="返利明细" name="rebate" />
           <el-tab-pane label="合同列表" name="contracts" />
-          <el-tab-pane label="库存明细" name="inventory" />
+          <el-tab-pane v-if="inventoryEnabled" label="库存明细" name="inventory" />
         </el-tabs>
 
         <div v-if="activeTab === 'kpi'" class="tab-pane">
@@ -88,6 +88,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, TrendCharts } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
+import { useTenantFeatures } from '@/composables/useTenantFeatures'
+const { features: tenantFeatures, loadFeatures } = useTenantFeatures()
+const inventoryEnabled = computed(() => !!tenantFeatures.value.inventoryEnabled)
 import * as echarts from 'echarts'
 
 const route = useRoute()
@@ -120,14 +123,21 @@ const summaryCards = computed(() => [
   { key: 'ytd', title: '年累计目标达成', value: '¥ ' + fmtNum(kpi.ytdActual, 2), sub: '年目标 ¥' + fmtNum(kpi.ytdTarget, 2) + ' / 剩余 ¥' + fmtNum(kpi.ytdGap, 2), percent: clampPct(kpi.ytdAchievement), color: rateColor(kpi.ytdAchievement) },
   { key: 'mom', title: '环比上月', value: signedPct(kpi.momRate), sub: '上月 ¥' + fmtNum(kpi.prevActual, 2) + ' / 本月 ¥' + fmtNum(kpi.monthActual, 2), percent: Math.min(100, Math.abs(Number(kpi.momRate || 0) * 100)), color: Number(kpi.momRate || 0) >= 0 ? '#52c41a' : '#ff4d4f' }
 ])
-const miniCards = computed(() => [
-  { key: 'orders', value: kpi.monthOrders ?? 0, label: '本月订单数', sub: 'YTD ' + (kpi.ytdOrders ?? 0) + ' 单', color: '#1677ff' },
-  { key: 'rebate', value: '¥' + fmtNum(kpi.ytdRebate, 0), label: 'YTD净返利', sub: '按当前达成预提', color: '#52c41a' },
-  { key: 'return', value: '¥' + fmtNum(kpi.returnAmount, 0), label: 'YTD退货', sub: '退货率 ' + fmtPct(kpi.returnRate), color: '#faad14' },
-  { key: 'stock', value: fmtNum(kpi.inventoryQty, 0), label: '库存数量', sub: '库存金额 ¥' + fmtNum(kpi.inventoryAmount, 0), color: '#722ed1' },
-  { key: 'sku', value: kpi.inventorySku ?? 0, label: '库存SKU', sub: '合格率 ' + fmtPct(kpi.qualifiedRate), color: '#13c2c2' },
-  { key: 'contracts', value: kpi.activeContracts ?? 0, label: '有效合同', sub: '90天到期 ' + (kpi.expiringContracts ?? 0), color: '#ff4d4f' }
-])
+const miniCards = computed(() => {
+  const cards = [
+    { key: 'orders', value: kpi.monthOrders ?? 0, label: '本月订单数', sub: 'YTD ' + (kpi.ytdOrders ?? 0) + ' 单', color: '#1677ff' },
+    { key: 'rebate', value: '¥' + fmtNum(kpi.ytdRebate, 0), label: 'YTD净返利', sub: '按当前达成预提', color: '#52c41a' },
+    { key: 'return', value: '¥' + fmtNum(kpi.returnAmount, 0), label: 'YTD退货', sub: '退货率 ' + fmtPct(kpi.returnRate), color: '#faad14' },
+  ]
+  if (inventoryEnabled.value) {
+    cards.push(
+      { key: 'stock', value: fmtNum(kpi.inventoryQty, 0), label: '库存数量', sub: '库存金额 ¥' + fmtNum(kpi.inventoryAmount, 0), color: '#722ed1' },
+      { key: 'sku', value: kpi.inventorySku ?? 0, label: '库存SKU', sub: '合格率 ' + fmtPct(kpi.qualifiedRate), color: '#13c2c2' }
+    )
+  }
+  cards.push({ key: 'contracts', value: kpi.activeContracts ?? 0, label: '有效合同', sub: '90天到期 ' + (kpi.expiringContracts ?? 0), color: '#ff4d4f' })
+  return cards
+})
 
 const tabCols = computed(() => {
   if (activeTab.value === 'achievement') return [
@@ -248,10 +258,11 @@ function scheduleRenderAch() {
 watch(activeTab, async n => {
   await nextTick()
   if (n === 'kpi') { if (achRows.value.length) scheduleRenderAch(); else loadKpi() }
+  else if (n === 'inventory' && !inventoryEnabled.value) { /* 库存模块关闭 */ }
   else loadTab(n)
 })
 function onResize() { achChart && achChart.resize() }
-onMounted(() => { loadBasic(); loadKpi(); window.addEventListener('resize', onResize) })
+onMounted(() => { loadFeatures(); loadBasic(); loadKpi(); window.addEventListener('resize', onResize) })
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
   if (achRenderTimer) clearTimeout(achRenderTimer)

@@ -162,7 +162,9 @@ async function onEdit(row) {
   editVisible.value = true
 }
 function normalizeAssignees(list) {
-  return (list || []).filter((a) => a && a.refId).map((a) => ({ assigneeType: a.assigneeType, refId: a.refId, displayName: a.displayName }))
+  return (list || [])
+    .filter((a) => a && a.assigneeType && (a.assigneeType === 'SUBMITTER' || a.refId))
+    .map((a) => ({ assigneeType: a.assigneeType, refId: a.assigneeType === 'SUBMITTER' ? 0 : a.refId, displayName: a.assigneeType === 'SUBMITTER' ? (a.displayName || '提交人本人') : a.displayName }))
 }
 async function onSave() {
   if (!form.value.name) { ElMessage.warning('请填写名称'); return }

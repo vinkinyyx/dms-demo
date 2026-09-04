@@ -1,8 +1,8 @@
 <template>
   <el-container class="layout">
     <el-aside width="220px" class="aside">
-      <div class="logo"><DmsLogo :size="30" class="logo-mark" inverse /><span class="logo-sub">平台后台</span></div>
-      <el-menu :default-active="route.path" router background-color="var(--dms-sider-bg)" text-color="var(--dms-sider-text)" active-text-color="#ffffff">
+      <div class="logo"><DmsLogo :size="32" class="logo-mark" variant="auto" /><span class="logo-sub">平台后台</span></div>
+      <el-menu :default-active="route.path" router background-color="var(--dms-sider-bg)" text-color="var(--dms-sider-text)" active-text-color="var(--dms-sider-text-active, #ffffff)">
         <el-menu-item index="/">
           <el-icon><DataLine /></el-icon><span>首页总览</span>
         </el-menu-item>
@@ -38,8 +38,8 @@
             <button v-for="item in themePresets" :key="item.key" type="button" class="theme-chip"
               :class="{ active: currentPreset.key === item.key }" :title="item.name"
               :style="{ '--chip': item.color }" @click="setThemePreset(item.key)" />
-            <el-button text circle :title="themeMode === 'dark' ? '切换浅色' : '切换深色'" @click="toggleThemeMode">
-              <el-icon><Moon v-if="themeMode === 'light'" /><Sunny v-else /></el-icon>
+            <el-button text circle :title="siderMode === 'dark' ? '菜单切换浅色' : '菜单切换深色'" @click="toggleSiderMode">
+              <el-icon><Sunny v-if="siderMode === 'dark'" /><Moon v-else /></el-icon>
             </el-button>
           </div>
         </div>
@@ -75,16 +75,17 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/store/auth'
 import { logout as logoutApi, changePassword } from '@/api/auth'
 import { Moon, Sunny, DataLine, PieChart } from '@element-plus/icons-vue'
-import { THEME_PRESETS as themePresets, currentThemePreset as currentPreset, setPreset as setThemePreset, toggleMode as applyThemeMode, initTheme } from '../config/theme-runtime'
+import { THEME_PRESETS as themePresets, currentThemePreset as currentPreset, setPreset as setThemePreset, toggleSider as applyToggleSider, currentSiderMode, initTheme, forceContentLight } from '../config/theme-runtime'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const pwdVisible = ref(false)
 initTheme()
+forceContentLight()
 const pwdForm = reactive({ oldPassword: '', newPassword: '' })
-const themeMode = ref(document.documentElement.dataset.mode || 'light')
-function toggleThemeMode(){ applyThemeMode(); themeMode.value = document.documentElement.dataset.mode || 'light' }
+const siderMode = ref(document.documentElement.dataset.sider || currentSiderMode.value || 'light')
+function toggleSiderMode(){ applyToggleSider(); siderMode.value = document.documentElement.dataset.sider || 'light' }
 
 onMounted(() => { if (!auth.user && auth.hasValidToken && auth.hasValidToken()) auth.fetchMe() })
 
@@ -108,8 +109,8 @@ async function submitPwd() {
 <style scoped>
 .layout { height: 100vh; background: var(--dms-bg-page); }
 .aside {
-  background: linear-gradient(180deg,#243447 0%,#1f2d3d 100%);
-  border-right: 1px solid #1a2533;
+  background: var(--dms-sider-bg, #fff);
+  border-right: 1px solid var(--dms-sider-border, #eef0f4);
   overflow-y: auto;
   box-shadow: none;
 }
@@ -117,30 +118,37 @@ async function submitPwd() {
   height: 60px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 10px;
-  color: #fff;
-  background: #1b2736;
-  border-bottom: 1px solid rgba(255,255,255,.06);
+  padding: 0 16px;
+  color: var(--dms-sider-text-active, var(--dms-color-primary));
+  background: var(--dms-sider-bg, #fff);
+  border-bottom: 1px solid var(--dms-sider-border, #eef0f4);
   font-weight: 700;
 }
 .logo-mark {
-  min-width: 30px;
+  min-width: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.logo-sub { font-size: 15px; color: #e5eaf1; }
-.aside :deep(.el-menu) { border-right: none; background: transparent; padding: 8px 6px; }
+.logo-sub { font-size: 16px; font-weight: 700; color: var(--dms-sider-text-hover, #0f172a); letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aside :deep(.el-menu) { border-right: none; background: transparent; padding: 10px 8px; }
 .aside :deep(.el-menu-item), .aside :deep(.el-sub-menu__title) {
   height: 42px;
-  margin: 2px 0;
-  border-radius: 3px;
-  color: #b8c4d3;
+  margin: 3px 0;
+  border-radius: 8px;
+  color: var(--dms-sider-text, #4b5563);
   font-weight: 500;
+  font-size: 14px;
 }
-.aside :deep(.el-menu-item:hover), .aside :deep(.el-sub-menu__title:hover) { background: rgba(255,255,255,.08); color: #fff; }
-.aside :deep(.el-menu-item.is-active) { color: #fff; background: var(--dms-color-primary); box-shadow: none; }
+.aside :deep(.el-menu-item .el-icon), .aside :deep(.el-sub-menu__title .el-icon) { color: inherit; font-size: 17px; }
+.aside :deep(.el-menu-item:hover), .aside :deep(.el-sub-menu__title:hover) { background: var(--dms-sider-bg-deep, #f5f7fa); color: var(--dms-sider-text-hover, #1f2937); }
+.aside :deep(.el-menu-item.is-active) { color: var(--dms-sider-text-active, var(--dms-color-primary)); background: var(--dms-sider-active-bg, var(--dms-color-primary-bg)); font-weight: 600; box-shadow: none; }
+.aside :deep(.el-menu-item.is-active .el-icon) { color: var(--dms-sider-text-active, var(--dms-color-primary)); }
+.aside :deep(.el-sub-menu.is-active > .el-sub-menu__title) { color: var(--dms-sider-text-active, var(--dms-color-primary)); }
+.aside :deep(.el-sub-menu .el-menu) { background: transparent; padding: 2px 0 2px 14px; }
+.aside :deep(.el-sub-menu .el-menu-item) { min-width: auto; height: 38px; margin: 2px 0; border-radius: 8px; }
 .header {
   display: flex;
   justify-content: space-between;

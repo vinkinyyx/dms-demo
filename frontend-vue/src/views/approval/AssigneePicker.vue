@@ -3,8 +3,10 @@
     <el-radio-group v-model="kind" size="small" @change="onKindChange" style="margin-bottom:8px;">
       <el-radio-button value="USER">账号</el-radio-button>
       <el-radio-button value="ROLE">角色</el-radio-button>
+      <el-radio-button value="SUBMITTER">提交人本人</el-radio-button>
     </el-radio-group>
     <el-select
+      v-if="kind !== 'SUBMITTER'"
       v-model="selected"
       filterable
       remote
@@ -41,6 +43,7 @@ const options = ref([])
 const loading = ref(false)
 
 async function query(keyword) {
+  if (kind.value === 'SUBMITTER') return
   loading.value = true
   try {
     if (kind.value === 'USER') {
@@ -62,7 +65,12 @@ async function query(keyword) {
 function onKindChange() {
   selected.value = null
   options.value = []
+  if (kind.value === 'SUBMITTER') {
+    emit('update:modelValue', { assigneeType: 'SUBMITTER', refId: 0, displayName: '提交人本人' })
+    return
+  }
   emit('update:modelValue', { assigneeType: kind.value, refId: null, displayName: null })
+  query('')
 }
 
 function onChange(val) {
@@ -70,5 +78,7 @@ function onChange(val) {
   emit('update:modelValue', { assigneeType: kind.value, refId: val, displayName: opt ? opt.label : null })
 }
 
-onMounted(() => query(''))
+onMounted(() => {
+  if (kind.value !== 'SUBMITTER') query('')
+})
 </script>

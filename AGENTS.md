@@ -23,7 +23,7 @@
   - 产品宣传手册（独立静态站，不在 /dms/ 下）：PC http://dms-dev.mysolmed.com/brochure/ ；移动 http://dms-dev.mysolmed.com/brochure/mobile.html ；打印 http://dms-dev.mysolmed.com/brochure/print.html （⚠️ 移动/打印页直接在 /brochure/ 目录下，**没有** /brochure/pages/ 子目录，写错会回退成 PC 首页）
   - ✅ **当前部署状态（2026-08-28 v4.4.2）**：前端以 `VITE_BASE=/dms/` 构建，Nginx 用 `alias + try_files` 直接 serve（/dms/、/dms/admin/ 各自 alias），地址栏保持 /dms/ 前缀，无 302 到根路径的旧行为
   - ⚠️ **铁律9强制**：每次部署/配置变更后必须用真实浏览器逐个验证上述全部入口（含 /dms/、/dms/mobile/login、/dms/mobile/register、/dms/admin/、宣传 3 页），**不允许只 curl 根路径**
-- **生产环境**：http://8.133.193.238/dms/ （未经用户明确指令，禁止操作）
+- **生产环境**：http://8.133.193.238/dms/ （平台后台 http://8.133.193.238/dms/admin/ ；2026-09-05 已发布 **v4.6.6**，Flyway 已至 **V148**；生产 webgate 前端整层替换后必须 `docker restart webgate` 才能刷新 bind-mount，详见 `docs/02_设计/prod-deploy-report-v4.6.6.md`）
 - **演示账号**：租户 `default` / 业务前端 `sys_admin`/`Dms@123456`（或 `admin`/`Sh123456`）；平台后台 `admin`/`Sh123456`
 
 ---
@@ -476,4 +476,3 @@ node tools/smoke-test.cjs
 ### 10.4 外部方法论评估结论
 - `obra/superpowers` 已拉取到 `~/.codex/skill-evaluation/superpowers/` 供参考，最值得吸收的是 `brainstorming`、`writing-plans`、`systematic-debugging`、`verification-before-completion`；未全量启用，避免与本项目 AGENTS.md 冲突。
 - `genkovich/sdd` 已拉取到 `~/.codex/skill-evaluation/sdd/` 供参考，最值得吸收的是 `interview`、`clarify`、`specify`、`plan-tests` 的 Socratic 提问和门禁思想；已体现在 `dms-requirement-intake`，未全量启用。
-

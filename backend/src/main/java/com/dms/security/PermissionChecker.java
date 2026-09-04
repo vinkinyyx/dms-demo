@@ -57,6 +57,15 @@ public class PermissionChecker {
         }
     }
 
+    public boolean isTenantAdmin() {
+        try {
+            com.dms.security.DataScope scope = applicationContext.getBean(com.dms.security.DataScope.class);
+            return scope.currentUser().id() != null && scope.isAdmin();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.context.ApplicationContext applicationContext;
 

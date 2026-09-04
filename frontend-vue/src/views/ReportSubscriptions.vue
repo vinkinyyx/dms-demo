@@ -70,22 +70,28 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { formatDateTime } from '@/utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import { useTenantFeatures } from '@/composables/useTenantFeatures'
+const { features: tenantFeatures, loadFeatures } = useTenantFeatures()
+const reportTypes = computed(() => {
+  const all = [
+    { value: 'sales-ranking', label: '销售排行' },
+    { value: 'inventory-turnover', label: '库存周转' },
+    { value: 'order-trace', label: '订单追溯' },
+    { value: 'sales', label: '销售报表' }
+  ]
+  return tenantFeatures.value.inventoryEnabled ? all : all.filter(t => t.value !== 'inventory-turnover')
+})
 
 const rows = ref([]), loading = ref(false)
 const dialog = ref(false)
 const form = reactive({ id: null, name: '', reportType: 'sales-ranking', cronExpr: 'DAILY', emails: '', active: true, params: '{}' })
-const reportTypes = [
-  { value: 'sales-ranking', label: '销售排行' },
-  { value: 'inventory-turnover', label: '库存周转' },
-  { value: 'order-trace', label: '订单追溯' },
-  { value: 'sales', label: '销售报表' }
-]
 function freqLabel(c) { return ({ DAILY: '每日', WEEKLY: '每周', MONTHLY: '每月' })[c] || c }
+onMounted(loadFeatures)
 async function reload() {
   loading.value = true
   try { const { data } = await request({ url: '/api/report-subscriptions', method: 'get' }); rows.value = data || [] }

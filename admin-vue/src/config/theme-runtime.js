@@ -14,14 +14,43 @@ const paletteMap = {
   orange: { primary: '#fa8c16', hover: '#ffa940', active: '#d46b08', bg: '#fff7e6', border: '#ffd591', dark: '#873800' }
 }
 const mode = ref(localStorage.getItem(`${STORAGE_KEY}:mode`) === 'dark' ? 'dark' : 'light')
+// 菜单（侧边栏）独立深浅：sider='light' 浅色菜单（默认）/ 'dark' 深色菜单；仅作用于菜单区域
+const sider = ref(localStorage.getItem(`${STORAGE_KEY}:sider`) === 'dark' ? 'dark' : 'light')
 const preset = ref(localStorage.getItem(`${STORAGE_KEY}:preset`) || 'blue')
 if (!paletteMap[preset.value]) preset.value = 'blue'
 export const currentThemePreset = computed(() => THEME_PRESETS.find(item => item.key === preset.value) || THEME_PRESETS[0])
+export const currentSiderMode = computed(() => sider.value)
+
+function applySiderVars(root, palette) {
+  if (sider.value === 'dark') {
+    root.style.setProperty('--dms-sider-bg', 'linear-gradient(180deg,#17233d 0%,#111b2f 100%)')
+    root.style.setProperty('--dms-sider-bg-deep', 'rgba(255,255,255,.06)')
+    root.style.setProperty('--dms-sider-text', '#b8c5d9')
+    root.style.setProperty('--dms-sider-text-hover', '#fff')
+    root.style.setProperty('--dms-sider-text-active', '#fff')
+    root.style.setProperty('--dms-sider-active-bg', 'rgba(22,119,255,.30)')
+    root.style.setProperty('--dms-sider-badge-bg', 'rgba(255,255,255,.10)')
+    root.style.setProperty('--dms-sider-badge-text', '#b8c5d9')
+    root.style.setProperty('--dms-sider-border', 'rgba(255,255,255,.06)')
+  } else {
+    root.style.setProperty('--dms-sider-bg', '#ffffff')
+    root.style.setProperty('--dms-sider-bg-deep', '#f5f7fa')
+    root.style.setProperty('--dms-sider-text', '#4b5563')
+    root.style.setProperty('--dms-sider-text-hover', '#1f2937')
+    root.style.setProperty('--dms-sider-text-active', palette.primary)
+    root.style.setProperty('--dms-sider-active-bg', palette.bg)
+    root.style.setProperty('--dms-sider-badge-bg', '#eef1f6')
+    root.style.setProperty('--dms-sider-badge-text', '#8a94a6')
+    root.style.setProperty('--dms-sider-border', '#eef0f4')
+  }
+}
+
 function setRootVars() {
   const root = document.documentElement
   const palette = paletteMap[preset.value]
   root.dataset.theme = preset.value
   root.dataset.mode = mode.value
+  root.dataset.sider = sider.value
   Object.entries({
     '--dms-color-primary': palette.primary,
     '--dms-color-primary-hover': palette.hover,
@@ -47,10 +76,6 @@ function setRootVars() {
     root.style.setProperty('--dms-border-1', '#2b3b5a')
     root.style.setProperty('--dms-border-2', '#233351')
     root.style.setProperty('--dms-border-3', '#1c2a44')
-    root.style.setProperty('--dms-sider-bg', 'linear-gradient(180deg,#17233d 0%,#111b2f 100%)')
-    root.style.setProperty('--dms-sider-bg-deep', 'rgba(255,255,255,.04)')
-    root.style.setProperty('--dms-sider-text', '#b8c5d9')
-    root.style.setProperty('--dms-sider-text-active', '#fff')
   } else {
     root.style.removeProperty('--dms-bg-page')
     root.style.removeProperty('--dms-bg-container')
@@ -63,11 +88,8 @@ function setRootVars() {
     root.style.removeProperty('--dms-border-1')
     root.style.removeProperty('--dms-border-2')
     root.style.removeProperty('--dms-border-3')
-    root.style.setProperty('--dms-sider-bg', 'linear-gradient(180deg,#f8fbff 0%,#eef4ff 100%)')
-    root.style.setProperty('--dms-sider-bg-deep', 'rgba(255,255,255,.72)')
-    root.style.setProperty('--dms-sider-text', '#465a75')
-    root.style.setProperty('--dms-sider-text-active', palette.primary)
   }
+  applySiderVars(root, palette)
   root.style.setProperty('--el-color-primary', palette.primary)
   root.style.setProperty('--el-color-primary-light-3', palette.hover)
   root.style.setProperty('--el-color-primary-light-5', palette.border)
@@ -88,6 +110,16 @@ export function applyTheme(nextPreset = preset.value, nextMode = mode.value) {
 }
 export function toggleMode() {
   applyTheme(preset.value, mode.value === 'dark' ? 'light' : 'dark')
+}
+// 主应用中内容区固定浅色：月亮/太阳按钮只用于切换菜单底色，不改变内容区
+export function forceContentLight() {
+  if (mode.value !== 'light') applyTheme(preset.value, 'light')
+}
+export function toggleSider() {
+  sider.value = sider.value === 'dark' ? 'light' : 'dark'
+  localStorage.setItem(`${STORAGE_KEY}:sider`, sider.value)
+  document.documentElement.dataset.sider = sider.value
+  applySiderVars(document.documentElement, paletteMap[preset.value])
 }
 export function setPreset(key) {
   applyTheme(key, mode.value)

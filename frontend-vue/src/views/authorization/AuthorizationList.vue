@@ -1,20 +1,5 @@
 <template>
   <div class="auth-list-page">
-    <el-alert
-      :title="enforce ? '授权与下单已挂钩：经销商无有效授权（产品线+终端医院+有效期）时不能下单/出库' : '授权与下单解耦：当前可直接下单，不受授权限制'"
-      :type="enforce ? 'error' : 'info'"
-      :closable="false"
-      show-icon
-      style="margin-bottom:12px">
-      <template #default>
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <span>{{ enforce ? '✅ 授权管控已开启' : '⏸️ 授权管控已关闭' }}</span>
-          <el-switch :model-value="enforce" :loading="switchLoading" active-text="挂钩下单" inactive-text="解耦" @change="onToggleEnforce" />
-          <el-button link type="primary" :loading="switchLoading" @click="onToggleEnforce(!enforce)">{{ enforce ? '关闭管控' : '开启管控' }}</el-button>
-        </div>
-      </template>
-    </el-alert>
-
     <el-form :inline="true" size="small" @submit.prevent>
       <el-form-item label="状态">
         <el-select v-model="query.status" clearable placeholder="全部状态" style="width:140px" @change="reload">
@@ -95,7 +80,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  listAuthorizations, getOrderEnforce, setOrderEnforce,
+  listAuthorizations,
   terminateAuthorization, renewAuthorization, exportAuthorizations
 } from './api'
 
@@ -103,8 +88,6 @@ const router = useRouter()
 const rows = ref([])
 const total = ref(0)
 const loading = ref(false)
-const enforce = ref(false)
-const switchLoading = ref(false)
 const saving = ref(false)
 
 const STATUS_OPTS = [
@@ -130,27 +113,7 @@ function statusTag(s) {
     rejected: 'danger', draft: 'info' }[s] || 'info'
 }
 function canTerminate(row) { return row.status === 'active' || row.status === 'not_started' }
-function canRenew(row) { return ['active', 'not_started', 'expired'].includes(row.status) }
-
-async function loadEnforce() {
-  try { const res = await getOrderEnforce(); enforce.value = !!res?.data?.enforced } catch (e) { /* ignore */ }
-}
-async function onToggleEnforce(val) {
-  const target = typeof val === 'boolean' ? val : !enforce.value
-  try {
-    await ElMessageBox.confirm(
-      target ? '开启后，经销商下单/出库若无有效授权将被拦截，确认开启？' : '关闭后授权与下单解耦，可直接下单，确认关闭？',
-      '授权-下单挂钩开关', { type: 'warning' })
-  } catch { return }
-  switchLoading.value = true
-  try {
-    await setOrderEnforce(target)
-    enforce.value = target
-    ElMessage.success(target ? '已开启授权管控' : '已关闭授权管控')
-  } catch (e) {
-    ElMessage.error('设置失败: ' + (e?.message || e))
-  } finally { switchLoading.value = false }
-}
+function canRenew(row) { return row.status === 'active' || row.status === 'not_started' }
 
 async function reload() {
   loading.value = true
@@ -217,5 +180,5 @@ async function doExport() {
   } catch (e) { ElMessage.error('导出失败: ' + (e?.message || e)) }
 }
 
-onMounted(() => { loadEnforce(); reload() })
+onMounted(() => { reload() })
 </script>

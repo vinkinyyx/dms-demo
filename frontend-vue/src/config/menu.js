@@ -102,11 +102,10 @@ export const MENU_GROUPS = [
       { key: 'tenant-page-configs', route: '/tenant-page-configs', icon: 'Setting', label: '列表页配置', permissionCode: 'tenant_ui_config:view' },
       { key: 'log-center', icon: 'Notebook', label: '日志中心', route: '/log-center', permissionCode: 'api_log:view' }
       ,{ key: 'async-tasks', icon: 'Files', label: '导入导出任务', route: '/async-tasks' }
+      ,{ key: 'system-switches', icon: 'Switch', label: '系统开关', route: '/system-switches', permissionCode: 'role:view' }
     ]
   }
 ]
-
-
 
 
 

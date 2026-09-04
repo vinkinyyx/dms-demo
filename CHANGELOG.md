@@ -1,3 +1,142 @@
+## v4.6.6 (2026-09-04) - 登录页恢复深色 + 菜单深/浅切换（仅菜单区、logo 跟随、月亮按钮语义修正）+ TOP5 改排行榜全名 + 移动端首页升级（纯前端，无 Flyway）
+
+> **生产发布：2026-09-05 已部署正式环境 8.133.193.238**（生产 v4.6.1 → v4.6.6，Flyway V146 → V147/V148；webgate 新增 `/dms/admin/` 深链 fallback；发布报告 `docs/02_设计/prod-deploy-report-v4.6.6.md`，发布包归档服务器 `/opt/dms/backups/release-v4.6.6-20260905/` 与本地 `releases/dms-v4.6.6-20260905/`）。
+
+> 背景：v4.6.5 后 4 点跟进——①登录页蓝色风格用户不满意，要求恢复之前的深色品牌区；②需要菜单底色在深/浅两种风格间切换（右上角按钮，仅切菜单区域、不切内容区），且 logo 要跟随菜单底色切换，登录页/平台后台同步；③浅色底上 logo 仍太淡看不清；④首页驾驶舱「经销商销售 TOP5」名称仍显示不全；⑤移动端首页太简单太素。
+
+### 登录页恢复深色
+- `frontend-vue/src/views/Login.vue` 品牌区由 v4.6.5 品牌蓝渐变**恢复为原深灰蓝渐变**（#1f2d3d→#34495e）+ 右侧主色描边，logo 用白色版（`inverse`）在深底上清晰；表单区浅色不变。
+
+### 菜单深/浅独立切换（仅菜单区域）
+- 两端 `config/theme-runtime.js` 新增**独立的 sider 模式**（`dms-theme-preference:sider`，light 默认 / dark），与整页明暗 mode 解耦——点右上角「菜单深/浅」按钮只切侧边栏底色，不影响内容区/主题色；切换写 `html[data-sider]` 并持久化。
+- 业务前端 `layout/index.vue`、平台后台 `admin-vue/layout/AdminLayout.vue` 顶栏各加一个菜单切换按钮（菜单条 + 日/月内联 SVG 图标，tooltip「菜单切换深色/浅色」）；sider 深色 token 为原深蓝渐变（#17233d→#111b2f）+ 白字 + 半透蓝选中底，浅色为白底 + 深灰字 + 浅蓝选中底。
+- admin 激活菜单文字由写死 `#ffffff` 改为 `var(--dms-sider-text-active)`（浅底主色字/深底白字），修复浅底白字不可见。
+
+### Logo 跟随菜单底色 + 裁剪增强
+- 两端 `components/DmsLogo.vue`：`variant='auto'`（默认）改为跟随 **`html[data-sider]`**（深菜单→白 logo、浅菜单→深 logo），MutationObserver 同时监听 data-mode 与 data-sider；登录深底用 inverse、移动彩色导航保留 inverse。
+- **logo 资产裁剪**：原 `logo-mark(-white).png` 为 512×512 但「m」内容只占中部约 46%（四周大片透明留白），32px 渲染时实际图形仅 ~15px 显得淡；用脚本按 alpha 边界裁剪两端共 4 个 PNG 至 266×240（含 14px 留白）重编码，「m」图形在同尺寸下放大约 1.9 倍，浅色底上藏青「m」清晰可见。
+
+### TOP5 经销商全名显示
+- **根因**：工作台首页 `/home` 渲染的是 `views/Home.vue`（非 `views/Dashboard.vue`），其 TOP5 图用 `grid.left:100` 固定、无 axisLabel 配置，长名（12 字）被裁到只剩公司后缀。
+- `Home.vue` 与 `Dashboard.vue` 横向条形图统一修复：`grid.containLabel:true` + 类目名 `formatter` 均衡两行断字（≤8 字单行、≤16 字两行对半断、超长按 8 字/行），不设固定 width（避免 echarts 默认 truncate 截尾），柱条右侧加 ¥ 金额标签，tooltip 显示完整名+金额；TOP 医院图同法。
+
+### 二次修正（用户验收反馈，同日）
+- **切换按钮语义修正**：用户明确月亮/太阳按钮应**只切菜单底色、不切右侧内容区**。去掉 v4.6.6 初版多加的重复按钮，把顶栏**唯一**的月亮/太阳按钮直接绑定到 sider 深/浅切换（`layout/index.vue`、admin `AdminLayout.vue`）；新增 `forceContentLight()`，主应用内容区固定浅色（`data-mode` 恒 light，`.main` 实测保持 rgb(245,247,250)），点按钮仅 `data-sider` 变化。登录页的明暗按钮保持不动。
+- **TOP5 由 echarts 横向条形图改为 HTML 排行榜**：长中文名在 echarts 里无论截断/换行都难看，改为名次徽标（1 金橙/2 银/3 铜）+ **经销商完整名单行显示**（ellipsis 兜底）+ 绿色比例条（按榜首相长）+ 右对齐 ¥ 金额；`views/Home.vue` 移除 TOP5 的 echarts 实例/resize/dispose。数据看板 `Dashboard.vue` 的 TOP5/TOP 医院图保留 echarts 但 y 轴类目改 `grid.left:150` + `width:140 truncate`（把图变窄、给类名留足空间），tooltip 全名。
+
+### 移动端首页风格升级
+- `views/mobile/MHome.vue`：渐变蓝头部加装饰圆 + logo 半透芯片 + 副标题「MySolMed DMS·移动工作台」；本月概览 KPI 改纵向卡片 + 蓝/橙彩色图标；常用功能宫格图标改 4 色圆角块（蓝/绿/橙/紫循环）；最近订单卡片保留。仅 scoped 样式，不影响其他移动页。
+
+### 验证（测试环境 dms-dev，2026-09-04）
+- 两前端 `VITE_BASE` 构建通过，`scripts/deploy_front_admin.py` 部署（不动后端/nginx）。
+- 铁律9 八入口真实浏览器全 200（宣传三页 title 正确）；业务/平台/移动页面 Console 0 红错、Network 0 个 5xx。
+- 实测：登录页深灰蓝品牌区 + 白 logo；业务侧栏默认白底深 logo，点切换变深蓝渐变 + 白 logo（canvas 取像素验证深色菜单下 logo 白色像素 4850），内容区不受影响；平台后台同样可切、激活项可见；TOP5 全名两行显示（天津金邦医疗/器械有限公司 ¥329,800 等，tooltip 全名）；移动端首页渐变头 + 彩色宫格 + KPI 卡片。截图 automation_test/v466-results-20260904/。
+
+## v4.6.5 (2026-09-04) - 登录页/平台后台浅色化 + 品牌 Logo 主题自适应 + 寄售库存移出进销存开关（纯前端，无 Flyway）
+
+> 背景：v4.6.4 浅色侧边栏后的 4 点跟进——①业务前端登录页、②平台后台（admin-vue）首页/菜单未浅色化；③浅色侧栏上原白色 inverse logo 完全不可见；④寄售库存属于业务库存（受独立寄售/授信控制），不应被进销存 inventoryEnabled 开关隐藏。
+
+### 品牌 Logo 主题自适应
+- `components/DmsLogo.vue`（frontend-vue 与 admin-vue 各一份）新增 `variant`：'auto'（默认，跟随 html[data-mode] 明暗，浅色底用深色 m logo、深色底用白 logo，MutationObserver 监听 data-mode 切换）、'light' 强制白、'dark' 强制深；旧 `inverse` prop 保留兼容。侧边栏/后台改用 `variant="auto"`，登录页白芯片内用 `variant="dark"`。
+
+### 登录页浅色化
+- 业务前端 `views/Login.vue`：左侧品牌区由深灰渐变改为**品牌蓝渐变**（#1677ff→#46a1ff）+ 装饰圆，logo 放入白色圆角芯片（深色 m 清晰可见），特性圆点改圆形，卡片大圆角 + 蓝色投影；右侧表单保持浅色。平台后台登录页本就是浅色卡片，无需改。
+
+### 平台后台（admin-vue）浅色化
+- `layout/AdminLayout.vue` 侧边栏由深色硬编码改为 token 驱动浅色扁平（白底、圆角 8px、选中浅蓝底主色字、子菜单缩进），logo 区左对齐；`styles/tokens.css` 默认 sider token 改浅色并补 active-bg/badge/border；`config/theme-runtime.js` 明暗两套分支补齐新 token（深色模式侧边栏仍为深色）；logo 文案精简为「平台后台」避免裁切。首页 Overview 本就是浅色卡片，随侧栏统一。
+
+### 寄售库存放出来
+- `config/menu.js` 移除寄售库存的 `inventoryOnly: true`（v4.6.4 误加），寄售库存/资信属独立业务（modules.js 有独立 consignmentEnabled/授信配置），仅按 `inventory:view` 权限显示，不受进销存 inventoryEnabled 开关影响。库存业务组在进销存关闭时仅保留「销售出库、寄售库存」。
+
+### 验证（测试环境，2026-09-04）
+- 两前端 `VITE_BASE` 构建通过；部署业务前端 dist + admin dist 到 /opt/dms/test/frontend/dms 与 /dms/admin（不动后端/nginx）。
+- 浏览器实测：业务登录页品牌蓝面板、白芯片内深色 logo 清晰；业务侧栏白底 logo 可见；平台后台登录→首页侧栏白底、「首页总览」浅蓝高亮、logo「m·平台后台」不裁切；寄售库存菜单在库存关闭时仍在、页面正常打开（0 红错/0 5xx）；库存查询等纯进销存项仍正确隐藏。铁律9 八入口全 200、Console 0 红错。截图 automation_test/v463-results-20260904/（40-46）。
+
+## v4.6.4 (2026-09-04) - 浅色侧边栏菜单风格 + 库存模块关闭时彻底清除库存痕迹 + 驾驶舱 TOP 经销商名称显示修复（纯前端，无 Flyway）
+
+> 背景：用户 3 项需求——①主界面/菜单风格改造为浅色扁平样式（参考现代后台：白底侧边栏、圆角高亮选中、分组可折叠）；②库存模块关闭时仍有「库存影子」（报表中心库存类、经销商画像库存明细/KPI、驾驶舱活动图入库序列等）；③驾驶舱「经销商销售 TOP5」经销商名称显示不全。
+
+### 前端 - 菜单浅色风格（R1）
+- **侧边栏由深色渐变改为 token 驱动的浅色扁平风格**：白底（--dms-sider-bg #fff）、菜单项圆角 8px、选中项浅蓝底（--dms-sider-active-bg）+ 主色文字、hover 浅灰；logo 区与侧边栏同底。`layout/index.vue` 菜单样式改用 `--dms-sider-*` token，不再硬编码深色。
+- **主题 token**：`styles/tokens/semantic.scss` 默认 sider token 由深色（#001529）改为浅色；`config/theme-runtime.js` 浅色/深色两套分支均补齐 `--dms-sider-text-hover/active-bg/badge/border`，深色模式侧边栏仍正确。
+
+### 前端 - 库存模块关闭时彻底隐藏库存内容（R2，仅厂家用户，与菜单同口径）
+- 新增 **`composables/useTenantFeatures.js`**：单例缓存 + in-flight 去重拉取 `/api/tenant/features`（inventoryEnabled/purchaseEnabled），失败 fail-open 全开；layout/Dashboard/DealerProfile/Reports/ReportSubscriptions 共用，消除各页面重复拉取。
+- **报表中心**（`views/Reports.vue` + `config/reports.js`）：库存类分组（库存周转、库存呆滞/超期）在库存关闭时整体隐藏，hero 文案动态去掉「库存」，带 query 的库存报表也不打开。
+- **经销商画像**（`views/DealerProfile.vue`）：库存明细 tab、库存数量/库存SKU 两个 KPI 卡在关闭时隐藏，不发请求；其余 KPI/合同/返利/月度达成保留。
+- **数据驾驶舱**（`views/Dashboard.vue`）：库存三态饼图区块在关闭时不再渲染（修 localStorage 布局恢复导致的旧 v-show 残留）、合格/待检/不合格库存 KPI 移除、效期预警横幅不加载、近 7 日活跃图去掉「入库」序列与图例。
+- **命令面板 Ctrl+K**（`layout/index.vue`）：硬编码的库存查询/收货入库/库存移动/库存盘点/效期预警/序列号追溯按开关过滤。
+- **菜单**：寄售库存补标 `inventoryOnly: true`（原遗漏，关闭库存时仍显示）。
+- **报表订阅**（`views/ReportSubscriptions.vue`）：新建订阅报表下拉的「库存周转」按开关过滤。
+
+### 前端 - 驾驶舱 TOP 经销商名称修复 + UI 优化（R3）
+- **TOP5 名称显示不全修复**（`Dashboard.vue renderTopDealers`）：grid 改 `containLabel: true`，y 轴类目名 `axisLabel.width:150 + overflow:truncate + ellipsis`，柱状条加右侧金额标签（¥ 格式），tooltip 显示完整名称+金额；TOP 医院图同法处理（超长名省略+tooltip 全名）。
+- **KPI 卡自适应**：库存关闭时 KPI 由 8 张减为 5 张，span 由固定 6 改为按数量自适应（6/8），不再留白。
+
+### 影响文件
+- 新增 `frontend-vue/src/composables/useTenantFeatures.js`
+- 改 `layout/index.vue`、`views/Dashboard.vue`、`views/DealerProfile.vue`、`views/Reports.vue`、`views/ReportSubscriptions.vue`、`config/menu.js`、`styles/tokens/semantic.scss`、`config/theme-runtime.js`
+- 部署辅助脚本 `scripts/deploy_front_only.py`（纯前端定向部署，仅传 dist、不碰后端/nginx/admin）
+
+### 验证（测试环境 dms-dev，2026-09-04）
+- 后端无改动（不重新部署 jar）；前端 `VITE_BASE=/dms/` 构建通过，定向部署到 /opt/dms/test/frontend/dms（备份 dms-front-20260904-212958）。
+- 铁律9 八入口（/、/dms/、/dms/admin/、/dms/mobile/login、/dms/mobile/register、/brochure/、/brochure/mobile.html、/brochure/print.html）真实浏览器全 200，Console 0 红错、Network 0 个 5xx。
+- 浏览器实测：侧边栏背景 rgb(255,255,255) 浅色、选中项浅蓝圆角高亮；驾驶舱图表区块仅余 销售趋势/TOP经销商/订单漏斗/医院手术TOP/近7日活跃（无库存三态、无库存 KPI/横幅）；TOP5 经销商全名完整显示（合肥德医医疗器械有限公司 ¥440,962 等 5 家）；报表中心无库存类/库存周转/呆滞、hero 文案去库存；经销商画像（DLR-011 天津金邦）仅 KPI概览/月度达成/返利明细/合同列表 4 tab，无库存明细/库存 KPI；命令面板搜「库存」无结果。截图 automation_test/v463-results-20260904/。
+
+## v4.6.3 (2026-09-04) - 审批流体系补齐（SUBMITTER 节点 + 8 类业务审批挂载）+ 系统开关管理员页 + 首页/合同工作台 UI 紧凑化（Flyway V148）
+
+> 背景：用户 7 项需求——①首页快捷按钮过大需紧凑重设计；②合同工作台列表筛选/操作风格与其他菜单统一；③合同补「终止合同」流程；④授权补「终止授权/授权续约」且**终止与续约只能在有效(active)和未开始(not_started)授权中选择**；⑤「授权与下单挂钩」开关从授权管理移到「用户与权限」、**仅租户管理员可操作**；⑥每日定时系统邮件的开关同样收口到管理员页；⑦配置审批流并挂到 8 类业务上，测试环境所有审批流**一层即可、审批人=提交人本人∪系统管理员（或签 ANY）**。需求澄清 4 项口径（用户均选推荐项）：促销命中也要审批（成交价与基础价任何差异都审，仅产品全局折扣+经销商全局折扣自动免审）；主数据待审期间不可选用、审批通过后生效；引擎新增「提交人本人」节点类型 SUBMITTER + 授权续约独立流 AUTHORIZATION_RENEW；Flyway 播种一层模板 + 「用户与权限」下新建管理员专属「系统开关」页。
+
+### 后端 - 审批引擎（b1）
+- **新增审批人节点类型 `SUBMITTER`（提交人本人）**：`ApprovalAssigneeType` 枚举由 USER/ROLE 扩为 USER/ROLE/**SUBMITTER**；`ApprovalService.resolveNodeUsers(tenantId, nodeId, submitterId)` 三分支闭环——USER 按 config.refId 取用户；**SUBMITTER 按提交人 submitterId 取提交人本人**（submitterId 为 null 跳过）；ROLE（else 分支）经 userRoleRepository.findByRoleId 展开角色下全部用户；三分支均 filter 同租户 + status='active'，LinkedHashMap 按 userId 去重。配合节点 approve_mode=ANY（或签），提交人本人与管理员任一审批即过。
+- `ApprovalTemplateService` 模板/节点/审批人 CRUD 与 LogicFlow 图解析同步支持 SUBMITTER（assignee 保存时 refId 可空，不引用具体用户/角色）。
+
+### 后端 - 业务审批挂载（b2/b3/b4）
+- **合同终止**（需求③）：已生效合同 `POST /api/contracts/{id}/terminate`（body 带终止原因）走审批流业务类型 `CONTRACT_TERMINATE`，审批通过置 terminated、驳回/撤回恢复 effective；前端发起需填写终止原因（ElMessageBox.prompt 必填校验）。
+- **授权终止/续约**（需求④）：终止 `POST /api/authorizations/{id}/terminate` 走 `AUTHORIZATION_TERMINATE`；续约 `POST /api/authorizations/{id}/renew` 走**独立业务类型 `AUTHORIZATION_RENEW`**（复制经销商+产品线+终端维度，按新有效期生成新授权，source='renew'）。**状态门禁**：终止与续约仅对 `active`（生效中）/`not_started`（未开始）授权开放，pending_approval/expired/terminated 等状态后端拒绝（Service 层断言）、前端按钮不渲染。
+- **销售订单条件审批**（需求⑦-6）：提交销售订单时按价格差异判定是否需要审批——成交价相对基础价存在**任何**促销/特价/整单折扣/手工改价等差异即需审批（业务类型 `SALES_ORDER`，模板既有 ID25 已启用）；**仅命中产品级全局折扣 + 经销商级全局折扣（标准折扣体系、无额外促销）时自动免审直提**。
+- **销退订单**（需求⑦-7）：销退单（RMA 退换）提交**一律需审批**（业务类型 `SALES_RETURN`/RMA 模板既有 ID26 已启用）。
+- **主数据创建审批**（需求⑦-8）：物料/经销商/供应商创建接入审批——新建后状态 `pending_approval`，**待审期间不可被业务单据选用**（下拉/远程搜索过滤掉待审记录），审批通过后转为可用、驳回回到草稿；业务类型 `PRODUCT_CREATE`/`DEALER_CREATE`/`SUPPLIER_CREATE`。
+
+### 后端 - 系统开关聚合接口 + 管理员门禁（b5，承接本日早前后端步骤）
+- **SystemSwitchController**（`backend/src/main/java/com/dms/system/controller/SystemSwitchController.java`，`@RequestMapping("/api/system-switches")`，类级 `@PreAuthorize("@perm.isTenantAdmin()")`）：
+  - `GET /api/system-switches`：聚合返回 4 个开关——1 个租户级「授权与下单挂钩」（key=`order.authz.enforce`、scope=`tenant`、defaultValue=false）+ 3 个全局定时邮件开关（`mail.schedule.enabled` 总开关 / `mail.schedule.report.enabled` 报表订阅 08:00 / `mail.schedule.approval.enabled` 审批超时提醒 09:00，scope=`global`），字段统一 key/label/description/enabled/value/configured/defaultValue/scope。
+  - `POST /api/system-switches`：body `{key, enabled}`，按 key 白名单分流（order.authz.enforce→setOrderAuthzEnforced、mail.schedule.*→updateMailSwitch），非法 key/缺参返回 `ApiResponse.fail(40001)`，成功返回刷新后完整列表。
+- **PermissionChecker 新增 `isTenantAdmin()`**：`currentUser().id() != null && isAdmin()`——**id()!=null 守卫是关键**，DataScope.currentUser() 对匿名请求（TenantContext uid=null）兜底返回 `CurrentUser(null,"admin",...)`，不加守卫会被 isAdmin()（role==null/admin/sys_admin）误判。
+- **移除** v4.6.2 错放在授权域的 `GET/POST /api/authorizations/order-enforce` 两端点及 AuthorizationService 两个包装方法（全 backend/src grep 零残留）；下单链路内部校验 `systemSettingService.isOrderAuthzEnforced(tenantId)` 原样保留、挂钩语义不变；平台后台 `/api/admin/mail-config/switches` 共存不动。
+
+### 数据库（Flyway V148，b6）
+- **`V148__v463_approval_submitter_and_new_templates.sql`**（checksum=61545495，测试环境已应用）：幂等播种 6 个一层审批模板，每个模板 1 个节点（approve_mode=ANY 或签）+ 2 个审批人配置（SUBMITTER 提交人本人 + ROLE 系统管理员角色）：
+  1. `CONTRACT_TERMINATE` 合同终止（ID28）；2. `AUTHORIZATION_TERMINATE` 授权终止（ID29）；3. `AUTHORIZATION_RENEW` 授权续约（ID30）；4. `PRODUCT_CREATE` 物料创建（ID31）；5. `DEALER_CREATE` 经销商创建（ID32）；6. `SUPPLIER_CREATE` 供应商创建（ID33）。
+  - 既有模板 `SALES_ORDER`（ID25）/`SALES_RETURN` RMA 退换（ID26）/`INVOICE_ORDER` 开票订单（ID27）保持已启用。
+  - 迁移末尾幂等补挂：为既有相关模板节点补齐 SUBMITTER 审批人（NOT EXISTS 防重）。
+- 无表结构变更（复用 approval_templates/approval_template_nodes/approval_node_assignees 三表与 assignee_type 字符串列）。
+
+### 前端（f1/f2/f3/f4，共 13 文件）
+- **f3 系统开关页（需求⑤⑥）**：新增 `views/system/SystemSwitches.vue`——「用户与权限」菜单下管理员专属页，el-alert 说明租户/全局作用域，「授权与下单挂钩（本租户）」开关 + 定时邮件 3 开关（总开关/报表订阅/审批超时提醒），切换调 GET/POST `/api/system-switches`；路由 `/system-switches`（meta.permission='role:view'）+ 菜单挂「用户与权限」分组。
+- **授权管理页摘除开关**：`views/authorization/api.js` 由旧 `/api/authorizations/order-enforce` 切换到 `/api/system-switches`；`AuthorizationList.vue` 移除顶部挂钩开关（已迁至系统开关页），终止/续约按钮按状态门禁渲染（仅 active/not_started 可见，已到期/审批中仅「查看」）。
+- **f4 审批配置支持 SUBMITTER（需求⑦）**：`views/approval/dict.js` 审批人类型字典增「提交人本人」；`AssigneePicker.vue` 支持 SUBMITTER（无需选具体用户/角色）；`ApprovalFlowEditor.vue` LogicFlow 节点面板/属性编辑同步；`ApprovalTemplates.vue` 模板列表展示。
+- **f4 合同/授权终止续约入口（需求③④）**：`views/contract/ContractWorkspace.vue` 已生效行操作列增「终止合同」（danger，perm contract:submit，弹框必填终止原因）；`ContractDetail.vue` 详情页同步入口；`contract/api.js` 增 terminateContract；授权终止/续约按钮与 api 接入。
+- **f2 合同工作台筛选栏风格统一（需求②）**：`ContractWorkspace.vue` 筛选区由多行大按钮改为与其他菜单一致的 **el-card + el-form inline size="small" 单行紧凑布局**（关键词 200px / 合同分类 140px / 状态 140px + 查询/重置/新建合同/导出/异步导出），表格 size="small" border stripe；状态页签（全部/草稿/审批中/已生效/已驳回/已终止/已到期）保留。
+- **f1 首页紧凑重设计（需求①）**：`views/Home.vue` 快捷入口按钮由大卡片改为紧凑小按钮/图标网格，压缩首屏占用空间。
+- 其余：`config/menu.js`（系统开关菜单项）、`router/index.js`（/system-switches 路由）。
+
+### 部署与验证（2026-09-04，测试环境 dms-dev.mysolmed.com）
+- **服务器侧构建**（本机终端桥故障，project_rules.md §14，走服务器 Maven/Node）：后端 jar 117,197,075 字节；前端 **VITE_BASE=/dms/** 构建（index.html 引用 /dms/assets/index-BkwmA27h.js，198 assets，含 SystemSwitches-DnvgjB3R.js/.css）。
+- **Flyway**：V147 checksum 对齐修复（库中 1561521515 → 本地 906988248；先核验 V147 操作幂等已生效再 UPDATE flyway_schema_history 对齐 checksum）；**V148 成功迁移**（6 模板播种，flyway_schema_history success，Current=148）。
+- **铁律9 GATE（真实浏览器逐项）**：
+  - 系统开关页 `/dms/system-switches`：面包屑「首页/用户与权限/系统开关」、菜单归位「用户与权限」；「授权与下单挂钩（本租户）」=**关闭（解耦默认）**；定时邮件 3 开关=**开启**。✓ 需求⑤⑥
+  - 审批流配置页 `/dms/approval/templates`：V148 播种 6 模板（ID28-33）全部**已启用**、更新时间 2026-09-04 14:45；ID25/26/27 既有模板已启用；共 33 条。✓ 需求⑦
+  - 授权管理页 `/dms/authorizations`：筛选栏仅 状态/经销商/合同编号 + 查询/重置/新增授权/导出（**无解耦开关**）；已到期/审批中行仅「查看」，生效中行有「查看/终止/续约」；共 38 条。✓ 需求④⑤
+  - 合同工作台 `/dms/contracts`：单行 inline 紧凑筛选栏 + 已生效合同「终止合同」按钮；共 35 条。✓ 需求②③
+  - Console 无红错（仅 1 条 Element Plus el-radio label 弃用 warn，历史既有非阻塞）；Network 100 条无 5xx；移动 H5 `/dms/mobile/login` 正常渲染非白屏。
+- **引擎安全核查**：resolveNodeUsers 三分支（USER/SUBMITTER/ROLE）闭环，SUBMITTER 对 submitterId=null 与非本租户/停用用户均安全跳过，无枚举异常风险。
+
+### 踩坑/教训
+- **前端部署须核验实际落盘**：首次 rm -rf + cp 后仅凭命令退出码误以为成功，实际 dist 未生效；须逐文件验证 index.html 引用的 hash chunk 在目标目录真实存在（铁律3）。
+- **browser_wait_for 工具本轮 IDE Command timeout**：页面已加载时不必再 wait_for，直接 browser_snapshot 即可；browser_console_messages/browser_network_requests 返回的是 object（含 content 数组的快照结构）而非数组，不能直接 .filter。
+- **业务前端必须 VITE_BASE=/dms/ 构建**，产物放 nginx bind-mount 的 `frontend/dms/` 子目录，替换 dist 即生效（无需重建/重启 nginx 容器）。
+
 ## v4.6.2 (2026-09-03) - 授权模块产品线化重构 + 授权-下单挂钩开关 + 合同/授权终止与续约（Flyway V147）
 
 > 背景：审查合同模块与授权功能后修复多项缺陷，并按业务要求把授权从「产品/分类维度」重构为「厂家授权给经销商：产品线 + 终端医院 + 有效期」，同时提供授权与下单是否挂钩的租户级开关，补齐授权/合同的终止与续约流程。
@@ -697,8 +836,7 @@
 ## v4.2.5 (2026-08-23) - 筛选下拉真实可用 + 订单更新时间有数据 + 范围过滤后端落地
 > PATCH 版本。针对 v4.2.4 部署后仍存在的问题：resource 下拉空白、销售/销退"更新时间"列无数据、日期/金额范围在订单类页面不生效。
 
-### 修复
-- **Q2.3 resource 下拉空白（真实修复）** `frontend-vue/src/components/CrudView.vue`：`selectFilterOptions()` 增加 `filter.resource` 解析（原只处理 `filter.remote`），`ensureRemoteFilterOptions()` 同步收集 resource 键并扩充端点映射（dealers/suppliers/warehouses/hospitals/products/product-lines/contracts），打开筛选 popover 时懒加载；产品价格"经销商/供应商"、销退"经销商/收货仓库"等 resource 下拉现在有选项可选
+### 修复- **Q2.3 resource 下拉空白（真实修复）** `frontend-vue/src/components/CrudView.vue`：`selectFilterOptions()` 增加 `filter.resource` 解析（原只处理 `filter.remote`），`ensureRemoteFilterOptions()` 同步收集 resource 键并扩充端点映射（dealers/suppliers/warehouses/hospitals/products/product-lines/contracts），打开筛选 popover 时懒加载；产品价格"经销商/供应商"、销退"经销商/收货仓库"等 resource 下拉现在有选项可选
 - **Q3 更新时间列有数据** 销售订单/销退/采购/采退列表 SQL 补查 `updated_at` 并映射 `updatedAt`（此前前端自动注入列但数据为空）
 - **Q2.6 日期范围在订单类页面真实生效** SalesOrder/SalesReturn/PurchaseOrder/PurchaseReturn/ProductPrice 列表接口新增 `xxxFrom/xxxTo` 范围参数（`>=`/`<` 次日 0 点），支持 createdAt/updatedAt/validFrom/validTo 范围筛选
 - **Q2.5 金额/数量范围在订单类页面真实生效** 销售/销退/采购/采退 `finalAmount`、采购 `totalAmount`、库存 `qty` 支持 `From/To` 范围过滤；对应模块列升级 `filter.range: true`
@@ -1397,8 +1535,7 @@ DMS 列表页硬编码风格不统一：搜索区/工具栏/行内操作按钮�
 ### 后端导入修复
 - **供应商导入整体失效**：`SupplierController.batchImport` 走的是与实表不符的 JPA 实体（实体声明 `id UUID`/`status Integer`/`attrs jsonb`，实表是 `id bigint`/`status varchar`/无 `attrs`），必然 `column s1_0.attrs does not exist` → 500。改为与该控制器其余方法一致的原生 SQL upsert，`status` 兼容 `1/0`、`启用/停用`、`active/inactive`。
 - **销售订单导入整体失效**：Hibernate 原生 SQL 把 `'{}'::jsonb` 的 `::jsonb` 当成命名参数，报 `syntax error at or near ":"` → 整批回滚。统一改为 `CAST('{}' AS jsonb)`；`IntegrationController` 同类写法一并修正。
-- **产品导入类型强转崩溃**：Excel 同一列可能是文本也可能是数字，`(Number) value` 直接强转抛 `ClassCastException`。新增 `ExcelImportUtils.coerce(value, type)` 作为统一转换入口，产品/医院/经销商/分类/区域/仓库 6 个控制器的 `setFieldValue` 全部改为委托调用。
-- **仓库导入必填字段缺失**：`warehouses.dealer_id NOT NULL`，但模板与导入列都没有经销商ID，新建必然违反非空约束。模板与导入列补 `经销商ID`，并在 `WarehouseService.upsertByCode` 新建分支前置校验，报错文案改为"经销商ID不能为空"。
+- **产品导入类型强转崩溃**：Excel 同一列可能是文本也可能是数字，`(Number) value` 直接强转抛 `ClassCastException`。新增 `ExcelImportUtils.coerce(value, type)` 作为统一转换入口，产品/医院/经销商/分类/区域/仓库 6 个控制器的 `setFieldValue` 全部改为委托调用。- **仓库导入必填字段缺失**：`warehouses.dealer_id NOT NULL`，但模板与导入列都没有经销商ID，新建必然违反非空约束。模板与导入列补 `经销商ID`，并在 `WarehouseService.upsertByCode` 新建分支前置校验，报错文案改为"经销商ID不能为空"。
 - 采购订单导入补 `docNoGenerator.next("PO")`（`code` 列 NOT NULL UNIQUE，原先必然全行失败），另补 `ADJ`/`MV`/`SURG`。
 - 新增 `ExcelImportUtils.toDateString()`：Excel 日期单元格解析为 `LocalDateTime`，`toString` 得到 `2026-01-31T00:00` 无法入 DATE 列；手术日期、采购期望到货、销售期望交付三处 SQL 改用 `CAST(? AS date)`。
 - `surgery_date` 补空值校验；手术报台导入状态由 `DRAFT` 改为 `COMPLETED`。
@@ -2013,6 +2150,4 @@ v3.8.7 沉淀了 D13 规范和基础设施（platform_button_configs 表、v-has
 - Layer 2 §18 列表页布局规范保持冻结（v3.8.7 入冻结区，本版未变更规范文字）。
 - Layer 4 D13：本版本正式落地 D13（CrudView 接入、菜单按权限过滤、admin-vue 维护入口完善）。
 - D12 状态：原文 2026-08-06 已因 PowerShell 编码异常丢失；按上下文重写并锁定 deploy-fast 流程。
-
-
 

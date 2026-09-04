@@ -26,6 +26,9 @@ public final class ApprovalSummaryBuilder {
                 case "CONTRACT" -> fillContract(em, result, instance);
                 case "AUTHORIZATION" -> fillAuthorization(em, result, instance);
                 case "RMA_ORDER" -> fillRmaOrder(em, result, instance);
+                case "PRODUCT_CREATE" -> fillProductCreate(em, result, instance);
+                case "DEALER_CREATE" -> fillDealerCreate(em, result, instance);
+                case "SUPPLIER_CREATE" -> fillSupplierCreate(em, result, instance);
                 default -> result.put("items", List.of());
             }
         } catch (Exception ex) {
@@ -243,6 +246,51 @@ public final class ApprovalSummaryBuilder {
         Object vf = val(c, "valid_from");
         Object vt = val(c, "valid_to");
         header.put("有效期", (vf == null ? "" : vf) + " ~ " + (vt == null ? "" : vt));
+        result.put("header", header);
+        result.put("items", List.of());
+    }
+
+    private static void fillProductCreate(EntityManager em, Map<String, Object> result, ApprovalInstance in) {
+        List<Tuple> rs = em.createNativeQuery(
+                "select code, name_cn as name, status from products " +
+                "where id = ?1 and tenant_id = ?2", Tuple.class)
+                .setParameter(1, in.getBusinessId()).setParameter(2, in.getTenantId()).getResultList();
+        if (rs.isEmpty()) { fallbackHeader(result, in); return; }
+        Tuple p = rs.get(0);
+        Map<String, Object> header = new LinkedHashMap<>();
+        header.put("编码", val(p, "code"));
+        header.put("名称", val(p, "name"));
+        header.put("状态", val(p, "status"));
+        result.put("header", header);
+        result.put("items", List.of());
+    }
+
+    private static void fillDealerCreate(EntityManager em, Map<String, Object> result, ApprovalInstance in) {
+        List<Tuple> rs = em.createNativeQuery(
+                "select code, name, status from dealers " +
+                "where id = ?1 and tenant_id = ?2", Tuple.class)
+                .setParameter(1, in.getBusinessId()).setParameter(2, in.getTenantId()).getResultList();
+        if (rs.isEmpty()) { fallbackHeader(result, in); return; }
+        Tuple d = rs.get(0);
+        Map<String, Object> header = new LinkedHashMap<>();
+        header.put("编码", val(d, "code"));
+        header.put("名称", val(d, "name"));
+        header.put("状态", val(d, "status"));
+        result.put("header", header);
+        result.put("items", List.of());
+    }
+
+    private static void fillSupplierCreate(EntityManager em, Map<String, Object> result, ApprovalInstance in) {
+        List<Tuple> rs = em.createNativeQuery(
+                "select code, name, status from suppliers " +
+                "where id = ?1 and tenant_id = ?2", Tuple.class)
+                .setParameter(1, in.getBusinessId()).setParameter(2, in.getTenantId()).getResultList();
+        if (rs.isEmpty()) { fallbackHeader(result, in); return; }
+        Tuple s = rs.get(0);
+        Map<String, Object> header = new LinkedHashMap<>();
+        header.put("编码", val(s, "code"));
+        header.put("名称", val(s, "name"));
+        header.put("状态", val(s, "status"));
         result.put("header", header);
         result.put("items", List.of());
     }

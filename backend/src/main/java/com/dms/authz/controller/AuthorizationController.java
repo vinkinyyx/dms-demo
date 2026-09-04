@@ -125,22 +125,4 @@ public class AuthorizationController {
     public ApiResponse<List<java.util.Map<String, Object>>> productLines() {
         return ApiResponse.ok(service.listProductLines());
     }
-
-    /** 授权-下单挂钩开关：查询当前租户是否强制 */
-    @GetMapping("/api/authorizations/order-enforce")
-    public ApiResponse<java.util.Map<String, Object>> orderEnforce() {
-        boolean enforced = service.isOrderAuthzEnforced();
-        return ApiResponse.ok(java.util.Map.of(
-                "enforced", enforced,
-                "label", enforced ? "授权与下单已挂钩：无有效授权不能下单/出库" : "授权与下单解耦：可直接下单"));
-    }
-
-    /** 授权-下单挂钩开关：更新（业务前台租户配置） */
-    @PostMapping("/api/authorizations/order-enforce")
-    @OperationLog(businessType = "authorization", action = OperationAction.UPDATE, remark = "授权-下单开关设置")
-    public ApiResponse<java.util.Map<String, Object>> setOrderEnforce(@RequestBody java.util.Map<String, Object> body) {
-        boolean enabled = Boolean.parseBoolean(String.valueOf(body.getOrDefault("enabled", false)));
-        service.setOrderAuthzEnforced(enabled);
-        return ApiResponse.ok(java.util.Map.of("enforced", enabled));
-    }
 }

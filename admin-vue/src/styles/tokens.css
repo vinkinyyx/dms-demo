@@ -32,7 +32,7 @@
   --dms-border-1:var(--dms-gray-300);--dms-border-2:var(--dms-gray-200);--dms-border-3:var(--dms-gray-100);
   --dms-border-focus:var(--dms-blue-500);
   --dms-link-color:var(--dms-blue-500);--dms-link-hover:var(--dms-blue-400);--dms-link-active:var(--dms-blue-600);
-  --dms-sider-bg:#001529;--dms-sider-bg-deep:#000c1c;--dms-sider-text:#cfd8dc;--dms-sider-text-active:#ffffff;
+  --dms-sider-bg:#ffffff;--dms-sider-bg-deep:#f5f7fa;--dms-sider-text:#4b5563;--dms-sider-text-hover:#1f2937;--dms-sider-text-active:var(--dms-color-primary,#1677ff);--dms-sider-active-bg:var(--dms-color-primary-bg,#e8f1ff);--dms-sider-badge-bg:#eef1f6;--dms-sider-badge-text:#8a94a6;--dms-sider-border:#eef0f4;
 
   --dms-font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",Helvetica,Arial,sans-serif;
   --dms-font-size-xs:12px;--dms-font-size-sm:13px;--dms-font-size-base:14px;--dms-font-size-md:16px;

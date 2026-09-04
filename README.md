@@ -105,8 +105,8 @@ ullable=false，默认 ZERO。
 - 回归工具 tools/_e2e_v389_final.py。
 # 通用 DMS 经销商管理系统 — 项目入口
 
-**当前版本**: 测试环境 v4.6.1（2026-09-02，定时邮件发送运行时开关，Flyway V146）｜正式环境 v4.6.1（2026-09-03 部署，Flyway V146）
-**最后更新**: 2026-09-03
+**当前版本**: 测试环境与正式环境均为 **v4.6.6**（2026-09-05 生产已发布，v4.6.3 审批流补齐+系统开关页 Flyway V147/V148 → v4.6.4 浅色菜单/清库存影子 → v4.6.5 登录页/后台浅色化+Logo 自适应+寄售库存放出 → v4.6.6 登录页恢复深色+菜单深/浅仅菜单区切换（logo 跟随）+TOP5 改排行榜全名+移动端首页升级）；生产发布报告 `docs/02_设计/prod-deploy-report-v4.6.6.md`
+**最后更新**: 2026-09-04
 **正式环境**: 业务前台/PC http://8.133.193.238/dms/ ｜ 移动端 http://8.133.193.238/dms/mobile/login ｜ 平台后台 http://8.133.193.238/dms/admin/ ｜ 健康检查 http://8.133.193.238/actuator/health
 **测试环境（域名，推荐）**: PC http://dms-dev.mysolmed.com/dms/ ｜ 移动 H5 http://dms-dev.mysolmed.com/dms/mobile/login ｜ 经销商准入注册 http://dms-dev.mysolmed.com/dms/mobile/register ｜ 平台后台 http://dms-dev.mysolmed.com/dms/admin/ ｜ API/健康检查 http://dms-dev.mysolmed.com/api、http://dms-dev.mysolmed.com/actuator/health ｜ 产品宣传手册 http://dms-dev.mysolmed.com/brochure/（移动页 /brochure/mobile.html、打印页 /brochure/print.html）
 **测试环境（IP 直连）**: `43.128.145.141` 与域名同机；自 2026-09-03 起**网页路径** IP 访问会 301 自动跳转到域名（旧 IP 书签/缓存无需手动改，点开即跳域名），**API 路径**（/api/、/auth/、/actuator/、/open/）走 IP 不跳转，自动化脚本不受影响；裸域名/根路径 `/` 已配置 302 跳转 `/dms/` 直达系统

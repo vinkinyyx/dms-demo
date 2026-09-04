@@ -14,7 +14,7 @@ import java.time.OffsetDateTime;
 
 /**
  * 授权审批回调：
- * - AUTHORIZATION：创建/续约审批。通过 -> 按有效期置 active/not_started；驳回 -> rejected；撤回/退回 -> draft。
+ * - AUTHORIZATION：创建审批；AUTHORIZATION_RENEW：续约审批。通过 -> 按有效期置 active/not_started；驳回 -> rejected；撤回/退回 -> draft。
  * - AUTHORIZATION_TERMINATE：终止审批。通过 -> terminated；驳回/撤回/退回 -> 恢复原状态（active/not_started）。
  * 状态统一由本回调落库，Service/Controller 不再重复写状态。
  */
@@ -25,12 +25,14 @@ public class AuthorizationApprovalCallback implements ApprovalBusinessCallback {
 
     public static final String BT_AUTHORIZATION = "AUTHORIZATION";
     public static final String BT_AUTHORIZATION_TERMINATE = "AUTHORIZATION_TERMINATE";
+    public static final String BT_AUTHORIZATION_RENEW = "AUTHORIZATION_RENEW";
 
     private final AuthorizationRepository authorizationRepository;
 
     @Override
     public boolean supports(String businessType) {
-        return BT_AUTHORIZATION.equals(businessType) || BT_AUTHORIZATION_TERMINATE.equals(businessType);
+        return BT_AUTHORIZATION.equals(businessType) || BT_AUTHORIZATION_TERMINATE.equals(businessType)
+                || BT_AUTHORIZATION_RENEW.equals(businessType);
     }
 
     @Override
@@ -45,7 +47,7 @@ public class AuthorizationApprovalCallback implements ApprovalBusinessCallback {
             LocalDate today = LocalDate.now();
             boolean notStarted = auth.getValidFrom() != null && auth.getValidFrom().isAfter(today);
             auth.setStatus(notStarted ? "not_started" : "active");
-            log.info("授权 {} 审批通过，状态={}", auth.getId(), auth.getStatus());
+            log.info("授权 {} 审批通过（{}），状态={}", auth.getId(), instance.getBusinessType(), auth.getStatus());
         }
         auth.setUpdatedAt(OffsetDateTime.now());
         authorizationRepository.save(auth);

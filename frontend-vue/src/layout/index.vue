@@ -2,8 +2,8 @@
   <el-container class="layout">
     <el-aside :width="collapsed ? '64px' : '230px'" class="sidebar">
       <div class="logo" @click="$router.push('/home')">
-        <DmsLogo :size="30" class="logo-icon" inverse />
-        <span v-show="!collapsed" class="logo-text">经销商管理</span>
+        <DmsLogo :size="32" class="logo-icon" variant="auto" />
+        <span v-show="!collapsed" class="logo-text">MySolMed DMS</span>
       </div>
       <el-scrollbar class="menu-scroll">
         <el-menu :default-active="activeKey" :collapse="collapsed" router unique-opened
@@ -39,8 +39,8 @@
           <button v-for="item in themePresets" :key="item.key" type="button" class="theme-chip"
             :class="{ active: currentPreset.key === item.key }" :title="item.name"
             :style="{ '--chip': item.color }" @click="setThemePreset(item.key)" />
-          <el-button text circle :title="themeMode === 'dark' ? '切换浅色' : '切换深色'" @click="toggleThemeMode">
-            <el-icon><Moon v-if="themeMode === 'light'" /><Sunny v-else /></el-icon>
+          <el-button text circle :title="siderMode === 'dark' ? '菜单切换浅色' : '菜单切换深色'" @click="toggleSiderMode">
+            <el-icon><Sunny v-if="siderMode === 'dark'" /><Moon v-else /></el-icon>
           </el-button>
         </div>
         <el-badge :value="unread" :hidden="!unread" class="bell-badge" @click="goNotifications">
@@ -99,9 +99,11 @@ import { Bell, Moon, Sunny, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { useTagsStore } from '@/store/tags'
 import { ensurePermissions } from '@/directives/has'
-import { THEME_PRESETS as themePresets, currentThemePreset as currentPreset, setPreset as setThemePreset, toggleMode as applyThemeMode, initTheme } from '@/config/theme-runtime'
+import { THEME_PRESETS as themePresets, currentThemePreset as currentPreset, setPreset as setThemePreset, toggleSider as applyToggleSider, currentSiderMode, initTheme, forceContentLight } from '@/config/theme-runtime'
 import Breadcrumb from './Breadcrumb.vue'
 import TagsBar from './TagsBar.vue'
+import { useTenantFeatures } from '@/composables/useTenantFeatures'
+const { features, loadFeatures } = useTenantFeatures()
 
 const route = useRoute()
 const router = useRouter()
@@ -119,22 +121,22 @@ const collapsed = ref(localStorage.getItem('dms:sidebar:collapsed') === '1')
 const commandOpen = ref(false)
 const commandQuery = ref('')
 initTheme()
+forceContentLight()
 const unread = ref(0)
-const themeMode = ref(document.documentElement.dataset.mode || 'light')
-function toggleThemeMode(){ applyThemeMode(); themeMode.value = document.documentElement.dataset.mode || 'light' }
+const siderMode = ref(document.documentElement.dataset.sider || currentSiderMode.value || 'light')
+function toggleSiderMode(){ applyToggleSider(); siderMode.value = document.documentElement.dataset.sider || 'light' }
 function toggleSidebar(){ collapsed.value = !collapsed.value; persistSidebar(); applySidebarVar() }
 function applySidebarVar(){ document.documentElement.style.setProperty('--dms-sidebar-w', collapsed.value ? '64px' : '230px'); window.dispatchEvent(new Event('sidebar-toggle')) }
 async function loadUnread(){ try { const r=await unreadCount(); unread.value=Number(r.data?.count||0) } catch(e){ unread.value=0 } }
 function goNotifications(){ router.push('/notifications') }
 setInterval(loadUnread, 60000)
 const permissionsLoaded = ref(false)
-const features = ref({ inventoryEnabled: true, purchaseEnabled: true })
 
 onMounted(async () => { applySidebarVar();
   collapsed.value = localStorage.getItem('dms:sidebar:collapsed') === '1'
   await ensurePermissions()
   await loadUnread()
-  try { const r = await request.get('/api/tenant/features'); if (r.data) Object.assign(features.value, r.data) } catch(e) {}
+  await loadFeatures()
   permissionsLoaded.value = true
 })
 
@@ -177,13 +179,13 @@ const commandItems = computed(() => {
     { title: '消息中心', path: '/notifications' },
     { title: '个人资料', path: '/profile' },
     { title: '销售订单', path: '/m/orders' },
-    { title: '库存查询', path: '/m/inventory' },
-    { title: '收货入库', path: '/m/receipts' },
+    { title: '库存查询', path: '/m/inventory', inventoryOnly: true },
+    { title: '收货入库', path: '/m/receipts', inventoryOnly: true },
     { title: '销售出库', path: '/m/sales-outs' },
-    { title: '库存移动', path: '/m/stock-moves' },
-    { title: '库存盘点', path: '/stocktakes' },
-    { title: '效期预警', path: '/expiry-alerts' },
-    { title: '序列号追溯', path: '/traceability' },
+    { title: '库存移动', path: '/m/stock-moves', inventoryOnly: true },
+    { title: '库存盘点', path: '/stocktakes', inventoryOnly: true },
+    { title: '效期预警', path: '/expiry-alerts', inventoryOnly: true },
+    { title: '序列号追溯', path: '/traceability', inventoryOnly: true },
     { title: '报表中心', path: '/reports' },
     { title: '报表订阅', path: '/report-subscriptions' },
     { title: '审批中心', path: '/approval/todo' },
@@ -192,7 +194,11 @@ const commandItems = computed(() => {
     { title: '导入导出任务', path: '/async-tasks' }
   ]
   for (const group of menuGroups.value) for (const item of group.items) items.push({ title: item.label, path: item.route || '/m/' + item.key })
-  return items
+  const isVendor = userStore.userType === 'vendor'
+  return items.filter(it => {
+    if (isVendor && it.inventoryOnly && !features.value.inventoryEnabled) return false
+    return true
+  })
 })
 function queryCommands(query, cb) {
   const q = String(query || '').trim().toLowerCase()
@@ -236,22 +242,22 @@ function onCommand(cmd) {
 .layout { height: 100vh; background: var(--dms-bg-page); }
 .layout > .el-container { min-height: 0; }
 .sidebar {
-  background: linear-gradient(180deg,#243447 0%,#1f2d3d 100%);
-  border-right: 1px solid #1a2533;
+  background: var(--dms-sider-bg);
+  border-right: 1px solid var(--dms-sider-border, #eef0f4);
   transition: width var(--dms-motion-duration-medium) var(--dms-motion-ease-out);
   overflow: hidden;
   box-shadow: none;
 }
 .logo {
-  height: 56px;
+  height: 60px;
   display: flex;
   align-items: center;
-  gap: var(--dms-spacing-2);
-  padding: 0 var(--dms-spacing-5);
-  color: #fff;
+  gap: 10px;
+  padding: 0 16px;
+  color: var(--dms-sider-text-active, var(--dms-color-primary));
   cursor: pointer;
-  background: #1b2736;
-  border-bottom: 1px solid rgba(255,255,255,.06);
+  background: var(--dms-sider-bg);
+  border-bottom: 1px solid var(--dms-sider-border, #eef0f4);
   font-family: var(--dms-font-family-number);
 }
 .logo-icon {
@@ -260,32 +266,37 @@ function onCommand(cmd) {
   align-items: center;
   justify-content: center;
 }
-.logo-text { font-size: var(--dms-font-size-sm); white-space: nowrap; font-weight: var(--dms-font-weight-semibold); color: #e5eaf1; }
+.logo-text { font-size: 16px; white-space: nowrap; font-weight: 700; color: var(--dms-sider-text-hover, #0f172a); letter-spacing: .2px; }
 .menu-scroll { height: calc(100vh - 56px); }
 :deep(.el-menu) {
   border-right: none;
   background: transparent;
-  padding: 8px 6px;
+  padding: 10px 8px;
 }
 :deep(.el-menu-item), :deep(.el-sub-menu__title) {
   height: 42px;
-  margin: 2px 0;
-  border-radius: 3px;
-  color: #b8c4d3;
+  margin: 3px 0;
+  border-radius: 8px;
+  color: var(--dms-sider-text);
   font-weight: 500;
+  font-size: 14px;
 }
+:deep(.el-menu-item .el-icon), :deep(.el-sub-menu__title .el-icon) { color: inherit; font-size: 17px; }
 :deep(.el-menu-item:hover), :deep(.el-sub-menu__title:hover) {
-  background: rgba(255,255,255,.08);
-  color: #fff;
+  background: var(--dms-sider-bg-deep, #f5f7fa);
+  color: var(--dms-sider-text-hover, #1f2937);
 }
 :deep(.el-menu-item.is-active) {
-  color: #fff;
-  background: var(--dms-color-primary);
+  color: var(--dms-sider-text-active, var(--dms-color-primary));
+  background: var(--dms-sider-active-bg, var(--dms-color-primary-bg));
+  font-weight: 600;
   box-shadow: none;
 }
-:deep(.el-menu-item.is-active .el-icon), :deep(.el-menu-item.is-active) { color: #fff; }
-:deep(.el-sub-menu .el-menu) { background: rgba(0,0,0,.12); padding: 4px; }
-:deep(.el-sub-menu .el-menu-item) { min-width: auto; height: 38px; }
+:deep(.el-menu-item.is-active .el-icon) { color: var(--dms-sider-text-active, var(--dms-color-primary)); }
+:deep(.el-sub-menu.is-active > .el-sub-menu__title) { color: var(--dms-sider-text-active, var(--dms-color-primary)); }
+:deep(.el-sub-menu .el-menu) { background: transparent; padding: 2px 0 2px 14px; }
+:deep(.el-sub-menu .el-menu-item) { min-width: auto; height: 38px; margin: 2px 0; border-radius: 8px; }
+:deep(.el-menu--collapse .el-menu-item), :deep(.el-menu--collapse .el-sub-menu__title) { border-radius: 8px; }
 .topbar {
   display: flex;
   align-items: center;

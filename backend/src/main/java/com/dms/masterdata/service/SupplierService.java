@@ -10,12 +10,18 @@ import com.dms.common.PageResult;
 import com.dms.common.util.TenantContext;
 import com.dms.masterdata.entity.Supplier;
 import com.dms.masterdata.repository.SupplierRepository;
+import com.dms.approval.dto.StartApprovalRequest;
+import com.dms.approval.service.ApprovalService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -28,6 +34,13 @@ public class SupplierService {
     private final SupplierRepository repository;
     private final ReferenceCheckService referenceCheckService;
     private final com.dms.execution.service.AuditLogService opLog;
+    @Lazy
+    private final ApprovalService approvalService;
+    @Lazy
+    private final SupplierService self;
+
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager em;
 
     @Transactional(readOnly = true)
     public PageResult<Supplier> list(PageQuery pageQuery) {
@@ -50,6 +63,10 @@ public class SupplierService {
 
     @Transactional
     public Supplier create(Supplier entity) {
+        return create(entity, true);
+    }
+
+    private Supplier create(Supplier entity, boolean requireApproval) {
         UUID tenantId = TenantContext.getTenantId();
         if (tenantId == null) {
             throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少 tenantId");
@@ -59,12 +76,61 @@ public class SupplierService {
         }
         entity.setId(null);
         entity.setTenantId(tenantId);
-        if (entity.getStatus() == null) entity.setStatus("active");
+        entity.setStatus(requireApproval ? "pending_approval" : "active");
         entity.setUpdatedAt(OffsetDateTime.now());
         entity.ensureAttrs();
         Supplier saved = repository.save(entity);
         opLog.log("supplier", saved.getId(), "CREATE", "新建供应商 " + saved.getCode());
+        if (requireApproval) scheduleCreateApproval(saved);
         return saved;
+    }
+
+    private void scheduleCreateApproval(Supplier saved) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    kickoffCreateApproval(saved);
+                }
+            });
+        } else {
+            kickoffCreateApproval(saved);
+        }
+    }
+
+    private void kickoffCreateApproval(Supplier saved) {
+        try {
+            self.startCreateApproval(saved.getId(), saved.getCode(), saved.getName());
+        } catch (Exception e) {
+            log.warn("供应商创建审批发起失败，回退为 active: id={} code={}", saved.getId(), saved.getCode(), e);
+            try {
+                self.fallbackActive(saved.getId());
+            } catch (Exception ex) {
+                log.error("供应商创建审批失败后回退 active 也失败: id={}", saved.getId(), ex);
+            }
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void startCreateApproval(Long id, String code, String name) {
+        StartApprovalRequest request = new StartApprovalRequest();
+        request.setBusinessType(SupplierCreateApprovalCallback.BUSINESS_TYPE);
+        request.setBusinessId(id);
+        request.setBusinessCode(code);
+        request.setTitle("供应商创建审批-" + (name != null ? name : code));
+        java.util.Map<String, Object> snapshot = new java.util.LinkedHashMap<>();
+        snapshot.put("id", id);
+        snapshot.put("code", code);
+        snapshot.put("name", name);
+        request.setBusinessSnapshot(snapshot);
+        approvalService.start(request);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void fallbackActive(Long id) {
+        em.createNativeQuery("UPDATE suppliers SET status='active', updated_at=now() WHERE id=?1")
+          .setParameter(1, id).executeUpdate();
+        opLog.log("supplier", id, "UPDATE", "供应商创建审批发起失败，回退为生效状态");
     }
 
     @Transactional
@@ -106,7 +172,7 @@ public class SupplierService {
             if (entity.getName() == null || entity.getName().trim().isEmpty()) {
                 throw new BusinessException(ErrorCode.PARAM_MISSING, "名称不能为空");
             }
-            create(entity); return true; });
+            create(entity, false); return true; });
     }
 
     @Transactional

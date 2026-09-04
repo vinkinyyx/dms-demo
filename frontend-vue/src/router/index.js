@@ -97,6 +97,7 @@ const routes = [
       { path: 'stocktakes', name: 'Stocktakes', component: () => import('@/views/Stocktakes.vue'), meta: { title: '库存盘点' } },
       { path: 'expiry-alerts', name: 'ExpiryAlerts', component: () => import('@/views/ExpiryAlerts.vue'), meta: { title: '效期预警' } },
       { path: 'async-tasks', name: 'AsyncTasks', component: () => import('@/views/AsyncTasks.vue'), meta: { title: '导入导出任务' } },
+      { path: 'system-switches', name: 'SystemSwitches', component: () => import('@/views/SystemSwitches.vue'), meta: { title: '系统开关', permission: 'role:view' } },
       { path: 'traceability', name: 'Traceability', component: () => import('@/views/Traceability.vue'), meta: { title: '序列号追溯' } },
       { path: 'log-center', name: 'LogCenter', component: () => import('@/views/LogCenter.vue'), meta: { title: '日志中心' } },
       { path: 'login-logs', name: 'LoginLogs', component: () => import('@/views/LoginLogs.vue'), meta: { title: '登录日志' } },

@@ -166,13 +166,19 @@ async function doWithdraw() {
   load()
 }
 async function doTerminate() {
-  const { value } = await ElMessageBox.prompt('请输入合同终止原因', '合同终止', {
-    confirmButtonText: '提交终止审批', cancelButtonText: '取消', type: 'warning',
-    inputValidator: (v) => (v && v.trim()) ? true : '终止原因必填'
-  })
-  await terminateContract(route.params.id, { reason: value })
-  ElMessage.success('已提交合同终止审批')
-  load()
+  let reason = ''
+  try {
+    const r = await ElMessageBox.prompt('请输入合同终止原因', '合同终止', {
+      confirmButtonText: '提交终止审批', cancelButtonText: '取消', type: 'warning',
+      inputValidator: (v) => (v && v.trim()) ? true : '终止原因必填'
+    })
+    reason = r.value
+  } catch { return }
+  try {
+    await terminateContract(route.params.id, { reason })
+    ElMessage.success('已提交终止审批')
+    load()
+  } catch (e) { ElMessage.error('终止失败: ' + (e?.response?.data?.message || e?.message || e)) }
 }
 function actionLabel(a) {
   return ({ submit: '提交', approve: '通过', reject: '驳回', withdraw: '撤回', terminate: '终止' })[a] || a

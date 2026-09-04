@@ -23,14 +23,6 @@ export function exportAuthorizations() {
   return request({ url: '/api/authorizations/actions/export', method: 'get', responseType: 'blob' })
 }
 
-// ===== 授权-下单挂钩开关 =====
-export function getOrderEnforce() {
-  return request({ url: '/api/authorizations/order-enforce', method: 'get' })
-}
-export function setOrderEnforce(enabled) {
-  return request({ url: '/api/authorizations/order-enforce', method: 'post', data: { enabled } })
-}
-
 // ===== 选择器数据 =====
 export function listAuthProductLines() {
   return request({ url: '/api/authorizations/product-lines', method: 'get' })

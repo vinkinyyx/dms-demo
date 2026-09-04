@@ -1,28 +1,28 @@
 <template>
   <div class="contract-workspace">
     <el-card shadow="never">
-      <div class="toolbar">
-        <el-radio-group v-model="query.status" @change="reload">
-          <el-radio-button label="">全部</el-radio-button>
-          <el-radio-button label="draft">草稿</el-radio-button>
-          <el-radio-button label="pending">审批中</el-radio-button>
-          <el-radio-button label="effective">已生效</el-radio-button>
-          <el-radio-button label="rejected">已驳回</el-radio-button>
-          <el-radio-button label="terminated">已终止</el-radio-button>
-          <el-radio-button label="expired">已到期</el-radio-button>
-        </el-radio-group>
-        <div class="filters">
+      <el-form :inline="true" size="small" @submit.prevent>
+        <el-form-item label="关键词">
           <el-input v-model="query.keyword" placeholder="合同编号/名称" clearable style="width: 200px" @keyup.enter="reload" />
+        </el-form-item>
+        <el-form-item label="合同分类">
           <el-select v-model="query.category" placeholder="合同分类" clearable style="width: 140px">
             <el-option v-for="o in CATEGORY_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="query.status" clearable placeholder="全部状态" style="width: 140px" @change="reload">
+            <el-option v-for="s in STATUS_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
           <el-button type="primary" @click="reload">查询</el-button>
           <el-button @click="reset">重置</el-button>
-          <el-button type="success" @click="goCreate"><el-icon><Plus /></el-icon>新建合同</el-button>
+          <el-button type="primary" v-has="'contract:create'" @click="goCreate"><el-icon><Plus /></el-icon>新建合同</el-button>
           <el-button @click="doExport"><el-icon><Download /></el-icon>导出</el-button>
           <el-button @click="doExportAsync" :loading="exportingAsync">异步导出</el-button>
-        </div>
-      </div>
+        </el-form-item>
+      </el-form>
 
       <el-table :data="list" v-loading="loading" border stripe size="small">
         <el-table-column prop="code" label="合同编号" width="190"><template #default="{ row }"><el-link type="primary" @click="goDetail(row.id)">{{ row.code }}</el-link></template></el-table-column>
@@ -52,13 +52,13 @@
             <div class="row-actions">
               <el-button link type="primary" @click="goDetail(row.id)">查看</el-button>
               <template v-if="rowActions(row).length <= 2">
-                <el-button v-for="a in rowActions(row)" :key="a.key" link :type="a.type" @click="a.on(row.id)">{{ a.label }}</el-button>
+                <el-button v-for="a in rowActions(row)" :key="a.key" v-has="a.perm" link :type="a.type" @click="a.on(row.id)">{{ a.label }}</el-button>
               </template>
               <el-dropdown v-else trigger="click" @command="(cmd)=>cmd.on(row.id)">
                 <el-button link type="primary">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item v-for="a in rowActions(row)" :key="a.key" :command="a">{{ a.label }}</el-dropdown-item>
+                    <el-dropdown-item v-for="a in rowActions(row)" :key="a.key" v-has="a.perm" :command="a">{{ a.label }}</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -69,11 +69,12 @@
 
       <el-pagination
         class="pager"
+        background
         layout="total, sizes, prev, pager, next, jumper"
         :total="total"
         :current-page="query.page"
         :page-size="query.size"
-        :page-sizes="[10, 20, 50]"
+        :page-sizes="[10, 20, 50, 100]"
         @current-change="(p) => { query.page = p; load() }"
         @size-change="(s) => { query.size = s; query.page = 1; load() }"
       />
@@ -86,8 +87,8 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowDown } from '@element-plus/icons-vue'
-import { listContracts, submitContract, withdrawContract, deleteContract, exportContracts } from './api'
-import { CATEGORY_OPTIONS, APP_TYPE_OPTIONS, categoryLabel, appTypeLabel, statusMeta } from './dict'
+import { listContracts, submitContract, withdrawContract, deleteContract, terminateContract, exportContracts } from './api'
+import { CATEGORY_OPTIONS, APP_TYPE_OPTIONS, STATUS_OPTIONS, categoryLabel, appTypeLabel, statusMeta } from './dict'
 import request from '@/utils/request'
 import { formatDate } from '@/utils/format'
 
@@ -131,6 +132,21 @@ async function doWithdraw(id) {
   ElMessage.success('已撤回')
   load()
 }
+async function doTerminate(id) {
+  let reason = ''
+  try {
+    const r = await ElMessageBox.prompt('请输入合同终止原因', '合同终止', {
+      confirmButtonText: '提交终止审批', cancelButtonText: '取消', type: 'warning',
+      inputValidator: (v) => (v && v.trim()) ? true : '终止原因必填'
+    })
+    reason = r.value
+  } catch { return }
+  try {
+    await terminateContract(id, { reason })
+    ElMessage.success('已提交终止审批')
+    load()
+  } catch (e) { ElMessage.error('终止失败: ' + (e?.response?.data?.message || e?.message || e)) }
+}
 
 const exportingAsync = ref(false)
 async function doExportAsync() {
@@ -169,18 +185,17 @@ async function doDelete(id) {
 }
 function rowActions(row){
   const a=[]
-  if(row.status==='draft'||row.status==='rejected') a.push({key:'edit',label:'编辑',type:'primary',on:(id)=>goEdit(id)})
-  if(row.status==='draft') a.push({key:'submit',label:'提交',type:'warning',on:(id)=>doSubmit(id)})
-  if(row.status==='draft') a.push({key:'delete',label:'删除',type:'danger',on:(id)=>doDelete(id)})
-  if(row.status==='pending') a.push({key:'withdraw',label:'撤回',type:'info',on:(id)=>doWithdraw(id)})
+  if(row.status==='draft'||row.status==='rejected') a.push({key:'edit',label:'编辑',type:'primary',perm:null,on:(id)=>goEdit(id)})
+  if(row.status==='draft') a.push({key:'submit',label:'提交',type:'warning',perm:null,on:(id)=>doSubmit(id)})
+  if(row.status==='draft') a.push({key:'delete',label:'删除',type:'danger',perm:null,on:(id)=>doDelete(id)})
+  if(row.status==='pending') a.push({key:'withdraw',label:'撤回',type:'info',perm:null,on:(id)=>doWithdraw(id)})
+  if(row.status==='effective') a.push({key:'terminate',label:'终止合同',type:'danger',perm:'contract:submit',on:(id)=>doTerminate(id)})
   return a
 }
 onMounted(load)
 </script>
 
 <style scoped>
-.toolbar { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
-.filters { display: flex; gap: 8px; flex-wrap: wrap; }
 .pager { margin-top: 16px; justify-content: flex-end; }
 .row-actions { display: flex; gap: 6px; align-items: center; }
 </style>

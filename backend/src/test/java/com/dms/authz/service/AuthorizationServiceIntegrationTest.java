@@ -265,7 +265,7 @@ class AuthorizationServiceIntegrationTest extends BaseIntegrationTest {
         assertFalse(systemSettingService.isOrderAuthzEnforced(tenant.getId()), "默认关闭");
         systemSettingService.setOrderAuthzEnforced(true);
         assertTrue(systemSettingService.isOrderAuthzEnforced(tenant.getId()), "开启后应立即可读");
-        assertTrue(authorizationService.isOrderAuthzEnforced());
+        assertTrue(systemSettingService.isOrderAuthzEnforced(), "服务层默认租户读取应一致");
         systemSettingService.setOrderAuthzEnforced(false);
         assertFalse(systemSettingService.isOrderAuthzEnforced(tenant.getId()), "关闭后应立即可读");
     }

@@ -10,12 +10,18 @@ import com.dms.common.PageResult;
 import com.dms.common.util.TenantContext;
 import com.dms.masterdata.entity.Product;
 import com.dms.masterdata.repository.ProductRepository;
+import com.dms.approval.dto.StartApprovalRequest;
+import com.dms.approval.service.ApprovalService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -30,6 +36,10 @@ public class ProductService {
     private final ProductRepository repository;
     private final ReferenceCheckService referenceCheckService;
     private final com.dms.execution.service.AuditLogService opLog;
+    @Lazy
+    private final ApprovalService approvalService;
+    @Lazy
+    private final ProductService self;
 
     @jakarta.persistence.PersistenceContext
     private jakarta.persistence.EntityManager em;
@@ -252,6 +262,10 @@ public class ProductService {
 
     @Transactional
     public Product create(Product entity) {
+        return create(entity, true);
+    }
+
+    private Product create(Product entity, boolean requireApproval) {
         validateProductType(entity.getProductType());
         UUID tenantId = TenantContext.getTenantId();
         if (tenantId == null) {
@@ -262,7 +276,7 @@ public class ProductService {
         }
         entity.setId(null);
         entity.setTenantId(tenantId);
-        if (entity.getStatus() == null) entity.setStatus("active");
+        entity.setStatus(requireApproval ? "pending_approval" : "active");
         if (entity.getTaxRate() == null) entity.setTaxRate(new BigDecimal("0.13"));
         if (entity.getUdiRequired() == null) entity.setUdiRequired(true);
         if (entity.getIsSerialManaged() == null) entity.setIsSerialManaged(false);
@@ -272,7 +286,56 @@ public class ProductService {
         entity.ensureAttrs();
         Product saved = repository.save(entity);
         opLog.log("product", saved.getId(), "CREATE", "新建产品 " + saved.getCode());
+        if (requireApproval) scheduleCreateApproval(saved);
         return saved;
+    }
+
+    private void scheduleCreateApproval(Product saved) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    kickoffCreateApproval(saved);
+                }
+            });
+        } else {
+            kickoffCreateApproval(saved);
+        }
+    }
+
+    private void kickoffCreateApproval(Product saved) {
+        try {
+            self.startCreateApproval(saved.getId(), saved.getCode(), saved.getNameCn());
+        } catch (Exception e) {
+            log.warn("产品创建审批发起失败，回退为 active: id={} code={}", saved.getId(), saved.getCode(), e);
+            try {
+                self.fallbackActive(saved.getId());
+            } catch (Exception ex) {
+                log.error("产品创建审批失败后回退 active 也失败: id={}", saved.getId(), ex);
+            }
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void startCreateApproval(Long id, String code, String name) {
+        StartApprovalRequest request = new StartApprovalRequest();
+        request.setBusinessType(ProductCreateApprovalCallback.BUSINESS_TYPE);
+        request.setBusinessId(id);
+        request.setBusinessCode(code);
+        request.setTitle("产品创建审批-" + (name != null ? name : code));
+        java.util.Map<String, Object> snapshot = new java.util.LinkedHashMap<>();
+        snapshot.put("id", id);
+        snapshot.put("code", code);
+        snapshot.put("name", name);
+        request.setBusinessSnapshot(snapshot);
+        approvalService.start(request);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void fallbackActive(Long id) {
+        em.createNativeQuery("UPDATE products SET status='active', updated_at=now() WHERE id=?1")
+          .setParameter(1, id).executeUpdate();
+        opLog.log("product", id, "UPDATE", "产品创建审批发起失败，回退为生效状态");
     }
     public void validateProductType(String productType) {
         if (productType == null || productType.isBlank()) {
@@ -347,7 +410,7 @@ public class ProductService {
             if (entity.getNameCn() == null || entity.getNameCn().trim().isEmpty()) {
                 throw new BusinessException(ErrorCode.PARAM_MISSING, "中文名称不能为空");
             }
-            create(entity); return true; });
+            create(entity, false); return true; });
     }
 
     @Transactional

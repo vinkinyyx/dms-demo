@@ -119,6 +119,7 @@ automation_test/frontend-dist.zip
 # ============ 发布备份/打包产物 ============
 releases/*-backup-*/
 releases/*-prod-deploy-*/
+releases/dms-v*/
 
 # Local sync rollback backups
 .sync-backup-*/
@@ -162,3 +163,13 @@ automation_test/v455_open_collab_outbound_e2e.py
 tests/reports/
 test-results/
 playwright-report/
+
+# 浏览器验证截图结果（运行产物，非源码；仅 automation_test/e2e 脚本入库）
+automation_test/v4*-results-*/
+
+# 一次性变更入包（外部投递，不入库）
+DMS-changeset-*/
+
+# 含明文 SSH 密码的一次性前端部署助手（功能由 deploy_test.py 覆盖）
+scripts/deploy_front_admin.py
+scripts/deploy_front_only.py

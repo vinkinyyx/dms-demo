@@ -2,7 +2,7 @@
   <div class="m-home">
     <div class="m-hero">
       <div class="m-hero-row">
-        <DmsLogo :size="28" inverse />
+        <span class="m-hero-logo"><DmsLogo :size="30" inverse /></span>
         <div class="m-hero-hi">
           你好，{{ userStore.username }}
           <span class="m-hero-date">{{ today }}</span>
@@ -13,6 +13,7 @@
           </van-badge>
         </router-link>
       </div>
+      <div class="m-hero-sub">MySolMed DMS · 移动工作台</div>
     </div>
 
     <div class="m-primary-actions">
@@ -27,19 +28,21 @@
     <div class="m-sec-title">本月概览</div>
     <div class="m-stats">
       <div class="m-stat" @click="$router.push('/mobile/dashboard')">
+        <div class="m-stat-ic m-stat-ic--blue"><van-icon name="balance-o" /></div>
         <div class="m-stat-v">¥ {{ fmtAmount(monthKpi.totalSales) }}</div>
         <div class="m-stat-l">本月销售金额</div>
       </div>
       <div class="m-stat" @click="$router.push('/mobile/dashboard')">
+        <div class="m-stat-ic m-stat-ic--orange"><van-icon name="orders-o" /></div>
         <div class="m-stat-v">{{ monthKpi.totalOrders || 0 }}</div>
         <div class="m-stat-l">本月订单数</div>
       </div>
     </div>
 
     <div class="m-sec-title">常用功能</div>
-    <div class="m-quick-grid">
-      <router-link v-for="q in quicks" :key="q.key" :to="q.to" class="m-quick-item">
-        <div class="m-quick-ic">
+    <div class="m-quick-grid m-quick-grid--home">
+      <router-link v-for="(q, i) in quicks" :key="q.key" :to="q.to" class="m-quick-item">
+        <div class="m-quick-ic" :class="'m-quick-ic--c' + (i % 4)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" v-html="q.icon" />
         </div>
         <div class="m-quick-l">{{ q.label }}</div>
@@ -126,4 +129,53 @@ load()
 .m-home { padding-bottom: var(--dms-spacing-4); }
 .m-stat { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .m-stat:active { opacity: .7; }
+.m-hero { position: relative; overflow: hidden; }
+.m-hero::after {
+  content: '';
+  position: absolute;
+  right: -50px; top: -60px;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.10);
+  pointer-events: none;
+}
+.m-hero::before {
+  content: '';
+  position: absolute;
+  right: 40px; bottom: -70px;
+  width: 130px; height: 130px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.08);
+  pointer-events: none;
+}
+.m-hero-row { position: relative; z-index: 1; }
+.m-hero-logo {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.18);
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+}
+.m-hero-sub { position: relative; z-index: 1; margin-top: 14px; font-size: 12px; opacity: .85; letter-spacing: .5px; }
+/* KPI 卡片纵向化 + 彩色图标 */
+.m-stats { gap: 0; padding: var(--dms-spacing-4); }
+.m-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.m-stat-ic {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+.m-stat-ic--blue { background: var(--dms-blue-50, #e6f4ff); color: var(--dms-color-primary); }
+.m-stat-ic--orange { background: #fff3e8; color: #fa8c16; }
+.m-stat-v { font-size: 20px; }
+/* 常用功能彩色宫格 */
+.m-quick-grid--home { padding: var(--dms-spacing-4) var(--dms-spacing-2) var(--dms-spacing-3); gap: var(--dms-spacing-3) 0; }
+.m-quick-ic { width: 48px; height: 48px; border-radius: 14px; }
+.m-quick-ic svg { width: 24px; height: 24px; }
+.m-quick-ic--c0 { background: #e6f4ff; color: #1677ff; }
+.m-quick-ic--c1 { background: #f6ffed; color: #00b96b; }
+.m-quick-ic--c2 { background: #fff7e6; color: #fa8c16; }
+.m-quick-ic--c3 { background: #f9f0ff; color: #722ed1; }
 </style>

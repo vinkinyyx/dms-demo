@@ -1,10 +1,18 @@
 export const BUSINESS_TYPES = [
+  { value: 'CONTRACT', label: '合同创建' },
+  { value: 'CONTRACT_TERMINATE', label: '合同终止' },
+  { value: 'AUTHORIZATION', label: '授权创建' },
+  { value: 'AUTHORIZATION_TERMINATE', label: '授权终止' },
+  { value: 'AUTHORIZATION_RENEW', label: '授权续约' },
   { value: 'SALES_ORDER', label: '销售订单' },
+  { value: 'SALES_RETURN', label: '销退订单' },
   { value: 'PURCHASE_ORDER', label: '采购订单' },
-  { value: 'SALES_RETURN', label: '销售退货' },
   { value: 'PURCHASE_RETURN', label: '采购退货' },
-  { value: 'CONTRACT', label: '合同' },
-  { value: 'AUTHORIZATION', label: '授权' }
+  { value: 'INVOICE_ORDER', label: '开票订单' },
+  { value: 'RMA_ORDER', label: 'RMA退换' },
+  { value: 'PRODUCT_CREATE', label: '物料创建' },
+  { value: 'DEALER_CREATE', label: '经销商创建' },
+  { value: 'SUPPLIER_CREATE', label: '供应商创建' }
 ]
 
 export const BUSINESS_LABELS = BUSINESS_TYPES.reduce((m, t) => { m[t.value] = t.label; return m }, {})
@@ -51,7 +59,7 @@ export const TASK_STATUS = [
 ]
 export const TASK_STATUS_LABELS = TASK_STATUS.reduce((m, t) => { m[t.value] = t.label; return m }, {})
 
-export const ASSIGNEE_TYPE_LABELS = { USER: '账号', ROLE: '角色' }
+export const ASSIGNEE_TYPE_LABELS = { USER: '账号', ROLE: '角色', SUBMITTER: '提交人本人' }
 
 export const CONDITION_FIELDS = [
   { value: 'finalAmount', label: '单据金额', numeric: true },

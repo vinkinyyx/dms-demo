@@ -49,10 +49,12 @@ public class AuthorizationService {
     private final ApprovalService approvalService;
     private final SystemSettingService systemSettingService;
 
-    /** 授权创建/续约审批业务类型 */
+    /** 授权创建审批业务类型 */
     public static final String BT_AUTHORIZATION = "AUTHORIZATION";
     /** 授权终止审批业务类型 */
     public static final String BT_AUTHORIZATION_TERMINATE = "AUTHORIZATION_TERMINATE";
+    /** 授权续约审批业务类型 */
+    public static final String BT_AUTHORIZATION_RENEW = "AUTHORIZATION_RENEW";
 
     @PersistenceContext
     private EntityManager em;
@@ -297,18 +299,19 @@ public class AuthorizationService {
     }
 
     /**
-     * 授权续约：基于已有的生效/未开始/已到期授权复制经销商+产品线+终端医院，按新时间段生成新授权并走审批。
+     * 授权续约：仅允许对生效中(active)/未开始(not_started)的授权发起。
+     * 复制经销商+产品线+终端医院，按新时间段生成新授权，走独立的 AUTHORIZATION_RENEW 审批流。
      * 同一经销商续约允许时间段相接/重叠（排他校验跳过本经销商）。
      */
     @Transactional
     public Authorization renew(Long id, Authorization req) {
         UUID tenantId = TenantContext.getTenantId();
         Authorization src = getOwned(id, tenantId);
-        if (!"active".equals(src.getStatus()) && !"not_started".equals(src.getStatus())
-                && !"expired".equals(src.getStatus())) {
-            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "仅生效中/未开始/已到期的授权可以续约");
+        if (!"active".equals(src.getStatus()) && !"not_started".equals(src.getStatus())) {
+            throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "仅生效中或未开始的授权可以续约");
         }
         Authorization copy = new Authorization();
+        copy.setTenantId(tenantId);
         copy.setDealerId(src.getDealerId());
         copy.setContractId(src.getContractId());
         copy.setAuthType(src.getAuthType());
@@ -316,6 +319,7 @@ public class AuthorizationService {
         copy.setTerminalIds(src.getTerminalIds());
         copy.setCategoryIds(src.getCategoryIds());
         copy.setSource("renew");
+        copy.setStatus("pending_approval");
         copy.setRemark(req != null && req.getRemark() != null ? req.getRemark()
                 : "续约自授权 AUTH-" + src.getId());
         if (req != null && req.getValidFrom() != null) copy.setValidFrom(req.getValidFrom());
@@ -325,7 +329,25 @@ public class AuthorizationService {
         if (copy.getValidTo().isBefore(copy.getValidFrom())) {
             throw new BusinessException(ErrorCode.PARAM_MISSING, "续约有效期结束不能早于开始");
         }
-        return create(copy);
+        normalizeScope(copy);
+        copy.setUpdatedAt(OffsetDateTime.now());
+        Authorization saved = authorizationRepository.save(copy);
+        try {
+            StartApprovalRequest request = new StartApprovalRequest();
+            request.setBusinessType(BT_AUTHORIZATION_RENEW);
+            request.setBusinessId(saved.getId());
+            request.setBusinessCode("AUTH-RENEW-" + saved.getId());
+            request.setTitle("授权续约审批: AUTH-" + saved.getId());
+            Map<String, Object> snapshot = buildSnapshot(saved);
+            snapshot.put("renewFromId", src.getId());
+            request.setBusinessSnapshot(snapshot);
+            approvalService.start(request);
+        } catch (Exception e) {
+            saved.setStatus("draft");
+            authorizationRepository.save(saved);
+            throw e;
+        }
+        return saved;
     }
 
     /**
@@ -422,18 +444,6 @@ public class AuthorizationService {
             list.add(m);
         }
         return list;
-    }
-
-    /** 授权-下单挂钩开关（当前租户） */
-    @Transactional(readOnly = true)
-    public boolean isOrderAuthzEnforced() {
-        return systemSettingService.isOrderAuthzEnforced();
-    }
-
-    /** 更新授权-下单挂钩开关（当前租户） */
-    @Transactional
-    public void setOrderAuthzEnforced(boolean enabled) {
-        systemSettingService.setOrderAuthzEnforced(enabled);
     }
 
     /** 产品线/终端字段归一到 CSV 字段（兼容单值 productLineId/terminalId） */

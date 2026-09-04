@@ -136,9 +136,15 @@ function cleanNode(n, i) {
     allowTransfer: n.allowTransfer !== false,
     allowAddSign: n.allowAddSign !== false,
     timeoutHours: n.timeoutHours || 0,
-    assignees: (n.assignees || []).filter(a => a && a.refId),
-    ccs: (n.ccs || []).filter(a => a && a.refId)
+    assignees: (n.assignees || []).filter(validAssignee),
+    ccs: (n.ccs || []).filter(validAssignee)
   }
+}
+
+function validAssignee(a) {
+  if (!a || !a.assigneeType) return false
+  if (a.assigneeType === 'SUBMITTER') return true
+  return !!a.refId
 }
 
 function signature(nodes) {
@@ -149,8 +155,8 @@ function signature(nodes) {
     allowTransfer: n.allowTransfer,
     allowAddSign: n.allowAddSign,
     timeoutHours: n.timeoutHours,
-    assignees: (n.assignees || []).filter(a => a && a.refId),
-    ccs: (n.ccs || []).filter(a => a && a.refId)
+    assignees: (n.assignees || []).filter(validAssignee),
+    ccs: (n.ccs || []).filter(validAssignee)
   })))
 }
 

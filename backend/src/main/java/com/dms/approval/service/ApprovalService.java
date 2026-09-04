@@ -381,7 +381,7 @@ public class ApprovalService {
     }
 
     private void activateNode(ApprovalInstance instance, ApprovalTemplate template, ApprovalTemplateNode node) {
-        List<User> users = resolveNodeUsers(template.getTenantId(), node.getId());
+        List<User> users = resolveNodeUsers(template.getTenantId(), node.getId(), instance.getSubmitterId());
         if (users.isEmpty()) throw new BusinessException(ErrorCode.BUSINESS_RULE_VIOLATION, "no approver for node " + node.getName());
         instance.setCurrentNodeId(node.getId());
         instance.setCurrentNodeName(node.getName());
@@ -401,11 +401,15 @@ public class ApprovalService {
         record(instance, null, "NODE_START", node.getId(), node.getName(), null, null, "node started", null);
     }
 
-    private List<User> resolveNodeUsers(UUID tenantId, Long nodeId) {
+    private List<User> resolveNodeUsers(UUID tenantId, Long nodeId, Long submitterId) {
         Map<Long, User> users = new LinkedHashMap<>();
         for (ApprovalNodeAssignee config : assigneeRepository.findByNodeIdOrderByIdAsc(nodeId)) {
             if (config.getAssigneeType() == ApprovalAssigneeType.USER) {
                 userRepository.findById(config.getRefId()).filter(u -> tenantId.equals(u.getTenantId()) && "active".equals(u.getStatus())).ifPresent(u -> users.put(u.getId(), u));
+            } else if (config.getAssigneeType() == ApprovalAssigneeType.SUBMITTER) {
+                if (submitterId != null) {
+                    userRepository.findById(submitterId).filter(u -> tenantId.equals(u.getTenantId()) && "active".equals(u.getStatus())).ifPresent(u -> users.put(u.getId(), u));
+                }
             } else {
                 for (UserRole userRole : userRoleRepository.findByRoleId(config.getRefId())) {
                     userRepository.findById(userRole.getUserId()).filter(u -> tenantId.equals(u.getTenantId()) && "active".equals(u.getStatus())).ifPresent(u -> users.put(u.getId(), u));

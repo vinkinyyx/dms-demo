@@ -37,7 +37,7 @@
 
     <!-- KPI -->
     <el-row :gutter="12" class="kpi-row">
-      <el-col v-for="k in kpiCards" :key="k.key" :span="6">
+      <el-col v-for="k in kpiCards" :key="k.key" :span="kpiSpan">
         <el-card shadow="hover" class="kpi-card" :style="{ borderTop: '3px solid ' + k.color }">
           <div class="kpi-v" :style="{ color: k.color }">{{ k.display }}</div>
           <div class="kpi-l">{{ k.label }}</div>
@@ -50,7 +50,7 @@
     </el-row>
 
     <el-alert
-      v-if="expirySummary.expired || expirySummary.within30"
+      v-if="inventoryEnabled && (expirySummary.expired || expirySummary.within30)"
       class="expiry-banner"
       :type="expirySummary.expired ? 'error' : 'warning'"
       :closable="false"
@@ -71,7 +71,7 @@
       class="block-grid"
     >
       <template #item="{ element: b }">
-        <div v-show="visible[b.key]" class="block-wrap" :class="{ 'is-edit': editMode }">
+        <div v-if="blockAllowed(b)" v-show="visible[b.key]" class="block-wrap" :class="{ 'is-edit': editMode }">
           <el-card shadow="never" class="block-card">
             <template #header>
               <div class="block-header">
@@ -105,16 +105,20 @@ import { Setting, Refresh, RefreshLeft, Rank, CaretTop, CaretBottom, View } from
 import { getKpi, getSalesTrend, getInventoryPie, getTopDealers, getOrderFunnel, getTopHospitals, getActivity7d } from '@/api/dashboard'
 import { rangeFor } from '@/config/reports'
 import request from '@/utils/request'
+import { useTenantFeatures } from '@/composables/useTenantFeatures'
+const { features: tenantFeatures, loadFeatures } = useTenantFeatures()
 
 const LAYOUT_KEY = 'dashboard.layout.v1'
+const inventoryEnabled = computed(() => !!tenantFeatures.value.inventoryEnabled)
 const DEFAULT_BLOCKS = [
   { key: 'trend', title: '销售趋势' },
-  { key: 'pie', title: '库存三态' },
+  { key: 'pie', title: '库存三态', inventoryOnly: true },
   { key: 'topDealers', title: '销售 TOP 经销商' },
   { key: 'funnel', title: '订单漏斗' },
   { key: 'topHospitals', title: '医院手术 TOP' },
   { key: 'activity', title: '近 7 日活跃' }
 ]
+const VISIBLE_BLOCKS = computed(() => DEFAULT_BLOCKS.filter(b => !b.inventoryOnly || inventoryEnabled.value))
 
 // 筛选
 const rangeKey = ref('year')
@@ -140,14 +144,19 @@ const kpi = reactive({})
 const kpiCards = ref([])
 
 const editMode = ref(false)
-const orderedBlocks = ref([...DEFAULT_BLOCKS])
+const orderedBlocks = ref([...VISIBLE_BLOCKS.value])
 const visible = reactive({})
-DEFAULT_BLOCKS.forEach(b => visible[b.key] = true)
+VISIBLE_BLOCKS.value.forEach(b => visible[b.key] = true)
 const chartRefs = {}
 const charts = {}
 
 function getBlockTitle(k) { return DEFAULT_BLOCKS.find(b => b.key === k)?.title || k }
-const hiddenKeys = computed(() => DEFAULT_BLOCKS.map(b => b.key).filter(k => !visible[k]))
+function blockAllowed(b) { return VISIBLE_BLOCKS.value.some(x => x.key === b.key) }
+const kpiSpan = computed(() => {
+  const n = kpiCards.value.length || 1
+  return n <= 4 ? 6 : n <= 6 ? 8 : 6
+})
+const hiddenKeys = computed(() => VISIBLE_BLOCKS.value.map(b => b.key).filter(k => !visible[k]))
 
 function onRangeChange(v) {
   if (v !== 'year') customRange.value = rangeFor(v)
@@ -187,25 +196,27 @@ function ensureChart(key) {
 
 function buildKpi() {
   const totalSales = Number(kpi.totalSales || 0)
-  kpiCards.value = [
+  const all = [
     { key: 'totalSales', label: '总销售额', display: '¥ ' + totalSales.toLocaleString('zh-CN', { maximumFractionDigits: 0 }), color: '#1677ff' },
     { key: 'totalOrders', label: '订单数', display: kpi.totalOrders || 0, color: '#52c41a' },
     { key: 'activeDealers', label: '活跃经销商', display: kpi.activeDealers || 0, color: '#faad14' },
     { key: 'totalProducts', label: '产品数', display: kpi.totalProducts || 0, color: '#909399' },
-    { key: 'qualifiedStock', label: '合格库存', display: kpi.qualifiedStock || 0, color: '#52c41a' },
-    { key: 'pendingStock', label: '待检库存', display: kpi.pendingStock || 0, color: '#faad14' },
-    { key: 'defectiveStock', label: '不合格库存', display: kpi.defectiveStock || 0, color: '#ff4d4f' },
+    { key: 'qualifiedStock', label: '合格库存', display: kpi.qualifiedStock || 0, color: '#52c41a', invOnly: true },
+    { key: 'pendingStock', label: '待检库存', display: kpi.pendingStock || 0, color: '#faad14', invOnly: true },
+    { key: 'defectiveStock', label: '不合格库存', display: kpi.defectiveStock || 0, color: '#ff4d4f', invOnly: true },
     { key: 'totalSurgeries', label: '报台数', display: kpi.totalSurgeries || 0, color: '#1677ff' }
   ]
+  kpiCards.value = all.filter(k => !k.invOnly || inventoryEnabled.value)
 }
 
 async function loadAll() {
   const p = commonParams()
   try {
+    const piePromise = inventoryEnabled.value ? getInventoryPie(p).catch(() => ({ data: [] })) : Promise.resolve({ data: [] })
     const [k, trend, pie, td, fn, th, act] = await Promise.all([
       getKpi(p).catch(() => ({ data: {} })),
       getSalesTrend(p).catch(() => ({ data: [] })),
-      getInventoryPie(p).catch(() => ({ data: [] })),
+      piePromise,
       getTopDealers(p).catch(() => ({ data: [] })),
       getOrderFunnel(p).catch(() => ({ data: [] })),
       getTopHospitals(p).catch(() => ({ data: [] })),
@@ -244,12 +255,25 @@ function renderPie(data) {
 }
 function renderTopDealers(data) {
   const c = ensureChart('topDealers'); if (!c) return
+  const names = data.map(d => d.name || '-').reverse()
   c.setOption({
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: 100, right: 20, top: 10, bottom: 20 },
-    xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: data.map(d => d.name).reverse() },
-    series: [{ type: 'bar', data: data.map(d => Number(d.value || 0)).reverse(), itemStyle: { color: '#1677ff' } }]
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (ps) => { const p = Array.isArray(ps) ? ps[0] : ps; return (p.name || '') + '：¥' + Number(p.value || 0).toLocaleString('zh-CN') } },
+    grid: { left: 150, right: 60, top: 14, bottom: 20 },
+    xAxis: { type: 'value', axisLabel: { formatter: (v) => v >= 10000 ? (v / 10000) + '万' : v } },
+    yAxis: {
+      type: 'category', data: names,
+      axisLabel: {
+        margin: 12, color: '#4b5563', fontSize: 12,
+        width: 140, overflow: 'truncate', ellipsis: '…'
+      },
+      axisTick: { show: false }, axisLine: { show: false }
+    },
+    series: [{
+      type: 'bar', data: data.map(d => Number(d.value || 0)).reverse(),
+      barWidth: '52%',
+      itemStyle: { color: '#1677ff', borderRadius: [0, 4, 4, 0] },
+      label: { show: true, position: 'right', color: '#6b7280', fontSize: 12, formatter: (p) => '¥' + Number(p.value || 0).toLocaleString('zh-CN') }
+    }]
   }, true)
 }
 function renderFunnel(data) {
@@ -261,29 +285,43 @@ function renderFunnel(data) {
 }
 function renderTopHospitals(data) {
   const c = ensureChart('topHospitals'); if (!c) return
+  const names = data.map(d => d.name || '-').reverse()
   c.setOption({
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: 100, right: 20, top: 10, bottom: 20 },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (ps) => { const p = Array.isArray(ps) ? ps[0] : ps; return (p.name || '') + '：' + Number(p.value || 0).toLocaleString('zh-CN') + ' 台' } },
+    grid: { left: 150, right: 60, top: 14, bottom: 20 },
     xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: data.map(d => d.name).reverse() },
-    series: [{ type: 'bar', data: data.map(d => Number(d.value || 0)).reverse(), itemStyle: { color: '#52c41a' } }]
+    yAxis: {
+      type: 'category', data: names,
+      axisLabel: { margin: 12, color: '#4b5563', fontSize: 12, width: 140, overflow: 'truncate', ellipsis: '…' },
+      axisTick: { show: false }, axisLine: { show: false }
+    },
+    series: [{
+      type: 'bar', data: data.map(d => Number(d.value || 0)).reverse(),
+      barWidth: '52%', itemStyle: { color: '#52c41a', borderRadius: [0, 4, 4, 0] },
+      label: { show: true, position: 'right', color: '#6b7280', fontSize: 12 }
+    }]
   }, true)
 }
 function renderActivity(data) {
   const c = ensureChart('activity'); if (!c) return
-  const days = Array.from(new Set([...(data.orders || []), ...(data.surgeries || []), ...(data.receipts || [])].map(d => d.date))).sort()
+  const inv = inventoryEnabled.value
+  const sources = [data.orders || [], data.surgeries || []]
+  if (inv) sources.push(data.receipts || [])
+  const days = Array.from(new Set(sources.flat().map(d => d.date))).sort()
   const mapBy = (arr) => days.map(d => { const f = (arr || []).find(x => x.date === d); return f ? Number(f.count || 0) : 0 })
+  const series = [
+    { name: '订单', type: 'bar', data: mapBy(data.orders), itemStyle: { color: '#1677ff' } },
+    { name: '手术', type: 'bar', data: mapBy(data.surgeries), itemStyle: { color: '#52c41a' } }
+  ]
+  const legend = ['订单', '手术']
+  if (inv) { series.push({ name: '入库', type: 'bar', data: mapBy(data.receipts), itemStyle: { color: '#faad14' } }); legend.push('入库') }
   c.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['订单', '手术', '入库'], top: 0 },
+    legend: { data: legend, top: 0 },
     grid: { left: 50, right: 20, top: 30, bottom: 20 },
     xAxis: { type: 'category', data: days },
     yAxis: { type: 'value' },
-    series: [
-      { name: '订单', type: 'bar', data: mapBy(data.orders), itemStyle: { color: '#1677ff' } },
-      { name: '手术', type: 'bar', data: mapBy(data.surgeries), itemStyle: { color: '#52c41a' } },
-      { name: '入库', type: 'bar', data: mapBy(data.receipts), itemStyle: { color: '#faad14' } }
-    ]
+    series
   }, true)
 }
 
@@ -292,8 +330,8 @@ function onResize() { Object.values(charts).forEach(c => c.resize()) }
 function hideBlock(k) { visible[k] = false; saveLayout() }
 function showBlock(k) { visible[k] = true; saveLayout() }
 function resetLayout() {
-  DEFAULT_BLOCKS.forEach(b => visible[b.key] = true)
-  orderedBlocks.value = [...DEFAULT_BLOCKS]
+  VISIBLE_BLOCKS.value.forEach(b => visible[b.key] = true)
+  orderedBlocks.value = [...VISIBLE_BLOCKS.value]
   saveLayout()
   loadAll()
 }
@@ -309,44 +347,54 @@ function loadLayout() {
     if (!raw) return
     const v = JSON.parse(raw)
     if (Array.isArray(v.order)) {
-      const sorted = v.order.map(k => DEFAULT_BLOCKS.find(b => b.key === k)).filter(Boolean)
-      DEFAULT_BLOCKS.forEach(b => { if (!sorted.find(x => x.key === b.key)) sorted.push(b) })
+      const visibleKeys = VISIBLE_BLOCKS.value.map(b => b.key)
+      const sorted = v.order
+        .filter(k => visibleKeys.includes(k))
+        .map(k => VISIBLE_BLOCKS.value.find(b => b.key === k))
+        .filter(Boolean)
+      VISIBLE_BLOCKS.value.forEach(b => { if (!sorted.find(x => x.key === b.key)) sorted.push(b) })
       orderedBlocks.value = sorted
     }
     if (v.visible) {
-      DEFAULT_BLOCKS.forEach(b => { if (v.visible[b.key] === false) visible[b.key] = false })
+      VISIBLE_BLOCKS.value.forEach(b => { if (v.visible[b.key] === false) visible[b.key] = false })
     }
   } catch (e) {}
 }
 
 watch(orderedBlocks, () => saveLayout(), { deep: true })
 
-onMounted(() => {
-  loadExpirySummary()
-  loadLayout(); loadAll(); window.addEventListener('resize', onResize) })
+onMounted(async () => {
+  await loadFeatures()
+  if (inventoryEnabled.value) loadExpirySummary()
+  loadLayout(); loadAll(); window.addEventListener('resize', onResize)
+})
 onBeforeUnmount(() => { window.removeEventListener('resize', onResize); Object.values(charts).forEach(c => c.dispose()) })
 </script>
 
 <style scoped>
 .dash { padding: 0; }
-.dash-filters { margin-bottom: 12px; }
-.filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.filter-label { color: var(--dms-text-4); font-size: 13px; }
+.dash-filters { margin-bottom: 8px; padding: 10px 12px !important; }
+.dash-filters :deep(.el-card__body) { padding: 0 !important; }
+.filter-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.filter-label { color: var(--dms-text-4); font-size: 12px; }
 .spacer { flex: 1; }
-.kpi-row { margin-bottom: 12px; }
-.kpi-card { text-align: center; }
-.kpi-v { font-size: 24px; font-weight: 700; }
-.kpi-l { font-size: 13px; color: var(--dms-text-4); margin-top: 6px; }
-.kpi-d { font-size: 12px; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 2px; }
+.kpi-row { margin-bottom: 8px; }
+.kpi-card { text-align: center; padding: 10px 12px; border-top: 2px solid var(--dms-color-primary) !important; }
+.kpi-v { font-size: 20px; font-weight: 700; line-height: 1.2; }
+.kpi-l { font-size: 12px; color: var(--dms-text-4); margin-top: 2px; }
+.kpi-d { font-size: 11px; margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 2px; }
 .kpi-d.up { color: var(--dms-color-success); }
 .kpi-d.down { color: var(--dms-color-danger); }
-.block-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.block-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .block-wrap.is-edit .block-card { border: 2px dashed var(--dms-color-primary); }
 .block-card { margin-bottom: 0; }
-.block-header { display: flex; align-items: center; gap: 8px; }
+.block-card :deep(.el-card__header) { padding: 6px 10px; border-bottom: none; }
+.block-card :deep(.el-card__body) { padding: 8px 10px !important; }
+.block-header { display: flex; align-items: center; gap: 6px; }
 .block-handle { cursor: move; color: var(--dms-text-4); }
-.block-title { font-size: 14px; font-weight: 600; }
-.block-chart { width: 100%; height: 300px; }
-.restore-card { margin-top: 12px; }
-.expiry-banner{margin-bottom:12px}
+.block-title { font-size: 13px; font-weight: 600; }
+.block-chart { width: 100%; height: 220px; }
+.restore-card { margin-top: 8px; }
+.expiry-banner { margin-bottom: 8px; }
 </style>
+

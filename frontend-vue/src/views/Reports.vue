@@ -4,7 +4,7 @@
       <div class="hero-row">
         <div>
           <h2 class="hero-title">报表中心</h2>
-          <p class="hero-sub">销售 · 库存 · 订单 · 应收 · 报台 · 经销商画像 统一入口。每张报表均支持筛选、图表、穿透、xlsx 导出。</p>
+          <p class="hero-sub">{{ heroSub }}</p>
         </div>
         <div class="hero-right">
           <el-tag type="info" effect="plain">v4.2</el-tag>
@@ -22,7 +22,7 @@
 
     <template v-else>
       <el-row :gutter="12">
-        <el-col v-for="g in REPORT_GROUPS" :key="g.title" :span="8">
+        <el-col v-for="g in visibleGroups" :key="g.title" :span="8">
           <el-card shadow="never" class="group-card">
             <template #header>
               <div class="group-header">
@@ -61,14 +61,36 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import ReportPage from '@/components/ReportPage.vue'
 import { REPORTS, REPORT_GROUPS, rangeFor } from '@/config/reports'
+import { useTenantFeatures } from '@/composables/useTenantFeatures'
+
+const { features: tenantFeatures, loadFeatures } = useTenantFeatures()
+const inventoryEnabled = computed(() => !!tenantFeatures.value.inventoryEnabled)
+
+// 库存类报表在库存模块关闭时整体隐藏（key 集合来自 config/reports 中 group='库存类'）
+const INVENTORY_REPORT_KEYS = Object.keys(REPORTS).filter(k => REPORTS[k].group === '库存类')
+const visibleGroups = computed(() =>
+  REPORT_GROUPS
+    .map(g => ({ ...g, keys: g.keys.filter(k => inventoryEnabled.value || !INVENTORY_REPORT_KEYS.includes(k)) }))
+    .filter(g => g.keys.length > 0)
+)
+const heroSub = computed(() => {
+  const parts = ['销售', '订单', '应收', '报台', '经销商画像']
+  if (inventoryEnabled.value) parts.splice(1, 0, '库存')
+  return parts.join(' · ') + ' 统一入口。每张报表均支持筛选、图表、穿透、xlsx 导出。'
+})
 
 const activeKey = ref(null)
 const route = useRoute()
-onMounted(() => { const k = route.query.key; if (k && REPORTS[k]) activeKey.value = k })
+onMounted(async () => {
+  await loadFeatures()
+  const k = route.query.key
+  // 库存报表在模块关闭时即使带 query 也不打开
+  if (k && REPORTS[k] && (inventoryEnabled.value || !INVENTORY_REPORT_KEYS.includes(k))) activeKey.value = k
+})
 
 function open(k) { activeKey.value = k }
 

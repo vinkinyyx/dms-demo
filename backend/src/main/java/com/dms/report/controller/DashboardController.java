@@ -164,13 +164,12 @@ public class DashboardController {
             @RequestParam(required = false) String orderType) {
         UUID tid = TenantContext.getTenantId();
         String flt = orderCommonFilter(period, dealerId, status, orderType, "o");
-        // 如果用户没有指定 period，默认限制为本月
         String timeFilter = (period == null || period.isBlank()) ? "  AND o.created_at >= DATE_TRUNC('month', now()) " : "";
         var q = em.createNativeQuery(
                 "SELECT COALESCE(d.name, CAST(o.dealer_id AS TEXT)) AS dealer_name, " +
                 "COALESCE(SUM(o.amount_incl_tax),0) AS amount " +
                 "FROM orders o LEFT JOIN dealers d ON d.id = o.dealer_id " +
-                "WHERE o.tenant_id = ?1 " + timeFilter + flt +
+                "WHERE o.tenant_id = ?1 AND (o.is_red IS NULL OR o.is_red = false) " + timeFilter + flt +
                 "GROUP BY o.dealer_id, d.name " +
                 "ORDER BY amount DESC LIMIT 5", Tuple.class);
         q.setParameter(1, tid);
