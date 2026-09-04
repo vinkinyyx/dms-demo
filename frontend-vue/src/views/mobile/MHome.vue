@@ -174,8 +174,9 @@ load()
 .m-quick-grid--home { padding: var(--dms-spacing-4) var(--dms-spacing-2) var(--dms-spacing-3); gap: var(--dms-spacing-3) 0; }
 .m-quick-ic { width: 48px; height: 48px; border-radius: 14px; }
 .m-quick-ic svg { width: 24px; height: 24px; }
-.m-quick-ic--c0 { background: #e6f4ff; color: #1677ff; }
+.m-quick-ic--c0 { background: var(--dms-m-tint, #eaf1f9); color: var(--dms-color-primary, #2e6ba8); }
 .m-quick-ic--c1 { background: #f6ffed; color: #00b96b; }
 .m-quick-ic--c2 { background: #fff7e6; color: #fa8c16; }
 .m-quick-ic--c3 { background: #f9f0ff; color: #722ed1; }
 </style>
+

@@ -40,8 +40,8 @@ const themeMode = ref(document.documentElement.dataset.mode || 'light')
 const remembered = JSON.parse(localStorage.getItem('dms_mobile_remember') || '{}')
 const form = reactive({
   tenantCode: remembered.tenantCode || 'default',
-  username: remembered.username || '',
-  password: ''
+  username: remembered.username || 'sys_admin',
+  password: remembered.password || 'Dms@123456'
 })
 function toggleThemeMode(){ applyThemeMode(); themeMode.value = document.documentElement.dataset.mode || 'light' }
 
@@ -59,15 +59,15 @@ async function onSubmit() {
 .m-login {
   min-height: 100vh;
   padding: 0 0 32px;
-  background: #eef2f7;
+  background: var(--dms-bg-page, #f4f7fb);
 }
 .m-login-top {
   position: relative;
   text-align: center;
   padding: 72px 20px 58px;
   color: #fff;
-  background: linear-gradient(135deg, #1f2d3d 0%, #34495e 100%);
-  border-bottom: 3px solid var(--dms-color-primary);
+  background: var(--dms-m-head-gradient, linear-gradient(135deg, #2e6ba8 0%, #5a95d0 100%));
+  border-bottom: 3px solid var(--dms-m-amber, #d97706);
 }
 .m-logo {
   width: 48px;
@@ -136,3 +136,4 @@ async function onSubmit() {
 :global(html[data-mode='dark']) .m-login { background: #0b1220; }
 :global(html[data-mode='dark']) .m-form { background: #111827; border-color: #243044; box-shadow: none; }
 </style>
+

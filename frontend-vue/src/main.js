@@ -21,6 +21,7 @@ import 'vant/lib/index.css'
 /* 运行期 CSS 变量覆盖（必须在组件库 CSS 之后） */
 import '@/styles/element/runtime.scss'
 import '@/styles/vant/index.scss'
+import '@/styles/vant/mobile-theme.scss'  // 移动端藏青琥珀主题（作用域：.m-layout/.m-login/.m-register）
 
 /* 全局重置与业务样式 */
 import '@/styles/reset.scss'
@@ -44,3 +45,4 @@ app.use(hasDirective)
 app.config.errorHandler = (err, instance, info) => { console.error('全局未捕获错误:', err, info) }
 initTheme()
 app.mount('#app')
+

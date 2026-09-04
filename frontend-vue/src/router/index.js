@@ -50,7 +50,6 @@ const routes = [
       { path: 'warehouses/:id', name: 'WarehouseDetail', component: () => import('@/views/ResourceDetail.vue'), props: { moduleKey: 'warehouses', title: '仓库详情' }, meta: { title: '仓库详情' } },
       { path: 'regions/:id', name: 'RegionDetail', component: () => import('@/views/ResourceDetail.vue'), props: { moduleKey: 'regions', title: '区域详情' }, meta: { title: '区域详情' } },
       { path: 'suppliers/:id', name: 'SupplierDetail', component: () => import('@/views/ResourceDetail.vue'), props: { moduleKey: 'suppliers', title: '供应商详情' }, meta: { title: '供应商详情' } },
-      { path: 'authorizations/:id', name: 'AuthorizationDetail', component: () => import('@/views/ResourceDetail.vue'), props: { moduleKey: 'authorizations', title: '授权详情' }, meta: { title: '授权详情' } },
       { path: 'purchase-orders/:id', name: 'PurchaseOrderDetail', component: () => import('@/views/ResourceDetail.vue'), props: { moduleKey: 'purchase-orders', title: '采购订单详情' }, meta: { title: '采购订单详情' } },
       { path: 'receipts/:id', name: 'ReceiptDetail', component: () => import('@/views/ResourceDetail.vue'), props: { moduleKey: 'receipts', title: '收货入库详情' }, meta: { title: '收货入库详情' } },
       { path: 'stock-moves/:id', name: 'StockMoveDetail', component: () => import('@/views/ResourceDetail.vue'), props: { moduleKey: 'stock-moves', title: '库存移动详情' }, meta: { title: '库存移动详情' } },

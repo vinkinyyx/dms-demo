@@ -7,12 +7,6 @@
         <span class="ht-user">{{ userStore.username }} · {{ userTypeLabel }}</span>
       </div>
       <div class="ht-right">
-        <div class="ht-shortcuts">
-          <div v-for="s in visibleShortcuts" :key="s.key" class="sm-item" @click="navigate(s)">
-            <el-icon :size="12" color="var(--dms-color-primary)"><component :is="s.icon" /></el-icon>
-            <span>{{ s.label }}</span>
-          </div>
-        </div>
         <el-radio-group v-model="rangeKey" size="small" @change="onRangeChange">
           <el-radio-button label="today">当日</el-radio-button>
           <el-radio-button label="month">本月</el-radio-button>
@@ -23,6 +17,18 @@
         <el-button type="primary" link size="small" @click="$router.push('/dashboard')">
           完整仪表盘 →
         </el-button>
+      </div>
+    </div>
+
+    <div class="shortcut-row">
+      <div
+        v-for="s in visibleShortcuts"
+        :key="s.key"
+        class="sc-card"
+        @click="navigate(s)"
+      >
+        <span class="sc-ico"><el-icon :size="24"><component :is="s.icon" /></el-icon></span>
+        <span class="sc-label">{{ s.label }}</span>
       </div>
     </div>
 
@@ -119,7 +125,12 @@ const allShortcuts = [
   { key: 'products', icon: 'Goods', label: '产品管理' },
   { key: 'dealers', icon: 'OfficeBuilding', label: '经销商管理' },
   { key: 'orders', icon: 'Sell', label: '销售订单' },
-  { key: 'inventory', icon: 'Box', label: '库存查询', inventoryOnly: true }
+  { key: 'sales-returns', route: '/m/sales-returns', icon: 'RefreshLeft', label: '销退订单' },
+  { key: 'sales-outs', route: '/m/sales-outs', icon: 'Van', label: '销售出库' },
+  { key: 'inventory', icon: 'Box', label: '库存查询', inventoryOnly: true },
+  { key: 'contracts', route: '/contracts', icon: 'Document', label: '合同工作台' },
+  { key: 'reports', route: '/reports', icon: 'DataAnalysis', label: '报表中心' },
+  { key: 'approval', route: '/approval/todo', icon: 'Stamp', label: '我的审批' }
 ]
 const visibleShortcuts = computed(() =>
   allShortcuts.filter(s => !s.inventoryOnly || inventoryEnabled.value)
@@ -279,13 +290,36 @@ onBeforeUnmount(() => {
 .ht-welcome { font-weight: 600; color: var(--dms-text-1); }
 .ht-user { color: var(--dms-text-4); }
 .ht-right { display: flex; align-items: center; gap: 6px; }
-.ht-shortcuts { display: flex; align-items: center; gap: 2px; padding-right: 4px; border-right: 1px solid var(--dms-border-2); margin-right: 2px; }
-.sm-item {
-  display: inline-flex; align-items: center; gap: 2px;
-  padding: 3px 8px; font-size: 11px; color: var(--dms-text-3);
-  border-radius: 3px; cursor: pointer; transition: all .15s; white-space: nowrap;
+.shortcut-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
 }
-.sm-item:hover { background: var(--el-color-primary-light-9); color: var(--el-color-primary); }
+.sc-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--dms-bg-container);
+  border: 1px solid var(--dms-border-2);
+  border-radius: var(--dms-radius-lg, 8px);
+  cursor: pointer;
+  transition: all .18s var(--dms-motion-ease-out, ease);
+}
+.sc-card:hover {
+  border-color: var(--dms-color-primary-border);
+  box-shadow: var(--dms-shadow-md);
+  transform: translateY(-1px);
+}
+.sc-ico {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; flex-shrink: 0;
+  border-radius: 10px;
+  color: var(--dms-color-primary);
+  background: var(--dms-color-primary-bg);
+}
+.sc-label { font-size: 14px; font-weight: 600; color: var(--dms-text-1); white-space: nowrap; }
 .kpi-row { margin-bottom: 6px; }
 .kpi-card {
   background: var(--dms-bg-container); border: 1px solid var(--dms-border-2);

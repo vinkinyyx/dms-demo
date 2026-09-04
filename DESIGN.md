@@ -31,8 +31,9 @@
 | 平台后台 | 运行时主题（菜单深浅） | `admin-vue/src/config/theme-runtime.js` | 后台菜单深/浅两套底色 |
 | 两端 | Logo（随主题切换） | `frontend-vue/src/components/DmsLogo.vue`、`admin-vue/src/components/DmsLogo.vue` | 换 Logo 图形/字标 |
 
-> 前台样式引入顺序（`frontend-vue/src/main.js`）：`base-light → semantic → base-dark → element/index → element/runtime → vant → reset → app → enterprise`。
+> 前台样式引入顺序（frontend-vue/src/main.js）：base-light → semantic → base-dark → element/index → element/runtime → vant/index → vant/mobile-theme（移动端专属）→ reset → app → enterprise。
 > `enterprise.scss` 最后引入，在令牌之上做组件精修：**改全局基调改令牌，改单个组件视觉改 enterprise.scss**。
+> **移动端 H5（Vant）专属主题：`frontend-vue/src/styles/vant/mobile-theme.scss`** —— 在移动端根作用域（`.m-layout` / `.m-login` / `.m-register`）覆盖 `--dms-*` 语义令牌，只影响移动端、不影响 PC；Vant 组件经 `--van-*` 自动跟随。详见文末 **§11 移动端（H5/Vant）设计标准**。
 
 ---
 
@@ -175,6 +176,9 @@
 
 > 调整侧栏宽窄 / 顶栏高低 / 菜单项疏密，**只改这 8 个令牌**即可，不要改 `layout/index.vue` 里的数值。
 
+**多页签（TagsBar）**：`layout/TagsBar.vue`，若依风格——白底、28px 高、小圆角；页签带图标（`layout/tagIcons.js` 按标题/路径映射）；激活态 = 浅蓝底 `--dms-color-primary-bg` + 主色字 + 左侧 3px 主色竖条；非激活白底灰字；右侧「刷新」+「页签操作」下拉（关闭其他/全部）。页签数据在 `store/tags.js`（sessionStorage 持久化，首页固定 affix）。
+**面包屑（Breadcrumb）**：`layout/Breadcrumb.vue`，渲染在顶栏，层级来自 `utils/pageMeta.resolvePageMeta`。
+
 ---
 
 ## 8. 组件视觉规范（PC，企业沉稳风）
@@ -217,3 +221,79 @@
 3. **本文件随代码更新（铁律11）**：新增 / 重命名令牌、改默认值、增删品牌预设时，同步更新本文件表格；本文件与令牌实际值必须一致。
 4. **改完构建验证**：`cd frontend-vue && npm run build`（admin 同理 `cd admin-vue && npm run build`），并按铁律9 真实浏览器验证登录页、工作台、菜单深/浅切换、后台、移动端。
 5. **不破坏三层架构**：组件只引用 Layer 2 语义令牌；Layer 1 色板不被业务代码直接引用（图表色板 `--dms-chart-*` 除外）。
+
+
+---
+
+## 11. 移动端（H5 / Vant）设计标准 —— 藏青琥珀（Navy Amber）
+
+> 适用：业务前台移动 H5（`frontend-vue/src/views/mobile/**`，路由 `/mobile/*`）。平台后台无移动端。
+> 移动端复用同一套三层令牌（Layer1→Layer2→组件），但在**移动端根作用域**覆盖语义令牌为「藏青琥珀」主题，与 PC 的极光蓝区分，互不影响。
+> 唯一事实源：`frontend-vue/src/styles/vant/mobile-theme.scss`。
+
+### 11.1 作用域与生效方式
+
+- 移动端三个根类：内页 `.m-layout`（MLayout.vue）、登录 `.m-login`（MLogin.vue）、注册 `.m-register`（MCustomerRegister.vue）。
+- 主题文件在这三个类下覆盖 `--dms-*` 语义令牌与 `--van-*` 桥接令牌；Vant 组件（按钮/导航栏/标签栏/单元格/Tab…）因 `--van-*` 已映射到这些令牌而**自动跟随**，无需逐组件改色。
+- **改移动端配色只改 `mobile-theme.scss`**，不要在页面 `.vue` 里写死色值；PC 端不受影响。
+- 引入顺序见 §1，`vant/mobile-theme.scss` 必须在 `vant/index.scss` **之后**引入以保证覆盖。
+
+### 11.2 配色令牌（藏青琥珀）
+
+| 用途 | 令牌 | 值 |
+|------|------|----|
+| 主色（导航、主按钮、选中态、链接） | `--dms-color-primary` | `#2E6BA8` 藏青 |
+| 主色 hover / 亮 | `--dms-color-primary-hover` | `#5A95D0` |
+| 主色按压 / 深 | `--dms-color-primary-active` | `#245A8F` |
+| 主色浅底（选中底） | `--dms-color-primary-bg` | `#E3EEFA` |
+| 点缀金（金额、认证标、当前步骤、FAB、扫描线、未读点） | `--dms-m-amber` | `#D97706` 琥珀 |
+| 点缀金深 | `--dms-m-amber-deep` | `#B45309` |
+| 点缀金浅底 | `--dms-m-amber-bg` | `#FEF3C7` |
+| 图标/缩略图底（浅蓝灰） | `--dms-m-tint` | `#EAF1F9` |
+| 头部渐变（hero / 登录页头） | `--dms-m-head-gradient` | `linear-gradient(135deg,#2E6BA8,#5A95D0)` |
+| 页面底色 | `--dms-bg-page` | `#F4F7FB` 淡蓝灰 |
+| 卡片底 | `--dms-bg-container` | `#FFFFFF` |
+
+- **语义状态色**复用全局：成功 `--dms-color-success`、警告 `--dms-color-warning`、危险 `--dms-color-danger`；状态一律「色＋图标/圆点＋文字」三重表达，不仅靠颜色。
+- **琥珀金只作小面积点缀**，绝不大面积铺底；主操作按钮用藏青实心白字，次级操作用白底藏青描边。
+
+### 11.3 Vant 桥接要点（mobile-theme.scss 内）
+
+- `--van-primary-color: #2E6BA8`：按钮、开关、单选等主色。
+- `--van-nav-bar-*color: #FFFFFF`：导航栏在深色头部上标题/箭头为白字（配合藏青头部）。
+- `--van-tabbar-item-active-color: #D97706`：底部标签栏选中态用琥珀点缀。
+- `--van-tab-active-*: #2E6BA8`：页面内 Tab 选中用藏青。
+- 其余圆角/字号/高度沿用 `vant/index.scss` 的全局桥接。
+
+### 11.4 布局与组件规范（移动端）
+
+- **底部标签栏**：固定 5 项以内（首页 / 订单 · 报台 / 审批 / 我的），高度走 `--dms-mobile-tabbar-height-safe`，用 `<van-tabbar route>`。
+- **触控目标**：可点元素 ≥ 44×44px（`--dms-mobile-tap-size`），相邻目标间距 ≥ 8px；移除 iOS 默认点击高亮（`-webkit-tap-highlight-color: transparent`）。
+- **头部**：内页首页用 `.m-hero` 藏青渐变 + 白字 + `DmsLogo inverse`；二级页用 `<van-nav-bar>`，白底藏青返回箭头；登录/注册头部用同款藏青渐变。
+- **卡片**：白卡、圆角 `--dms-radius-xl/lg`、轻投影 `--dms-shadow-sm`，页面底为 `#F4F7FB`。
+- **功能宫格**：图标块 44px、底色 `--dms-m-tint` 浅蓝灰、图标色 `--dms-color-primary`，4 列。
+- **主按钮层级**：主操作 = 藏青实心（`.m-primary-btn--main` / van-button type=primary）；次操作 = 白底藏青描边（`--ghost`）；危险操作 = 红字红边二次确认。
+- **数字**：金额/数量用等宽数字（`font-variant-numeric: tabular-nums`），金额可用琥珀 `--dms-m-amber-deep` 强调。
+- **列表引用字段**：经销商/产品等外键必须显示编码＋名称，禁止裸显数字 ID（与 PC 铁律一致）。
+- **扫码页**：取景相机区保留深色（模拟真实取景），扫描框角标/扫描线用琥珀；结果清单在浅色卡片区。
+
+### 11.5 页面清单（12 屏，已对齐本主题）
+
+登录（MLogin）、首页工作台（MHome）、智能下单（MSmartOrder）、下销售订单（MOrderCreate）、销售订单列表（MOrders）、订单详情（MOrderDetail）、移动审批（MApprovals）、手术植入报台（MSurgeryReportCreate）、扫码收货（MReceiveScan）、库存扫码查询（MInventoryScan）、消息中心（MMessages）、我的业绩（MDashboard）；注册页 MCustomerRegister 同主题。
+> 完整视觉参考（静态高保真原型）：`.codex/visualizations/.../dms-mobile-full-12-v6.html`（同目录含真实 `logo-mark.png`）。
+
+### 11.6 品牌 Logo
+
+- 移动端**必须**使用 `DmsLogo` 组件（`frontend-vue/src/components/DmsLogo.vue`），直接渲染 `assets/brand/logo-mark.png`（深藏青圆角「m」+ 右上青色圆点），透明底、**不加白色方块瓷砖**；深色头部上用 `inverse` / `variant="light"` 取白色版。
+- 禁止自造或替换 Logo 图形；与 PC 端同一张图，保持像素级一致。
+
+### 11.7 常见调整配方（移动端）
+
+| 想改 | 改哪里 |
+|------|--------|
+| 移动端主色 / 头部渐变 | `vant/mobile-theme.scss` 的 `--dms-color-primary*` / `--dms-m-head-gradient` |
+| 琥珀点缀色 | `vant/mobile-theme.scss` 的 `--dms-m-amber*` |
+| 图标底色 | `--dms-m-tint`；`.m-quick-ic` 在 `app.scss` |
+| 底部导航选中色 | `--van-tabbar-item-active-color` |
+| 首页 hero / 登录页头 | `app.scss` `.m-hero`、`MLogin.vue` `.m-login-top`（均引用令牌渐变） |
+| 触控高度 / 导航栏高度 | `semantic.scss` 的 `--dms-mobile-*-height` |

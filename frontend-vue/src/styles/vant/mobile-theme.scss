@@ -1,0 +1,62 @@
+/* ===== DMS 移动端 H5 专属主题：藏青琥珀（Navy Amber）=====
+ * 只作用于移动端根节点（.m-layout 内页 / .m-login 登录 / .m-register 注册），
+ * 不影响 PC 业务前台与平台后台。
+ * 通过覆盖 Layer2 语义令牌 --dms-* 实现全站换肤；Vant 的 --van-* 已桥接到这些令牌，
+ * 因此 van-button / van-nav-bar / van-tabbar / van-cell 等组件自动跟随。
+ * 设计事实源：项目根 DESIGN.md「移动端（H5/Vant）设计标准」章节。
+ *
+ * 配色：
+ *   主色  藏青  #2E6BA8（导航、主按钮、选中态）
+ *   点缀  琥珀  #D97706（金额、认证标、当前步骤、FAB、扫描线、未读点；小面积）
+ *   图标底 浅蓝灰 #EAF1F9
+ *   页面底 淡蓝灰 #F4F7FB，卡片 #FFFFFF
+ */
+
+.m-layout,
+.m-login,
+.m-register {
+  /* ---------- 主色语义：藏青 ---------- */
+  --dms-color-primary: #2e6ba8;
+  --dms-color-primary-hover: #5a95d0;
+  --dms-color-primary-active: #245a8f;
+  --dms-color-primary-bg: #e3eefa;
+  --dms-color-primary-border: #b9d4ef;
+
+  /* ---------- 链接 ---------- */
+  --dms-link-color: #2e6ba8;
+  --dms-link-hover: #5a95d0;
+  --dms-link-active: #245a8f;
+
+  /* ---------- 背景 ---------- */
+  --dms-bg-page: #f4f7fb;
+  --dms-bg-container: #ffffff;
+  --dms-bg-elevated: #ffffff;
+  --dms-bg-hover: #eef4fb;
+  --dms-bg-selected: #e3eefa;
+
+  /* ---------- 边框 / 选中 ---------- */
+  --dms-border-focus: #2e6ba8;
+
+  /* ---------- 移动端专用令牌（藏青琥珀扩展）---------- */
+  --dms-m-navy: #2e6ba8;
+  --dms-m-navy-deep: #245a8f;
+  --dms-m-navy-light: #5a95d0;
+  --dms-m-amber: #d97706;
+  --dms-m-amber-deep: #b45309;
+  --dms-m-amber-bg: #fef3c7;
+  --dms-m-tint: #eaf1f9;            /* 图标/缩略图浅蓝灰底 */
+  --dms-m-head-gradient: linear-gradient(135deg, #2e6ba8 0%, #5a95d0 100%);
+}
+
+/* 移动端 Vant 组件令牌直接桥接（在 vant/index.scss 基础上的移动端定向覆盖）*/
+.m-layout,
+.m-login,
+.m-register {
+  --van-primary-color: #2e6ba8;
+  --van-nav-bar-arrow-color: #ffffff;
+  --van-nav-bar-text-color: #ffffff;
+  --van-nav-bar-title-text-color: #ffffff;
+  --van-tabbar-item-active-color: #d97706;   /* 底部导航选中用琥珀点缀 */
+  --van-tab-active-text-color: #2e6ba8;
+  --van-tab-active-line-color: #2e6ba8;
+}

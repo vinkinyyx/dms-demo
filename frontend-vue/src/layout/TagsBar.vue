@@ -12,7 +12,7 @@
           @click.middle.prevent="closeTag(tag)"
           @contextmenu.prevent="openMenu($event, tag)"
         >
-          <span class="tag-dot" v-if="tag.key === tagsStore.activeKey" />
+          <el-icon class="tag-ico"><component :is="tagIcon(tag)" /></el-icon>
           <span class="tag-title">{{ tag.title }}</span>
           <el-icon
             v-if="!tag.affix"
@@ -22,6 +22,24 @@
         </div>
       </div>
     </el-scrollbar>
+
+    <div class="tags-actions">
+      <el-tooltip content="刷新当前页" placement="bottom">
+        <button type="button" class="tags-act-btn" @click="refreshCurrent"><el-icon><Refresh /></el-icon></button>
+      </el-tooltip>
+      <el-dropdown trigger="click" @command="onAction">
+        <el-tooltip content="页签操作" placement="bottom">
+          <button type="button" class="tags-act-btn"><el-icon><ArrowDown /></el-icon></button>
+        </el-tooltip>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="refresh"><el-icon><Refresh /></el-icon>刷新页面</el-dropdown-item>
+            <el-dropdown-item command="closeOthers"><el-icon><CircleClose /></el-icon>关闭其他</el-dropdown-item>
+            <el-dropdown-item command="closeAll"><el-icon><Delete /></el-icon>关闭全部</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </div>
 
     <ul
       v-if="menu.visible"
@@ -41,8 +59,9 @@
 <script setup>
 import { reactive, ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Close, Refresh, CircleClose, Delete } from '@element-plus/icons-vue'
+import { Close, Refresh, CircleClose, Delete, ArrowDown } from '@element-plus/icons-vue'
 import { useTagsStore } from '@/store/tags'
+import { iconForRoute } from './tagIcons'
 
 const route = useRoute()
 const router = useRouter()
@@ -52,6 +71,16 @@ const trackRef = ref(null)
 const tagRefs = ref([])
 
 const menu = reactive({ visible: false, x: 0, y: 0, tag: null })
+
+function tagIcon(tag) {
+  return iconForRoute(tag) || 'Menu'
+}
+
+function onAction(cmd) {
+  if (cmd === 'refresh') refreshCurrent()
+  else if (cmd === 'closeOthers') closeOthers()
+  else if (cmd === 'closeAll') closeAll()
+}
 
 function syncRoute() {
   tagsStore.addRoute(route)
@@ -139,56 +168,63 @@ function closeAll() {
 <style scoped lang="scss">
 .tags-bar {
   position: relative;
-  background: var(--dms-bg-container);
+  display: flex;
+  align-items: center;
+  background: #fff;
   border-bottom: 1px solid var(--dms-border-2);
-  padding: 6px 12px;
+  padding: 5px 8px;
   flex-shrink: 0;
 }
-.tags-scroll { width: 100%; }
+.tags-scroll { flex: 1; min-width: 0; }
 :deep(.el-scrollbar__wrap) { overflow-y: hidden; }
 :deep(.el-scrollbar__view) { display: inline-block; min-width: 100%; }
 .tags-track {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 2px;
+  gap: 4px;
+  padding: 0 4px;
   width: max-content;
   min-width: 100%;
 }
 .tag-chip {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 12px;
-  border-radius: var(--dms-radius-md);
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 3px;
   border: 1px solid var(--dms-border-1);
-  background: var(--dms-bg-container);
-  color: var(--dms-text-2);
+  background: #fff;
+  color: #495060;
   font-size: var(--dms-font-size-sm);
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
   transition: all var(--dms-motion-duration-fast, .15s) var(--dms-motion-ease-out, ease);
 }
+.tag-ico { font-size: 13px; color: #a0a6b2; flex-shrink: 0; }
 .tag-chip:hover {
   color: var(--dms-color-primary);
   border-color: var(--dms-color-primary-border);
   background: var(--dms-color-primary-bg);
 }
+.tag-chip:hover .tag-ico { color: var(--dms-color-primary); }
 .tag-chip.active {
-  background: var(--dms-color-primary);
+  background: var(--dms-color-primary-bg);
   border-color: var(--dms-color-primary);
-  color: #fff;
-  box-shadow: 0 2px 6px rgba(64, 158, 255, .35);
+  color: var(--dms-color-primary);
+  font-weight: 600;
 }
-.tag-chip.active:hover { color: #fff; }
-.tag-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .9);
-  flex-shrink: 0;
+.tag-chip.active .tag-ico { color: var(--dms-color-primary); }
+.tag-chip.active::before {
+  content: '';
+  position: absolute;
+  left: -1px; top: 50%;
+  transform: translateY(-50%);
+  width: 3px; height: 16px;
+  border-radius: 0 2px 2px 0;
+  background: var(--dms-color-primary);
 }
 .tag-title { line-height: 1; }
 .tag-close {
@@ -201,8 +237,31 @@ function closeAll() {
   justify-content: center;
   flex-shrink: 0;
 }
-.tag-close:hover { background: rgba(0, 0, 0, .15); color: #fff; }
-.tag-chip.active .tag-close:hover { background: rgba(255, 255, 255, .3); }
+.tag-close:hover { background: var(--dms-color-primary); color: #fff; }
+
+.tags-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 8px;
+  margin-left: 4px;
+  border-left: 1px solid var(--dms-border-2);
+  flex-shrink: 0;
+}
+.tags-act-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border: 1px solid var(--dms-border-1);
+  border-radius: 3px;
+  background: #fff;
+  color: #606266;
+  cursor: pointer;
+  transition: all .15s;
+}
+.tags-act-btn:hover { color: var(--dms-color-primary); border-color: var(--dms-color-primary-border); background: var(--dms-color-primary-bg); }
+.tags-act-btn .el-icon { font-size: 15px; }
 
 .tag-context-menu {
   position: absolute;
@@ -230,7 +289,5 @@ function closeAll() {
 .tag-context-menu li.disabled { color: var(--dms-text-disabled); cursor: not-allowed; }
 .tag-context-menu li.disabled:hover { background: transparent; color: var(--dms-text-disabled); }
 
-:global(html[data-mode='dark']) .tags-bar { background: #111827; border-color: #243044; }
-:global(html[data-mode='dark']) .tag-chip { background: #1a2334; border-color: #2c3a52; color: #c3cad6; }
-:global(html[data-mode='dark']) .tag-context-menu { background: #1a2334; border-color: #2c3a52; }
+:global(html[data-sider='dark']) .tags-bar { background: #fff; }
 </style>

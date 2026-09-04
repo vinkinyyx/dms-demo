@@ -37,7 +37,7 @@ import { useAuthStore } from '@/store/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
-const form = reactive({ username: 'admin', password: '' })
+const form = reactive({ username: 'admin', password: 'Sh123456' })
 initTheme()
 const loading = ref(false)
 const themeMode = ref(document.documentElement.dataset.mode || 'light')

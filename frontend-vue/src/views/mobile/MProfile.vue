@@ -78,7 +78,7 @@ async function onLogout() {
 
 <style scoped>
 .profile-header {
-  background: linear-gradient(135deg, var(--dms-blue-700), var(--dms-color-primary));
+  background: var(--dms-m-head-gradient, linear-gradient(135deg, var(--dms-blue-700), var(--dms-color-primary)));
   color: var(--dms-text-inverse, #fff);
   padding: calc(36px + var(--dms-mobile-safe-top)) 20px 48px;
   text-align: center;
@@ -86,3 +86,4 @@ async function onLogout() {
 .name { font-size: 20px; font-weight: 600; margin-top: 8px; }
 .meta { opacity: .85; font-size: 13px; margin-top: 4px; }
 </style>
+

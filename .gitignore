@@ -166,6 +166,8 @@ playwright-report/
 
 # 浏览器验证截图结果（运行产物，非源码；仅 automation_test/e2e 脚本入库）
 automation_test/v4*-results-*/
+automation_test/_diag-shots/
+automation_test/_*-results/
 
 # 一次性变更入包（外部投递，不入库）
 DMS-changeset-*/

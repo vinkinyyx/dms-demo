@@ -1,3 +1,45 @@
+## v4.6.9 (2026-09-05) - 移动端 H5 全站切「藏青琥珀」主题 + DESIGN.md 增补移动端设计标准（纯前端，无 Flyway）
+
+> 目标：把移动端 H5 视觉从 PC 同款极光蓝切换为独立的「藏青琥珀 Navy Amber」主题（主色藏青 #2E6BA8、琥珀 #D97706 点缀、浅蓝灰图标底 #EAF1F9、页面底 #F4F7FB），只影响移动端、不影响 PC；并把整套移动端设计标准固化进 DESIGN.md。
+
+### 设计标准沉淀（铁律11）
+- DESIGN.md 新增 §11 移动端（H5/Vant）设计标准：作用域与生效方式、藏青琥珀配色令牌表、Vant 桥接要点、布局/组件规范（底部导航≤5、触控≥44px、卡片/宫格/按钮层级/等宽数字/扫码页）、12 屏页面清单、Logo 规范、移动端「改哪里」配方表；§1 令牌地图同步登记新文件与引入顺序。
+- 移动端与 PC 共用三层令牌架构，主题通过移动端根作用域覆盖 Layer2 语义令牌实现，不改编排库、不写死色值。
+
+### 主题实现（令牌化，作用域隔离）
+- 新增 frontend-vue/src/styles/vant/mobile-theme.scss：在 .m-layout / .m-login / .m-register 三个移动端根类下覆盖 --dms-color-primary 系列、--dms-bg-*、--dms-link-* 为藏青系，并新增 --dms-m-navy / amber / tint / head-gradient 移动端专用令牌；Vant 经 --van-* 自动跟随（主色藏青、导航栏白字、底部标签栏选中琥珀）。
+- main.js 在 vant/index.scss 之后引入 vant/mobile-theme.scss 保证覆盖优先级。
+- 头部渐变令牌化：app.scss 的 .m-hero 与 .m-quick-ic、MProfile.vue 个人中心头、MLogin.vue 登录头（原硬编码深灰蓝 #1f2d3d→#34495e）统一改为 var(--dms-m-head-gradient) 藏青渐变；首页功能宫格首图标硬编码 #1677ff 改为 var(--dms-m-tint)/--dms-color-primary。
+- Logo 统一：登录/首页/个人中心均用 DmsLogo 组件渲染真实品牌标（logo-mark.png 深藏青圆角 m + 青点），深色头部用 inverse 白版，不加白色方块瓷砖，与 PC 像素级一致。
+
+### 验证
+- cd frontend-vue && npm run build 通过；构建产物 CSS 已含 .m-layout/.m-login/.m-register 作用域的藏青令牌与琥珀 tabbar 色，PC 极光蓝令牌保持不变。
+- 高保真原型（12 屏）见 .codex/visualizations/.../dms-mobile-full-12-v6.html。
+
+## v4.6.8 (2026-09-05) - 登录页全预填 + 修复菜单点不开(前端 chunk 丢失) + 多页签若依风格 + 首页快捷方式独立成行（纯前端，无 Flyway）
+
+> 测试环境已部署验证；生产仍 v4.6.6，待用户指令后再发生产。
+
+### 修复：大量菜单点击无反应（合同工作台/合同模板/授权管理等）
+- **根因（部署事故，非代码 Bug）**：上一轮"孤儿 assets 清理"逻辑错误——只保留了 `index.html` 直接引用的入口 bundle，误删了**路由懒加载 chunk**（Login/DmsLogo/各业务页等按需加载的 js/css 不写在 index.html 里）。访问页面时 nginx `try_files` 把缺失的 chunk 回退成 index.html（MIME=text/html），浏览器报 `Failed to load module script ... MIME text/html` / `Unable to preload CSS`，Vue 无法挂载 → 登录页整页空白、点任何菜单都"路由切换失败"白屏。
+- **二次坑**：首次整包重部署时构建漏带 `VITE_BASE=/dms/`，业务前端 base 退化为根 `/`，index.html 引用 `/assets/...` 导致 `/dms/login` 深链去根目录取资源 404。改用 `VITE_BASE=/dms/ npm run build` 重构建重部署后恢复。
+- **修复**：整包重新部署业务 + admin 两个前端（全量懒加载 chunk 就位），重启 nginx-test。复测登录页 4 输入框 0 错误；55 个菜单项完整；合同工作台/合同模板/授权管理直链与菜单点击均正常打开（非空白、有表格），0 个 JS 错误。
+- **顺手清理**：删除 `router/index.js` 中残留的重复死路由 `authorizations/:id`（原指向通用 ResourceDetail，被后定义的专用 `AuthorizationDetail.vue` 同名覆盖）。
+
+### 需求1：登录页自动填充演示账号密码
+- 三个入口均预填（记忆值优先）：业务前台 `sys_admin / Dms@123456` / 租户 `default`（本就有）；平台后台 `admin / Sh123456`（`admin-vue Login.vue` 补密码默认值）；移动 H5 `sys_admin / Dms@123456`（`MLogin.vue` 补账号/密码默认值）。打开登录页直接点登录即可。
+
+### 需求3：多页签改成若依风格
+- `layout/TagsBar.vue`：页签加图标（新增 `layout/tagIcons.js` 按标题/路径映射 Element 图标）；激活态由实心蓝底改为**浅蓝底 + 主色字 + 左侧 3px 蓝条**（若依样式）；右侧新增「刷新」按钮 +「页签操作」下拉（刷新/关闭其他/关闭全部）；整体扁平白底、28px 高、小圆角。右键菜单（刷新/关闭/关闭其他/关闭全部）保留。面包屑仍在顶栏。
+
+### 需求4：首页快捷方式独立成行、放大
+- `views/Home.vue`：把原先挤在顶部头部行里 11px 的小链接（`ht-shortcuts`）移出，改为**独立一整行大卡片**（`.shortcut-row`，42px 图标方块 + 14px 加粗文字、hover 上浮阴影），自适应栅格。
+- 快捷入口由 4 个扩充到 8 个：产品管理、经销商管理、销售订单、销退订单、销售出库、合同工作台、报表中心、我的审批（库存查询仅在库存开启的厂家显示）。
+
+### 教训（记入 layer3）
+- 前端 dist 的 `assets/` **绝不能按 index.html 引用去清理**：懒加载 chunk 是运行时动态 import 的，不在 index.html 里；要清只能整包替换部署，不能"删不被 index.html 引用的文件"。
+- 业务前端构建必须 `VITE_BASE=/dms/`（`vite.config.js` base 默认 `/`）；admin 默认 base 即 `/dms/admin/`。部署后用浏览器深链 `/dms/login` 实测，不能只 curl `/dms/`。
+
 ## v4.6.7 (2026-09-05) - PC 端设计标准 DESIGN.md + 布局尺寸令牌化（纯前端，无 Flyway）
 
 > 目标：把 PC 端设计标准固化为单一事实源，后续 UI 颜色/布局调整只改令牌文件，不在业务组件写死色值/尺寸。
