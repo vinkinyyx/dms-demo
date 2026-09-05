@@ -122,7 +122,7 @@ const fromTo = ref(rangeFor(rangeKey.value))
 const chartRef = ref(null)
 let chartInst = null
 
-const PALETTE = ['#1677ff', '#52c41a', '#faad14', '#ff4d4f', '#909399', '#722ed1', '#13c2c2', '#fa8c16']
+const PALETTE = ['#2e6ba8', '#52c41a', '#faad14', '#ff4d4f', '#909399', '#722ed1', '#13c2c2', '#fa8c16']
 
 const rangeOptions = [
   { value: 'today', label: '当日' },

@@ -2,10 +2,9 @@
   <div class="m-home">
     <div class="m-hero">
       <div class="m-hero-row">
-        <span class="m-hero-logo"><DmsLogo :size="30" inverse /></span>
         <div class="m-hero-hi">
-          你好，{{ userStore.username }}
-          <span class="m-hero-date">{{ today }}</span>
+          <div class="m-hero-greet">{{ greeting }}，{{ userStore.username }}</div>
+          <div class="m-hero-who">{{ dealerName || 'MySolMed DMS' }}</div>
         </div>
         <router-link to="/mobile/messages" class="m-hero-action" aria-label="消息">
           <van-badge :content="messageBadge" :show="!!messageBadge">
@@ -13,93 +12,110 @@
           </van-badge>
         </router-link>
       </div>
-      <div class="m-hero-sub">MySolMed DMS · 移动工作台</div>
     </div>
 
-    <div class="m-primary-actions">
-      <router-link to="/mobile/smart-order" class="m-primary-btn m-primary-btn--main">
-        <van-icon name="chat-o" />智能下单
+    <div class="m-kpiband m-kpiband-2">
+      <router-link class="m-kpi" to="/mobile/orders"><div class="n m-num">{{ kpi.ongoing }}</div><div class="t">进行中订单</div></router-link>
+      <router-link class="m-kpi" to="/mobile/approvals"><div class="n m-num">{{ kpi.approval }}</div><div class="t">待我审批</div></router-link>
+      <router-link class="m-kpi" to="/mobile/dashboard"><div class="n m-num">¥{{ kpi.monthSales }}</div><div class="t">本月销售额</div></router-link>
+    </div>
+
+    <div class="m-section">常用功能</div>
+    <div class="m-grid-card">
+      <router-link v-for="q in quicks" :key="q.key" :to="q.to" class="qa">
+        <div class="ic"><van-icon :name="q.icon" /></div>
+        <span>{{ q.label }}</span>
       </router-link>
-      <router-link to="/mobile/orders/create" class="m-primary-btn m-primary-btn--ghost">
-        <van-icon name="plus" />下销售订单
-      </router-link>
     </div>
 
-    <div class="m-sec-title">本月概览</div>
-    <div class="m-stats">
-      <div class="m-stat" @click="$router.push('/mobile/dashboard')">
-        <div class="m-stat-ic m-stat-ic--blue"><van-icon name="balance-o" /></div>
-        <div class="m-stat-v">¥ {{ fmtAmount(monthKpi.totalSales) }}</div>
-        <div class="m-stat-l">本月销售金额</div>
-      </div>
-      <div class="m-stat" @click="$router.push('/mobile/dashboard')">
-        <div class="m-stat-ic m-stat-ic--orange"><van-icon name="orders-o" /></div>
-        <div class="m-stat-v">{{ monthKpi.totalOrders || 0 }}</div>
-        <div class="m-stat-l">本月订单数</div>
-      </div>
-    </div>
-
-    <div class="m-sec-title">常用功能</div>
-    <div class="m-quick-grid m-quick-grid--home">
-      <router-link v-for="(q, i) in quicks" :key="q.key" :to="q.to" class="m-quick-item">
-        <div class="m-quick-ic" :class="'m-quick-ic--c' + (i % 4)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" v-html="q.icon" />
+    <div class="m-section">最近业务<router-link class="m-more" to="/mobile/orders">全部 ›</router-link></div>
+    <div class="m-card-list">
+      <div v-for="o in recentOrders" :key="o.id" class="m-ord" role="button" tabindex="0" :aria-label="'查看订单 ' + o.code" @click="onCardAction(o)" @keydown.enter="onCardAction(o)">
+        <div class="ot">
+          <span class="no">{{ o.code }}</span>
+          <span class="st" :class="statusCls(o.status)"><i></i>{{ statusText(o.status) }}</span>
         </div>
-        <div class="m-quick-l">{{ q.label }}</div>
-      </router-link>
-    </div>
-
-    <div class="m-sec-title">最近订单</div>
-    <div class="m-list-card">
-      <van-cell
-        v-for="o in recentOrders" :key="o.id"
-        :title="o.code"
-        :label="(o.dealerName || '-') + ' · ' + (o.createdAt || '').substring(0, 10)"
-        is-link
-        @click="$router.push('/mobile/orders/' + o.id)"
-      >
-        <template #value>
-          <div class="m-amt">¥ {{ o.finalAmount || 0 }}</div>
-          <van-tag :type="statusTagType(o.status)" size="mini">{{ statusText(o.status) }}</van-tag>
-        </template>
-      </van-cell>
-      <van-empty v-if="!loadingRecent && !recentOrders.length" description="暂无订单" />
+        <div class="ol">
+          <div class="th"><van-icon name="orders-o" /></div>
+          <div>
+            <div class="pn">{{ o.dealerName || '销售订单' }}</div>
+            <div class="pm">{{ formatDate(o.createdAt) }} · <b class="m-num">¥{{ fmtAmount(o.finalAmount) }}</b></div>
+          </div>
+        </div>
+        <div class="of">
+          <span class="tot">合计<b class="m-num">¥{{ fmtAmount(o.finalAmount) }}</b></span>
+          <button type="button" class="ob" :class="o.status === 'PENDING_APPROVAL' ? 'amber' : 'ghost'" @click.stop="onCardAction(o)">
+            {{ cardAction(o.status) }}
+          </button>
+        </div>
+      </div>
+      <van-empty v-if="!loadingRecent && !recentOrders.length" description="暂无业务" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, onActivated } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { listSalesOrders } from '@/api/order'
 import { getKpi } from '@/api/dashboard'
-import { statusText, statusTagType } from '@/utils/dict'
+import { statusText } from '@/utils/dict'
+import { formatDate } from '@/utils/format'
 import request from '@/utils/request'
 
 const userStore = useUserStore()
-const today = new Date().toLocaleDateString('zh-CN')
+const router = useRouter()
 
 const monthKpi = reactive({})
 const recentOrders = ref([])
 const loadingRecent = ref(false)
 const messageBadge = ref(0)
+const approvalTodo = ref(0)
 
-const ICONS = {
-  surgery: '<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 13h2l1-2 2 4 1-2h2"/>' ,
-  orders: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/>',
-  approvals: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
-  dashboard: '<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>',
-  messages: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>',
-  profile: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'
-}
 const quicks = [
-  { key: 'surgery',   label: '手术报台', to: '/mobile/surgery-reports' },
-  { key: 'orders',    label: '我的订单', to: '/mobile/orders' },
-  { key: 'approvals', label: '移动审批', to: '/mobile/approvals' },
-  { key: 'dashboard', label: '我的业绩', to: '/mobile/dashboard' },
-  { key: 'messages',  label: '消息中心', to: '/mobile/messages' },
-  { key: 'profile',   label: '我的',     to: '/mobile/profile' }
-].map(q => ({ ...q, icon: ICONS[q.key] }))
+  { key: 'smart',     label: '智能下单',   to: '/mobile/smart-order',     icon: 'chat-o' },
+  { key: 'create',    label: '下销售订单', to: '/mobile/orders/create',   icon: 'description' },
+  { key: 'surgery',   label: '手术报台',   to: '/mobile/surgery-reports', icon: 'todo-list-o' },
+  { key: 'approvals', label: '移动审批',   to: '/mobile/approvals',       icon: 'passed' },
+  { key: 'dashboard', label: '我的业绩',   to: '/mobile/dashboard',       icon: 'bar-chart-o' },
+  { key: 'messages',  label: '消息中心',   to: '/mobile/messages',        icon: 'envelop-o' }
+]
+
+const greeting = computed(() => {
+  const h = new Date().getHours()
+  if (h < 6) return '凌晨好'
+  if (h < 12) return '早上好'
+  if (h < 14) return '中午好'
+  if (h < 18) return '下午好'
+  return '晚上好'
+})
+const dealerName = computed(() => userStore.user?.dealerName || '')
+const kpi = computed(() => ({
+  ongoing: Number(monthKpi.totalOrders || recentOrders.value.length || 0),
+  approval: approvalTodo.value,
+  monthSales: fmtCompact(monthKpi.totalSales)
+}))
+function fmtCompact(v) {
+  const n = Number(v || 0)
+  return n >= 10000 ? (n / 10000).toFixed(1) + '万' : n.toLocaleString('zh-CN')
+}
+
+const STATUS_CLS = {
+  DRAFT: 'st-info', SUBMITTED: 'st-pen', PENDING_APPROVAL: 'st-pen',
+  APPROVED: 'st-ok', CONFIRMED: 'st-ok', REJECTED: 'st-rej',
+  CANCELLED: 'st-rej', SHIPPED: 'st-info', PARTIAL_SHIPPED: 'st-info',
+  RECEIVED: 'st-ok', COMPLETED: 'st-ok', RECEIVING: 'st-info'
+}
+function statusCls(s) { return STATUS_CLS[s] || 'st-info' }
+function cardAction(s) {
+  if (s === 'PENDING_APPROVAL' || s === 'SUBMITTED') return '去审批'
+  return '查看'
+}
+function onCardAction(o) {
+  if (o.status === 'PENDING_APPROVAL' || o.status === 'SUBMITTED') { router.push('/mobile/approvals'); return }
+  router.push('/mobile/orders/' + o.id)
+}
 
 function fmtAmount(v) {
   const n = Number(v || 0)
@@ -108,6 +124,10 @@ function fmtAmount(v) {
 
 async function load() {
   try { Object.assign(monthKpi, (await getKpi({ period: 'month' })).data || {}) } catch (e) { /* ignore */ }
+  try {
+    const todo = await request({ url: '/api/approval/tasks/my-todo', method: 'get', params: { page: 1, size: 1 } })
+    approvalTodo.value = Number(todo?.data?.total || 0)
+  } catch (e) { /* ignore */ }
   try {
     const unread = await request({ url: '/api/notifications/unread-count', method: 'get' })
     messageBadge.value = Number(unread?.data?.count || 0)
@@ -122,61 +142,24 @@ async function load() {
   finally { loadingRecent.value = false }
 }
 
+let firstEnter = true
+onActivated(() => { if (!firstEnter) load(); firstEnter = false })
 load()
 </script>
 
 <style scoped>
-.m-home { padding-bottom: var(--dms-spacing-4); }
-.m-stat { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.m-stat:active { opacity: .7; }
+.m-kpi{text-decoration:none;color:inherit;}
+.m-home { padding-bottom: 20px; }
 .m-hero { position: relative; overflow: hidden; }
 .m-hero::after {
-  content: '';
-  position: absolute;
-  right: -50px; top: -60px;
-  width: 180px; height: 180px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.10);
-  pointer-events: none;
+  content: ''; position: absolute; right: -50px; top: -60px;
+  width: 180px; height: 180px; border-radius: 50%; background: rgba(255,255,255,.10); pointer-events: none;
 }
-.m-hero::before {
-  content: '';
-  position: absolute;
-  right: 40px; bottom: -70px;
-  width: 130px; height: 130px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.08);
-  pointer-events: none;
-}
-.m-hero-row { position: relative; z-index: 1; }
-.m-hero-logo {
-  width: 40px; height: 40px;
-  border-radius: 10px;
-  background: rgba(255,255,255,.18);
-  display: inline-flex; align-items: center; justify-content: center;
-  flex: 0 0 auto;
-}
-.m-hero-sub { position: relative; z-index: 1; margin-top: 14px; font-size: 12px; opacity: .85; letter-spacing: .5px; }
-/* KPI 卡片纵向化 + 彩色图标 */
-.m-stats { gap: 0; padding: var(--dms-spacing-4); }
-.m-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.m-stat-ic {
-  width: 40px; height: 40px;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-  margin-bottom: 4px;
-}
-.m-stat-ic--blue { background: var(--dms-blue-50, #e6f4ff); color: var(--dms-color-primary); }
-.m-stat-ic--orange { background: #fff3e8; color: #fa8c16; }
-.m-stat-v { font-size: 20px; }
-/* 常用功能彩色宫格 */
-.m-quick-grid--home { padding: var(--dms-spacing-4) var(--dms-spacing-2) var(--dms-spacing-3); gap: var(--dms-spacing-3) 0; }
-.m-quick-ic { width: 48px; height: 48px; border-radius: 14px; }
-.m-quick-ic svg { width: 24px; height: 24px; }
-.m-quick-ic--c0 { background: var(--dms-m-tint, #eaf1f9); color: var(--dms-color-primary, #2e6ba8); }
-.m-quick-ic--c1 { background: #f6ffed; color: #00b96b; }
-.m-quick-ic--c2 { background: #fff7e6; color: #fa8c16; }
-.m-quick-ic--c3 { background: #f9f0ff; color: #722ed1; }
+.m-hero-row { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 10px; }
+.m-hero-hi { flex: 1; min-width: 0; }
+.m-hero-greet { font-size: 12px; opacity: .88; }
+.m-hero-who { font-size: 19px; font-weight: 800; margin-top: 3px; display: flex; align-items: center; }
+.m-hero-action { position: relative; z-index: 1; color: #fff; font-size: 22px; line-height: 1; padding: 4px; }
+.m-kpi { cursor: pointer; }
+.m-ord { cursor: pointer; }
 </style>
-

@@ -1,7 +1,7 @@
 <template>
   <el-container class="layout">
     <el-aside :width="collapsed ? SIDER_COLLAPSED_W : SIDER_W" class="sidebar">
-      <div class="logo" @click="$router.push('/home')">
+      <div class="logo" role="link" tabindex="0" aria-label="返回工作台首页" @click="$router.push('/home')" @keydown.enter="$router.push('/home')">
         <DmsLogo :size="32" class="logo-icon" variant="auto" />
         <span v-show="!collapsed" class="logo-text">MySolMed DMS</span>
       </div>
@@ -43,7 +43,7 @@
             <el-icon><Sunny v-if="siderMode === 'dark'" /><Moon v-else /></el-icon>
           </el-button>
         </div>
-        <el-badge :value="unread" :hidden="!unread" class="bell-badge" @click="goNotifications">
+        <el-badge :value="unread" :hidden="!unread" class="bell-badge" role="button" tabindex="0" aria-label="消息中心" @click="goNotifications" @keydown.enter="goNotifications">
           <el-icon class="bell-icon"><Bell /></el-icon>
         </el-badge>
         <el-dropdown @command="onCommand">
@@ -333,7 +333,7 @@ function onCommand(cmd) {
 }
 .theme-chip:hover { filter: brightness(.96); }
 .theme-chip.active { box-shadow: 0 0 0 1px #fff, 0 0 0 2px var(--chip); }
-.bell-badge{cursor:pointer;margin-right:12px}.bell-icon{font-size:20px;color:#606266}.bell-icon:hover{color:var(--dms-color-primary)}.user-info { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #606266; outline: none; }
+.bell-badge{cursor:pointer;margin-right:12px}.bell-icon{font-size:20px;color:#606266}.bell-icon:hover{color:var(--dms-color-primary)}.user-info { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #606266; }
 .user-info:hover { color: var(--dms-color-primary); }
 .main { background: var(--dms-bg-page); padding: var(--dms-layout-content-padding, var(--dms-padding-page)); }
 :global(html[data-mode='dark']) .topbar { background: #111827; border-color: #243044; }

@@ -175,3 +175,17 @@ DMS-changeset-*/
 # 含明文 SSH 密码的一次性前端部署助手（功能由 deploy_test.py 覆盖）
 scripts/deploy_front_admin.py
 scripts/deploy_front_only.py
+
+# 宣传手册：本地预览 junction 与废弃截图备份（不入库；正式资源在 DMS产品宣传手册/assets 与 pages/*.html）
+DMS产品宣传手册/pages/assets/
+DMS产品宣传手册/assets/_*/
+DMS产品宣传手册/_*/
+
+# 高保真原型的截图产物（html 源码入库）
+prototype/**/shots/
+
+# 含明文 SSH 密码的一次性部署/还原助手（正式部署见 docs/02_设计/运维部署.md）
+tools/restore_admin.py
+tools/deploy_frontend_test2.py
+tools/_prod_*.py
+tools/_*.cjs

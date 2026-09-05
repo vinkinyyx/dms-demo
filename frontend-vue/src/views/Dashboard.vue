@@ -197,14 +197,14 @@ function ensureChart(key) {
 function buildKpi() {
   const totalSales = Number(kpi.totalSales || 0)
   const all = [
-    { key: 'totalSales', label: '总销售额', display: '¥ ' + totalSales.toLocaleString('zh-CN', { maximumFractionDigits: 0 }), color: '#1677ff' },
+    { key: 'totalSales', label: '总销售额', display: '¥ ' + totalSales.toLocaleString('zh-CN', { maximumFractionDigits: 0 }), color: '#2e6ba8' },
     { key: 'totalOrders', label: '订单数', display: kpi.totalOrders || 0, color: '#52c41a' },
     { key: 'activeDealers', label: '活跃经销商', display: kpi.activeDealers || 0, color: '#faad14' },
     { key: 'totalProducts', label: '产品数', display: kpi.totalProducts || 0, color: '#909399' },
     { key: 'qualifiedStock', label: '合格库存', display: kpi.qualifiedStock || 0, color: '#52c41a', invOnly: true },
     { key: 'pendingStock', label: '待检库存', display: kpi.pendingStock || 0, color: '#faad14', invOnly: true },
     { key: 'defectiveStock', label: '不合格库存', display: kpi.defectiveStock || 0, color: '#ff4d4f', invOnly: true },
-    { key: 'totalSurgeries', label: '报台数', display: kpi.totalSurgeries || 0, color: '#1677ff' }
+    { key: 'totalSurgeries', label: '报台数', display: kpi.totalSurgeries || 0, color: '#2e6ba8' }
   ]
   kpiCards.value = all.filter(k => !k.invOnly || inventoryEnabled.value)
 }
@@ -241,7 +241,7 @@ function renderTrend(data) {
     grid: { left: 60, right: 20, top: 20, bottom: 40 },
     xAxis: { type: 'category', data: data.map(d => d.month) },
     yAxis: { type: 'value' },
-    series: [{ name: '销售额', type: 'line', smooth: true, areaStyle: {}, data: data.map(d => Number(d.amount || 0)), itemStyle: { color: '#1677ff' } }]
+    series: [{ name: '销售额', type: 'line', smooth: true, areaStyle: {}, data: data.map(d => Number(d.amount || 0)), itemStyle: { color: '#2e6ba8' } }]
   }, true)
 }
 function renderPie(data) {
@@ -271,7 +271,7 @@ function renderTopDealers(data) {
     series: [{
       type: 'bar', data: data.map(d => Number(d.value || 0)).reverse(),
       barWidth: '52%',
-      itemStyle: { color: '#1677ff', borderRadius: [0, 4, 4, 0] },
+      itemStyle: { color: '#2e6ba8', borderRadius: [0, 4, 4, 0] },
       label: { show: true, position: 'right', color: '#6b7280', fontSize: 12, formatter: (p) => '¥' + Number(p.value || 0).toLocaleString('zh-CN') }
     }]
   }, true)
@@ -310,7 +310,7 @@ function renderActivity(data) {
   const days = Array.from(new Set(sources.flat().map(d => d.date))).sort()
   const mapBy = (arr) => days.map(d => { const f = (arr || []).find(x => x.date === d); return f ? Number(f.count || 0) : 0 })
   const series = [
-    { name: '订单', type: 'bar', data: mapBy(data.orders), itemStyle: { color: '#1677ff' } },
+    { name: '订单', type: 'bar', data: mapBy(data.orders), itemStyle: { color: '#2e6ba8' } },
     { name: '手术', type: 'bar', data: mapBy(data.surgeries), itemStyle: { color: '#52c41a' } }
   ]
   const legend = ['订单', '手术']

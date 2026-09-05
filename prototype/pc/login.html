@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 · MySolMed DMS 经销商管理系统</title>
+<link rel="stylesheet" href="assets/dms.css">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-hero">
+    <div class="blob b1"></div><div class="blob b2"></div>
+    <div class="hero-inner">
+      <div class="hero-brand">
+        <div class="logo"><img src="assets/logo-mark-white.png" alt="MySolMed"></div>
+        <span>MySolMed DMS</span>
+      </div>
+      <h1>面向医疗器械经销商的<br>一体化业务管理平台</h1>
+      <p>覆盖基础数据、合同授权、订单审批、库存追溯、手术报台与营销代金券全链路，让高值耗材流通合规、可追溯、更高效。</p>
+      <div class="login-feats">
+        <div class="f"><span data-ic="sell"></span>订单 · 审批 · 出库闭环</div>
+        <div class="f"><span data-ic="box"></span>批号 / 序列号全程追溯</div>
+        <div class="f"><span data-ic="firstaid"></span>手术植入报台管理</div>
+        <div class="f"><span data-ic="dataana"></span>经营数据实时看板</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="login-panel">
+    <div class="login-box">
+      <div class="lb-title">欢迎登录</div>
+      <div class="lb-sub">MySolMed 经销商管理系统（DMS）</div>
+
+      <div class="lb-tabs">
+        <div class="lb-tab active">账号登录</div>
+        <div class="lb-tab">短信登录</div>
+      </div>
+
+      <div class="lb-field">
+        <label>租户</label>
+        <div class="lb-input"><span data-ic="office"></span><input value="default（默认租户）" readonly></div>
+      </div>
+      <div class="lb-field">
+        <label>账号</label>
+        <div class="lb-input"><span data-ic="user"></span><input placeholder="请输入用户名 / 手机号" value="sys_admin"></div>
+      </div>
+      <div class="lb-field">
+        <label>密码</label>
+        <div class="lb-input"><span data-ic="key"></span><input type="password" placeholder="请输入密码" value="Dms@123456">
+          <span data-ic="eye" style="cursor:pointer"></span></div>
+      </div>
+
+      <div class="lb-row">
+        <span class="lb-check on"><span class="box"><span data-ic="check"></span></span>记住我</span>
+        <a href="#">忘记密码？</a>
+      </div>
+
+      <button class="lb-btn" onclick="location.href='home.html'">登 录</button>
+
+      <div class="lb-foot">
+        演示账号：sys_admin / Dms@123456 &nbsp;|&nbsp; 平台后台 admin / Sh123456<br>
+        登录即代表同意《服务协议》与《隐私政策》
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+  document.querySelectorAll('[data-ic]').forEach(function(el){ el.innerHTML = icon(el.getAttribute('data-ic')); });
+</script>
+</body>
+</html>

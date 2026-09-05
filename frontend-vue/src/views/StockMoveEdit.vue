@@ -64,7 +64,7 @@
               <el-tag :type="statusTagType(row.fromStockStatus)" size="small">{{ statusText(row.fromStockStatus) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="本次数量" width="130">
+          <el-table-column align="right" label="本次数量" width="130">
             <template #default="{ row }">
               <el-input-number v-if="!row.isSerialManaged" v-model="row.qty" :min="1" :max="Number(row.onHand)" :precision="0" size="small" style="width:100%" controls-position="right" />
               <el-tag v-else type="info" size="small">1 件</el-tag>
@@ -124,7 +124,7 @@
           <el-table-column label="序列号" width="160">
             <template #default="{ row }">{{ row.serialNo || '-' }}</template>
           </el-table-column>
-          <el-table-column label="数量" width="90" prop="qty" />
+          <el-table-column align="right" label="数量" width="90" prop="qty" />
           <el-table-column label="源状态" width="100">
             <template #default="{ row }"><el-tag :type="statusTagType(row.fromStockStatus)" size="small">{{ statusText(row.fromStockStatus) }}</el-tag></template>
           </el-table-column>

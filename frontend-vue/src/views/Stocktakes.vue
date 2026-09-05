@@ -58,8 +58,8 @@
         <el-table-column prop="productId" label="产品ID" width="100" />
         <el-table-column prop="batchNo" label="批号" width="140" />
         <el-table-column prop="serialNo" label="序列号" width="140" />
-        <el-table-column prop="bookQty" label="账面数量" width="110" />
-        <el-table-column prop="actualQty" label="实盘数量" width="110" />
+        <el-table-column align="right" prop="bookQty" label="账面数量" width="110" />
+        <el-table-column align="right" prop="actualQty" label="实盘数量" width="110" />
         <el-table-column label="差异" width="100">
           <template #default="{ row }">
             <span :style="{color: Number(row.diffQty) < 0 ? '#f56c6c' : (Number(row.diffQty) > 0 ? '#67c23a' : '#909399')}">{{ row.diffQty }}</span>

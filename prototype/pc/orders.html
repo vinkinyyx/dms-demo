@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>销售订单 · MySolMed DMS</title>
+<link rel="stylesheet" href="assets/dms.css">
+</head>
+<body>
+<div id="app"></div>
+
+<script type="text/template" id="pageBody">
+  <div class="page-head">
+    <div>
+      <div class="page-title">销售订单</div>
+      <div class="page-desc">管理经销商销售订单全生命周期：草稿 → 提交 → 审批 → 出库 → 完成</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn">导入</button>
+      <button class="btn">导出</button>
+      <button class="btn btn-primary" onclick="location.href='order-detail.html'">新建销售订单</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="filter-bar">
+      <div class="f-item"><span class="f-label">订单编号</span>
+        <input class="input" placeholder="请输入订单编号" style="min-width:180px"></div>
+      <div class="f-item"><span class="f-label">经销商</span>
+        <div class="select"><span class="ph">输入名称 / 编码搜索</span><span data-ic="search"></span></div></div>
+      <div class="f-item"><span class="f-label">订单状态</span>
+        <div class="select"><span>全部状态</span><span data-ic="chevronD"></span></div></div>
+      <div class="f-item"><span class="f-label">终端医院</span>
+        <div class="select"><span class="ph">输入医院名称</span><span data-ic="search"></span></div></div>
+      <div class="f-item"><span class="f-label">下单日期</span>
+        <div class="select" style="min-width:230px"><span class="ph">2026-09-01 ~ 2026-09-05</span><span data-ic="chevronD"></span></div></div>
+      <div class="filter-actions">
+        <button class="btn">重置</button>
+        <button class="btn btn-primary">查询</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <span class="tag tag-blue">全部 <b style="margin-left:4px">348</b></span>
+      <span class="tag tag-gray">草稿 <b style="margin-left:4px">26</b></span>
+      <span class="tag tag-gold">待审批 <b style="margin-left:4px">12</b></span>
+      <span class="tag tag-cyan">待出库 <b style="margin-left:4px">34</b></span>
+      <span class="tag tag-green">已完成 <b style="margin-left:4px">268</b></span>
+      <span class="tag tag-red">已驳回 <b style="margin-left:4px">8</b></span>
+      <span class="spacer"></span>
+      <button class="btn btn-sm">批量提交审批</button>
+      <button class="btn btn-sm btn-link-more"><span data-ic="chevronD"></span>列设置</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="dms">
+        <thead><tr>
+          <th style="width:36px"><span class="lb-check on" style="display:inline-flex"><span class="box"><span data-ic="check"></span></span></span></th>
+          <th>订单编号</th><th>经销商</th><th>终端医院</th><th>产品线</th>
+          <th class="num">订单金额</th><th>订单状态</th><th>审批状态</th><th>提交人</th><th>下单时间</th>
+          <th style="width:150px" class="col-actions">操作</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="lb-check" style="display:inline-flex"><span class="box"></span></span></td>
+            <td><div class="cell-main">SO20260905008</div><div class="cell-sub">3 行 · BOM×1</div></td>
+            <td><div class="cell-main">杭州仁济医疗器械有限公司</div><div class="cell-sub">DR-HZ-0006</div></td>
+            <td>浙江大学附属第一医院</td>
+            <td><span class="tag tag-cyan">脊柱外科</span></td>
+            <td class="num">¥186,400.00</td>
+            <td><span class="tag tag-gold"><span class="dot"></span>待审批</span></td>
+            <td><span class="tag tag-gold"><span class="dot"></span>审批中</span></td>
+            <td>张丽</td><td>2026-09-05 10:24</td>
+            <td class="col-actions"><div class="act-links"><a class="btn-text" href="order-detail.html">查看</a><span class="sep">|</span><button class="btn-text">审批</button><span class="sep">|</span><span class="act-more">更多<span data-ic="chevronD"></span></span></div></td>
+          </tr>
+          <tr>
+            <td><span class="lb-check" style="display:inline-flex"><span class="box"></span></span></td>
+            <td><div class="cell-main">SO20260905006</div><div class="cell-sub">5 行</div></td>
+            <td><div class="cell-main">上海康泽医疗科技有限公司</div><div class="cell-sub">DR-SH-0012</div></td>
+            <td>上海瑞金医院</td>
+            <td><span class="tag tag-blue">心血管介入</span></td>
+            <td class="num">¥92,750.00</td>
+            <td><span class="tag tag-blue"><span class="dot"></span>待出库</span></td>
+            <td><span class="tag tag-green"><span class="dot"></span>已通过</span></td>
+            <td>李强</td><td>2026-09-05 09:48</td>
+            <td class="col-actions"><div class="act-links"><a class="btn-text" href="order-detail.html">查看</a><span class="sep">|</span><button class="btn-text">出库</button><span class="sep">|</span><span class="act-more">更多<span data-ic="chevronD"></span></span></div></td>
+          </tr>
+          <tr>
+            <td><span class="lb-check on" style="display:inline-flex"><span class="box"><span data-ic="check"></span></span></span></td>
+            <td><div class="cell-main">SO20260904019</div><div class="cell-sub">8 行 · 代金券</div></td>
+            <td><div class="cell-main">苏州恒瑞医疗器械</div><div class="cell-sub">DR-SZ-0021</div></td>
+            <td>苏州大学附属第一医院</td>
+            <td><span class="tag tag-purple">关节外科</span></td>
+            <td class="num">¥245,120.00</td>
+            <td><span class="tag tag-green"><span class="dot"></span>已完成</span></td>
+            <td><span class="tag tag-green"><span class="dot"></span>已通过</span></td>
+            <td>王芳</td><td>2026-09-04 16:30</td>
+            <td class="col-actions"><div class="act-links"><a class="btn-text" href="order-detail.html">查看</a><span class="sep">|</span><button class="btn-text">打印</button><span class="sep">|</span><span class="act-more">更多<span data-ic="chevronD"></span></span></div></td>
+          </tr>
+          <tr>
+            <td><span class="lb-check" style="display:inline-flex"><span class="box"></span></span></td>
+            <td><div class="cell-main">SO20260904015</div><div class="cell-sub">2 行</div></td>
+            <td><div class="cell-main">南京迈瑞医疗经销商</div><div class="cell-sub">DR-NJ-0009</div></td>
+            <td>江苏省人民医院</td>
+            <td><span class="tag tag-gold">创伤外科</span></td>
+            <td class="num">¥58,300.00</td>
+            <td><span class="tag tag-gray"><span class="dot"></span>草稿</span></td>
+            <td><span class="tag tag-gray"><span class="dot"></span>未提交</span></td>
+            <td>陈杰</td><td>2026-09-04 14:02</td>
+            <td class="col-actions"><div class="act-links"><a class="btn-text" href="order-detail.html">查看</a><span class="sep">|</span><button class="btn-text">编辑</button><span class="sep">|</span><span class="act-more">更多<span data-ic="chevronD"></span></span></div></td>
+          </tr>
+          <tr>
+            <td><span class="lb-check" style="display:inline-flex"><span class="box"></span></span></td>
+            <td><div class="cell-main">SO20260903027</div><div class="cell-sub">4 行</div></td>
+            <td><div class="cell-main">宁波康泰医疗器械</div><div class="cell-sub">DR-NB-0014</div></td>
+            <td>宁波第一医院</td>
+            <td><span class="tag tag-cyan">脊柱外科</span></td>
+            <td class="num">¥131,680.00</td>
+            <td><span class="tag tag-red"><span class="dot"></span>已驳回</span></td>
+            <td><span class="tag tag-red"><span class="dot"></span>已驳回</span></td>
+            <td>张丽</td><td>2026-09-03 11:15</td>
+            <td class="col-actions"><div class="act-links"><a class="btn-text" href="order-detail.html">查看</a><span class="sep">|</span><button class="btn-text">编辑</button><span class="sep">|</span><span class="act-more">更多<span data-ic="chevronD"></span></span></div></td>
+          </tr>
+          <tr>
+            <td><span class="lb-check" style="display:inline-flex"><span class="box"></span></span></td>
+            <td><div class="cell-main">SO20260903022</div><div class="cell-sub">6 行 · BOM×2</div></td>
+            <td><div class="cell-main">温州医械供应链</div><div class="cell-sub">DR-WZ-0017</div></td>
+            <td>温州医科大学附属第二医院</td>
+            <td><span class="tag tag-blue">心血管介入</span></td>
+            <td class="num">¥167,900.00</td>
+            <td><span class="tag tag-blue"><span class="dot"></span>待出库</span></td>
+            <td><span class="tag tag-green"><span class="dot"></span>已通过</span></td>
+            <td>李强</td><td>2026-09-03 09:37</td>
+            <td class="col-actions"><div class="act-links"><a class="btn-text" href="order-detail.html">查看</a><span class="sep">|</span><button class="btn-text">出库</button><span class="sep">|</span><span class="act-more">更多<span data-ic="chevronD"></span></span></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <span class="page-total">共 348 条</span>
+      <select class="page-size"><option>20 条/页</option><option>50 条/页</option><option>100 条/页</option></select>
+      <button class="page-btn">‹</button>
+      <button class="page-btn active">1</button>
+      <button class="page-btn">2</button>
+      <button class="page-btn">3</button>
+      <button class="page-btn">…</button>
+      <button class="page-btn">18</button>
+      <button class="page-btn">›</button>
+    </div>
+  </div>
+</script>
+
+<script src="assets/app.js"></script>
+<script>
+function hydrate(root){ root.querySelectorAll('[data-ic]').forEach(function(el){ el.innerHTML = icon(el.getAttribute('data-ic')); }); }
+shell({
+  active:'orders',
+  crumb:'订单业务 / <b>销售订单</b>',
+  body:document.getElementById('pageBody').innerHTML,
+  after:function(){ hydrate(document.getElementById('content')); }
+});
+</script>
+</body>
+</html>

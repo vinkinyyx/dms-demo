@@ -34,7 +34,7 @@
         <el-table-column prop="spec" label="规格" width="120" />
         <el-table-column prop="batchNo" label="批号" width="140" />
         <el-table-column prop="serialNo" label="序列号" width="140" />
-        <el-table-column prop="qty" label="库存数量" width="100" />
+        <el-table-column align="right" prop="qty" label="库存数量" width="100" />
         <el-table-column prop="unit" label="单位" width="70" />
         <el-table-column prop="warehouseName" label="仓库" width="140" show-overflow-tooltip />
         <el-table-column prop="expDate" label="到期日期" width="130" />

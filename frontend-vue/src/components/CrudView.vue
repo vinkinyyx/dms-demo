@@ -108,14 +108,14 @@
     </div>
 
     <el-table ref="tableRef" :data="rows" v-loading="loading" border stripe size="small" @sort-change="onSortChange" :default-sort="{ prop: 'updatedAt', order: 'descending' }">
-      <el-table-column v-for="c in displayCols" :key="c.k" :prop="c.k" :label="c.l"
+      <el-table-column v-for="c in displayCols" :key="c.k" :prop="c.k" :label="c.l" :align="isNumericCol(c) ? 'right' : 'left'"
         :width="c.fixedWidth || (c.minWidth == null && c.w != null && c.w <= 90 ? c.w : undefined)"
         :min-width="c.minWidth != null ? c.minWidth : (c.w != null && c.w > 90 ? Math.max(c.w, 120) : 120)"
         :sortable="c.sortable === false ? false : 'custom'" show-overflow-tooltip>
         <template #header>
           <span>{{ c.l }}</span>
-          <el-icon v-if="c.filter" class="filter-icon" @click.stop="openFilter(c, $event)">
-            <Filter :color="colFilters[c.k] != null && colFilters[c.k] !== '' ? '#1677ff' : '#c0c4cc'" />
+          <el-icon v-if="c.filter" class="filter-icon" role="button" tabindex="0" :aria-label="`按${c.l}筛选`" @click.stop="openFilter(c, $event)" @keydown.enter.stop="openFilter(c, $event)" @keydown.space.prevent.stop="openFilter(c, $event)">
+            <Filter :color="colFilters[c.k] != null && colFilters[c.k] !== '' ? '#2e6ba8' : '#c0c4cc'" />
           </el-icon>
         </template>
         <template #default="{ row }">
@@ -489,6 +489,14 @@ function loadColOrder() {
 }
 function saveColOrder(order) {
   try { localStorage.setItem(colOrderKey(), JSON.stringify(order || [])) } catch (_) {}
+}
+function isNumericCol(c) {
+  const k = String((c && c.k) || '')
+  const l = String((c && c.l) || '')
+  if (/金额|单价|税额|数量|库存|余额|折扣率|合计|总计|成本|重量|占比|达成率/.test(l)) return true
+  if (/率$/.test(l)) return true
+  if (/(price|amount|total|qty|quantity|stock|balance|weight|rate|ratio)$/i.test(k)) return true
+  return false
 }
 function isDateColKey(k) {
   return /At$|Time$|Date$|(From|To)$/i.test(String(k || ''))

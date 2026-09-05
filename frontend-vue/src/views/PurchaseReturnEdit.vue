@@ -58,19 +58,19 @@
           </template>
         </el-table-column>
         <el-table-column label="规格" min-width="120" prop="productSpec" />
-        <el-table-column label="数量" width="140">
+        <el-table-column align="right" label="数量" width="140">
           <template #default="{ row }">
             <el-input-number v-if="!readonly" v-model="row.qty" :min="1" :precision="0" size="small" style="width:100%" controls-position="right" />
             <span v-else>{{ row.qty }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="单价" width="140">
+        <el-table-column align="right" label="单价" width="140">
           <template #default="{ row }">
             <el-input-number v-if="!readonly" v-model="row.unitPrice" :min="0" :precision="2" size="small" style="width:100%" controls-position="right" />
             <span v-else>{{ row.unitPrice }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="税率" width="120">
+        <el-table-column align="right" label="税率" width="120">
           <template #default="{ row }">
             <el-input-number v-if="!readonly" v-model="row.taxRate" :min="0" :max="1" :step="0.01" :precision="2" size="small" style="width:100%" controls-position="right" />
             <span v-else>{{ row.taxRate }}</span>

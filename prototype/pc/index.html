@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMS PC 端原型总览 · MySolMed</title>
+<link rel="stylesheet" href="assets/dms.css">
+<style>
+  body{background:linear-gradient(180deg,#eef4ff 0,#f5f7fa 260px)}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 24px 60px}
+  .hero-head{text-align:center;margin-bottom:34px}
+  .hero-head h1{font-size:28px;color:var(--text-1);font-weight:700}
+  .hero-head p{color:var(--text-3);margin-top:10px;font-size:14px}
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .pcard{background:#fff;border:1px solid var(--border-light);border-radius:10px;overflow:hidden;box-shadow:var(--shadow-card);cursor:pointer;transition:all .18s;display:block;text-decoration:none;color:inherit}
+  .pcard:hover{transform:translateY(-3px);box-shadow:var(--shadow-pop);border-color:var(--primary-border)}
+  .pcard .thumb{height:150px;position:relative;overflow:hidden;border-bottom:1px solid var(--border-light)}
+  .pcard .body{padding:16px 18px}
+  .pcard .pt{font-size:16px;font-weight:600;color:var(--text-1);display:flex;align-items:center;gap:8px}
+  .pcard .pd{font-size:13px;color:var(--text-4);margin-top:6px;line-height:1.6}
+  .pcard .pno{position:absolute;top:10px;left:12px;background:rgba(255,255,255,.9);color:var(--blue-600);font-size:12px;font-weight:700;padding:2px 9px;border-radius:12px}
+  .spec{background:#fff;border:1px solid var(--border-light);border-radius:10px;padding:20px 24px;margin-top:26px}
+  .spec h3{font-size:15px;color:var(--text-1);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .spec h3::before{content:"";width:4px;height:15px;border-radius:2px;background:var(--primary)}
+  .swatches{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .sw{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-3)}
+  .sw i{width:22px;height:22px;border-radius:5px;border:1px solid rgba(0,0,0,.06)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero-head">
+    <h1>MySolMed DMS · PC 端高保真原型</h1>
+    <p>风格：Data-Dense Dashboard × 瑞士极简 · 对齐移动端「藏青琥珀」配色（主色 藏青 #2E6BA8 · 页面底 #F4F7FB · 琥珀 #D97706 点缀）· 企业级沉稳</p>
+  </div>
+
+  <div class="cards">
+    <a class="pcard" href="login.html">
+      <div class="thumb" style="background:linear-gradient(120deg,#245a8f,#38a3e8)">
+        <span class="pno">01</span>
+        <div style="position:absolute;inset:24px 28px;background:rgba(255,255,255,.95);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#245a8f;font-weight:700;box-shadow:0 8px 20px rgba(0,0,0,.15)">欢迎登录</div>
+      </div>
+      <div class="body"><div class="pt">登录页</div><div class="pd">医疗蓝品牌主视觉 + 登录卡片，租户/账号/密码，账号与短信双 Tab</div></div>
+    </a>
+    <a class="pcard" href="home.html">
+      <div class="thumb" style="background:#f5f7fa;padding:16px">
+        <span class="pno">02</span>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px">
+          <div style="background:#fff;border-radius:5px;height:34px;border-top:3px solid #2e6ba8"></div>
+          <div style="background:#fff;border-radius:5px;height:34px;border-top:3px solid #52c41a"></div>
+          <div style="background:#fff;border-radius:5px;height:34px;border-top:3px solid #faad14"></div>
+          <div style="background:#fff;border-radius:5px;height:34px;border-top:3px solid #fa8c16"></div>
+        </div>
+        <div style="background:#fff;border-radius:5px;height:70px;display:flex;align-items:flex-end;padding:8px;gap:5px">
+          <i style="flex:1;background:#2e6ba8;height:40%;border-radius:2px"></i><i style="flex:1;background:#2e6ba8;height:60%"></i><i style="flex:1;background:#52c41a;height:50%"></i><i style="flex:1;background:#2e6ba8;height:75%"></i><i style="flex:1;background:#52c41a;height:65%"></i><i style="flex:1;background:#2e6ba8;height:90%"></i>
+        </div>
+      </div>
+      <div class="body"><div class="pt">业务工作台</div><div class="pd">KPI 概览、快捷入口、我的待办、销售趋势、近期订单一屏聚合</div></div>
+    </a>
+    <a class="pcard" href="dashboard.html">
+      <div class="thumb" style="background:#f5f7fa;padding:16px">
+        <span class="pno">03</span>
+        <div style="display:flex;gap:8px;height:100%">
+          <div style="flex:2;background:#fff;border-radius:5px;padding:8px;display:flex;align-items:flex-end;gap:4px">
+            <i style="flex:1;background:#5a95d0;height:50%;border-radius:2px"></i><i style="flex:1;background:#2e6ba8;height:70%"></i><i style="flex:1;background:#5a95d0;height:60%"></i><i style="flex:1;background:#2e6ba8;height:85%"></i><i style="flex:1;background:#2e6ba8;height:95%"></i>
+          </div>
+          <div style="flex:1;background:#fff;border-radius:5px;display:flex;align-items:center;justify-content:center">
+            <div style="width:52px;height:52px;border-radius:50%;background:conic-gradient(#2e6ba8 0 38%,#13c2c2 38% 62%,#722ed1 62% 80%,#faad14 80% 92%,#c0c4cc 92% 100%)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="body"><div class="pt">数据驾驶舱</div><div class="pd">筛选条 + 核心 KPI + 柱线趋势 + 品类环图 + 经销商 TOP 榜 + 术式统计 + 库存预警</div></div>
+    </a>
+    <a class="pcard" href="orders.html">
+      <div class="thumb" style="background:#fff;padding:14px 16px">
+        <span class="pno">04</span>
+        <div style="height:20px;background:var(--gray-100);border-radius:4px;margin-bottom:6px"></div>
+        <div style="height:12px;background:var(--gray-100);border-radius:3px;margin:5px 0;width:90%"></div>
+        <div style="height:12px;background:var(--gray-100);border-radius:3px;margin:5px 0;width:75%"></div>
+        <div style="height:12px;background:var(--gray-100);border-radius:3px;margin:5px 0;width:85%"></div>
+        <div style="height:12px;background:var(--gray-100);border-radius:3px;margin:5px 0;width:70%"></div>
+      </div>
+      <div class="body"><div class="pt">销售订单列表</div><div class="pd">CrudView 规范：查询/重置常驻、工具栏固定顺序、外键显示名称、状态标签、危险操作收纳「更多」</div></div>
+    </a>
+    <a class="pcard" href="order-detail.html" style="grid-column:span 2">
+      <div class="thumb" style="background:#fff;padding:16px 20px;display:flex;gap:14px">
+        <span class="pno">05</span>
+        <div style="flex:1.6">
+          <div style="display:flex;gap:6px;margin-bottom:10px"><i style="width:18px;height:18px;border-radius:50%;background:#2e6ba8"></i><i style="flex:1;height:2px;background:#2e6ba8;margin-top:8px"></i><i style="width:18px;height:18px;border-radius:50%;background:#2e6ba8"></i><i style="flex:1;height:2px;background:#dcdfe6;margin-top:8px"></i><i style="width:18px;height:18px;border-radius:50%;border:2px solid #2e6ba8"></i></div>
+          <div style="height:10px;background:var(--gray-100);border-radius:3px;margin:5px 0"></div>
+          <div style="height:10px;background:var(--gray-100);border-radius:3px;margin:5px 0;width:80%"></div>
+          <div style="height:10px;background:var(--blue-50);border-radius:3px;margin:5px 0;border-left:3px solid #2e6ba8"></div>
+        </div>
+        <div style="flex:1;background:var(--gray-100);border-radius:6px;padding:10px">
+          <div style="height:8px;background:#d4d8de;border-radius:2px;margin:6px 0"></div>
+          <div style="height:8px;background:#d4d8de;border-radius:2px;margin:6px 0;width:80%"></div>
+          <div style="height:14px;background:#ff4d4f;border-radius:3px;margin-top:10px;opacity:.85"></div>
+        </div>
+      </div>
+      <div class="body"><div class="pt">销售订单详情 / 计价</div><div class="pd">审批步骤条 + 基本信息 + BOM 子母件明细（子件不计价）+ 折扣/代金券分摊 + 价税合计 + 审批时间线</div></div>
+    </a>
+  </div>
+
+  <div class="spec">
+    <h3>设计规范速览（对齐项目 Design Token）</h3>
+    <div class="swatches">
+      <div class="sw"><i style="background:#2e6ba8"></i>主色 藏青 #2E6BA8</div>
+      <div class="sw"><i style="background:#245a8f"></i>主色深 #245A8F</div>
+      <div class="sw"><i style="background:#d97706"></i>点缀 琥珀 #D97706</div>
+      <div class="sw"><i style="background:#52c41a"></i>成功/通过 #52c41a</div>
+      <div class="sw"><i style="background:#faad14"></i>预警/待审 #faad14</div>
+      <div class="sw"><i style="background:#ff4d4f"></i>危险/驳回 #ff4d4f</div>
+      <div class="sw"><i style="background:#13c2c2"></i>信息/青色 #13c2c2</div>
+      <div class="sw"><i style="background:#722ed1"></i>紫色 #722ed1</div>
+      <div class="sw"><i style="background:#f5f7fa"></i>页面底 #f5f7fa</div>
+    </div>
+    <p style="font-size:13px;color:var(--text-3);line-height:1.9">
+      配色与移动端 H5「藏青琥珀」完全一致：藏青主色、淡蓝灰页面底 #F4F7FB、琥珀仅用于金额/关键点缀。
+      字体：PingFang SC / Microsoft YaHei 系统字体栈；正文 14px、表格 13px、辅助 12px。圆角 4–6px，轻投影。浅色侧边栏（白底 + 藏青激活态）。
+      所有外键字段展示「编码 + 名称」，状态用语义色标签，危险操作收纳「更多」下拉并二次确认。
+      图表使用 ECharts + 项目色盲友好色板。本批为静态高保真原型，数据为示例，定稿后按 Element Plus 规范落到 <code>frontend-vue</code>。
+    </p>
+  </div>
+</div>
+</body>
+</html>

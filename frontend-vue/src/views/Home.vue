@@ -122,14 +122,9 @@ const userTypeLabel = computed(() => (
 ))
 
 const allShortcuts = [
-  { key: 'products', icon: 'Goods', label: '产品管理' },
-  { key: 'dealers', icon: 'OfficeBuilding', label: '经销商管理' },
   { key: 'orders', icon: 'Sell', label: '销售订单' },
-  { key: 'sales-returns', route: '/m/sales-returns', icon: 'RefreshLeft', label: '销退订单' },
-  { key: 'sales-outs', route: '/m/sales-outs', icon: 'Van', label: '销售出库' },
-  { key: 'inventory', icon: 'Box', label: '库存查询', inventoryOnly: true },
-  { key: 'contracts', route: '/contracts', icon: 'Document', label: '合同工作台' },
-  { key: 'reports', route: '/reports', icon: 'DataAnalysis', label: '报表中心' },
+  { key: 'sales-outs', icon: 'Van', label: '销售出库' },
+  { key: 'sales-returns', icon: 'RefreshLeft', label: '销退订单' },
   { key: 'approval', route: '/approval/todo', icon: 'Stamp', label: '我的审批' }
 ]
 const visibleShortcuts = computed(() =>
@@ -150,7 +145,7 @@ function onRangeChange(v) { localStorage.setItem('dms:home:range', v); loadAll()
 const kpiLoading = ref(false)
 const kpiData = reactive({})
 const kpiCards = computed(() => ([
-  { key: 'totalSales', label: '销售总额', display: fmtMoney(kpiData.totalSales), color: '#1677ff' },
+  { key: 'totalSales', label: '销售总额', display: fmtMoney(kpiData.totalSales), color: '#2e6ba8' },
   { key: 'totalOrders', label: '订单数', display: fmtNum(kpiData.totalOrders), color: '#52c41a' },
   { key: 'activeDealers', label: '活跃经销商', display: fmtNum(kpiData.activeDealers), color: '#faad14' },
   { key: 'totalSurgeries', label: '手术台数', display: fmtNum(kpiData.totalSurgeries), color: '#ff4d4f' }
@@ -160,7 +155,7 @@ const quickStatsAll = computed(() => ([
   { k: 'qualified', l: '合格库存', v: fmtNum(kpiData.qualifiedStock), color: '#52c41a', inventoryOnly: true },
   { k: 'pending', l: '待验库存', v: fmtNum(kpiData.pendingStock), color: '#faad14', inventoryOnly: true },
   { k: 'defective', l: '不合格库存', v: fmtNum(kpiData.defectiveStock), color: '#ff4d4f', inventoryOnly: true },
-  { k: 'products', l: '产品总数', v: fmtNum(kpiData.totalProducts), color: '#1677ff' }
+  { k: 'products', l: '产品总数', v: fmtNum(kpiData.totalProducts), color: '#2e6ba8' }
 ]))
 const visibleQuickStats = computed(() =>
   quickStatsAll.value.filter(q => !q.inventoryOnly || inventoryEnabled.value)
@@ -217,7 +212,7 @@ async function loadTrend() {
       series: [{
         name: '销售额', type: 'line', smooth: true, areaStyle: { opacity: 0.2 },
         data: list.map(x => Number(x.amount || x.value || 0)),
-        itemStyle: { color: '#1677ff' }
+        itemStyle: { color: '#2e6ba8' }
       }]
     }, true)
   } catch (e) { /* ignore */ }
@@ -292,7 +287,7 @@ onBeforeUnmount(() => {
 .ht-right { display: flex; align-items: center; gap: 6px; }
 .shortcut-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 10px;
 }

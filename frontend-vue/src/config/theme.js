@@ -5,10 +5,10 @@
  * 色值与 styles/tokens/base-light.scss 保持一致。
  */
 export const DMS_COLORS = {
-  primary: '#1677ff',
-  primaryHover: '#4096ff',
-  primaryActive: '#0958d9',
-  primaryBg: '#e6f4ff',
+  primary: '#2e6ba8',
+  primaryHover: '#5a95d0',
+  primaryActive: '#245a8f',
+  primaryBg: '#e3eefa',
   success: '#52c41a',
   successBg: '#f6ffed',
   warning: '#faad14',
@@ -21,13 +21,13 @@ export const DMS_COLORS = {
   text3: '#606266',
   text4: '#909399',
   border: '#e4e7ed',
-  bgPage: '#f5f7fa',
+  bgPage: '#f4f7fb',
   bgContainer: '#ffffff'
 }
 
 /** ECharts 图表色板（色盲友好，与规范一致） */
 export const DMS_CHART_PALETTE = [
-  '#1677ff', '#52c41a', '#faad14', '#ff4d4f',
+  '#2e6ba8', '#52c41a', '#d97706', '#ff4d4f',
   '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'
 ]
 

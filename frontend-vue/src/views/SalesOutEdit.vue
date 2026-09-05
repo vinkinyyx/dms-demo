@@ -62,10 +62,10 @@
         <el-table-column label="行号" width="70" prop="seq" />
         <el-table-column label="产品编码" min-width="140" prop="productCode" />
         <el-table-column label="产品名称" min-width="200" prop="productName" />
-        <el-table-column label="订单数量" width="100" prop="qty" />
-        <el-table-column label="已发数量" width="100"><template #default="{ row }">{{ shippedByProduct[row.productId] || 0 }}</template></el-table-column>
-        <el-table-column label="待发数量" width="100"><template #default="{ row }">{{ remainingByProduct[row.productId] ?? row.qty }}</template></el-table-column>
-        <el-table-column label="单价" width="110" prop="unitPrice" />
+        <el-table-column align="right" label="订单数量" width="100" prop="qty" />
+        <el-table-column align="right" label="已发数量" width="100"><template #default="{ row }">{{ shippedByProduct[row.productId] || 0 }}</template></el-table-column>
+        <el-table-column align="right" label="待发数量" width="100"><template #default="{ row }">{{ remainingByProduct[row.productId] ?? row.qty }}</template></el-table-column>
+        <el-table-column align="right" label="单价" width="110" prop="unitPrice" />
         <el-table-column label="小计" width="120" prop="subtotal" />
       </el-table>
     </el-card>
@@ -101,7 +101,7 @@
               <span v-else>{{ row.productName || ('产品'+row.productId) }} <el-tag v-if="row.isSerialManaged" type="warning" size="small">序列号</el-tag></span>
             </template>
           </el-table-column>
-          <el-table-column label="数量" width="110">
+          <el-table-column align="right" label="数量" width="110">
             <template #default="{ row }">
               <el-input-number v-if="batch.status === 'DRAFT'" v-model="row.qty" :min="0" :controls="false" size="small" style="width:100%" />
               <span v-else>{{ row.qty || 0 }}</span>
@@ -198,7 +198,7 @@
         <el-table-column label="产品名称" min-width="180" prop="productName" />
         <el-table-column label="批次号" width="140" prop="batchNo" />
         <el-table-column label="序列号" width="180" prop="serialNo" />
-        <el-table-column label="发货数量" width="100" prop="qty" />
+        <el-table-column align="right" label="发货数量" width="100" prop="qty" />
         <el-table-column label="发货时间" width="160"><template #default="{ row }">{{ formatDateTime(row.confirmedAt) }}</template></el-table-column>
         <el-table-column label="发货人" width="120" prop="confirmedByName" />
       </el-table>

@@ -2,12 +2,14 @@ import { ref, computed } from 'vue'
 
 const STORAGE_KEY = 'dms-theme-preference'
 export const THEME_PRESETS = [
+  { key: 'navy', name: '藏青琥珀', color: '#2e6ba8', gradients: ['#e3eefa', '#f4f7fb'] },
   { key: 'blue', name: '极光蓝', color: '#1677ff', gradients: ['#e6f4ff', '#f5f7ff'] },
   { key: 'violet', name: '星云紫', color: '#722ed1', gradients: ['#f9f0ff', '#f7f2ff'] },
   { key: 'green', name: '青翠绿', color: '#00b96b', gradients: ['#f6ffed', '#effdf6'] },
   { key: 'orange', name: '日暮橙', color: '#fa8c16', gradients: ['#fff7e6', '#fff3e8'] }
 ]
 const paletteMap = {
+  navy: { primary: '#2e6ba8', hover: '#5a95d0', active: '#245a8f', bg: '#e3eefa', border: '#b9d4ef', dark: '#1b4470' },
   blue: { primary: '#1677ff', hover: '#4096ff', active: '#0958d9', bg: '#e6f4ff', border: '#91caff', dark: '#002c8c' },
   violet: { primary: '#722ed1', hover: '#9254de', active: '#531dab', bg: '#f9f0ff', border: '#d3adf7', dark: '#22075e' },
   green: { primary: '#00b96b', hover: '#29cc7d', active: '#009452', bg: '#f6ffed', border: '#b7eb8f', dark: '#135200' },
@@ -16,8 +18,8 @@ const paletteMap = {
 const mode = ref(localStorage.getItem(`${STORAGE_KEY}:mode`) === 'dark' ? 'dark' : 'light')
 // 菜单（侧边栏）独立深浅：sider='light' 浅色菜单（默认）/ 'dark' 深色菜单；仅作用于菜单区域，与整页明暗模式互不影响
 const sider = ref(localStorage.getItem(`${STORAGE_KEY}:sider`) === 'dark' ? 'dark' : 'light')
-const preset = ref(localStorage.getItem(`${STORAGE_KEY}:preset`) || 'blue')
-if (!paletteMap[preset.value]) preset.value = 'blue'
+const preset = ref(localStorage.getItem(`${STORAGE_KEY}:preset`) || 'navy')
+if (!paletteMap[preset.value]) preset.value = 'navy'
 export const currentThemePreset = computed(() => THEME_PRESETS.find(item => item.key === preset.value) || THEME_PRESETS[0])
 export const currentSiderMode = computed(() => sider.value)
 
@@ -103,7 +105,7 @@ function setRootVars() {
   root.style.setProperty('--van-tabbar-item-active-color', palette.primary)
 }
 export function applyTheme(nextPreset = preset.value, nextMode = mode.value) {
-  preset.value = paletteMap[nextPreset] ? nextPreset : 'blue'
+  preset.value = paletteMap[nextPreset] ? nextPreset : 'navy'
   mode.value = nextMode === 'dark' ? 'dark' : 'light'
   localStorage.setItem(`${STORAGE_KEY}:preset`, preset.value)
   localStorage.setItem(`${STORAGE_KEY}:mode`, mode.value)

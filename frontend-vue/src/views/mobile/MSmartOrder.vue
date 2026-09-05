@@ -2,7 +2,7 @@
   <div class="smart-order">
     <van-nav-bar title="智能下单" left-arrow @click-left="$router.back()">
       <template #right>
-        <span class="restart-link" @click="restart">↺ 重新开始</span>
+        <button type="button" class="restart-link restart-btn" @click="restart">↺ 重新开始</button>
       </template>
     </van-nav-bar>
 
@@ -920,6 +920,7 @@ onMounted(async () => {
 <style scoped>
 .smart-order { display: flex; flex-direction: column; height: 100vh; background: var(--dms-bg-page, #f7f8fa); }
 .restart-link { font-size: 13px; color: var(--dms-color-primary, #1989fa); }
+.restart-btn { background:none; border:0; padding:0; font:inherit; cursor:pointer; }
 .chat-scroll { flex: 1; overflow-y: auto; padding: 12px 12px 16px; }
 .msg-row { display: flex; gap: 8px; margin-bottom: 14px; align-items: flex-start; }
 .msg-row.is-user { flex-direction: row-reverse; }

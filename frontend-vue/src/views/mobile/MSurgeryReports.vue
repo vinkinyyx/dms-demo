@@ -1,8 +1,8 @@
 <template>
-  <div>
+  <div class="m-page-scroll">
     <van-nav-bar :left-arrow="false">
       <template #title>
-        <span class="nav-title"><SurgeryIcon :size="20" bg="var(--dms-color-primary)" /><span>手术报台</span></span>
+        <span class="nav-title"><SurgeryIcon :size="18" bg="rgba(255,255,255,0.18)" /><span>手术报台</span></span>
       </template>
     </van-nav-bar>
 
@@ -13,24 +13,26 @@
         finished-text="没有更多了"
         @load="onLoad"
       >
-        <div class="m-list-card" v-if="list.length">
-          <van-cell
-            v-for="r in list" :key="r.id"
-            :title="r.code"
-            :label="'医院：' + (r.terminalName || '-') + ' · 经销商：' + (r.dealerName || '-')"
-            is-link
-            @click="$router.push('/mobile/surgery-reports/' + r.id)"
-          >
-            <template #value>
-              <div class="m-sub">{{ formatDate(r.surgeryDate) }}</div>
-              <van-tag :type="statusTagType(r.status)" size="mini">{{ statusText(r.status) }}</van-tag>
-            </template>
-          </van-cell>
+        <div class="m-card-list" v-if="list.length">
+          <div v-for="r in list" :key="r.id" class="m-ord" role="button" tabindex="0" :aria-label="'查看手术报台 ' + r.code" @click="$router.push('/mobile/surgery-reports/' + r.id)" @keydown.enter="$router.push('/mobile/surgery-reports/' + r.id)" @keydown.space.prevent="$router.push('/mobile/surgery-reports/' + r.id)">
+            <div class="ot">
+              <span class="no">{{ r.code }}</span>
+              <span class="st" :class="statusCls(r.status)"><i></i>{{ statusText(r.status) }}</span>
+            </div>
+            <div class="ol">
+              <div class="th"><van-icon name="todo-list-o" /></div>
+              <div>
+                <div class="pn">{{ r.terminalName || '手术报台' }}</div>
+                <div class="pm">经销商：{{ r.dealerName || '-' }} · {{ formatDate(r.surgeryDate) }}</div>
+              </div>
+            </div>
+            <div class="of">
+              <span class="tot">主刀 / 产品明细</span>
+              <button class="ob ghost">查看</button>
+            </div>
+          </div>
         </div>
-        <van-empty v-if="finished && !list.length">
-          <template #image><SurgeryIcon :size="72" bg="var(--dms-color-primary)" /></template>
-          <p>暂无报台，点击右下角新建</p>
-        </van-empty>
+        <van-empty v-if="finished && !list.length" description="暂无报台，点击右下角新建" />
       </van-list>
     </van-pull-refresh>
 
@@ -43,7 +45,7 @@
 <script setup>
 import { ref } from 'vue'
 import { listResource } from '@/api/crud'
-import { statusText, statusTagType } from '@/utils/dict'
+import { statusText } from '@/utils/dict'
 import { formatDate } from '@/utils/format'
 import SurgeryIcon from '@/components/SurgeryIcon.vue'
 
@@ -53,6 +55,13 @@ const finished = ref(false)
 const refreshing = ref(false)
 let page = 1
 const pageSize = 20
+
+const STATUS_CLS = {
+  DRAFT: 'st-info', SUBMITTED: 'st-pen', PENDING_APPROVAL: 'st-pen',
+  APPROVED: 'st-ok', CONFIRMED: 'st-ok', REJECTED: 'st-rej', CANCELLED: 'st-rej',
+  COMPLETED: 'st-ok'
+}
+function statusCls(s) { return STATUS_CLS[s] || 'st-info' }
 
 async function onLoad() {
   loading.value = true
@@ -75,6 +84,7 @@ function onRefresh() {
 </script>
 
 <style scoped>
-.nav-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
-.fab-wrap { position: fixed; right: 16px; bottom: calc(var(--dms-mobile-tabbar-height) + 16px); z-index: 10; }
+.nav-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; }
+.fab-wrap { position: fixed; right: 16px; bottom: calc(var(--dms-mobile-tabbar-height, 50px) + 16px); z-index: 10; }
+.m-ord { cursor: pointer; }
 </style>

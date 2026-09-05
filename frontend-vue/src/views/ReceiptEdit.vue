@@ -58,22 +58,22 @@
         <el-table-column label="PO 行号" width="80" prop="seq" />
         <el-table-column label="产品编码" min-width="140" prop="productCode" />
         <el-table-column label="产品名称" min-width="180" prop="productName" />
-        <el-table-column label="采购数量" width="100" prop="qty">
+        <el-table-column align="right" label="采购数量" width="100" prop="qty">
           <template #default="{ row }">{{ row.qty || 0 }}</template>
         </el-table-column>
-        <el-table-column label="已收数量" width="100" prop="receivedQty">
+        <el-table-column align="right" label="已收数量" width="100" prop="receivedQty">
           <template #default="{ row }">
             <el-tag type="success" size="small">{{ row.receivedQty || 0 }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="待收数量" width="100">
+        <el-table-column align="right" label="待收数量" width="100">
           <template #default="{ row }">
             <el-tag :type="(Number(row.qty||0) - Number(row.receivedQty||0)) > 0 ? 'warning' : 'success'" size="small">
               {{ Number(row.qty||0) - Number(row.receivedQty||0) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="单价" width="100" prop="unitPrice">
+        <el-table-column align="right" label="单价" width="100" prop="unitPrice">
           <template #default="{ row }">{{ row.unitPrice || 0 }}</template>
         </el-table-column>
         <el-table-column label="序列号管理" width="100">
@@ -121,7 +121,7 @@
               <span v-else>{{ row.productName || ('产品'+row.productId) }} <el-tag v-if="row.isSerialManaged" type="warning" size="small">序列号</el-tag></span>
             </template>
           </el-table-column>
-          <el-table-column label="数量" width="110">
+          <el-table-column align="right" label="数量" width="110">
             <template #default="{ row }">
               <el-input-number v-if="batch.status === 'DRAFT' && !row.isSerialManaged" v-model="row.qty" :min="0" :controls="false" size="small" style="width:100%" />
               <el-tag v-else-if="batch.status === 'DRAFT' && row.isSerialManaged" type="info" size="small" style="width:100%;text-align:center">{{ row.qty || 0 }} 件</el-tag>

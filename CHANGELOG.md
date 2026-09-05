@@ -1,3 +1,153 @@
+## v4.7.6 (2026-09-05) - 移动 H5 首页/审批/消息中心 7 项交互修复（纯前端 PATCH）
+
+> 移动端 H5 上线后用户验收发现的 7 个交互问题，纯前端修复，已部署测试环境（`VITE_BASE=/dms/` 构建）；无后端/Flyway/Nginx 改动。
+
+### 修复（均在 `frontend-vue/src/views/mobile/`）
+1. **常用功能图标空/过简**（`MHome.vue`、`MProfile.vue`）：消息中心图标 `envelope-o` 是无效 Vant 图标名（正确为 `envelop-o`，无尾 e）导致渲染空白，已更正；「下销售订单」图标由过简的 `add-o`（+号）改为 `description`（单据图标），与「单据」语义匹配；「我的」页（MProfile.vue）消息中心同样误用 `envelope-o` 导致图标空白，一并改为 `envelop-o`。其余图标（智能下单 chat-o、手术报台 todo-list-o、移动审批 passed、我的业绩 bar-chart-o、电脑版 desktop-o、用户 user-circle-o）保留并确认均可渲染。
+2. **审批后角标/列表不及时刷新**（`MLayout.vue`、`MApprovals.vue`）：底部 tabbar 审批角标原用 `onActivated`（MLayout 作为路由父组件常驻不触发），改为 `watch(route.path)` 每次路由切换重拉 my-todo；审批列表页加 `onActivated`（跳过首次），审批完成返回时重新拉取，已办任务即时从「待我审批」消失。实测审批 1 单后待办 6→5、角标 6→5、首页 KPI 同步。
+3. **最近业务「查看/去审批」跳首页**（`MHome.vue`）：根因是 `onCardAction` 用 `location.hash='#/mobile/...'`，而项目路由是 **history 模式**（createWebHistory），写 hash 不触发匹配落到默认首页；改为注入 `useRouter` 用 `router.push('/mobile/orders/:id')` / `router.push('/mobile/approvals')`。实测点击「查看」正确进入 `/mobile/orders/320` 订单详情。
+4. **消息中心去掉「系统」「库存」页签**（`MMessages.vue`）：van-tabs 仅保留 全部 / 未读 / 审批。
+5. **消息卡片打不开详情**（`MMessages.vue`）：原 `open()` 对非审批消息只调 `reload` 不展示内容；新增 `van-popup` 底部弹层展示消息标题/时间/正文，审批类消息额外提供「查看审批详情」按钮跳转审批页；点击同时标记已读。
+6. **首页搜索栏去掉**（`MHome.vue`）：移除 hero 区无实际功能的「搜索产品/订单/报台」假搜索条及对应 CSS。
+7. **首页「已认证」去掉**（`MHome.vue`）：移除 hero 用户名旁的 `vbadge 已认证` 标签。
+
+### 验证（铁律9 真实移动浏览器 Playwright）
+- 登录 `/mobile/login`→home：无搜索条、无「已认证」；常用功能 6 图标类名分别为 chat-o / description / todo-list-o / passed / bar-chart-o / envelop-o（全部有效 Vant 图标，消息中心信封图标正常渲染）；最近业务点「查看」跳转 `/mobile/orders/320` 订单详情（不再落首页）。
+- 审批：待办 6 单→进入详情点「同意」→确认→返回列表变 5 单、首项被移除；底部 tabbar 审批角标 6→5；首页 KPI「待我审批」=5，三者一致、即时更新。
+- 消息中心：页签仅 全部/未读/审批（无系统/库存）；点消息卡弹出底部详情弹层（标题/正文/时间齐全），审批类消息带「查看审批详情」按钮。
+- 全程 Console 无红色错误、无 HTTP 5xx；移动端深度冒烟 `--target=mobile` 17/17 通过。
+
+---
+## v4.7.5 (2026-09-05) - 产品宣传手册修订：注册截图比例、移动办公增移动审批、角色权限截图修正（静态站）
+
+> 纯宣传手册（独立静态站 brochure）修订，不涉及 DMS 业务前后端、无 Flyway/Nginx 改动；本地 `DMS产品宣传手册/` 与测试环境 `/opt/dms/test/frontend/brochure/` 已同步部署。
+
+### 变更（index/mobile/print 三页，scenarios.html 不引用这些截图故不动）
+- **05 经销商准入注册截图比例**：竖屏注册截图（780×1688）在手机框里过高，PC 端新增 `.phone-chrome.phone-sm` 紧凑手机框（max-width 172px），移动端页 05 框由 300px 收窄到 168px（与移动办公区手机一致），打印页该手机图高度提到 118mm；三处均等比例缩放，高度与 PC 截图协调。
+- **移动办公 · 业务随人走 增移动审批**：PC 端手机格由 4 列改 5 列（grid-cols-5），新增 `51-mobile-approvals-new.png`（待我审批列表 + 去审批按钮），顺序为 移动登录/工作台/订单/审批/报台，文案补「待办一键审批·超时催办」，KPI 「4 大移动场景」改「5 大」，区块描述突出移动审批与消息；打印页 grid4 同改 5 列加移动审批与标签、导语补移动审批/扫码作业（mobile.html 本就含移动审批，仅同步 05 比例）。
+- **打印页 16 角色权限截图修正**：原引用 `22-pc-roles-new.png` 是空白占位页（"模块 roles-manage 尚未迁移"），改为内容完整的 `20-pc-roles-new.png`（角色管理列表 + 权限设置）。
+- **无用截图清理**：空白的 `22-pc-roles-new.png` 本地移入 `assets/_retired_backup/`，服务器 brochure 整层清空后重新镜像（`rsync` 等价的 clean+extract），服务器 assets 现 37 张，无 _retired_backup、无 22 残留。
+
+### 验证（Playwright 本地渲染三页 + 服务器 curl）
+- 本地 file:// 渲染：PC 05 手机框宽 172px、移动办公 5 个手机含移动审批且整齐；print 角色权限有完整角色列表、移动办公 5 手机、05 手机高度协调；mobile 05 框 168px、移动审批在位；三页 Console 无报错。
+- 服务器（Host: www.mysolmed.com）：index 含 `phone-sm`×5 与移动审批图；print 角色权限仅引用 `20-pc-roles-new`、含移动审批；mobile 05 框 `max-width:168px`（无 300px）；`/assets/22-pc-roles-new.png` 404、`51/20/07` 均 200；移动 UA `/` 200、dms-dev `/` 仍 302→`/dms/`。
+
+---
+## v4.7.4 (2026-09-05) - P1 收尾：PC 编辑页数字列右对齐 + H5 其余页面语义化；宣传册部署与域名分流（纯前端/静态站/Nginx）
+
+> 背景：v4.7.3 落地了三端公共可访问性/数字排版整改，本批完成其 P1 剩余项，并把产品宣传手册部署到测试环境、配置独立域名分流。
+
+### 变更
+- **PC 编辑页数字列右对齐**（10 个自写 `el-table` 页面，共 24 列补 `align="right"`）：`approval/ApprovalDetailDrawer.vue`(2)、`contract/ContractPrices.vue`(税率 1)、`ExpiryAlerts.vue`(1)、`OrderCreate.vue`(1)、`PurchaseReturnEdit.vue`(3)、`ReceiptEdit.vue`(5)、`SalesOutEdit.vue`(6)、`StockMoveEdit.vue`(2)、`Stocktakes.vue`(2)、`Traceability.vue`(1)。金额/单价/税额/数量/税率等数字列表头与数据右对齐，配合 v4.7.3 的 `tabular-nums` 纵向成线。跳过非纯数字/控件列（折扣控件、switch、居中开票数量）。
+- **H5 其余页面语义化**（`views/mobile/`）：
+  - 4 个可点列表卡片 `<div @click>` → 加 `role="button" tabindex="0" :aria-label"` + Enter/Space 键盘触发（卡内已嵌 `<button>`，不改标签避免嵌套交互）：`MApprovals.vue`、`MMessages.vue`、`MReceiveScan.vue`、`MSurgeryReports.vue`。
+  - 4 个 `<span @click>` → `<button type="button">` + 重置样式（background/border/padding/font/cursor）：`MLogin.vue`(.fr-btn 忘记密码)、`MSmartOrder.vue`(.restart-btn 重新开始)、`MInventoryScan.vue` + `MReceiveScan.vue`(.nav-link-btn 手动输入)。
+- **宣传手册部署**：`DMS产品宣传手册/`（index/mobile/print/scenarios 四页 + assets）rsync 镜像到测试服务器 `/opt/dms/test/frontend/brochure/`，清理本地与服务器无用截图（本地移入 `assets/_retired_backup/`）。
+- **Nginx 域名分流**（`/opt/dms/test/nginx/nginx.conf`，已备份 `nginx.conf.bak.20260905-130603`）：新增 server 块 `server_name www.mysolmed.com mysolmed.com`，root 指向 brochure；http 块顶部加 `map $http_user_agent $mobile_device`（android/iphone/ipad/ipod/mobile/harmony 等 → 1），`location = /` 中移动 UA `rewrite ^ /mobile.html last`，桌面访问 `/mobile.html` 回 index、移动 UA 访问 `/print.html` 回 mobile。原 default server（`dms-dev.mysolmed.com _`，`/`→302 `/dms/`）未改动。
+- **部署前端**：`VITE_BASE=/dms/ npm run build` → 上传解压到 `/opt/dms/test/frontend/dms`（保留 admin）→ `docker restart dms-test-nginx`。部署后发现 admin 目录为空（403），从备份 `/opt/dms/backups/dms-front-restore-20260905-010905/admin/` 恢复。
+
+### 待用户操作
+- **DNS**：`www.mysolmed.com` 与 `mysolmed.com` 的 A 记录需在 DNS 控制台指向 `43.128.145.141`（当前仅 `dms-dev.mysolmed.com` 已解析）；Nginx 侧已就绪，DNS 生效后桌面访问 www 域名出 PC 宣传页、移动端 UA 自动出 mobile.html。
+
+### 验证（铁律9 真实浏览器 Playwright + 服务器 curl）
+- 铁律9 GATE：`dms-dev.mysolmed.com/` 302→`/dms/`→登录页 200、`/dms/` 200、`/dms/admin/` 200（恢复后）、`/dms/mobile/login` 200、`/dms/mobile/register` 200，DOM 非空、Console 无红错、无 5xx。
+- 宣传域名（服务器 curl 带 Host 头 + UA）：桌面 UA `/`→index（含「统一登录」）、移动 UA `/`→mobile.html（含 menu-btn）、移动 UA `/mobile.html` 200 保持、桌面 `/mobile.html` 回 index、`/print.html` 200、`/scenarios.html` 200、`/assets/07-dealer-admission.png` 200；`dms-dev /` 302→`/dms/`。
+- PC 数字列：`/sales-out-edit/149` 三个表格，表头 `订单数量/已发数量/待发数量/单价/发货数量` 均 `is-right`，截图确认右对齐。
+- H5 语义化：登录后 `/mobile/approvals` 6 卡、`/messages` 20 卡、`/surgery-reports` 20 卡均 `role=button + tabindex=0 + aria-label`，裸 `div@click` 0；`/mobile/scan-receive`、`/mobile/scan-inventory`「手动输入」为 `<button class="nav-link-btn">`；登录页「忘记密码？」、智能下单「重新开始」为 `<button>`；全程 0 Console 红错 0 5xx。
+- 深度冒烟（`E2E_BASE=http://dms-dev.mysolmed.com/dms node tools/smoke-test.cjs`）：273 项 262 通过；11 项失败均为库存相关页面后端业务响应 `40006「当前租户未启用进销存/库存模块」`（测试环境该租户未开通库存模块，数据/环境状态，与本次纯前端改动无关，无 5xx）。
+
+---
+## v4.7.3 (2026-09-05) - 三端前端可访问性与数字排版整改（Web Interface Guidelines 落地，纯前端 PATCH）
+
+> 背景：引入 `web-design-guidelines`（Vercel Web Interface Guidelines）skill 对 PC 业务前台（62 页）、移动 H5（23 页）、平台后台（14 页）共 99 个页面做全量评审，本批落地高 ROI、零业务逻辑改动的公共整改。
+
+### 变更（均为公共组件/全局样式/少量 H5 页面，一次改动全站生效）
+- 视口：`frontend-vue/index.html` 移除 `maximum-scale=1.0, user-scalable=no`，恢复移动端手势缩放（WCAG 1.4.4；PC 与 H5 共用 index.html，平台后台 admin 本就未禁用）。
+- 数字排版：`styles/enterprise.scss` 全局表格 `.el-table .cell` 加 `font-variant-numeric: tabular-nums`（等宽数字）；`components/CrudView.vue` 新增 `isNumericCol()`（按列 key/label 识别 金额/单价/税额/数量/库存/余额/折扣率/合计 等），数据列 `:align="isNumericCol(c)?'right':'left'"`，金额/数量列右对齐且小数点/千分位纵向成线。
+- 焦点可访问性：`enterprise.scss` 全局为 `button/a/[tabindex]/.el-button/.el-icon/.el-badge` 等补 `:focus-visible` 焦点环；`CrudView.vue` 表头筛选漏斗图标加 `role="button" tabindex="0" :aria-label` + Enter/Space 键盘触发；`layout/index.vue` 顶部消息铃铛 `el-badge` 加 `role="button" tabindex="0" aria-label="消息中心"` + 键盘事件，logo 加 `role="link" aria-label`，并移除 `.user-info` 的 `outline:none`。
+- 移动 H5 语义化（`MOrders.vue`、`MHome.vue`）：状态筛选 chip 由 `<span @click>` 改为 `<button type="button" :aria-pressed>`；订单卡由 `<div @click>`（内嵌按钮的嵌套交互）改为 `<router-link>`（MOrders）/ `role="button" tabindex="0" :aria-label`（MHome 保留卡内状态动作按钮）；KPI 三张卡由 `div@click` 改为 `<router-link>`；FAB 加 `aria-label`。
+- 日期/金额：H5 `MHome.vue`、`MOrders.vue` 模板里手切 ISO 的 `(createdAt||'').substring(0,10)` 改为统一 `@/utils/format` 的 `formatDate()`；金额加 `.m-num` 等宽类。
+- 触摸/动效：`enterprise.scss` 弹层（el-dialog/el-drawer/van-popup 等）加 `overscroll-behavior: contain`、可点移动元素加 `touch-action: manipulation`；新增全局 `@media (prefers-reduced-motion: reduce)` 降级。
+
+### 不在本批（P1/P2，另排期）
+- 自写 `el-table` 的列表页（Admin/Positions/Stocktakes/ConsignmentStock/DealerCredit 等）回归 CrudView；PC 编辑页（OrderCreate/SalesOutEdit/ReceiptEdit 等）28 处数字列补 `align=right`。
+- 其余 H5 页面（MApprovals/MMessages/MSmartOrder/MSurgeryReports/MInventoryScan/MReceiveScan/MLogin 共 13 处 `div@click`）同模式语义化。
+- 宣传册独立静态站（13.6MB 截图、Tailwind CDN、假表单）另立任务。
+
+### 验证（铁律9 真实浏览器，dev server 代理测试后端）
+- `npm run build` 通过（16.8s，无错误）。
+- Playwright 登录测试后端：PC `/m/orders`「最终金额」列右对齐 1/1、`/m/product-prices` 含税价/不含税价右对齐、`/m/purchase-orders` 总金额/实付金额 2/2，表格单元格 `font-variant-numeric: tabular-nums` 生效。
+- 移动 `/mobile/home`：3 张 KPI 卡均为 `<a>`、5 张订单卡 `role=button`；`/mobile/orders`：4 个筛选 chip 均为 `<button aria-pressed>`、20 张订单卡均为 `<a>`。
+- 铃铛 `el-badge`：`role=button`、`aria-label=消息中心`、聚焦 `outline: solid 2px`；筛选图标可键盘聚焦。
+- 全程 Console 无红色错误、无 HTTP 5xx（仅测试环境某列表接口业务参数 400，与本次改动无关）。
+
+---## v4.7.2 (2026-09-05) - PC 端全站换肤「藏青琥珀」+ 首页快捷入口一排 4 个 + 多页签风格统一（纯前端）
+
+> 目标：把 PC 业务前台的视觉风格从「极光蓝」统一切换到与移动端 H5 一致的「藏青琥珀（Navy Amber）」，并交付一版可直接使用的高保真原型（`prototype/pc/`）作为标准；首页快捷入口收敛为一排 4 个高频入口；多页签（TagsBar）配色随主题联动。
+
+### 变更
+- 主题：`config/theme-runtime.js` 新增预设 `navy`（藏青琥珀：primary `#2e6ba8`/hover `#5a95d0`/active `#245a8f`/bg `#e3eefa`/border `#b9d4ef`/dark `#1b4470`）并设为**默认主题**；原「极光蓝」保留为可切换预设。
+- 令牌：`styles/tokens/base-light.scss`（blue 阶）、`semantic.scss`、`styles/element/index.scss`、`enterprise.scss` 主色/页面底（`#f4f7fb`）/选中色对齐藏青；运行期常量 `config/theme.js`（ECharts 主色、图表色板第 1 色藏青、第 3 色琥珀 `#d97706`）同步。
+- 页面硬编码旧蓝（`#1677ff` 等）清理：`views/Dashboard.vue`、`views/Home.vue`、`views/DealerProfile.vue`、`components/CrudView.vue`、`components/ReportPage.vue`、`config/reports.js`；移动端 `views/mobile/*` 保持不动（本就是藏青）。
+- 首页 `views/Home.vue`：快捷入口由 9 项收敛为一排 4 个高频业务（销售订单 / 销售出库 / 销退订单 / 我的审批），`shortcut-row` 固定 `repeat(4,1fr)`；全部为 PC 路由（不再跳移动端 `/m/register`）。
+- 多页签 `layout/TagsBar.vue` 配色本就引用 `--dms-color-primary*`，随预设自动变藏青（浅底 `#e3eefa` + 藏青字 + 主色竖条），无需单独改样式。
+- Logo 沿用真实 `DmsLogo`（藏青「m」+ 青点），藏青底登录页自动用白色版本。
+- 登录页 `views/Login.vue` 按高保真稿重构为左右分屏：左侧藏青渐变 hero（`linear-gradient(150deg,#1b4470,#245a8f,#2e6ba8,#5a95d0)` + 圆斑 + 白色 `DmsLogo variant="light"` + 标语 + 4 个能力点），右侧白底登录卡（欢迎登录/三字段租户·账号·密码带前缀图标/记住我/藏青登录按钮/主题切换 dock 保留）；登录逻辑（`userStore.login` + 跳 `/home`）与默认演示账号不变。注意：全局 `reset.scss` 对 `h1~h6` 显式设了 `color:var(--dms-text-1)`，hero 内标题必须显式 `color:#fff` 否则深色底上显示成近黑色。
+- 高保真原型：新增 `prototype/pc/`（index/login/home/dashboard/orders/order-detail 六页 + 共享 dms.css/app.js），藏青琥珀主题、若依风格多页签、真实 logo、CrudView 列表规范、BOM/折扣/代金券计价详情，Playwright 截图无 Console 错误。
+
+### 验证（铁律9 真实浏览器 + 部署）
+- 铁律9 八入口 GATE：`/`(302→/dms/)、`/dms/`、`/dms/admin/`、`/dms/mobile/login`、`/dms/mobile/register`、`/brochure/`、`/brochure/mobile.html`、`/brochure/print.html` + `/actuator/health` 全部 200，DOM 非空、Console 无红色错误。
+- 登录后：`<html data-theme="navy">`，`--dms-color-primary=#2e6ba8`、`--dms-bg-page=#f4f7fb`、`--el-color-primary=#2e6ba8`；菜单 45 项、快捷入口=4、多页签随导航累积 10 个可切换。
+- Playwright 遍历核心页（首页/驾驶舱/产品/经销商/销售订单/销售出库/促销/代金券/我的审批/医院终端）均表格渲染、数据加载，0 Console 错误、0 HTTP 5xx。
+- `node tools/smoke-test.cjs --base=http://dms-dev.mysolmed.com/dms`：273 项中 262 通过；11 项失败均为库存/采购模块页在「厂商」租户下被模块门禁返回 HTTP 400（业务预期，与换肤无关）。
+- 构建：`VITE_BASE=/dms/ npm run build` 通过；已部署测试环境（前端静态替换 + nginx reload，未动后端/Nginx 基线/平台后台 admin）。
+
+---
+## v4.7.1 (2026-09-05) - 移动端去掉库存/收货入口 + 订单详情改为「优惠/促销」视角（纯前端）
+
+> 用户反馈两点调整：①移动端不做库存相关功能，移除扫码收货、库存扫码入口；②销售订单详情不展示税，改为突出折扣与参与的促销。
+
+### 变更
+- MHome.vue：常用功能宫格移除「扫码收货」「库存扫码」两项（8→6 项）；首页 KPI 带「待收货」替换为「本月销售额」（¥万），进行中订单/待我审批保留；最近业务订单卡的「扫码」动作按钮改为「查看」（已审批单不再跳扫码页）；移除 /api/receipts DRAFT 计数请求。扫码路由文件保留但不再从任何移动入口链接。
+- MOrderDetail.vue：产品明细行去掉「税率」「税额」两列，改为 数量/单价/金额 三列；行内优惠改为彩色 pill 标签（产品优惠=琥珀、行折扣=藏青、促销优惠=琥珀、整单折扣分摊=绿）。
+- 金额信息区重构：删除「不含税金额」「税额」；新增「命中促销」横幅（渲染后端 promoMessages，如满赠「本单满足【验证满A赠B-x】…赠送 …」，带礼物图标）；「优惠明细」卡逐项列示商品总额、产品优惠、行折扣、促销优惠、代金券抵扣、整单折扣/优惠合计（均取绝对值、琥珀色）；底部新增藏青「应付金额」大卡（finalAmount）。
+- 数据来源：行 productDiscountAmount/lineDiscountAmount/promoDiscountAmount/headerDiscountAmount 汇总；整单 discountAmount、voucherAmount、promoMessages（JSON 字符串数组，前端解析）。
+
+### 验证（铁律9 真实浏览器）
+- 首页宫格文本不含「扫码收货/库存扫码」；KPI 带=进行中订单/待我审批/本月销售额。
+- 有折扣订单 SO-20260830-00001 详情：不含「税率/税额/不含税」，含「命中促销（满A赠B 赠品 PRD-J006 ×2）」「优惠明细（产品优惠 -30、行折扣 -24304、整单合计 -24667.32）」「应付金额 ¥6332.68」。
+- 0 个 5xx、Console 0 错误；PC 端不受影响。已部署测试环境 backup stamp 20260905-073608。
+
+## v4.7.0 (2026-09-05) - 移动端 H5 按高保真稿逐页重构「布局」（藏青琥珀卡片化，纯前端）
+
+> 目标：v4.6.9 只做了全局换肤（配色），本次把移动端每一页的**布局结构**也按定稿高保真稿 dms-mobile-full-12-v6.html（12 屏）1:1 落地——首页 3-KPI 带 + 8 宫格 + 业务卡、订单/审批/报台卡片列表、消息卡、藏青业绩卡 + 柱状 + 排行、深色扫码取景框、浅色登录页。PC 端不动。
+
+### 布局组件（mobile-theme.scss 新增高保真结构类，仅 .m-layout 作用域）
+- 新增 .m-section/.m-kpiband/.m-kpi（3 列等宽数字带）、.m-grid-card（4 列功能宫格卡片）、.m-hero-search（hero 内嵌半透明搜索条）、.vbadge（琥珀认证标）。
+- 新增 .m-card-list/.m-ord 业务卡（单号等宽字体 + 状态 pill 带圆点 st-ok/pen/rej/info + 浅蓝灰缩略图块 .th + 虚线分隔 + 合计金额 + 藏青/琥珀/描边按钮 .ob）。
+- 新增 .m-msg-list/.m-msg-item 消息卡（彩色图标底 a/g/b + 未读琥珀点 + 两行截断 + 时间）。
+- 新增 .m-perf-card（藏青大卡）+ .m-bars 柱状（藏青渐变、当前月琥珀）+ .m-rank-card/.m-rank-row 排行（前三名琥珀名次块）。
+- 新增 .m-scan-stage 深色径向渐变取景框 + .m-scan-frame 琥珀四角 L 形角标 + .m-scan-line 扫描线动画 + .m-scan-hint；.m-invstock 三格库存（可用绿/锁定蓝/安全库存琥珀）。
+
+### 逐页重构（模板从基础 van-cell 改为卡片结构）
+- MHome.vue：藏青 hero（问候语 + 经销商名 + 琥珀「已认证」标 + 内嵌搜索条 + 消息铃带未读角标）；KPI 带改为进行中订单/待我审批/待收货 3 卡（接 my-todo、receipts DRAFT 计数）；常用功能 8 宫格（智能下单/下销售订单/手术报台/移动审批/扫码收货/库存扫码/我的业绩/消息中心）；最近业务改为 .m-ord 卡片（状态 pill + 合计 + 去审批/扫码/查看按钮）。
+- MOrders.vue：圆搜索 + 状态筛选 chips（全部带总数/待审批/已通过/已驳回）+ .m-ord 订单卡列表 + 琥珀 FAB。
+- MApprovals.vue：四 Tab（待我审批/我已审批/我发起/抄送）+ .m-ord 审批卡（业务类型标题 + 节点·时间 + 发起人 + 琥珀「去审批」/描边「查看」）。
+- MMessages.vue：五 Tab（全部/未读/审批/系统/库存）+ .m-msg-item 消息卡（按类型彩色图标 + 未读琥珀点）。
+- MDashboard.vue：藏青业绩大卡（本月销售额 + 7 月柱状、当前月琥珀）+ 经销商排行卡（前三名琥珀名次）+ 订单状态分布卡（枚举中文化）。
+- MProfile.vue：藏青渐变头部（头像 + 姓名 + 琥珀角色标）+ 悬浮 4 格快捷卡 + 账号信息卡 + 退出登录。
+- MReceiveScan.vue / MInventoryScan.vue：深色扫码取景框（琥珀四角 + 扫描线 + 提示）+ 藏青扫码按钮 + 手动输入；收货页待收货单卡、库存页产品卡 + 可用/锁定/安全库存三格。
+- MSurgeryReports.vue：.m-ord 报台卡（医院 + 经销商·日期 + 查看）+ 琥珀新建 FAB。
+- MLogin.vue：改为高保真浅色版（淡蓝渐变底 + 真实 DmsLogo 品牌标 + 白圆角表单卡 + 藏青登录按钮 + 自助注册入口），不再用深色大渐变头。
+- MOrderDetail.vue：状态条统一为藏青渐变；订单类型补 NORMAL/STANDARD/RETURN 中文映射（修复裸显 NORMAL）。
+
+### 验证（铁律9 真实浏览器，全绿）
+- 10 个移动路由全部 HTTP 200；35 个业务 API 全 200，0 个 5xx，Console 0 错误。
+- 计算样式：FAB rgb(217,119,6) 琥珀、nav-bar linear-gradient(135deg,rgb(46,107,168)...) 藏青。
+- 交互：订单卡→订单详情、审批卡→审批详情均正常打开（非白屏）；订单筛选 chips「待审批」切换生效（13 卡）；首页宫格→我的业绩跳转正常。
+- 全入口 GATE：根 / 302→/dms/、/dms/、/dms/admin/、/dms/mobile/login、/dms/mobile/register、/brochure/、/brochure/mobile.html、/brochure/print.html 均 200 且 title 正确（宣传页非静默回退）；/actuator/health UP。
+- PC 端登录页/极光蓝主题截图核对未受影响。
+
 ## v4.6.9 (2026-09-05) - 移动端 H5 全站切「藏青琥珀」主题 + DESIGN.md 增补移动端设计标准（纯前端，无 Flyway）
 
 > 目标：把移动端 H5 视觉从 PC 同款极光蓝切换为独立的「藏青琥珀 Navy Amber」主题（主色藏青 #2E6BA8、琥珀 #D97706 点缀、浅蓝灰图标底 #EAF1F9、页面底 #F4F7FB），只影响移动端、不影响 PC；并把整套移动端设计标准固化进 DESIGN.md。
@@ -2200,4 +2350,6 @@ v3.8.7 沉淀了 D13 规范和基础设施（platform_button_configs 表、v-has
 - Layer 2 §18 列表页布局规范保持冻结（v3.8.7 入冻结区，本版未变更规范文字）。
 - Layer 4 D13：本版本正式落地 D13（CrudView 接入、菜单按权限过滤、admin-vue 维护入口完善）。
 - D12 状态：原文 2026-08-06 已因 PowerShell 编码异常丢失；按上下文重写并锁定 deploy-fast 流程。
+
+
 

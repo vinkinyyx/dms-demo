@@ -38,16 +38,16 @@
               <van-tag v-if="line.isGift" plain type="danger" size="mini">赠品</van-tag>
             </div>
             <div v-if="line.productSpec" class="line-spec">规格：{{ line.productSpec }}</div>
-            <div class="line-grid">
+            <div class="line-grid line-grid-3">
               <div class="g"><label>数量</label><b>{{ line.qty || 0 }}</b></div>
-              <div class="g"><label>含税单价</label><b>¥{{ money(line.standardPriceInclTax || line.unitPrice) }}</b></div>
-              <div class="g"><label>税率</label><b>{{ rateLabel(line.taxRate) }}</b></div>
-              <div class="g"><label>税额</label><b>¥{{ money(line.taxAmount) }}</b></div>
+              <div class="g"><label>单价</label><b>¥{{ money(line.standardPriceInclTax || line.unitPrice) }}</b></div>
+              <div class="g"><label>金额</label><b>¥{{ money(lineLineSubtotal(line)) }}</b></div>
             </div>
-            <div v-if="hasDiscount(line)" class="line-discount">
-              <span v-if="Number(line.lineDiscountAmount || 0) > 0">行折扣 -¥{{ money(line.lineDiscountAmount) }}</span>
-              <span v-if="Number(line.promoDiscountAmount || 0) > 0">促销 -¥{{ money(line.promoDiscountAmount) }}</span>
-              <span v-if="Number(line.headerDiscountAmount || 0) > 0">整单折扣分摊 -¥{{ money(line.headerDiscountAmount) }}</span>
+            <div v-if="hasDiscount(line)" class="line-promos">
+              <span v-if="Number(line.productDiscountAmount || 0) > 0" class="lp lp-promo">产品优惠 -¥{{ money(line.productDiscountAmount) }}</span>
+              <span v-if="Number(line.lineDiscountAmount || 0) > 0" class="lp lp-line">行折扣 -¥{{ money(line.lineDiscountAmount) }}</span>
+              <span v-if="Number(line.promoDiscountAmount || 0) > 0" class="lp lp-promo">促销优惠 -¥{{ money(line.promoDiscountAmount) }}</span>
+              <span v-if="Number(line.headerDiscountAmount || 0) > 0" class="lp lp-header">整单折扣分摊 -¥{{ money(line.headerDiscountAmount) }}</span>
             </div>
             <div class="line-final">
               <span>小计</span>
@@ -64,16 +64,16 @@
                   <van-tag v-if="child.isGift" plain type="danger" size="mini">赠品</van-tag>
                 </div>
                 <div v-if="child.productSpec" class="line-spec">规格：{{ child.productSpec }}</div>
-                <div class="line-grid">
+                <div class="line-grid line-grid-3">
                   <div class="g"><label>数量</label><b>{{ child.qty || 0 }}</b></div>
-                  <div class="g"><label>含税单价</label><b>¥{{ money(child.standardPriceInclTax || child.unitPrice) }}</b></div>
-                  <div class="g"><label>税率</label><b>{{ rateLabel(child.taxRate) }}</b></div>
-                  <div class="g"><label>税额</label><b>¥{{ money(child.taxAmount) }}</b></div>
+                  <div class="g"><label>单价</label><b>¥{{ money(child.standardPriceInclTax || child.unitPrice) }}</b></div>
+                  <div class="g"><label>金额</label><b>¥{{ money(lineLineSubtotal(child)) }}</b></div>
                 </div>
-                <div v-if="hasDiscount(child)" class="line-discount">
-                  <span v-if="Number(child.lineDiscountAmount || 0) > 0">行折扣 -¥{{ money(child.lineDiscountAmount) }}</span>
-                  <span v-if="Number(child.promoDiscountAmount || 0) > 0">促销 -¥{{ money(child.promoDiscountAmount) }}</span>
-                  <span v-if="Number(child.headerDiscountAmount || 0) > 0">整单折扣分摊 -¥{{ money(child.headerDiscountAmount) }}</span>
+                <div v-if="hasDiscount(child)" class="line-promos">
+                  <span v-if="Number(child.productDiscountAmount || 0) > 0" class="lp lp-promo">产品优惠 -¥{{ money(child.productDiscountAmount) }}</span>
+                  <span v-if="Number(child.lineDiscountAmount || 0) > 0" class="lp lp-line">行折扣 -¥{{ money(child.lineDiscountAmount) }}</span>
+                  <span v-if="Number(child.promoDiscountAmount || 0) > 0" class="lp lp-promo">促销优惠 -¥{{ money(child.promoDiscountAmount) }}</span>
+                  <span v-if="Number(child.headerDiscountAmount || 0) > 0" class="lp lp-header">整单折扣分摊 -¥{{ money(child.headerDiscountAmount) }}</span>
                 </div>
                 <div class="line-final">
                   <span>小计</span>
@@ -86,13 +86,36 @@
         <van-empty v-else description="暂无明细" />
       </van-cell-group>
 
-      <van-cell-group inset title="金额信息" style="margin-top:10px">
-        <van-cell title="含税金额" :value="'¥' + money(order.amountInclTax)" />
-        <van-cell v-if="Number(order.discountAmount || 0) > 0" title="整单折扣" :value="'-¥' + money(order.discountAmount)" />
-        <van-cell title="不含税金额" :value="'¥' + money(order.amountExclTax)" />
-        <van-cell title="税额" :value="'¥' + money(order.taxAmount)" />
-        <van-cell title="最终金额" title-class="total-title" :value="'¥' + money(order.finalAmount)" value-class="total-value" />
+      <van-cell-group v-if="promoMessages.length" inset title="命中促销" style="margin-top:10px">
+        <div v-for="(msg, i) in promoMessages" :key="i" class="promo-hit">
+          <van-icon name="gift-o" class="promo-hit-ic" />
+          <span>{{ msg }}</span>
+        </div>
       </van-cell-group>
+
+      <van-cell-group inset title="优惠明细" style="margin-top:10px">
+        <van-cell title="商品总额" :value="'¥' + money(order.amountInclTax)" />
+        <van-cell v-if="totalProductDiscount > 0" title="产品优惠">
+          <template #value><span class="val-discount">-¥{{ money(totalProductDiscount) }}</span></template>
+        </van-cell>
+        <van-cell v-if="totalLineDiscount > 0" title="行折扣">
+          <template #value><span class="val-discount">-¥{{ money(totalLineDiscount) }}</span></template>
+        </van-cell>
+        <van-cell v-if="totalPromoDiscount > 0" title="促销优惠">
+          <template #value><span class="val-discount">-¥{{ money(totalPromoDiscount) }}</span></template>
+        </van-cell>
+        <van-cell v-if="Number(order.voucherAmount || 0) > 0" title="代金券抵扣">
+          <template #value><span class="val-discount">-¥{{ money(order.voucherAmount) }}</span></template>
+        </van-cell>
+        <van-cell v-if="Number(order.discountAmount || 0) > 0" title="整单折扣/优惠合计">
+          <template #value><span class="val-discount">-¥{{ money(order.discountAmount) }}</span></template>
+        </van-cell>
+      </van-cell-group>
+
+      <div class="pay-bar">
+        <span class="pay-label">应付金额</span>
+        <span class="pay-amount">¥{{ money(order.finalAmount) }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -108,7 +131,7 @@ const id = route.params.id
 const loading = ref(true)
 const order = ref(null)
 
-const ORDER_TYPE_LABEL = { SALES: '销售订单', REPLENISHMENT: '补货订单', PURCHASE: '采购订单' }
+const ORDER_TYPE_LABEL = { SALES: '销售订单', NORMAL: '销售订单', STANDARD: '销售订单', REPLENISHMENT: '补货订单', PURCHASE: '采购订单', RETURN: '退货订单' }
 
 const orderTypeLabel = computed(() => {
   const t = order.value?.orderType
@@ -129,6 +152,30 @@ const lineTree = computed(() => {
 function money(v) {
   return Number(v == null ? 0 : v).toFixed(2)
 }
+// 行折前小计（数量 × 单价），用于展示
+function lineLineSubtotal(line) {
+  const qty = Number(line.qty || 0)
+  const price = Number(line.standardPriceInclTax || line.unitPrice || 0)
+  return qty * price
+}
+// 解析促销命中文案（后端可能返回 JSON 字符串数组或数组）
+const promoMessages = computed(() => {
+  const raw = order.value?.promoMessages
+  if (!raw) return []
+  if (Array.isArray(raw)) return raw.filter(Boolean)
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [String(raw)]
+  } catch (e) {
+    return String(raw).split(/\n|；|;/).map(x => x.trim()).filter(Boolean)
+  }
+})
+function sumLines(key) {
+  return (order.value?.lines || []).reduce((acc, l) => acc + Math.abs(Number(l[key] || 0)), 0)
+}
+const totalProductDiscount = computed(() => sumLines('productDiscountAmount'))
+const totalLineDiscount = computed(() => sumLines('lineDiscountAmount'))
+const totalPromoDiscount = computed(() => sumLines('promoDiscountAmount'))
 function rateLabel(r) {
   if (r == null || r === '') return '-'
   const n = Number(r)
@@ -160,21 +207,13 @@ onMounted(async () => {
 <style scoped>
 .loading, .empty { padding: 40px 16px; text-align: center; }
 .detail-body { padding-bottom: 20px; }
-.status-bar { padding: 16px 20px; color: var(--dms-text-inverse); }
+.status-bar { padding: 16px 20px; color: #fff; background: var(--dms-m-head-gradient, linear-gradient(135deg,#2e6ba8,#5a95d0)); }
 .status-bar .st-text { font-size: 18px; font-weight: 600; }
 .status-bar .st-code { font-size: 13px; opacity: .9; margin-top: 4px; }
-.st-draft     { background: var(--dms-text-4); }
-.st-submitted { background: var(--dms-color-warning); }
-.st-approved,
-.st-completed,
-.st-active    { background: var(--dms-color-success); }
-.st-rejected,
-.st-cancelled { background: var(--dms-color-danger); }
-.st-shipping,
-.st-receiving,
-.st-partial_received,
-.st-partial_shipped,
-.st-partial_cancelled { background: var(--dms-color-primary); }
+.st-draft, .st-submitted, .st-approved, .st-completed, .st-active,
+.st-rejected, .st-cancelled, .st-shipping, .st-receiving,
+.st-partial_received, .st-partial_shipped, .st-partial_cancelled,
+.st-pending_approval, .st-confirmed { background: var(--dms-m-head-gradient, linear-gradient(135deg,#2e6ba8,#5a95d0)); }
 .line-list { padding: 4px 0; }
 .line-card { padding: 10px 16px; border-bottom: 1px solid var(--dms-divider-color); }
 .line-card:last-child { border-bottom: 0; }
@@ -185,11 +224,27 @@ onMounted(async () => {
 .child-prefix { color: var(--dms-text-4); }
 .line-spec { font-size: 12px; color: var(--dms-text-4); margin-top: 4px; }
 .line-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.line-grid.line-grid-3 { grid-template-columns: repeat(3, 1fr); }
 .line-grid .g { display: flex; flex-direction: column; font-size: 12px; color: var(--dms-text-4); }
-.line-grid .g b { color: var(--dms-text-1); font-weight: 500; font-size: 13px; margin-top: 2px; }
-.line-discount { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; font-size: 12px; color: var(--dms-color-danger); }
+.line-grid .g b { color: var(--dms-text-1); font-weight: 600; font-size: 13px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.line-promos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.line-promos .lp { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+.lp-promo { color: #b45309; background: #fef3c7; }
+.lp-line { color: #2e6ba8; background: #e3eefa; }
+.lp-header { color: #15803d; background: #dcfce7; }
 .line-final { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 14px; }
-.line-final b { color: var(--dms-color-danger); font-size: 16px; }
+.line-final b { color: var(--dms-m-amber-deep, #b45309); font-size: 16px; }
+.promo-hit { display: flex; align-items: flex-start; gap: 8px; padding: 10px 16px; font-size: 12.5px; color: #92400e; line-height: 1.5; }
+.promo-hit + .promo-hit { border-top: 1px dashed var(--dms-divider-color, #e3e9f2); }
+.promo-hit-ic { color: #d97706; font-size: 16px; margin-top: 1px; flex: none; }
+.val-discount { color: var(--dms-m-amber-deep, #b45309); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pay-bar {
+  margin: 12px 16px 4px; background: var(--dms-m-navy, #2e6ba8); border-radius: 14px;
+  padding: 16px 18px; display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 6px 16px rgba(46,107,168,.28);
+}
+.pay-bar .pay-label { color: #cdddf0; font-size: 13px; }
+.pay-bar .pay-amount { color: #fff; font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .child-list { margin-top: 8px; border-left: 2px solid var(--dms-gray-200); }
 .total-title { font-weight: 600; }
 .total-value { color: var(--dms-color-danger); font-weight: 700; font-size: 16px; }

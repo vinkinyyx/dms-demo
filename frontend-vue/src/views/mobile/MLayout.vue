@@ -23,9 +23,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onActivated } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import request from '@/utils/request'
 import SurgeryIcon from '@/components/SurgeryIcon.vue'
+
+const route = useRoute()
 
 const approvalBadge = ref(0)
 
@@ -39,7 +42,8 @@ async function loadBadges() {
 }
 
 onMounted(loadBadges)
-onActivated(loadBadges)
+// 路由切换（含审批完成返回、tab 切换）时刷新角标，保证数字及时更新
+watch(() => route.path, (p, old) => { if (p !== old) loadBadges() })
 </script>
 
 <style scoped>

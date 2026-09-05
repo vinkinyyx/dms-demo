@@ -25,7 +25,7 @@
       <el-table-column prop="priceExclTax" label="不含税单价" width="110" align="right">
         <template #default="{ row }">{{ Number(row.priceExclTax || 0).toFixed(4) }}</template>
       </el-table-column>
-      <el-table-column prop="taxRate" label="税率" width="80">
+      <el-table-column align="right" prop="taxRate" label="税率" width="80">
         <template #default="{ row }">{{ Math.round(Number(row.taxRate || 0) * 10000) / 100 }}%</template>
       </el-table-column>
       <el-table-column prop="validFrom" label="生效日期" width="110" />

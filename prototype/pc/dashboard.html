@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据驾驶舱 · MySolMed DMS</title>
+<link rel="stylesheet" href="assets/dms.css">
+</head>
+<body>
+<div id="app"></div>
+
+<script type="text/template" id="pageBody">
+  <div class="page-head">
+    <div>
+      <div class="page-title">数据驾驶舱</div>
+      <div class="page-desc">销售、库存、手术与回款核心指标 · 数据更新至 2026-09-05 12:00</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn">导出报表</button>
+      <button class="btn btn-primary">订阅驾驶舱日报</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="filter-bar">
+      <div class="f-item"><span class="f-label">时间范围</span>
+        <div class="select"><span>2026 年 9 月（本月）</span><span data-ic="chevronD"></span></div></div>
+      <div class="f-item"><span class="f-label">大区</span>
+        <div class="select"><span class="ph">全部大区</span><span data-ic="chevronD"></span></div></div>
+      <div class="f-item"><span class="f-label">产品线</span>
+        <div class="select"><span class="ph">全部产品线</span><span data-ic="chevronD"></span></div></div>
+      <div class="f-item"><span class="f-label">经销商</span>
+        <div class="select"><span class="ph">输入经销商名称 / 编码</span><span data-ic="search"></span></div></div>
+      <div class="filter-actions">
+        <button class="btn">重置</button>
+        <button class="btn btn-primary">查询</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g-12">
+    <div class="card kpi col-3">
+      <div class="kpi-top">
+        <div class="kpi-ic" style="background:var(--blue-50);color:var(--blue-600)" data-ic="coin"></div>
+        <div><div class="kpi-label">本期销售额</div><div class="kpi-val">¥1,286.5<small>万</small></div></div>
+      </div>
+      <div class="kpi-trend up"><span data-ic="arrowUp"></span>12.4% <span class="vs">环比 · 目标达成 72%</span></div>
+    </div>
+    <div class="card kpi col-3">
+      <div class="kpi-top">
+        <div class="kpi-ic" style="background:var(--green-50);color:var(--green-600)" data-ic="wallet"></div>
+        <div><div class="kpi-label">本期回款额</div><div class="kpi-val">¥1,205.3<small>万</small></div></div>
+      </div>
+      <div class="kpi-trend up"><span data-ic="arrowUp"></span>9.8% <span class="vs">回款率 93.7%</span></div>
+    </div>
+    <div class="card kpi col-3">
+      <div class="kpi-top">
+        <div class="kpi-ic" style="background:#fff7e6;color:#fa8c16" data-ic="box"></div>
+        <div><div class="kpi-label">库存周转天数</div><div class="kpi-val">68<small>天</small></div></div>
+      </div>
+      <div class="kpi-trend up"><span data-ic="arrowDn"></span>5 天 <span class="vs">较上季优化</span></div>
+    </div>
+    <div class="card kpi col-3">
+      <div class="kpi-top">
+        <div class="kpi-ic" style="background:#f9f0ff;color:#722ed1" data-ic="firstaid"></div>
+        <div><div class="kpi-label">手术报台（台）</div><div class="kpi-val">142</div></div>
+      </div>
+      <div class="kpi-trend up"><span data-ic="arrowUp"></span>15.6% <span class="vs">环比</span></div>
+    </div>
+  </div>
+
+  <div class="grid g-12 mt-14">
+    <div class="card col-8">
+      <div class="card-head"><div class="card-title"><span class="bar"></span>月度销售与回款趋势</div>
+        <div class="card-extra"><span class="tag tag-blue"><span class="dot"></span>销售额</span><span class="tag tag-green"><span class="dot"></span>回款额</span><span class="tag tag-gold"><span class="dot"></span>月度目标</span></div>
+      </div>
+      <div id="barChart" class="chart" style="height:300px"></div>
+    </div>
+    <div class="card col-4">
+      <div class="card-head"><div class="card-title"><span class="bar"></span>产品线销售占比</div></div>
+      <div id="pieChart" class="chart" style="height:300px"></div>
+    </div>
+  </div>
+
+  <div class="grid g-12 mt-14">
+    <div class="card col-6">
+      <div class="card-head"><div class="card-title"><span class="bar"></span>经销商销售 TOP 8</div>
+        <div class="card-extra"><a href="#">完整排行 →</a></div></div>
+      <div class="table-wrap">
+        <table class="dms">
+          <thead><tr><th style="width:44px">#</th><th>经销商</th><th class="num">销售额(万)</th><th>占比</th></tr></thead>
+          <tbody>
+            <tr><td><b>1</b></td><td><div class="cell-main">杭州仁济医疗器械有限公司</div></td><td class="num">286.4</td><td><div class="flex"><div style="flex:1;height:7px;background:var(--gray-200);border-radius:4px;overflow:hidden"><div style="width:100%;height:100%;background:var(--blue-500)"></div></div><span class="small muted" style="width:44px;text-align:right">22%</span></div></td></tr>
+            <tr><td><b>2</b></td><td><div class="cell-main">上海康泽医疗科技有限公司</div></td><td class="num">243.1</td><td><div class="flex"><div style="flex:1;height:7px;background:var(--gray-200);border-radius:4px;overflow:hidden"><div style="width:85%;height:100%;background:var(--blue-500)"></div></div><span class="small muted" style="width:44px;text-align:right">19%</span></div></td></tr>
+            <tr><td><b>3</b></td><td><div class="cell-main">苏州恒瑞医疗器械</div></td><td class="num">198.6</td><td><div class="flex"><div style="flex:1;height:7px;background:var(--gray-200);border-radius:4px;overflow:hidden"><div style="width:69%;height:100%;background:var(--blue-400)"></div></div><span class="small muted" style="width:44px;text-align:right">15%</span></div></td></tr>
+            <tr><td><b>4</b></td><td><div class="cell-main">南京迈瑞医疗经销商</div></td><td class="num">156.2</td><td><div class="flex"><div style="flex:1;height:7px;background:var(--gray-200);border-radius:4px;overflow:hidden"><div style="width:55%;height:100%;background:var(--blue-400)"></div></div><span class="small muted" style="width:44px;text-align:right">12%</span></div></td></tr>
+            <tr><td><b>5</b></td><td><div class="cell-main">宁波康泰医疗器械</div></td><td class="num">121.8</td><td><div class="flex"><div style="flex:1;height:7px;background:var(--gray-200);border-radius:4px;overflow:hidden"><div style="width:43%;height:100%;background:var(--blue-300)"></div></div><span class="small muted" style="width:44px;text-align:right">9%</span></div></td></tr>
+            <tr><td><b>6</b></td><td><div class="cell-main">温州医械供应链</div></td><td class="num">98.5</td><td><div class="flex"><div style="flex:1;height:7px;background:var(--gray-200);border-radius:4px;overflow:hidden"><div style="width:34%;height:100%;background:var(--blue-300)"></div></div><span class="small muted" style="width:44px;text-align:right">8%</span></div></td></tr>
+            <tr><td><b>7</b></td><td><div class="cell-main">合肥德康医疗</div></td><td class="num">76.3</td><td><div class="flex"><div style="flex:1;height:7px;background:var(--gray-200);border-radius:4px;overflow:hidden"><div style="width:27%;height:100%;background:var(--blue-200)"></div></div><span class="small muted" style="width:44px;text-align:right">6%</span></div></td></tr>
+            <tr><td><b>8</b></td><td><div class="cell-main">无锡联影器械</div></td><td class="num">61.0</td><td><div class="flex"><div style="flex:1;height:7px;background:var(--gray-200);border-radius:4px;overflow:hidden"><div style="width:21%;height:100%;background:var(--blue-200)"></div></div><span class="small muted" style="width:44px;text-align:right">5%</span></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card col-6">
+      <div class="card-head"><div class="card-title"><span class="bar"></span>手术报台统计（按术式）</div>
+        <div class="card-extra">本期 142 台</div></div>
+      <div id="surgeryChart" class="chart" style="height:300px"></div>
+    </div>
+  </div>
+
+  <div class="card mt-14">
+    <div class="card-head"><div class="card-title"><span class="bar"></span>库存与效期预警</div>
+      <div class="card-extra"><span class="tag tag-red"><span class="dot"></span>3 批 90 天内到期</span><span class="tag tag-gold"><span class="dot"></span>5 个 SKU 低于安全库存</span></div></div>
+    <div class="table-wrap">
+      <table class="dms">
+        <thead><tr><th>产品编码</th><th>产品名称</th><th>仓库</th><th>批号</th><th class="num">库存</th><th class="num">安全库存</th><th>效期至</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr><td><div class="cell-main">PRD-SP-0032</div></td><td>椎间融合器 Ⅱ 型（PEEK）</td><td>上海中心仓</td><td>LOT20250612</td><td class="num">48</td><td class="num">30</td><td>2026-12-10</td><td><span class="tag tag-red"><span class="dot"></span>96 天到期</span></td></tr>
+          <tr><td><div class="cell-main">PRD-SP-0018</div></td><td>脊柱后路钉棒系统（钛合金）</td><td>杭州区域仓</td><td>LOT20250803</td><td class="num">12</td><td class="num">40</td><td>2027-03-15</td><td><span class="tag tag-gold"><span class="dot"></span>低于安全库存</span></td></tr>
+          <tr><td><div class="cell-main">PRD-CV-0107</div></td><td>一次性使用心血管造影导管</td><td>上海中心仓</td><td>LOT20250520</td><td class="num">260</td><td class="num">200</td><td>2026-11-28</td><td><span class="tag tag-red"><span class="dot"></span>84 天到期</span></td></tr>
+          <tr><td><div class="cell-main">PRD-JT-0215</div></td><td>人工膝关节假体（旋转平台）</td><td>南京区域仓</td><td>LOT20250911</td><td class="num">8</td><td class="num">25</td><td>2028-06-01</td><td><span class="tag tag-gold"><span class="dot"></span>低于安全库存</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</script>
+
+<script src="assets/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script>
+function hydrate(root){
+  root.querySelectorAll('[data-ic]').forEach(function(el){ el.innerHTML = icon(el.getAttribute('data-ic')); });
+}
+var C = {blue:'#2e6ba8',green:'#52c41a',gold:'#faad14',cyan:'#13c2c2',purple:'#722ed1',magenta:'#eb2f96',orange:'#fa8c16'};
+shell({
+  active:'dashboard',
+  crumb:'数据看板 / <b>数据驾驶舱</b>',
+  body:document.getElementById('pageBody').innerHTML,
+  after:function(){
+    hydrate(document.getElementById('content'));
+    if(!window.echarts) return;
+    var bar = echarts.init(document.getElementById('barChart'));
+    bar.setOption({
+      grid:{left:50,right:20,top:36,bottom:28},
+      tooltip:{trigger:'axis'},
+      xAxis:{type:'category',data:['1月','2月','3月','4月','5月','6月','7月','8月','9月'],axisLine:{lineStyle:{color:'#e4e7ed'}},axisLabel:{color:'#909399'}},
+      yAxis:{type:'value',splitLine:{lineStyle:{color:'#f0f2f5'}},axisLabel:{color:'#909399'}},
+      series:[
+        {name:'销售额',type:'bar',barWidth:16,itemStyle:{color:C.blue,borderRadius:[4,4,0,0]},data:[860,760,940,1060,1120,1080,1180,1210,1286]},
+        {name:'回款额',type:'bar',barWidth:16,itemStyle:{color:C.green,borderRadius:[4,4,0,0]},data:[810,720,880,980,1040,1010,1100,1150,1205]},
+        {name:'月度目标',type:'line',smooth:true,symbol:'diamond',symbolSize:9,lineStyle:{width:2.5,color:C.gold,type:'dashed'},itemStyle:{color:C.gold},data:[900,900,950,1000,1100,1100,1150,1200,1300]}
+      ]
+    });
+    var pie = echarts.init(document.getElementById('pieChart'));
+    pie.setOption({
+      tooltip:{trigger:'item',formatter:'{b}<br/>{c} 万 ({d}%)'},
+      legend:{bottom:0,icon:'circle',itemWidth:9,textStyle:{color:'#606266',fontSize:12}},
+      series:[{type:'pie',radius:['52%','74%'],center:['50%','44%'],avoidLabelOverlap:true,
+        itemStyle:{borderColor:'#fff',borderWidth:2},
+        label:{show:false},labelLine:{show:false},
+        data:[
+          {name:'脊柱外科',value:486,itemStyle:{color:C.blue}},
+          {name:'心血管介入',value:312,itemStyle:{color:C.cyan}},
+          {name:'关节外科',value:238,itemStyle:{color:C.purple}},
+          {name:'创伤外科',value:156,itemStyle:{color:C.gold}},
+          {name:'其他耗材',value:94,itemStyle:{color:'#c0c4cc'}}
+        ]}]
+    });
+    var surg = echarts.init(document.getElementById('surgeryChart'));
+    surg.setOption({
+      grid:{left:90,right:30,top:16,bottom:24},
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+      xAxis:{type:'value',splitLine:{lineStyle:{color:'#f0f2f5'}},axisLabel:{color:'#909399'}},
+      yAxis:{type:'category',data:['其他','创伤复位','关节置换','心血管介入','脊柱内固定'],axisLine:{lineStyle:{color:'#e4e7ed'}},axisLabel:{color:'#606266'}},
+      series:[{type:'bar',barWidth:16,itemStyle:{borderRadius:[0,4,4,0],
+        color:{type:'linear',x:0,y:0,x2:1,y2:0,colorStops:[{offset:0,color:'#5a95d0'},{offset:1,color:'#2e6ba8'}]}},
+        label:{show:true,position:'right',color:'#606266'},
+        data:[12,24,31,38,37]}]
+    });
+    window.addEventListener('resize',function(){bar.resize();pie.resize();surg.resize();});
+  }
+});
+</script>
+</body>
+</html>

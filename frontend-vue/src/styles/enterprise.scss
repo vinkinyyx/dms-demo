@@ -55,12 +55,12 @@ html:root {
   border-radius: 4px;
   overflow: hidden;
   --el-table-border-color: #ebeef5;
-  --el-table-header-bg-color: #f5f7fa;
+  --el-table-header-bg-color: #f4f7fb;
   --el-table-row-hover-bg-color: #f7faff;
   font-size: 13px;
 }
 .el-table th.el-table__cell {
-  background: #f5f7fa !important;
+  background: #f4f7fb !important;
   color: #1f2d3d !important;
   font-weight: 600;
 }
@@ -76,7 +76,7 @@ html:root {
 .el-tag--success { background: var(--dms-color-success-bg); border-color: #b7eb8f; color: var(--dms-color-success); }
 .el-tag--warning { background: var(--dms-color-warning-bg); border-color: #ffd591; color: var(--dms-color-warning); }
 .el-tag--danger { background: var(--dms-color-danger-bg); border-color: #ffa39e; color: var(--dms-color-danger); }
-.el-tag--info { background: #f5f7fa; border-color: #d9d9d9; color: #5e6d82; }
+.el-tag--info { background: #f4f7fb; border-color: #d9d9d9; color: #5e6d82; }
 .el-dialog { border-radius: 6px !important; box-shadow: 0 16px 42px rgba(15,33,60,.16) !important; }
 .el-dialog__header { border-bottom: 1px solid #ebeef5; margin-right: 0; padding: 14px 18px; }
 .el-dialog__body { padding: 18px; }
@@ -99,3 +99,40 @@ html[data-mode='dark'] .el-table td.el-table__cell { border-bottom-color: #24304
 .van-tag { border-radius: 3px; font-weight: 500; }
 .van-nav-bar { border-bottom: 1px solid #ebeef5; }
 .van-tabbar { border-top: 1px solid #ebeef5; box-shadow: none; }
+
+/* ===== Web Interface Guidelines 落地（2026-09）：数字等宽 / 焦点可见 / 触摸安全 ===== */
+/* 表格数字使用等宽数字，金额/数量纵向对齐 */
+.el-table .cell { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+/* 数字列右对齐由组件在 <el-table-column align="right"> 控制；这里保证等宽 */
+.m-num, .num, .tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+/* 可交互元素必须有可见焦点环（键盘可见、鼠标点击不显示） */
+.el-button:focus-visible,
+.el-link:focus-visible,
+.el-icon:focus-visible,
+.el-badge:focus-visible,
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--el-color-primary, #2e6ba8);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* 弹层/抽屉/弹窗内滚动不穿透到背景 */
+.el-dialog, .el-drawer, .el-popper, .van-popup, .van-action-sheet {
+  overscroll-behavior: contain;
+}
+/* 移动端去掉双击缩放延迟、弹层滚动锁定 */
+.van-button, .van-cell, .m-ord, .chip, .m-kpi, .m-grid-card .qa {
+  touch-action: manipulation;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

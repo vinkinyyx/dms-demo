@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>销售订单详情 · MySolMed DMS</title>
+<link rel="stylesheet" href="assets/dms.css">
+</head>
+<body>
+<div id="app"></div>
+
+<script type="text/template" id="pageBody">
+  <div class="page-head">
+    <div>
+      <div class="page-title">销售订单 SO20260905008
+        <span class="tag tag-gold" style="vertical-align:3px;margin-left:8px"><span class="dot"></span>待审批</span>
+      </div>
+      <div class="page-desc">杭州仁济医疗器械有限公司 · 创建于 2026-09-05 10:24 · 提交人 张丽</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn">打印订单</button>
+      <button class="btn btn-danger">驳回</button>
+      <button class="btn">退回修改</button>
+      <button class="btn btn-primary">审批通过</button>
+    </div>
+  </div>
+
+  <div class="notice">
+    <span data-ic="info"></span>
+    <div>该订单含 <b>1 个 BOM 组合品</b>（脊柱后路钉棒系统），子件不独立计价；已应用产品折扣与代金券，代金券扣减金额按行金额比例分摊，合计未超面值。</div>
+  </div>
+
+  <div class="card">
+    <div class="steps">
+      <div class="step done"><span class="s-dot"><span data-ic="check"></span></span>创建订单</div><div class="step-line done"></div>
+      <div class="step done"><span class="s-dot"><span data-ic="check"></span></span>提交审批</div><div class="step-line done"></div>
+      <div class="step cur"><span class="s-dot">3</span>大区经理审批</div><div class="step-line"></div>
+      <div class="step"><span class="s-dot">4</span>销售出库</div><div class="step-line"></div>
+      <div class="step"><span class="s-dot">5</span>签收完成</div>
+    </div>
+    <div class="desc-grid">
+      <div class="desc-item"><span class="desc-label">订单编号</span><span class="desc-value">SO20260905008</span></div>
+      <div class="desc-item"><span class="desc-label">经销商</span><span class="desc-value">杭州仁济医疗器械有限公司（DR-HZ-0006）</span></div>
+      <div class="desc-item"><span class="desc-label">终端医院</span><span class="desc-value">浙江大学附属第一医院</span></div>
+      <div class="desc-item"><span class="desc-label">产品线</span><span class="desc-value">脊柱外科</span></div>
+      <div class="desc-item"><span class="desc-label">出库仓库</span><span class="desc-value">杭州区域仓（WH-HZ-01）</span></div>
+      <div class="desc-item"><span class="desc-label">期望交期</span><span class="desc-value">2026-09-12</span></div>
+      <div class="desc-item"><span class="desc-label">结算方式</span><span class="desc-value">账期 30 天</span></div>
+      <div class="desc-item"><span class="desc-label">销售员</span><span class="desc-value">张丽（华东大区）</span></div>
+      <div class="desc-item"><span class="desc-label">关联手术</span><span class="desc-value">OP20260912-031（脊柱内固定）</span></div>
+      <div class="desc-item"><span class="desc-label">备注</span><span class="desc-value">术前备货，需随货提供产品注册证与合格证</span></div>
+    </div>
+  </div>
+
+  <div class="card mt-14">
+    <div class="card-head">
+      <div class="card-title"><span class="bar"></span>订单明细 <span class="pill-count">3 行</span></div>
+      <div class="card-extra"><span class="tag tag-blue"><span class="dot"></span>BOM 组合品 1 个</span></div>
+    </div>
+    <div class="table-wrap">
+      <table class="dms">
+        <thead><tr>
+          <th style="width:40px">#</th><th>产品编码</th><th>产品名称</th><th>规格型号</th>
+          <th class="num">数量</th><th>单位</th><th class="num">单价（元）</th><th>折扣</th>
+          <th class="num">小计（元）</th><th>备注</th>
+        </tr></thead>
+        <tbody>
+          <tr style="background:var(--blue-50)">
+            <td>1</td>
+            <td><div class="cell-main">PRD-BOM-SP01</div></td>
+            <td><div class="cell-main">脊柱后路钉棒系统（组合套装）<span class="tag tag-blue" style="margin-left:6px">BOM</span></div><div class="cell-sub">母件 · 含 6 个子件</div></td>
+            <td>SY-SP-01 标准型</td>
+            <td class="num">2</td><td>套</td><td class="num">68,000.00</td>
+            <td><span class="tag tag-gold">9.0 折</span></td>
+            <td class="num"><b>122,400.00</b></td>
+            <td class="muted small">主计价行</td>
+          </tr>
+          <tr><td class="muted">1.1</td><td class="muted">PRD-SP-0101</td><td class="muted">└ 椎弓根螺钉（单轴）</td><td class="muted">D6.5×45mm</td><td class="num muted">12</td><td class="muted">枚</td><td class="num muted">—</td><td class="muted">—</td><td class="num muted">子件不计价</td><td></td></tr>
+          <tr><td class="muted">1.2</td><td class="muted">PRD-SP-0102</td><td class="muted">└ 连接棒（钛合金）</td><td class="muted">D6.0×100mm</td><td class="num muted">4</td><td class="muted">根</td><td class="num muted">—</td><td class="muted">—</td><td class="num muted">子件不计价</td><td></td></tr>
+          <tr><td class="muted">1.3</td><td class="muted">PRD-SP-0103</td><td class="muted">└ 横向连接器</td><td class="muted">标准型</td><td class="num muted">2</td><td class="muted">件</td><td class="num muted">—</td><td class="muted">—</td><td class="num muted">子件不计价</td><td></td></tr>
+          <tr>
+            <td>2</td>
+            <td><div class="cell-main">PRD-SP-0032</div></td>
+            <td><div class="cell-main">椎间融合器 Ⅱ 型（PEEK）</div></td>
+            <td>CL-Ⅱ-L</td>
+            <td class="num">4</td><td>枚</td><td class="num">12,800.00</td>
+            <td><span class="tag tag-gold">9.5 折</span></td>
+            <td class="num"><b>48,640.00</b></td><td></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><div class="cell-main">PRD-CV-0088</div></td>
+            <td><div class="cell-main">一次性使用无菌手术包</div></td>
+            <td>SP-标准包</td>
+            <td class="num">20</td><td>包</td><td class="num">980.00</td>
+            <td><span class="tag tag-gray">无折扣</span></td>
+            <td class="num"><b>19,600.00</b></td><td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid g-12 mt-14">
+      <div class="col-8">
+        <div class="section-title">折扣与代金券</div>
+        <div class="table-wrap" style="box-shadow:none">
+          <table class="dms">
+            <thead><tr><th>类型</th><th>名称 / 编码</th><th class="num">优惠金额（元）</th><th>分摊方式</th></tr></thead>
+            <tbody>
+              <tr><td><span class="tag tag-gold">产品折扣</span></td><td>脊柱线季度折扣（BOM 9.0 折 / 融合器 9.5 折）</td><td class="num">16,560.00</td><td class="muted small">按行独立计算</td></tr>
+              <tr><td><span class="tag tag-magenta" style="background:#fff0f6;color:#eb2f96">代金券</span></td><td>新客户满减券 VCH-2026-0886（面值 ¥5,000）</td><td class="num">4,240.00</td><td class="muted small">按行金额比例分摊 · 未超面值</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="price-box">
+          <div class="price-row"><span>商品总额</span><span class="v">¥195,200.00</span></div>
+          <div class="price-row"><span>产品折扣</span><span class="v discount">- ¥16,560.00</span></div>
+          <div class="price-row"><span>代金券扣减</span><span class="v discount">- ¥4,240.00</span></div>
+          <div class="price-row"><span>税额（13%）</span><span class="v">¥0.00</span></div>
+          <div class="price-row total"><span>应收金额</span><span class="v">¥174,400.00</span></div>
+          <div class="small muted" style="text-align:right;margin-top:6px">大写：壹拾柒万肆仟肆佰元整</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-14">
+    <div class="card-head"><div class="card-title"><span class="bar"></span>审批流程记录</div>
+      <div class="card-extra">审批流：销售订单标准审批（3 节点）</div></div>
+    <div style="display:flex;gap:0;overflow-x:auto;padding-bottom:6px">
+      <div style="flex:1;min-width:200px;position:relative;padding-left:26px">
+        <div style="position:absolute;left:6px;top:4px;bottom:-14px;width:2px;background:var(--blue-500)"></div>
+        <div style="position:absolute;left:0;top:2px;width:14px;height:14px;border-radius:50%;background:var(--blue-500);border:3px solid var(--blue-50)"></div>
+        <div class="cell-main">提交申请</div><div class="small muted">张丽 · 2026-09-05 10:24</div>
+        <div class="small" style="color:var(--text-3);margin-top:2px">订单创建并提交，进入审批流</div>
+      </div>
+      <div style="flex:1;min-width:200px;position:relative;padding-left:26px">
+        <div style="position:absolute;left:6px;top:4px;bottom:-14px;width:2px;background:var(--blue-200)"></div>
+        <div style="position:absolute;left:0;top:2px;width:14px;height:14px;border-radius:50%;background:var(--blue-500);border:3px solid var(--blue-50)"></div>
+        <div class="cell-main">销售主管审批 <span class="tag tag-green" style="margin-left:6px">已通过</span></div>
+        <div class="small muted">王建国 · 2026-09-05 11:02</div>
+        <div class="small" style="color:var(--text-3);margin-top:2px">同意：价格与折扣符合政策</div>
+      </div>
+      <div style="flex:1;min-width:200px;position:relative;padding-left:26px">
+        <div style="position:absolute;left:6px;top:4px;width:2px;bottom:-14px;background:var(--gray-200)"></div>
+        <div style="position:absolute;left:0;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--blue-500);box-shadow:0 0 0 3px var(--blue-50)"></div>
+        <div class="cell-main" style="color:var(--blue-600)">大区经理审批 <span class="tag tag-gold" style="margin-left:6px">审批中</span></div>
+        <div class="small muted">当前节点 · 处理人 陈总监</div>
+        <div class="small" style="color:var(--text-3);margin-top:2px">等待审批操作（通过 / 驳回 / 退回）</div>
+      </div>
+      <div style="flex:1;min-width:200px;position:relative;padding-left:26px">
+        <div style="position:absolute;left:5px;top:3px;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid var(--gray-300)"></div>
+        <div class="muted">出库与签收</div>
+        <div class="small muted">审批通过后流转</div>
+      </div>
+    </div>
+  </div>
+</script>
+
+<script src="assets/app.js"></script>
+<script>
+function hydrate(root){ root.querySelectorAll('[data-ic]').forEach(function(el){ el.innerHTML = icon(el.getAttribute('data-ic')); }); }
+shell({
+  active:'orders',
+  crumb:'订单业务 / <a href="orders.html">销售订单</a> / <b>订单详情</b>',
+  body:document.getElementById('pageBody').innerHTML,
+  after:function(){ hydrate(document.getElementById('content')); }
+});
+</script>
+</body>
+</html>

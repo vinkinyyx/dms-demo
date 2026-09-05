@@ -26,8 +26,8 @@
             <el-table-column prop="productCode" label="编码" width="120" />
             <el-table-column prop="productName" label="产品" min-width="160" />
             <el-table-column prop="batchNo" label="批号/序列号" width="140" />
-            <el-table-column prop="qty" label="数量" width="80" />
-            <el-table-column prop="unitPrice" label="单价" width="100" />
+            <el-table-column align="right" prop="qty" label="数量" width="80" />
+            <el-table-column align="right" prop="unitPrice" label="单价" width="100" />
             <el-table-column prop="subtotal" label="小计" width="100" />
           </el-table>
         </div>

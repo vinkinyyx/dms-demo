@@ -105,7 +105,7 @@
             </el-table-column>
             <el-table-column prop="productSpec" label="规格" width="120" show-overflow-tooltip/>
             <el-table-column prop="unit" label="单位" width="60" align="center"/>
-            <el-table-column label="数量" width="110">
+            <el-table-column align="right" label="数量" width="110">
               <template #default="{row}">
                 <el-input-number v-model="row.qty" :min="1" :precision="0" :step="1" controls-position="right" size="small" style="width:100%" :disabled="!canEditQty(row)" @change="()=>onLineQtyChange(row)"/>
               </template>

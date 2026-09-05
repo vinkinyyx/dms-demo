@@ -39,18 +39,20 @@
 
 ## 2. 颜色系统
 
-### 2.1 品牌主色（默认「极光蓝」）
+### 2.1 品牌主色（默认「藏青琥珀」Navy Amber，与移动端统一）
 
 | 令牌 | 值 | 用途 |
 |------|-----|------|
-| `--dms-blue-500` | `#1677ff` | 主色 / 主按钮 / 选中态 / 链接 |
-| `--dms-blue-400` | `#4096ff` | 主色 hover |
-| `--dms-blue-600` | `#0958d9` | 主色 active/pressed |
-| `--dms-blue-50`  | `#e6f4ff` | 主色浅底（选中行、标签底） |
-| `--dms-blue-300` | `#69b1ff` | 主色描边 |
-| `--dms-blue-700` | `#003eb3` | 深品牌文字 |
+| `--dms-blue-500` | `#2e6ba8` | 主色 / 主按钮 / 选中态 / 链接（藏青） |
+| `--dms-blue-400` | `#5a95d0` | 主色 hover |
+| `--dms-blue-600` | `#245a8f` | 主色 active/pressed |
+| `--dms-blue-50`  | `#e3eefa` | 主色浅底（选中行、标签底） |
+| `--dms-blue-300` | `#b9d4ef` | 主色描边 |
+| `--dms-blue-700` | `#1b4470` | 深品牌文字 |
 
 完整 10 阶（50→900）见 `base-light.scss`。**换品牌主色 = 改 blue 阶 + 运行时预设（见 §6）。**
+
+> **v4.6.7 起，PC 默认主题为「藏青琥珀」**：主色 `#2e6ba8`（hover `#5a95d0` / active `#245a8f` / 浅底 `#e3eefa` / 描边 `#b9d4ef` / 深字 `#1b4470`），页面底 `#f4f7fb`，与移动端 H5（§11）统一；金额/关键点缀用琥珀 `#d97706`。原「极光蓝 `#1677ff`」保留为可切换预设。品牌预设通过 `theme-runtime.js` 在运行期覆盖 `--dms-*` 与 `--el-color-primary`，故**新增/回退主题优先改预设，不必改基础令牌**。
 
 ### 2.2 语义色
 
@@ -75,15 +77,15 @@
 | `--dms-text-4` | gray-500 `#909399` | 辅助说明 |
 | `--dms-text-placeholder` | gray-400 `#c0c4cc` | 输入占位 |
 | `--dms-text-inverse` | `#ffffff` | 深底上的文字 |
-| `--dms-bg-page` | gray-100 `#f5f7fa` | 内容区页面底色 |
+| `--dms-bg-page` | 淡蓝灰 `#f4f7fb` | 内容区页面底色（与移动端一致） |
 | `--dms-bg-container` | `#ffffff` | 卡片/表格/弹层底 |
 | `--dms-bg-hover` | gray-50 `#fafafa` | 悬停底 |
-| `--dms-bg-selected` | blue-50 `#e6f4ff` | 选中行底 |
+| `--dms-bg-selected` | blue-50 `#e3eefa` | 选中行底 |
 | `--dms-border-1/2/3` | gray-300/200/100 | 强/中/弱边框 |
 
 ### 2.4 图表色板（色盲友好，勿改顺序）
 
-`--dms-chart-1 #1677ff`、`chart-2 #52c41a`、`chart-3 #faad14`、`chart-4 #ff4d4f`、`chart-5 #722ed1`、`chart-6 #13c2c2`、`chart-7 #eb2f96`、`chart-8 #fa8c16`；涨跌 `--dms-chart-up #52c41a` / `--dms-chart-down #ff4d4f`。
+`--dms-chart-1 #2e6ba8`、`chart-2 #52c41a`、`chart-3 #faad14`、`chart-4 #ff4d4f`、`chart-5 #722ed1`、`chart-6 #13c2c2`、`chart-7 #eb2f96`、`chart-8 #fa8c16`；涨跌 `--dms-chart-up #52c41a` / `--dms-chart-down #ff4d4f`。
 
 ---
 
@@ -98,7 +100,7 @@
 | `--dms-sider-text` | `#4b5563` | `#b8c5d9` |
 | `--dms-sider-text-hover` | `#1f2937` | `#ffffff` |
 | `--dms-sider-text-active` | 品牌主色 | `#ffffff` |
-| `--dms-sider-active-bg`（选中项底） | 主色浅底 `#e8f1ff` | `rgba(22,119,255,.30)` |
+| `--dms-sider-active-bg`（选中项底） | 主色浅底 `#e3eefa` | `rgba(46,107,168,.30)` |
 | `--dms-sider-badge-bg/text` | `#eef1f6 / #8a94a6` | `rgba(255,255,255,.10) / #b8c5d9` |
 | `--dms-sider-border` | `#eef0f4` | `rgba(255,255,255,.06)` |
 
@@ -145,11 +147,12 @@
 
 ## 6. 品牌预设（运行时换肤）
 
-`theme-runtime.js` 内置 4 套预设，右上角可切换，偏好存 `localStorage['dms-theme-preference:preset']`：
+`theme-runtime.js` 内置 5 套预设，右上角可切换，偏好存 `localStorage['dms-theme-preference:preset']`。**默认 `navy`（藏青琥珀，与移动端 H5 统一）**：
 
 | key | 名称 | 主色 | 浅底 |
 |-----|------|------|------|
-| `blue`（默认） | 极光蓝 | `#1677ff` | `#e6f4ff` |
+| `navy`（默认） | 藏青琥珀 | `#2e6ba8` | `#e3eefa` |
+| `blue` | 极光蓝 | `#1677ff` | `#e6f4ff` |
 | `violet` | 星云紫 | `#722ed1` | `#f9f0ff` |
 | `green` | 青翠绿 | `#00b96b` | `#f6ffed` |
 | `orange` | 日暮橙 | `#fa8c16` | `#fff7e6` |
@@ -176,7 +179,7 @@
 
 > 调整侧栏宽窄 / 顶栏高低 / 菜单项疏密，**只改这 8 个令牌**即可，不要改 `layout/index.vue` 里的数值。
 
-**多页签（TagsBar）**：`layout/TagsBar.vue`，若依风格——白底、28px 高、小圆角；页签带图标（`layout/tagIcons.js` 按标题/路径映射）；激活态 = 浅蓝底 `--dms-color-primary-bg` + 主色字 + 左侧 3px 主色竖条；非激活白底灰字；右侧「刷新」+「页签操作」下拉（关闭其他/全部）。页签数据在 `store/tags.js`（sessionStorage 持久化，首页固定 affix）。
+**多页签（TagsBar）**：`layout/TagsBar.vue`，若依风格——白底、28px 高、小圆角；页签带图标（`layout/tagIcons.js` 按标题/路径映射）；激活态 = 主色浅底 `--dms-color-primary-bg`（藏青 `#e3eefa`）+ 主色字（藏青 `#2e6ba8`）+ 左侧 3px 主色竖条；非激活白底灰字；悬停时切换为主色浅底；支持右键菜单（刷新/关闭/关闭其他/关闭全部）与中键关闭；右侧「刷新」+「页签操作」下拉。页签数据在 `store/tags.js`（sessionStorage 持久化，首页固定 affix），配合 `<keep-alive :max="12">` 缓存页面状态，用户可在多个已打开菜单页签间自由切换。
 **面包屑（Breadcrumb）**：`layout/Breadcrumb.vue`，渲染在顶栏，层级来自 `utils/pageMeta.resolvePageMeta`。
 
 ---
@@ -193,6 +196,17 @@
 - **分页**：`page-sizes=[20,50,100]`，右对齐。
 - **日期时间**：日期 `YYYY-MM-DD`、日期时间 `YYYY-MM-DD HH:mm:ss`，用统一格式化工具，禁止直接渲染 ISO/UTC。
 - **引用字段**：外键一律显示编码 + 名称（如 `PRD-B001 测试产品A`），禁止裸数字 ID；枚举显示中文 label。
+
+### 8.1 PC 登录页（Login.vue，v4.7.2 起）
+
+左右分屏、全高布局（参考高保真稿 `prototype/pc/login.html`）：
+
+- **左侧品牌 hero（藏青渐变）**：`flex 1.12`，背景 `linear-gradient(150deg,#1b4470 0%,#245a8f 42%,#2e6ba8 72%,#5a95d0 100%)` + 两个半透明白圆斑（`.blob`）；左上 `<DmsLogo :size="44" variant="light" />`（深底**必须用白色 logo**）+ 字标「MySolMed DMS」；下部白色大标题（`.login-hero h1` 必须显式 `color:#fff`——全局 `reset.scss` 对 h1~h6 显式设了 `--dms-text-1`，不覆盖会在深底上显示近黑色）、副标题（`rgba(255,255,255,.92)`）、4 个能力点（✓ 圆标）。
+- **右侧登录卡（白底）**：`flex 1`，居中宽 380px 白卡；「欢迎登录」标题 + 副标题 + 琥珀色演示提示条（`#fef3c7`/`#b45309`）；三字段「租户代码 / 账号 / 密码」均 `size=large` + 前缀图标（`OfficeBuilding/User/Lock`）；记住我 + 忘记密码一行；藏青全宽登录按钮（`--dms-color-primary`，hover `--dms-color-primary-hover`，字间距 6px）。
+- **主题切换 dock** 保留在右上（5 预设圆点 + 深浅模式切换），逻辑走 `config/theme-runtime`。
+- 登录逻辑不变：`el-form` 校验 + `userStore.login` + 成功 `router.replace('/home')`；默认演示账号 `default/sys_admin/Dms@123456`。
+- 窄屏（<900px）隐藏 hero，登录卡变为淡蓝渐变底上的白圆角卡（与移动端浅色登录呼应）。
+
 
 ---
 
@@ -277,10 +291,31 @@
 - **列表引用字段**：经销商/产品等外键必须显示编码＋名称，禁止裸显数字 ID（与 PC 铁律一致）。
 - **扫码页**：取景相机区保留深色（模拟真实取景），扫描框角标/扫描线用琥珀；结果清单在浅色卡片区。
 
+### 11.4.1 高保真布局组件类（v4.7.0 起，mobile-theme.scss 内，均以 .m-layout 为作用域）
+
+> v4.6.9 只做了配色令牌；v4.7.0 起把高保真稿 dms-mobile-full-12-v6.html 的**布局结构**也固化为可复用类，页面模板直接套用，不再退化为基础 van-cell 列表。改移动端布局优先复用这些类。
+
+| 类 | 用途 |
+|----|------|
+| `.m-section` / `.m-more` | 区块标题（14px 粗体）+ 右侧「全部 ›」链接 |
+| `.m-kpiband` / `.m-kpi`（.n/.t） | 首页 3 列等宽数字 KPI 带（白卡、藏青大数字） |
+| `.m-grid-card` / `.qa`（.ic/span） | 4 列功能宫格卡片（浅蓝灰图标块 42px） |
+| `.m-hero-search` / `.vbadge` | hero 内嵌半透明搜索条；琥珀「已认证」胶囊标 |
+| `.m-card-list` / `.m-ord` | 业务/订单卡：`.ot`（等宽单号 .no + 状态 pill .st）、`.ol`（缩略图块 .th + 标题 .pn/副 .pm）、`.of`（虚线分隔 + 合计 .tot + 按钮 .ob） |
+| 状态 pill | `.st-ok`(绿)/`.st-pen`(琥珀)/`.st-rej`(红)/`.st-info`(藏青)，内含 `<i>` 圆点 |
+| 卡内按钮 | `.ob` 藏青实心；`.ob.ghost` 白底藏青描边；`.ob.amber` 琥珀（去审批/FAB 类强调） |
+| `.m-msg-list` / `.m-msg-item` | 消息卡：`.mi` 彩色图标底（.a 红/.g 绿/.b 蓝）、`.mt` 标题 + `.dot` 未读琥珀点、`.md` 两行截断、`.mtime` |
+| `.m-perf-card` / `.m-bars` / `.m-rank-card` / `.m-rank-row` | 藏青业绩大卡（.pl/.pv/.pt）+ 柱状（.b，当前月 .cur 琥珀）+ 排行卡（.rk 名次，前三 .top 琥珀） |
+| `.m-scan-stage` / `.m-scan-frame`(.corner) / `.m-scan-line` / `.m-scan-hint` | 深色径向渐变取景框 + 琥珀四角 L 形角标 + 扫描线动画 + 提示 |
+| `.m-invstock` / `.s`(.ok/.warn/.lock) | 库存三格：可用(绿)/锁定(藏青)/安全库存(琥珀) |
+| `.m-page-scroll` | 页面滚动容器（底部留白） |
+
 ### 11.5 页面清单（12 屏，已对齐本主题）
 
-登录（MLogin）、首页工作台（MHome）、智能下单（MSmartOrder）、下销售订单（MOrderCreate）、销售订单列表（MOrders）、订单详情（MOrderDetail）、移动审批（MApprovals）、手术植入报台（MSurgeryReportCreate）、扫码收货（MReceiveScan）、库存扫码查询（MInventoryScan）、消息中心（MMessages）、我的业绩（MDashboard）；注册页 MCustomerRegister 同主题。
-> 完整视觉参考（静态高保真原型）：`.codex/visualizations/.../dms-mobile-full-12-v6.html`（同目录含真实 `logo-mark.png`）。
+登录（MLogin）、首页工作台（MHome）、智能下单（MSmartOrder）、下销售订单（MOrderCreate）、销售订单列表（MOrders）、订单详情（MOrderDetail）、移动审批（MApprovals）、手术植入报台（MSurgeryReports/Create）、消息中心（MMessages）、我的业绩（MDashboard）、我的（MProfile）；注册页 MCustomerRegister 同主题。
+> **v4.7.1 起移动端不提供库存/收货入口**：扫码收货（MReceiveScan）、库存扫码（MInventoryScan）页面文件保留但不从任何移动入口链接（首页宫格/KPI/订单卡均已移除）。
+> **订单详情（MOrderDetail）展示规范**：不展示税率/税额/不含税金额；产品行只显示 数量/单价/金额，行内与整单折扣用彩色 pill 与「优惠明细」卡突出，参与的促销用「命中促销」横幅（promoMessages）展示，底部为藏青「应付金额」卡。
+> **v4.7.0 起以上 12 屏布局已按高保真稿 1:1 落地**（卡片化列表 / KPI 带 / 业绩卡 / 深色扫码框 / 浅色登录页），不再是基础 van-cell 列表。\n> 完整视觉参考（静态高保真原型）：`.codex/visualizations/.../dms-mobile-full-12-v6.html`（同目录含真实 `logo-mark.png`）。\n> 登录页为**浅色版**（淡蓝渐变底 #EAF3FE→#F4F7FB + 真实 DmsLogo + 白圆角表单卡 + 藏青登录按钮），不用深色大渐变头。
 
 ### 11.6 品牌 Logo
 
@@ -295,5 +330,6 @@
 | 琥珀点缀色 | `vant/mobile-theme.scss` 的 `--dms-m-amber*` |
 | 图标底色 | `--dms-m-tint`；`.m-quick-ic` 在 `app.scss` |
 | 底部导航选中色 | `--van-tabbar-item-active-color` |
-| 首页 hero / 登录页头 | `app.scss` `.m-hero`、`MLogin.vue` `.m-login-top`（均引用令牌渐变） |
+| 首页 hero / 登录页 | `app.scss` `.m-hero`（藏青渐变）；登录页为浅色 `.m-login`（淡蓝渐变底 + 白卡，见 MLogin.vue） |
+| 卡片化列表 / KPI / 业绩 / 扫码框布局 | `vant/mobile-theme.scss` §11.4.1 的 `.m-ord`/`.m-kpi`/`.m-perf-card`/`.m-scan-stage` 等结构类，页面模板直接套用 |
 | 触控高度 / 导航栏高度 | `semantic.scss` 的 `--dms-mobile-*-height` |

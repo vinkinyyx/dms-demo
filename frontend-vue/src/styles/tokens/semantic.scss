@@ -61,10 +61,10 @@ html:root {
 
   /* ---------- 侧边导航（浅色，参考现代扁平后台；暗色模式由 theme-runtime 覆盖） ---------- */
   --dms-sider-bg: #ffffff;
-  --dms-sider-bg-deep: #f5f7fa;
+  --dms-sider-bg-deep: #f4f7fb;
   --dms-sider-text: #4b5563;
   --dms-sider-text-hover: #1f2937;
-  --dms-sider-text-active: var(--dms-color-primary, #1677ff);
+  --dms-sider-text-active: var(--dms-color-primary, #2e6ba8);
   --dms-sider-active-bg: var(--dms-color-primary-bg, #e8f1ff);
   --dms-sider-badge-bg: #eef1f6;
   --dms-sider-badge-text: #8a94a6;

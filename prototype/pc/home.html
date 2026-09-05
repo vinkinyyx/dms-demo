@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>业务工作台 · MySolMed DMS</title>
+<link rel="stylesheet" href="assets/dms.css">
+</head>
+<body>
+<div id="app"></div>
+
+<script type="text/template" id="pageBody">
+  <div class="page-head">
+    <div>
+      <div class="page-title">业务工作台</div>
+      <div class="page-desc">下午好，系统管理员 · 今天是 2026-09-05 周六 · 华东大区本月销售目标完成度 72%</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn">下载工作台日报</button>
+      <button class="btn btn-primary">新建销售订单</button>
+    </div>
+  </div>
+
+  <div class="grid g-12">
+    <div class="card kpi col-3">
+      <div class="kpi-top">
+        <div class="kpi-ic" style="background:var(--blue-50);color:var(--blue-600)" data-ic="sell"></div>
+        <div><div class="kpi-label">本月销售额（万元）</div><div class="kpi-val">1,286.5</div></div>
+      </div>
+      <div class="kpi-trend up"><span data-ic="arrowUp"></span>12.4% <span class="vs">较上月</span></div>
+      <svg class="kpi-spark" width="90" height="34" data-spark="120,132,118,145,138,160,152,175,168,190"></svg>
+    </div>
+    <div class="card kpi col-3">
+      <div class="kpi-top">
+        <div class="kpi-ic" style="background:var(--green-50);color:var(--green-600)" data-ic="doc"></div>
+        <div><div class="kpi-label">本月销售订单（单）</div><div class="kpi-val">348</div></div>
+      </div>
+      <div class="kpi-trend up"><span data-ic="arrowUp"></span>8.1% <span class="vs">较上月</span></div>
+      <svg class="kpi-spark" width="90" height="34" data-spark="60,72,68,80,76,90,85,96,92,104"></svg>
+    </div>
+    <div class="card kpi col-3">
+      <div class="kpi-top">
+        <div class="kpi-ic" style="background:var(--gold-50);color:var(--gold-600)" data-ic="bell"></div>
+        <div><div class="kpi-label">待我审批</div><div class="kpi-val">5<small>单</small></div></div>
+      </div>
+      <div class="kpi-trend down"><span class="vs">其中 2 单已超 24h 未处理</span></div>
+      <svg class="kpi-spark" width="90" height="34" data-spark="3,5,4,6,2,7,5,4,6,5"></svg>
+    </div>
+    <div class="card kpi col-3">
+      <div class="kpi-top">
+        <div class="kpi-ic" style="background:#fff7e6;color:#fa8c16" data-ic="alarm"></div>
+        <div><div class="kpi-label">效期预警（批）</div><div class="kpi-val">3<small>批 · 90天内</small></div></div>
+      </div>
+      <div class="kpi-trend down"><span data-ic="arrowDn"></span>需尽快调拨 / 退厂</div>
+      <svg class="kpi-spark" width="90" height="34" data-spark="8,7,7,6,6,5,5,4,4,3"></svg>
+    </div>
+  </div>
+
+  <div class="card mt-14">
+    <div class="card-head"><div class="card-title"><span class="bar"></span>快捷入口</div>
+      <div class="card-extra">常用业务一键直达</div></div>
+    <div class="quick-grid">
+      <div class="quick"><div class="quick-ic" style="background:var(--blue-50);color:var(--blue-600)" data-ic="sell"></div><span>新建销售订单</span></div>
+      <div class="quick"><div class="quick-ic" style="background:var(--green-50);color:var(--green-600)" data-ic="van"></div><span>销售出库</span></div>
+      <div class="quick"><div class="quick-ic" style="background:var(--gold-50);color:var(--gold-600)" data-ic="refreshL"></div><span>销退订单</span></div>
+      <div class="quick"><div class="quick-ic" style="background:#e6fffb;color:#0891b2" data-ic="takeaway"></div><span>收货入库</span></div>
+    </div>
+  </div>
+
+  <div class="grid g-12 mt-14">
+    <div class="card col-4">
+      <div class="card-head"><div class="card-title"><span class="bar"></span>我的待办</div>
+        <div class="card-extra"><a href="#">全部 5 条</a></div></div>
+      <div class="todo-item">
+        <div class="todo-ic" style="background:var(--gold-50);color:var(--gold-600)" data-ic="bell"></div>
+        <div class="todo-main"><div class="todo-title">销售订单 SO20260905008 待审批 <span class="tag tag-gold">待审批</span></div>
+          <div class="todo-meta">杭州仁济医疗器械 · ¥186,400.00 · 提交人 张丽</div></div>
+        <div class="todo-right"><div class="todo-time">10 分钟前</div></div>
+      </div>
+      <div class="todo-item">
+        <div class="todo-ic" style="background:var(--blue-50);color:var(--blue-600)" data-ic="refreshL"></div>
+        <div class="todo-main"><div class="todo-title">销退订单 SR20260904002 待审核 <span class="tag tag-blue">销退</span></div>
+          <div class="todo-meta">宁波康泰医疗 · 退货 3 行 · ¥12,800.00</div></div>
+        <div class="todo-right"><div class="todo-time">1 小时前</div></div>
+      </div>
+      <div class="todo-item">
+        <div class="todo-ic" style="background:#fff7e6;color:#fa8c16" data-ic="alarm"></div>
+        <div class="todo-main"><div class="todo-title">批次 LOT20250612 临近效期 <span class="tag tag-red">效期</span></div>
+          <div class="todo-meta">椎间融合器 Ⅱ 型 · 上海中心仓 · 剩余 96 天</div></div>
+        <div class="todo-right"><div class="todo-time">3 小时前</div></div>
+      </div>
+      <div class="todo-item">
+        <div class="todo-ic" style="background:var(--green-50);color:var(--green-600)" data-ic="takeaway"></div>
+        <div class="todo-main"><div class="todo-title">采购收货单 RC20260905001 待入库 <span class="tag tag-green">收货</span></div>
+          <div class="todo-meta">美敦力（上海）· 24 行待验收</div></div>
+        <div class="todo-right"><div class="todo-time">今天 09:20</div></div>
+      </div>
+      <div class="todo-item">
+        <div class="todo-ic" style="background:#f9f0ff;color:#722ed1" data-ic="firstaid"></div>
+        <div class="todo-main"><div class="todo-title">手术报台 OP20260903017 待核对 <span class="tag tag-purple">报台</span></div>
+          <div class="todo-meta">浙江大学附属第一医院 · 脊柱内固定系统</div></div>
+        <div class="todo-right"><div class="todo-time">昨天</div></div>
+      </div>
+    </div>
+
+    <div class="card col-8">
+      <div class="card-head"><div class="card-title"><span class="bar"></span>销售趋势（近 12 个月）</div>
+        <div class="card-extra">
+          <span class="tag tag-blue"><span class="dot"></span>销售额</span>
+          <span class="tag tag-green"><span class="dot"></span>回款额</span>
+        </div>
+      </div>
+      <div id="trendChart" class="chart" style="height:272px"></div>
+    </div>
+  </div>
+
+  <div class="card mt-14">
+    <div class="card-head"><div class="card-title"><span class="bar"></span>近期销售订单</div>
+      <div class="card-extra"><a href="orders.html">查看全部 →</a></div></div>
+    <div class="table-wrap">
+      <table class="dms">
+        <thead><tr>
+          <th>订单编号</th><th>经销商</th><th>终端医院</th><th class="num">订单金额</th>
+          <th>状态</th><th>提交人</th><th>下单时间</th><th style="width:110px">操作</th>
+        </tr></thead>
+        <tbody>
+          <tr><td><div class="cell-main">SO20260905008</div></td><td>杭州仁济医疗器械有限公司</td><td>浙江大学附属第一医院</td><td class="num">¥186,400.00</td><td><span class="tag tag-gold"><span class="dot"></span>待审批</span></td><td>张丽</td><td>2026-09-05 10:24</td><td><a href="order-detail.html">查看</a></td></tr>
+          <tr><td><div class="cell-main">SO20260905006</div></td><td>上海康泽医疗科技有限公司</td><td>上海瑞金医院</td><td class="num">¥92,750.00</td><td><span class="tag tag-blue"><span class="dot"></span>已审批·待出库</span></td><td>李强</td><td>2026-09-05 09:48</td><td><a href="order-detail.html">查看</a></td></tr>
+          <tr><td><div class="cell-main">SO20260904019</div></td><td>苏州恒瑞医疗器械</td><td>苏州大学附属第一医院</td><td class="num">¥245,120.00</td><td><span class="tag tag-green"><span class="dot"></span>已完成</span></td><td>王芳</td><td>2026-09-04 16:30</td><td><a href="order-detail.html">查看</a></td></tr>
+          <tr><td><div class="cell-main">SO20260904015</div></td><td>南京迈瑞医疗经销商</td><td>江苏省人民医院</td><td class="num">¥58,300.00</td><td><span class="tag tag-gray"><span class="dot"></span>草稿</span></td><td>陈杰</td><td>2026-09-04 14:02</td><td><a href="order-detail.html">查看</a></td></tr>
+          <tr><td><div class="cell-main">SO20260903027</div></td><td>宁波康泰医疗器械</td><td>宁波第一医院</td><td class="num">¥131,680.00</td><td><span class="tag tag-red"><span class="dot"></span>已驳回</span></td><td>张丽</td><td>2026-09-03 11:15</td><td><a href="order-detail.html">查看</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</script>
+
+<script src="assets/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script>
+function hydrate(root){
+  root.querySelectorAll('[data-ic]').forEach(function(el){ el.innerHTML = icon(el.getAttribute('data-ic')); });
+  root.querySelectorAll('[data-spark]').forEach(drawSpark);
+}
+function drawSpark(svg){
+  var vals = svg.getAttribute('data-spark').split(',').map(Number);
+  var w=90,h=34,min=Math.min.apply(null,vals),max=Math.max.apply(null,vals);
+  var pts = vals.map(function(v,i){ return (i/(vals.length-1)*w).toFixed(1)+','+((h-4)-(v-min)/(max-min||1)*(h-10)).toFixed(1); }).join(' ');
+  svg.innerHTML = '<polyline points="'+pts+'" fill="none" stroke="#2e6ba8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+}
+shell({
+  active:'home',
+  crumb:'首页 / <b>业务工作台</b>',
+  body:document.getElementById('pageBody').innerHTML,
+  after:function(){
+    hydrate(document.getElementById('content'));
+    if(window.echarts){
+      var c = echarts.init(document.getElementById('trendChart'));
+      c.setOption({
+        grid:{left:50,right:20,top:30,bottom:30},
+        tooltip:{trigger:'axis'},
+        xAxis:{type:'category',boundaryGap:false,data:['10月','11月','12月','1月','2月','3月','4月','5月','6月','7月','8月','9月'],axisLine:{lineStyle:{color:'#e4e7ed'}},axisLabel:{color:'#909399'}},
+        yAxis:{type:'value',splitLine:{lineStyle:{color:'#f0f2f5'}},axisLabel:{color:'#909399'}},
+        series:[
+          {name:'销售额',type:'line',smooth:true,symbol:'circle',symbolSize:6,data:[820,910,980,860,760,940,1060,1120,1080,1180,1210,1286],
+           lineStyle:{width:3,color:'#2e6ba8'},itemStyle:{color:'#2e6ba8'},
+           areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(46,107,168,.22)'},{offset:1,color:'rgba(46,107,168,.01)'}]}}},
+          {name:'回款额',type:'line',smooth:true,symbol:'circle',symbolSize:6,data:[760,830,900,810,720,880,980,1040,1010,1100,1150,1205],
+           lineStyle:{width:2.5,color:'#52c41a'},itemStyle:{color:'#52c41a'}}
+        ]
+      });
+      window.addEventListener('resize',function(){c.resize();});
+    }
+  }
+});
+</script>
+</body>
+</html>

@@ -125,7 +125,7 @@ const summaryCards = computed(() => [
 ])
 const miniCards = computed(() => {
   const cards = [
-    { key: 'orders', value: kpi.monthOrders ?? 0, label: '本月订单数', sub: 'YTD ' + (kpi.ytdOrders ?? 0) + ' 单', color: '#1677ff' },
+    { key: 'orders', value: kpi.monthOrders ?? 0, label: '本月订单数', sub: 'YTD ' + (kpi.ytdOrders ?? 0) + ' 单', color: '#2e6ba8' },
     { key: 'rebate', value: '¥' + fmtNum(kpi.ytdRebate, 0), label: 'YTD净返利', sub: '按当前达成预提', color: '#52c41a' },
     { key: 'return', value: '¥' + fmtNum(kpi.returnAmount, 0), label: 'YTD退货', sub: '退货率 ' + fmtPct(kpi.returnRate), color: '#faad14' },
   ]
@@ -234,7 +234,7 @@ function renderAch() {
     yAxis: [{ type: 'value', name: '金额' }, { type: 'value', name: '达成率', axisLabel: { formatter: '{value}%' }, max: 150 }],
     series: [
       { name: '目标', type: 'line', data: rows.map(x => Number(x.targetAmount || 0)), lineStyle: { type: 'dashed' } },
-      { name: '实际', type: 'bar', data: rows.map(x => Number(x.actualAmount || 0)), itemStyle: { color: '#1677ff' } },
+      { name: '实际', type: 'bar', data: rows.map(x => Number(x.actualAmount || 0)), itemStyle: { color: '#2e6ba8' } },
       { name: '达成率', type: 'line', yAxisIndex: 1, smooth: true, data: rows.map(x => Math.round(Number(x.achievementRate || 0) * 100)), itemStyle: { color: '#52c41a' } }
     ]
   })

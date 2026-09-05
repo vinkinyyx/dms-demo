@@ -73,7 +73,7 @@
             </template>
           </el-table-column>
           <el-table-column prop="serialNo" label="序列号" width="160" />
-          <el-table-column prop="qty" label="数量" width="90" />
+          <el-table-column align="right" prop="qty" label="数量" width="90" />
           <el-table-column label="仓库">
             <template #default="{ row }">{{ warehouseName(row.warehouseId) }}</template>
           </el-table-column>
